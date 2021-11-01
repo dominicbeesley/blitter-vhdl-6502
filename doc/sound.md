@@ -1,6 +1,8 @@
 
 ### Paula SOUND chipset
 
+Rough notes on accessing the Paula chipset hardware direct
+
 ~~~~
 JIM Dev no: &D0 (Paula) &D1 (Blitter/cpu)
 JIM Base address: $FE FC80
@@ -85,7 +87,7 @@ and sets channel 0 to repeatedly play the sound
 
 ~~~~
    10 REM BLIT SOUND
-   20 DEVNO%=&D0 : REM JIM device number for 1MHz Paula
+   20 DEVNO%=&D0 : REM JIM device number for 1MHz Paula (use &D1 for blitter board)
    30 snd%=&FD80:sndjim%=&FEFC
    40 SL%=32:SR%=1000:SP%=3546895/(SR%*SL%):REM calculate period
    50 BUF%=&FD00:

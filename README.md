@@ -15,4 +15,10 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 - Soft or Hard CPUs with separate configurations
 - Alternative CPU's. The main CPU can be replaced with either an FPGA IPCore CPU (T65) or with a plug-in cpu
 
+# Further reading
 
+	*	[Hardware Overview](doc/hardware-overview-mk3.md)
+	*	[Paula Chipset Hardware QuickStart](doc/sound.md)
+	*	[Blitter Support ROM](https://github.com/dominicbeesley/blitter-support-rom)
+
+	
