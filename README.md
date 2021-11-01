@@ -32,5 +32,8 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	        T6502					The T65 core
 	      fishbone					The Fishbone Bus basic components and definitions
 	    mk3						Projects and files relevant to the Mk.3 board
-	      mk3-board-erc				A simple Project to perform board ERC  
-	      mk3-erc-68000				Perform ERC on a 68000 plug-in cpu board
+	      testing					Projects for board testing and production
+	        mk3-board-erc				A simple Project to perform board ERC  
+	        mk3-erc-68000				Perform ERC on a 68000 plug-in cpu board
+	      shared					HDL shared between all mk.3 builds
+	      

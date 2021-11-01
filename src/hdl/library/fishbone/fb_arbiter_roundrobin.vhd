@@ -1,7 +1,7 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
 -- Copyright (c) 2009 Benjamin Krill <benjamin@krll.de>
--- Copyright (c) 2020 Dominic Beesley <dominic@dossytronics.net>
+-- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
