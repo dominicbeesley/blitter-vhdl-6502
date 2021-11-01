@@ -21,4 +21,8 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 *	[Paula Chipset Hardware QuickStart](doc/sound.md)
 *	[Blitter Support ROM](https://github.com/dominicbeesley/blitter-support-rom)
 
+# Project Structure
 
+	doc						Documentation
+	src						Code
+	
