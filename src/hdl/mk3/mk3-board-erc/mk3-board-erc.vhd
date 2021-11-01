@@ -152,7 +152,7 @@ entity mk3_board_erc is
 	);
 end mk3_board_erc;
 
-architecture rtl of mk3_firstlight is
+architecture rtl of mk3_board_erc is
 
 signal ctr		: unsigned(28 downto 0);
 
