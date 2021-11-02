@@ -128,7 +128,7 @@ set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
 #blitter addr calcs multi-cycles
 
-set blitpaths [ get_pins {\GBLIT:e_fb_blit|addr_gen|*|*} ]
+set blitpaths [ get_pins {e_top|\GCHIPSET:GBLIT:e_fb_blit|addr_gen|*|*} ]
 
 set_multicycle_path -setup -end -from  $blitpaths  -to  $blitpaths 2
 set_multicycle_path -hold -end -from  $blitpaths  -to  $blitpaths 1

@@ -36,4 +36,6 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	        mk3-board-erc				A simple Project to perform board ERC  
 	        mk3-erc-68000				Perform ERC on a 68000 plug-in cpu board
 	      shared					HDL shared between all mk.3 builds
-	      
+	      boards					contains individual builds
+	      	cpu-16-max				MAX10 16000LE build with all options except HDMI
+	      	
