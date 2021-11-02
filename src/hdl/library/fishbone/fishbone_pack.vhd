@@ -48,7 +48,7 @@ package fishbone is
 
 	-- RDY_CTDN
 	-- --------
-	-- the RDY countdown allows a slave to indicate how long it will be until data will be ready 
+	-- the RDY countdown allows a peripheral to indicate how long it will be until data will be ready 
 	-- this should count down to 0 and go to 0 once D_rd is valid for reads or 0 once a write is 
 	-- under way
 	-- when the number of cycles is not known then the rdy_ctdn should be set to RDY_CTDN_MAX
@@ -105,33 +105,33 @@ package fishbone is
 	end record fb_syscon_t;
 
 
-	-- signals from masters to slaves
-	type fb_mas_o_sla_i_t is record				
+	-- signals from controllers to peripherals
+	type fb_con_o_per_i_t is record				
 		cyc					:  std_logic;							-- stays active throughout cycle
 		we						: 	std_logic;							-- write =1, read = 0, qualified by A_o_stb_o
 		A						: 	std_logic_vector(23 downto 0);-- physical address
 		A_stb					: 	std_logic;							-- address out strobe, qualifies A_o, hold until end of cyc_o
-		D_wr					: 	std_logic_vector(7 downto 0);	-- data out from master to slave
+		D_wr					: 	std_logic_vector(7 downto 0);	-- data out from controller to peripheral
 		D_wr_stb				:	std_logic;							-- data out strobe, qualifies D_o, can ack writes as soon
 																			-- as this is ready or wait until end of cycle
-	end record fb_mas_o_sla_i_t;
+	end record fb_con_o_per_i_t;
 
-	--signals from slaves to masters
-	type fb_mas_i_sla_o_t is record
+	--signals from peripherals to controllers
+	type fb_con_i_per_o_t is record
 
 		D_rd					: 	std_logic_vector(7 downto 0);	-- data in during a read
 		rdy_ctdn				:	unsigned(RDY_CTDN_LEN-1 downto 0);							-- see above
-		ack					:	std_logic;							-- cycle complete, master must terminate cycle now, data was supplied or latched
+		ack					:	std_logic;							-- cycle complete, controller must terminate cycle now, data was supplied or latched
 		nul					:	std_logic;							-- when set there is no respone i.e. either there is an error or no address matches
 																			-- the cycle should be abored immediately (ack will also be set)
 
-	end record fb_mas_i_sla_o_t;
+	end record fb_con_i_per_o_t;
 
-	type fb_mas_o_sla_i_arr is array(natural range <>) of fb_mas_o_sla_i_t;
-	type fb_mas_i_sla_o_arr is array(natural range <>) of fb_mas_i_sla_o_t;
+	type fb_con_o_per_i_arr is array(natural range <>) of fb_con_o_per_i_t;
+	type fb_con_i_per_o_arr is array(natural range <>) of fb_con_i_per_o_t;
 
-	-- this constant contains the nul master to slave signal
-	constant fb_m2s_unsel : fb_mas_o_sla_i_t := (
+	-- this constant contains the nul controller to peripheral signal
+	constant fb_c2p_unsel : fb_con_o_per_i_t := (
 		cyc => '0',
 		we => '0',
 		A => (others => '1'),
@@ -140,8 +140,8 @@ package fishbone is
 		D_wr_stb => '0'
 		);
 
-	-- this constant contains the nul slave to master signal
-	constant fb_s2m_unsel : fb_mas_i_sla_o_t := (
+	-- this constant contains the nul peripheral to controller signal
+	constant fb_p2c_unsel : fb_con_i_per_o_t := (
 		D_rd => (others => '1'),
 		rdy_ctdn => RDY_CTDN_MAX,
 		ack => '0',

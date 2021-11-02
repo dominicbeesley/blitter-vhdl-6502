@@ -48,44 +48,44 @@ use work.common.all;
 entity fb_intcon_many_to_one is
 	generic (
 		SIM					: boolean := false;
-		G_MASTER_COUNT		: POSITIVE;
+		G_CONTROLLER_COUNT		: POSITIVE;
 		G_ARB_ROUND_ROBIN : boolean := false
 	);
 	port (
 
 		fb_syscon_i				: in	fb_syscon_t;
 
-		-- slave port connect to masters
-		fb_mas_m2s_i			: in	fb_mas_o_sla_i_arr(G_MASTER_COUNT-1 downto 0);
-		fb_mas_s2m_o			: out	fb_mas_i_sla_o_arr(G_MASTER_COUNT-1 downto 0);
+		-- peripheral port connect to controllers
+		fb_con_c2p_i			: in	fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
+		fb_con_p2c_o			: out	fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
 
-		-- master port connecto to slaves
-		fb_sla_m2s_o			: out fb_mas_o_sla_i_t;
-		fb_sla_s2m_i			: in 	fb_mas_i_sla_o_t
+		-- controller port connecto to peripherals
+		fb_per_c2p_o			: out fb_con_o_per_i_t;
+		fb_per_p2c_i			: in 	fb_con_i_per_o_t
 
 	);
 end fb_intcon_many_to_one;
 
 
 architecture rtl of fb_intcon_many_to_one is
-	signal	i_cyc_req			: std_logic_vector(G_MASTER_COUNT-1 downto 0);	-- cyc requests in from masters grouped
-	signal	i_cyc_grant_ix		: unsigned(numbits(G_MASTER_COUNT)-1 downto 0);
-	signal	r_cyc_grant_ix		: unsigned(numbits(G_MASTER_COUNT)-1 downto 0);
-	signal	r_cyc_act_oh		: unsigned(G_MASTER_COUNT-1 downto 0);				-- master is active 
-	signal	i_comcyc				: std_logic;												-- common cyc sent to all slaves
+	signal	i_cyc_req			: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);	-- cyc requests in from controllers grouped
+	signal	i_cyc_grant_ix		: unsigned(numbits(G_CONTROLLER_COUNT)-1 downto 0);
+	signal	r_cyc_grant_ix		: unsigned(numbits(G_CONTROLLER_COUNT)-1 downto 0);
+	signal	r_cyc_act_oh		: unsigned(G_CONTROLLER_COUNT-1 downto 0);				-- controller is active 
+	signal	i_comcyc				: std_logic;												-- common cyc sent to all peripherals
 	signal	r_cyc_ack			: std_logic;												-- signal that cycle is being serviced
 
-	signal	i_m2s				: fb_mas_o_sla_i_t := fb_m2s_unsel;					-- the i_m2s that has been granted muxed
+	signal	i_m2s				: fb_con_o_per_i_t := fb_c2p_unsel;					-- the i_m2s that has been granted muxed
 
 	-- register the muxed signals for timing
-	signal	r_m2s_A			: std_logic_vector(23 downto 0);						-- registered address of selected master
-	signal	r_m2s_we			: std_logic;												-- registered we 
+	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
+	signal	r_c2p_we			: std_logic;												-- registered we 
 	signal	r_D_wr			: std_logic_vector(7 downto 0);
 	signal	r_D_wr_stb		: std_logic;
 
-	signal	r_cyc_sla		: std_logic;												-- registered cyc for slave
+	signal	r_cyc_sla		: std_logic;												-- registered cyc for peripheral
 
-	signal	i_s2m				: fb_mas_i_sla_o_t;										-- data returned from selected slave
+	signal	i_s2m				: fb_con_i_per_o_t;										-- data returned from selected peripheral
 
 	--r_state machine
 	type		state_t	is	(idle, act);
@@ -94,15 +94,15 @@ architecture rtl of fb_intcon_many_to_one is
 begin
 
 
-g_cyc:for I in G_MASTER_COUNT-1 downto 0 generate
-	i_cyc_req(I) <= fb_mas_m2s_i(i).cyc and fb_mas_m2s_i(i).a_stb;
+g_cyc:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+	i_cyc_req(I) <= fb_con_c2p_i(i).cyc and fb_con_c2p_i(i).a_stb;
 end generate;
 
 	g_arb:if G_ARB_ROUND_ROBIN generate
-		-- arbitrate between incoming masters
+		-- arbitrate between incoming controllers
 		e_arb_rr:entity work.fb_arbiter_roundrobin
 		generic map (
-			CNT => G_MASTER_COUNT
+			CNT => G_CONTROLLER_COUNT
 			)
 		port map (
 			clk_i 		=> fb_syscon_i.clk,
@@ -112,10 +112,10 @@ end generate;
 			grant_ix_o	=> i_cyc_grant_ix
 			);
 	else generate
-		-- arbitrate between incoming masters
+		-- arbitrate between incoming controllers
 		e_arb_pri:entity work.fb_arbiter_prior
 		generic map (
-			CNT => G_MASTER_COUNT
+			CNT => G_CONTROLLER_COUNT
 			)
 		port map (
 			clk_i 		=> fb_syscon_i.clk,
@@ -128,21 +128,21 @@ end generate;
 
 	i_comcyc <= or_reduce(i_cyc_req);
 
-	fb_sla_m2s_o.cyc 			<= r_cyc_sla;
-	fb_sla_m2s_o.we 			<= r_m2s_we;
-	fb_sla_m2s_o.A				<= r_m2s_A;
-	fb_sla_m2s_o.A_stb		<= r_cyc_sla;
-	fb_sla_m2s_o.D_wr			<= r_D_wr;
-	fb_sla_m2s_o.D_wr_stb	<= r_D_wr_stb;
+	fb_per_c2p_o.cyc 			<= r_cyc_sla;
+	fb_per_c2p_o.we 			<= r_c2p_we;
+	fb_per_c2p_o.A				<= r_c2p_A;
+	fb_per_c2p_o.A_stb		<= r_cyc_sla;
+	fb_per_c2p_o.D_wr			<= r_D_wr;
+	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 
 
-	g_s2m_shared_bus:for I in G_MASTER_COUNT-1 downto 0 generate
+	g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 		-- TODO: check if moving data to own shared register saves space
-		fb_mas_s2m_o(I).D_rd 		<= fb_sla_s2m_i.D_rd;
-		fb_mas_s2m_o(I).rdy_ctdn 	<= fb_sla_s2m_i.rdy_ctdn when r_cyc_act_oh(I) = '1' else
+		fb_con_p2c_o(I).D_rd 		<= fb_per_p2c_i.D_rd;
+		fb_con_p2c_o(I).rdy_ctdn 	<= fb_per_p2c_i.rdy_ctdn when r_cyc_act_oh(I) = '1' else
 												 	RDY_CTDN_MAX;
-		fb_mas_s2m_o(I).ack 			<= fb_sla_s2m_i.ack and r_cyc_act_oh(I);				
-		fb_mas_s2m_o(I).nul 			<= fb_sla_s2m_i.nul and r_cyc_act_oh(I);
+		fb_con_p2c_o(I).ack 			<= fb_per_p2c_i.ack and r_cyc_act_oh(I);				
+		fb_con_p2c_o(I).nul 			<= fb_per_p2c_i.nul and r_cyc_act_oh(I);
 	end generate;
 
 	p_state:process(fb_syscon_i, r_state)
@@ -150,8 +150,8 @@ end generate;
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
 			r_cyc_sla <= '0';
-			r_m2s_A <= (others => '0');
-			r_m2s_we <= '0';
+			r_c2p_A <= (others => '0');
+			r_c2p_we <= '0';
 			r_cyc_grant_ix <= (others => '0');
 			r_cyc_act_oh <= (others => '0');
 			r_D_wr <= (others => '0');
@@ -167,16 +167,16 @@ end generate;
 						r_cyc_grant_ix <= i_cyc_grant_ix;
 						r_cyc_ack <= '1';
 						r_cyc_sla <= '1';
-						r_m2s_A <= fb_mas_m2s_i(to_integer(i_cyc_grant_ix)).A;					
-						r_m2s_we <= fb_mas_m2s_i(to_integer(i_cyc_grant_ix)).we;
+						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
+						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
 						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
 						r_state <= act;
-						r_D_wr_stb <= fb_mas_m2s_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
-						r_D_wr <= fb_mas_m2s_i(to_integer(i_cyc_grant_ix)).D_wr;
+						r_D_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
+						r_D_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
 					end if;
 				when act =>
-					r_D_wr_stb <= fb_mas_m2s_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
-					r_D_wr <= fb_mas_m2s_i(to_integer(r_cyc_grant_ix)).D_wr;
+					r_D_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+					r_D_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
 				when others =>  
 					r_state <= idle;
 					r_cyc_sla <= '0';
