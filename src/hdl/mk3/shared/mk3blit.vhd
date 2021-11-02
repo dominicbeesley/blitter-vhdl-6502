@@ -206,78 +206,78 @@ architecture rtl of mk3blit is
 	signal i_fb_syscon			: fb_syscon_t;							-- shared bus signals
 
 	-- cpu wrapper
-	signal i_m2s_cpu				: fb_mas_o_sla_i_t;
-	signal i_s2m_cpu				: fb_mas_i_sla_o_t;
+	signal i_c2p_cpu				: fb_con_o_per_i_t;
+	signal i_p2c_cpu				: fb_con_i_per_o_t;
 
-	-- blit master
-	signal i_m2s_blit_mas		: fb_mas_o_sla_i_t;
-	signal i_s2m_blit_mas		: fb_mas_i_sla_o_t;
-	-- blit slave interface control registers
-	signal i_m2s_blit_sla		: fb_mas_o_sla_i_t;
-	signal i_s2m_blit_sla		: fb_mas_i_sla_o_t;
+	-- blit controller
+	signal i_c2p_blit_con		: fb_con_o_per_i_t;
+	signal i_p2c_blit_con		: fb_con_i_per_o_t;
+	-- blit peripheral interface control registers
+	signal i_c2p_blit_per		: fb_con_o_per_i_t;
+	signal i_p2c_blit_per		: fb_con_i_per_o_t;
 
-	-- aeris master
-	signal i_m2s_aeris_mas		: fb_mas_o_sla_i_t;
-	signal i_s2m_aeris_mas		: fb_mas_i_sla_o_t;
-	-- aeris slave interface control registers
-	signal i_m2s_aeris_sla		: fb_mas_o_sla_i_t;
-	signal i_s2m_aeris_sla		: fb_mas_i_sla_o_t;
+	-- aeris controller
+	signal i_c2p_aeris_con		: fb_con_o_per_i_t;
+	signal i_p2c_aeris_con		: fb_con_i_per_o_t;
+	-- aeris peripheral interface control registers
+	signal i_c2p_aeris_per		: fb_con_o_per_i_t;
+	signal i_p2c_aeris_per		: fb_con_i_per_o_t;
 
-	-- dma master
-	signal i_m2s_dma_mas			: fb_mas_o_sla_i_arr(G_DMA_CHANNELS-1 downto 0);
-	signal i_s2m_dma_mas			: fb_mas_i_sla_o_arr(G_DMA_CHANNELS-1 downto 0);
-	-- dma slave interface control registers
-	signal i_m2s_dma_sla			: fb_mas_o_sla_i_t;
-	signal i_s2m_dma_sla			: fb_mas_i_sla_o_t;
+	-- dma controller
+	signal i_c2p_dma_con			: fb_con_o_per_i_arr(G_DMA_CHANNELS-1 downto 0);
+	signal i_p2c_dma_con			: fb_con_i_per_o_arr(G_DMA_CHANNELS-1 downto 0);
+	-- dma peripheral interface control registers
+	signal i_c2p_dma_per			: fb_con_o_per_i_t;
+	signal i_p2c_dma_per			: fb_con_i_per_o_t;
 
-	-- sound master
-	signal i_m2s_snd_mas			: fb_mas_o_sla_i_t;
-	signal i_s2m_snd_mas			: fb_mas_i_sla_o_t;
-	-- sound slave interface control registers
-	signal i_m2s_snd_sla			: fb_mas_o_sla_i_t;
-	signal i_s2m_snd_sla			: fb_mas_i_sla_o_t;
+	-- sound controller
+	signal i_c2p_snd_con			: fb_con_o_per_i_t;
+	signal i_p2c_snd_con			: fb_con_i_per_o_t;
+	-- sound peripheral interface control registers
+	signal i_c2p_snd_per			: fb_con_o_per_i_t;
+	signal i_p2c_snd_per			: fb_con_i_per_o_t;
 
 	-- cpu beeb motherboard wrapper
-	signal i_m2s_sys				: fb_mas_o_sla_i_t;
-	signal i_s2m_sys				: fb_mas_i_sla_o_t;
+	signal i_c2p_sys				: fb_con_o_per_i_t;
+	signal i_p2c_sys				: fb_con_i_per_o_t;
 
 	-- blitter board RAM/ROM memory wrapper
-	signal i_m2s_mem				: fb_mas_o_sla_i_t;
-	signal i_s2m_mem				: fb_mas_i_sla_o_t;
+	signal i_c2p_mem				: fb_con_o_per_i_t;
+	signal i_p2c_mem				: fb_con_i_per_o_t;
 
 	-- i2c eeprom control registers wrapper
-	signal i_m2s_eeprom			: fb_mas_o_sla_i_t;
-	signal i_s2m_eeprom			: fb_mas_i_sla_o_t;
+	signal i_c2p_eeprom			: fb_con_o_per_i_t;
+	signal i_p2c_eeprom			: fb_con_i_per_o_t;
 
 	-- memory control registers wrapper
-	signal i_m2s_memctl			: fb_mas_o_sla_i_t;
-	signal i_s2m_memctl			: fb_mas_i_sla_o_t;
+	signal i_c2p_memctl			: fb_con_o_per_i_t;
+	signal i_p2c_memctl			: fb_con_i_per_o_t;
 
 	-- memory control registers wrapper
-	signal i_m2s_version			: fb_mas_o_sla_i_t;
-	signal i_s2m_version			: fb_mas_i_sla_o_t;
+	signal i_c2p_version			: fb_con_o_per_i_t;
+	signal i_p2c_version			: fb_con_i_per_o_t;
 
-	--chipset slave
-	signal i_m2s_chipset_sla	: fb_mas_o_sla_i_t;
-	signal i_s2m_chipset_sla	: fb_mas_i_sla_o_t;
+	--chipset peripheral
+	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_per	: fb_con_i_per_o_t;
 
-	-- chipset master
-	signal i_m2s_chipset_mas	: fb_mas_o_sla_i_t;
-	signal i_s2m_chipset_mas	: fb_mas_i_sla_o_t;
+	-- chipset controller
+	signal i_c2p_chipset_con	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_con	: fb_con_i_per_o_t;
 
-	-- intcon master->slave
-	signal i_mas_m2s_intcon		: fb_mas_o_sla_i_arr(MASTER_COUNT-1 downto 0);
-	signal i_mas_s2m_intcon		: fb_mas_i_sla_o_arr(MASTER_COUNT-1 downto 0);
-	-- intcon slave->master
-	signal i_sla_m2s_intcon		: fb_mas_o_sla_i_arr(SLAVE_COUNT-1 downto 0);
-	signal i_sla_s2m_intcon		: fb_mas_i_sla_o_arr(SLAVE_COUNT-1 downto 0);
+	-- intcon controller->peripheral
+	signal i_con_c2p_intcon		: fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
+	signal i_con_p2c_intcon		: fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
+	-- intcon peripheral->controller
+	signal i_per_c2p_intcon		: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
+	signal i_per_p2c_intcon		: fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
 
-	-- chipset master->slave
-	signal i_mas_m2s_chipset	: fb_mas_o_sla_i_arr(MASTER_COUNT_CHIPSET-1 downto 0);
-	signal i_mas_s2m_chipset	: fb_mas_i_sla_o_arr(MASTER_COUNT_CHIPSET-1 downto 0);
-	-- chipset slave->master
-	signal i_sla_m2s_chipset	: fb_mas_o_sla_i_arr(SLAVE_COUNT_CHIPSET-1 downto 0);
-	signal i_sla_s2m_chipset	: fb_mas_i_sla_o_arr(SLAVE_COUNT_CHIPSET-1 downto 0);
+	-- chipset controller->peripheral
+	signal i_con_c2p_chipset	: fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
+	signal i_con_p2c_chipset	: fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
+	-- chipset peripheral->controller
+	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
+	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
 
 
 
@@ -327,15 +327,15 @@ architecture rtl of mk3blit is
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
 
-	-- intcon to slave sel
-	signal i_intcon_slave_sel_addr	: std_logic_vector(23 downto 0);
-	signal i_intcon_slave_sel			: unsigned(numbits(SLAVE_COUNT)-1 downto 0);  -- address decoded selected slave
-	signal i_intcon_slave_sel_oh		: std_logic_vector(SLAVE_COUNT-1 downto 0);	-- address decoded selected slaves as one-hot		
+	-- intcon to peripheral sel
+	signal i_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);
+	signal i_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
+	signal i_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
-	-- chipset m2s intcon to slave sel
-	signal i_chipset_intcon_slave_sel_addr		: std_logic_vector(7 downto 0);
-	signal i_chipset_intcon_slave_sel			: unsigned(numbits(SLAVE_COUNT_CHIPSET)-1 downto 0);  -- address decoded selected slave
-	signal i_chipset_intcon_slave_sel_oh		: std_logic_vector(SLAVE_COUNT_CHIPSET-1 downto 0);	-- address decoded selected slaves as one-hot		
+	-- chipset c2p intcon to peripheral sel
+	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
+	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET)-1 downto 0);  -- address decoded selected peripheral
+	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
 
 	-----------------------------------------------------------------------------
@@ -379,8 +379,8 @@ architecture rtl of mk3blit is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		HDMI_SCL_io							: inout	std_logic;
 		HDMI_SDA_io							: inout	std_logic;
@@ -404,9 +404,9 @@ architecture rtl of mk3blit is
 
 
 
-	-- hdmi slave interface control registers
-	signal i_m2s_hdmi_sla				: fb_mas_o_sla_i_t;
-	signal i_s2m_hdmi_sla				: fb_mas_i_sla_o_t;
+	-- hdmi peripheral interface control registers
+	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
+	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
 
 	signal i_vga_debug_r					: std_logic;
 	signal i_vga_debug_g					: std_logic;
@@ -480,117 +480,117 @@ begin
 
 	);	
 
-	-- address decode to select slave
+	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_SLAVE_COUNT				=> SLAVE_COUNT,
+		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> GBUILD_INCL_HDMI
 	)
 	port map (
-		addr_i						=> i_intcon_slave_sel_addr,
-		slave_sel_o					=> i_intcon_slave_sel,
-		slave_sel_oh_o				=> i_intcon_slave_sel_oh
+		addr_i						=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_o					=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_o				=> i_intcon_peripheral_sel_oh
 	);
 
 
-g_intcon_shared:IF MASTER_COUNT > 1 GENERATE
+g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: entity work.fb_intcon_shared
 	generic map (
 		SIM => SIM,
-		G_MASTER_COUNT => MASTER_COUNT,
-		G_SLAVE_COUNT => SLAVE_COUNT,
-		G_REGISTER_MAS_S2M => true
+		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
+		G_REGISTER_CONTROLLER_P2C => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
-		-- slave ports connect to masters
-		fb_mas_m2s_i						=> i_mas_m2s_intcon,
-		fb_mas_s2m_o						=> i_mas_s2m_intcon,
+		-- peripheral ports connect to controllers
+		fb_con_c2p_i						=> i_con_c2p_intcon,
+		fb_con_p2c_o						=> i_con_p2c_intcon,
 
-		-- master ports connect to slaves
-		fb_sla_m2s_o						=> i_sla_m2s_intcon,
-		fb_sla_s2m_i						=> i_sla_s2m_intcon,
+		-- controller ports connect to peripherals
+		fb_per_c2p_o						=> i_per_c2p_intcon,
+		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		slave_sel_addr_o					=> i_intcon_slave_sel_addr,
-		slave_sel_i							=> i_intcon_slave_sel,
-		slave_sel_oh_i						=> i_intcon_slave_sel_oh
+		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_i							=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
 
 
 END GENERATE;
-g_intcon_o2m:IF MASTER_COUNT = 1 GENERATE
+g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 	e_fb_intcon: entity work.fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
-		G_SLAVE_COUNT 						=> SLAVE_COUNT,
+		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
 		G_ADDRESS_WIDTH 					=> 24
 		)
 	port map (
 		fb_syscon_i 						=> i_fb_syscon,
 
-		-- slave ports connect to masters
-		fb_mas_m2s_i						=> i_mas_m2s_intcon(0),
-		fb_mas_s2m_o						=> i_mas_s2m_intcon(0),
+		-- peripheral ports connect to controllers
+		fb_con_c2p_i						=> i_con_c2p_intcon(0),
+		fb_con_p2c_o						=> i_con_p2c_intcon(0),
 
-		-- master ports connect to slaves
-		fb_sla_m2s_o						=> i_sla_m2s_intcon,
-		fb_sla_s2m_i						=> i_sla_s2m_intcon,
+		-- controller ports connect to peripherals
+		fb_per_c2p_o						=> i_per_c2p_intcon,
+		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		slave_sel_addr_o					=> i_intcon_slave_sel_addr,
-		slave_sel_i							=> i_intcon_slave_sel,
-		slave_sel_oh_i						=> i_intcon_slave_sel_oh
+		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_i							=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
 
 
 END GENERATE;
 
-	i_mas_m2s_intcon(MAS_NO_CPU)			<= i_m2s_cpu;
-	i_sla_s2m_intcon(SLAVE_NO_MEMCTL)	<=	i_s2m_memctl;
-	i_sla_s2m_intcon(SLAVE_NO_CHIPRAM)	<=	i_s2m_mem;
-	i_sla_s2m_intcon(SLAVE_NO_SYS)		<=	i_s2m_sys;
-	i_sla_s2m_intcon(SLAVE_NO_VERSION)	<= i_s2m_version;
+	i_con_c2p_intcon(MAS_NO_CPU)			<= i_c2p_cpu;
+	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
+	i_per_p2c_intcon(PERIPHERAL_NO_SYS)		<=	i_p2c_sys;
+	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
 
-	i_s2m_cpu				<= i_mas_s2m_intcon(MAS_NO_CPU);
-	i_m2s_memctl			<= i_sla_m2s_intcon(SLAVE_NO_MEMCTL);
-	i_m2s_mem				<= i_sla_m2s_intcon(SLAVE_NO_CHIPRAM);
-	i_m2s_sys				<= i_sla_m2s_intcon(SLAVE_NO_SYS);
-	i_m2s_version			<= i_sla_m2s_intcon(SLAVE_NO_VERSION);
+	i_p2c_cpu				<= i_con_p2c_intcon(MAS_NO_CPU);
+	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
+	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
+	i_c2p_sys				<= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
+	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
 
 
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
-	i_mas_m2s_intcon(MAS_NO_CHIPSET)		<= i_m2s_chipset_mas;
-	i_sla_s2m_intcon(SLAVE_NO_CHIPSET)	<= i_s2m_chipset_sla;
-	i_s2m_chipset_mas 	<= i_mas_s2m_intcon(MAS_NO_CHIPSET);
-	i_m2s_chipset_sla		<= i_sla_m2s_intcon(SLAVE_NO_CHIPSET);
+	i_con_c2p_intcon(MAS_NO_CHIPSET)		<= i_c2p_chipset_con;
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
+	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
-	e_chipset_mas:entity work.fb_intcon_many_to_one
+	e_chipset_con:entity work.fb_intcon_many_to_one
 	generic map (
 		SIM => SIM,
-		G_MASTER_COUNT	=> MASTER_COUNT_CHIPSET
+		G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
 	)
 	port map (
 
 		fb_syscon_i						=> i_fb_syscon,
 
-		-- slave port connect to masters
-		fb_mas_m2s_i => i_mas_m2s_chipset,
-		fb_mas_s2m_o => i_mas_s2m_chipset,
+		-- peripheral port connect to controllers
+		fb_con_c2p_i => i_con_c2p_chipset,
+		fb_con_p2c_o => i_con_p2c_chipset,
 
-		-- master port connecto to slaves
-		fb_sla_m2s_o					=> i_m2s_chipset_mas,
-		fb_sla_s2m_i					=> i_s2m_chipset_mas
+		-- controller port connecto to peripherals
+		fb_per_c2p_o					=> i_c2p_chipset_con,
+		fb_per_p2c_i					=> i_p2c_chipset_con
 
 	);
 
-	-- address decode to select slave
+	-- address decode to select peripheral
 	e_addr2s_chipset:entity work.address_decode_chipset
 	generic map (
 		SIM							=> SIM,
-		G_SLAVE_COUNT				=> SLAVE_COUNT_CHIPSET,
+		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT_CHIPSET,
 		G_INCL_CS_DMA						=> G_INCL_CS_DMA,
 		G_DMA_CHANNELS						=> G_DMA_CHANNELS,
 		G_INCL_CS_BLIT						=> G_INCL_CS_BLIT,
@@ -600,29 +600,29 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		G_INCL_CS_EEPROM					=> G_INCL_CS_EEPROM
 	)
 	port map (
-		addr_i						=> i_chipset_intcon_slave_sel_addr,
-		slave_sel_o					=> i_chipset_intcon_slave_sel,
-		slave_sel_oh_o				=> i_chipset_intcon_slave_sel_oh
+		addr_i						=> i_chipset_intcon_peripheral_sel_addr,
+		peripheral_sel_o					=> i_chipset_intcon_peripheral_sel,
+		peripheral_sel_oh_o				=> i_chipset_intcon_peripheral_sel_oh
 	);
 
-	e_fb_intcon_chipset_slave:entity work.fb_intcon_one_to_many
+	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
 	generic map (
 		SIM => SIM,
-		G_SLAVE_COUNT => SLAVE_COUNT_CHIPSET,
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET,
 		G_ADDRESS_WIDTH => 8
 	)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
-		fb_mas_m2s_i		=>	i_m2s_chipset_sla,
-		fb_mas_s2m_o		=> i_s2m_chipset_sla,
+		fb_con_c2p_i		=>	i_c2p_chipset_per,
+		fb_con_p2c_o		=> i_p2c_chipset_per,
 
-		fb_sla_m2s_o => i_sla_m2s_chipset,
-		fb_sla_s2m_i => i_sla_s2m_chipset,		
+		fb_per_c2p_o => i_per_c2p_chipset,
+		fb_per_p2c_i => i_per_p2c_chipset,		
 
-		slave_sel_addr_o					=> i_chipset_intcon_slave_sel_addr,
-		slave_sel_i							=> i_chipset_intcon_slave_sel,
-		slave_sel_oh_i						=> i_chipset_intcon_slave_sel_oh
+		peripheral_sel_addr_o					=> i_chipset_intcon_peripheral_sel_addr,
+		peripheral_sel_i							=> i_chipset_intcon_peripheral_sel,
+		peripheral_sel_oh_i						=> i_chipset_intcon_peripheral_sel_oh
 
 	);
 
@@ -630,12 +630,12 @@ GDMA:IF G_INCL_CS_DMA GENERATE
 
 	G_DMA_C:FOR I in 0 TO G_DMA_CHANNELS-1 GENERATE
 		
-		i_mas_m2s_chipset(MAS_NO_CHIPSET_DMA_0 + I)	<= i_m2s_dma_mas(I);
-		i_s2m_dma_mas(i) 	<= i_mas_s2m_chipset(MAS_NO_CHIPSET_DMA_0 + I);
+		i_con_c2p_chipset(MAS_NO_CHIPSET_DMA_0 + I)	<= i_c2p_dma_con(I);
+		i_p2c_dma_con(i) 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_DMA_0 + I);
 	END GENERATE;
 	
-	i_sla_s2m_chipset(SLAVE_NO_CHIPSET_DMA)	<=	i_s2m_dma_sla;
-	i_m2s_dma_sla 		<= i_sla_m2s_chipset(SLAVE_NO_CHIPSET_DMA);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA)	<=	i_p2c_dma_per;
+	i_c2p_dma_per 		<= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
 
 	e_fb_dma:entity work.fb_DMAC_int_dma
 	 generic map (
@@ -648,13 +648,13 @@ GDMA:IF G_INCL_CS_DMA GENERATE
 		-- fishbone signals		
 		fb_syscon_i							=> i_fb_syscon,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_m2s_dma_sla,
-		fb_sla_s2m_o						=> i_s2m_dma_sla,
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_c2p_dma_per,
+		fb_per_p2c_o						=> i_p2c_dma_per,
 
-		-- master interface (dma)
-		fb_mas_m2s_o						=> i_m2s_dma_mas,
-		fb_mas_s2m_i						=> i_s2m_dma_mas,
+		-- controller interface (dma)
+		fb_con_c2p_o						=> i_c2p_dma_con,
+		fb_con_p2c_i						=> i_p2c_dma_con,
 
 		int_o									=> i_dma_cpu_int,
 		cpu_halt_o							=> i_dma_cpu_halt,
@@ -668,10 +668,10 @@ END GENERATE;
 
 GBLIT:IF G_INCL_CS_BLIT GENERATE
 
-	i_mas_m2s_chipset(MAS_NO_CHIPSET_BLIT)		<= i_m2s_blit_mas;
-	i_s2m_blit_mas 	<= i_mas_s2m_chipset(MAS_NO_CHIPSET_BLIT);
-	i_m2s_blit_sla    <= i_sla_m2s_chipset(SLAVE_NO_CHIPSET_BLIT);
-	i_sla_s2m_chipset(SLAVE_NO_CHIPSET_BLIT)  <= i_s2m_blit_sla;
+	i_con_c2p_chipset(MAS_NO_CHIPSET_BLIT)		<= i_c2p_blit_con;
+	i_p2c_blit_con 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_BLIT);
+	i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
 
 	e_fb_blit:entity work.fb_dmac_blit
 	 generic map (
@@ -682,13 +682,13 @@ GBLIT:IF G_INCL_CS_BLIT GENERATE
 		-- fishbone signals		
 		fb_syscon_i							=> i_fb_syscon,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_m2s_blit_sla,
-		fb_sla_s2m_o						=> i_s2m_blit_sla,
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_c2p_blit_per,
+		fb_per_p2c_o						=> i_p2c_blit_per,
 
-		-- master interface (dma)
-		fb_mas_m2s_o						=> i_m2s_blit_mas,
-		fb_mas_s2m_i						=> i_s2m_blit_mas,
+		-- controller interface (dma)
+		fb_con_c2p_o						=> i_c2p_blit_con,
+		fb_con_p2c_i						=> i_p2c_blit_con,
 
 		cpu_halt_o							=> i_blit_cpu_halt,
 		blit_halt_i							=> i_aeris_cpu_halt
@@ -701,11 +701,11 @@ END GENERATE;
 
 GAERIS: IF G_INCL_CS_AERIS GENERATE
 
-	i_mas_m2s_chipset(MAS_NO_CHIPSET_AERIS)	<= i_m2s_aeris_mas;
-	i_s2m_aeris_mas <= i_mas_s2m_chipset(MAS_NO_CHIPSET_AERIS);
+	i_con_c2p_chipset(MAS_NO_CHIPSET_AERIS)	<= i_c2p_aeris_con;
+	i_p2c_aeris_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_AERIS);
 	
-	i_m2s_aeris_sla <= i_sla_m2s_chipset(SLAVE_NO_CHIPSET_AERIS);
-	i_sla_s2m_chipset(SLAVE_NO_CHIPSET_AERIS) <= i_s2m_aeris_sla;
+	i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
 
 	e_fb_aeris:entity work.fb_dmac_aeris
 	 generic map (
@@ -717,13 +717,13 @@ GAERIS: IF G_INCL_CS_AERIS GENERATE
 		-- fishbone signals		
 		fb_syscon_i							=> i_fb_syscon,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_m2s_aeris_sla,
-		fb_sla_s2m_o						=> i_s2m_aeris_sla,
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_c2p_aeris_per,
+		fb_per_p2c_o						=> i_p2c_aeris_per,
 
-		-- master interface (dma)
-		fb_mas_m2s_o						=> i_m2s_aeris_mas,
-		fb_mas_s2m_i						=> i_s2m_aeris_mas,
+		-- controller interface (dma)
+		fb_con_c2p_o						=> i_c2p_aeris_con,
+		fb_con_p2c_i						=> i_p2c_aeris_con,
 
 		cpu_halt_o							=> i_aeris_cpu_halt,
 
@@ -740,11 +740,11 @@ END GENERATE;
 
 
 GSND:IF G_INCL_CS_SND GENERATE
-	i_mas_m2s_chipset(MAS_NO_CHIPSET_SND)			<= i_m2s_snd_mas;
-	i_s2m_snd_mas <= i_mas_s2m_chipset(MAS_NO_CHIPSET_SND);
+	i_con_c2p_chipset(MAS_NO_CHIPSET_SND)			<= i_c2p_snd_con;
+	i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
 	
-	i_m2s_snd_sla <= i_sla_m2s_chipset(SLAVE_NO_CHIPSET_SOUND);
-	i_sla_s2m_chipset(SLAVE_NO_CHIPSET_SOUND)	<= i_s2m_snd_sla;
+	i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)	<= i_p2c_snd_per;
 
 	e_fb_snd:entity work.fb_DMAC_int_sound
 	 generic map (
@@ -756,13 +756,13 @@ GSND:IF G_INCL_CS_SND GENERATE
 		-- fishbone signals		
 		fb_syscon_i							=> i_fb_syscon,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_m2s_snd_sla,
-		fb_sla_s2m_o						=> i_s2m_snd_sla,
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_c2p_snd_per,
+		fb_per_p2c_o						=> i_p2c_snd_per,
 
-		-- master interface (dma)
-		fb_mas_m2s_o						=> i_m2s_snd_mas,
-		fb_mas_s2m_i						=> i_s2m_snd_mas,
+		-- controller interface (dma)
+		fb_con_c2p_o						=> i_c2p_snd_con,
+		fb_con_p2c_i						=> i_p2c_snd_con,
 
 		snd_clk_i							=> i_clk_snd,
 		snd_dat_o							=> i_snd_dat_o,
@@ -797,8 +797,8 @@ END GENERATE;
 
 
 GEEPROM: IF G_INCL_CS_EEPROM GENERATE
-	i_m2s_eeprom <= i_sla_m2s_chipset(SLAVE_NO_CHIPSET_EEPROM);
-	i_sla_s2m_chipset(SLAVE_NO_CHIPSET_EEPROM)	<=	i_s2m_eeprom;
+	i_c2p_eeprom <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM)	<=	i_p2c_eeprom;
 
 	e_fb_eeprom:entity work.fb_i2c
 	generic map (
@@ -814,8 +814,8 @@ GEEPROM: IF G_INCL_CS_EEPROM GENERATE
 		-- fishbone signals
 
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_i								=> i_m2s_eeprom,
-		fb_s2m_o								=> i_s2m_eeprom
+		fb_c2p_i								=> i_c2p_eeprom,
+		fb_p2c_o								=> i_p2c_eeprom
 	);
 
 END GENERATE;
@@ -841,8 +841,8 @@ END GENERATE;
 		-- fishbone signals
 
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_i								=> i_m2s_version,
-		fb_s2m_o								=> i_s2m_version
+		fb_c2p_i								=> i_c2p_version,
+		fb_p2c_o								=> i_p2c_version
 	);
 
 
@@ -878,8 +878,8 @@ END GENERATE;
 		-- fishbone signals
 
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_i								=> i_m2s_memctl,
-		fb_s2m_o								=> i_s2m_memctl,
+		fb_c2p_i								=> i_c2p_memctl,
+		fb_p2c_o								=> i_p2c_memctl,
 
 		-- cpu specific
 
@@ -908,8 +908,8 @@ END GENERATE;
 		-- fishbone signals
 
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_i								=> i_m2s_mem,
-		fb_s2m_o								=> i_s2m_mem,
+		fb_c2p_i								=> i_c2p_mem,
+		fb_p2c_o								=> i_p2c_mem,
 
 		debug_mem_a_stb_o					=> i_debug_mem_a_stb
 	);
@@ -941,8 +941,8 @@ END GENERATE;
 
 		-- fishbone signals
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_i								=> i_m2s_sys,
-		fb_s2m_o								=> i_s2m_sys,
+		fb_c2p_i								=> i_c2p_sys,
+		fb_p2c_o								=> i_p2c_sys,
 
 		-- generated extra signals
 
@@ -1033,8 +1033,8 @@ END GENERATE;
 
 		-- fishbone signals
 		fb_syscon_i							=> i_fb_syscon,
-		fb_m2s_o								=> i_m2s_cpu,
-		fb_s2m_i								=> i_s2m_cpu,
+		fb_c2p_o								=> i_c2p_cpu,
+		fb_p2c_i								=> i_p2c_cpu,
 
 		-- chipset control signals
 		cpu_halt_i							=> i_cpu_halt,
@@ -1229,8 +1229,8 @@ SD_MOSI_o <= '1';
 --====================================================
 
 
-	i_sla_s2m_intcon(SLAVE_NO_HDMI)		<= i_s2m_hdmi_sla;
-	i_m2s_hdmi_sla			<= i_sla_m2s_intcon(SLAVE_NO_HDMI);
+	i_per_p2c_intcon(PERIPHERAL_NO_HDMI)		<= i_p2c_hdmi_per;
+	i_c2p_hdmi_per			<= i_per_c2p_intcon(PERIPHERAL_NO_HDMI);
 
 
 	e_fb_HDMI:fb_HDMI
@@ -1242,8 +1242,8 @@ SD_MOSI_o <= '1';
 		CLK_48M_i			=> CLK_48M_i,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_m2s_i				=> i_m2s_hdmi_sla,
-		fb_s2m_o				=> i_s2m_hdmi_sla,
+		fb_c2p_i				=> i_c2p_hdmi_per,
+		fb_p2c_o				=> i_p2c_hdmi_per,
 
 		HDMI_SCL_io			=> HDMI_SCL_io,
 		HDMI_SDA_io			=> HDMI_SDA_io,

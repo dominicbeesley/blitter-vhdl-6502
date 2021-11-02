@@ -80,7 +80,7 @@ entity mk3blit_top is
 
 
 		-- test these as outputs!!!
-		SYS_RDY_i							: in 		std_logic; -- Master only?
+		SYS_RDY_i							: in 		std_logic; -- BBC Master only?
 		SYS_nNMI_i							: in 		std_logic;
 		SYS_nIRQ_i							: in 		std_logic;
 		SYS_PHI0_i							: in 		std_logic;

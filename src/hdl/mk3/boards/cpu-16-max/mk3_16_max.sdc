@@ -46,10 +46,10 @@ create_clock -name {CLK_48M} -period 20.833 -waveform { 0.000 10.416 } [get_port
 #**************************************************************
 
 
-create_generated_clock -name {main_pll}   -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 8 -divide_by 3 -master_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[0]}] 
-create_generated_clock -name {snd_pll}    -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 80 -divide_by 1083 -master_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[1]}] 
-create_generated_clock -name {hdmi_pixel} -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 2 -divide_by 3 -master_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[2]}] 
-create_generated_clock -name {hdmi_tmds}  -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 10 -divide_by 3 -master_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[3]}] 
+create_generated_clock -name {main_pll}   -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 8 -divide_by 3 -controller_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[0]}] 
+create_generated_clock -name {snd_pll}    -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 80 -divide_by 1083 -controller_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[1]}] 
+create_generated_clock -name {hdmi_pixel} -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 2 -divide_by 3 -controller_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[2]}] 
+create_generated_clock -name {hdmi_tmds}  -source [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|inclk[0]}] -duty_cycle 50/1 -multiply_by 10 -divide_by 3 -controller_clock {CLK_48M} [get_pins {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1|clk[3]}] 
 
 
 #**************************************************************

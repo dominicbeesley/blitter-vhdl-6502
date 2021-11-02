@@ -28,30 +28,30 @@ package mk3blit_pack is
 
 
 
-	constant SLAVE_COUNT		: natural := 6;
-	constant SLAVE_NO_VERSION	: natural := 0;
-	constant SLAVE_NO_SYS	 	: natural := 1;
-	constant SLAVE_NO_CHIPRAM	: natural := 2;
-	constant SLAVE_NO_MEMCTL	: natural := 3;
-	constant SLAVE_NO_CHIPSET	: natural := 4;
-	constant SLAVE_NO_HDMI		: natural := 5;
+	constant PERIPHERAL_COUNT		: natural := 6;
+	constant PERIPHERAL_NO_VERSION	: natural := 0;
+	constant PERIPHERAL_NO_SYS	 	: natural := 1;
+	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
+	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
+	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
+	constant PERIPHERAL_NO_HDMI		: natural := 5;
 	
 
-	constant MASTER_COUNT		: natural := 2;
+	constant CONTROLLER_COUNT		: natural := 2;
 	-- not 0 is highest priority!
 	constant MAS_NO_CPU		: natural := 1;
 	constant MAS_NO_CHIPSET		: natural := 0;
 
 
-	constant SLAVE_COUNT_CHIPSET	: natural := 5;
-	constant SLAVE_NO_CHIPSET_DMA	: natural := 0;
-	constant SLAVE_NO_CHIPSET_SOUND	: natural := 1;
-	constant SLAVE_NO_CHIPSET_BLIT	: natural := 2;
-	constant SLAVE_NO_CHIPSET_AERIS	: natural := 3;
-	constant SLAVE_NO_CHIPSET_EEPROM: natural := 4;
+	constant PERIPHERAL_COUNT_CHIPSET	: natural := 5;
+	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
+	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
+	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 2;
+	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 3;
+	constant PERIPHERAL_NO_CHIPSET_EEPROM: natural := 4;
 
 
-	constant MASTER_COUNT_CHIPSET	: natural := 5;
+	constant CONTROLLER_COUNT_CHIPSET	: natural := 5;
 	constant MAS_NO_CHIPSET_BLIT	: natural := 4;
 	constant MAS_NO_CHIPSET_DMA_1	: natural := 3; 
 	constant MAS_NO_CHIPSET_DMA_0	: natural := 2;
