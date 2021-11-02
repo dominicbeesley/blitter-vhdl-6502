@@ -481,7 +481,7 @@ begin
 	);	
 
 	-- address decode to select slave
-	e_addr2s:entity work.addr2slave
+	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
 		G_SLAVE_COUNT				=> SLAVE_COUNT,
@@ -522,7 +522,7 @@ g_intcon_shared:IF MASTER_COUNT > 1 GENERATE
 
 END GENERATE;
 g_intcon_o2m:IF MASTER_COUNT = 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_one_master_many_slave
+	e_fb_intcon: entity work.fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
 		G_SLAVE_COUNT 						=> SLAVE_COUNT,
@@ -567,7 +567,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_s2m_chipset_mas 	<= i_mas_s2m_intcon(MAS_NO_CHIPSET);
 	i_m2s_chipset_sla		<= i_sla_m2s_intcon(SLAVE_NO_CHIPSET);
 
-	e_chipset_mas:entity work.fb_intcon_many_master_one_slave
+	e_chipset_mas:entity work.fb_intcon_many_to_one
 	generic map (
 		SIM => SIM,
 		G_MASTER_COUNT	=> MASTER_COUNT_CHIPSET
@@ -587,7 +587,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	);
 
 	-- address decode to select slave
-	e_addr2s_chipset:entity work.addr2slave_chipset
+	e_addr2s_chipset:entity work.address_decode_chipset
 	generic map (
 		SIM							=> SIM,
 		G_SLAVE_COUNT				=> SLAVE_COUNT_CHIPSET,
@@ -605,7 +605,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		slave_sel_oh_o				=> i_chipset_intcon_slave_sel_oh
 	);
 
-	e_fb_intcon_chipset_slave:entity work.fb_intcon_one_master_many_slave
+	e_fb_intcon_chipset_slave:entity work.fb_intcon_one_to_many
 	generic map (
 		SIM => SIM,
 		G_SLAVE_COUNT => SLAVE_COUNT_CHIPSET,

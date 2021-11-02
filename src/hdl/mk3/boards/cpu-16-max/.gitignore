@@ -1,0 +1,14 @@
+db
+incremental_db
+output_files
+*.qws
+*.qdf
+*.chg
+*.bak
+*.rpt
+makefile.deps
+*.cof
+
+
+
+

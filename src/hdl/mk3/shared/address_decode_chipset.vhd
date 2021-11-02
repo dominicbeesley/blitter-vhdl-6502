@@ -50,7 +50,7 @@ use work.common.all;
 use work.fishbone.all;
 use work.mk3blit_pack.all;
 
-entity addr_decode_chipset is
+entity address_decode_chipset is
 	generic (
 		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_SLAVE_COUNT				: natural := 9;
@@ -68,9 +68,9 @@ entity addr_decode_chipset is
 		slave_sel_o					: out		unsigned(numbits(G_SLAVE_COUNT)-1 downto 0);
 		slave_sel_oh_o				: out		std_logic_vector(G_SLAVE_COUNT-1 downto 0)
 	);
-end addr_decode_chipset;
+end address_decode_chipset;
 
-architecture rtl of addr_decode_chipset is
+architecture rtl of address_decode_chipset is
 begin
 
 
