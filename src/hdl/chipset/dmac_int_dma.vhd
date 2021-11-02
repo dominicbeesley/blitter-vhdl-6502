@@ -59,13 +59,13 @@ entity fb_DMAC_int_dma is
 		-- fishbone signals		
 		fb_syscon_i							: in		fb_syscon_t;
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						: in		fb_mas_o_sla_i_t;
-		fb_sla_s2m_o						: out		fb_mas_i_sla_o_t;
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						: in		fb_con_o_per_i_t;
+		fb_per_p2c_o						: out		fb_con_i_per_o_t;
 
-		-- master interface (dma)
-		fb_mas_m2s_o						: out		fb_mas_o_sla_i_arr(G_CHANNELS-1 downto 0);
-		fb_mas_s2m_i						: in		fb_mas_i_sla_o_arr(G_CHANNELS-1 downto 0);
+		-- controller interface (dma)
+		fb_con_c2p_o						: out		fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
+		fb_con_p2c_i						: in		fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
 
 		int_o									: out		STD_LOGIC;		-- interrupt active hi
 		cpu_halt_o							: out		STD_LOGIC;
@@ -82,61 +82,61 @@ architecture Behavioral of fb_DMAC_int_dma is
 
 	type		sla_state_t	is (idle, child_act, sel_act, wait_cyc);
 
-	signal	r_sla_state 		: sla_state_t;
+	signal	r_per_state 		: sla_state_t;
 
-	signal	i_cha_fb_sla_m2s	: fb_mas_o_sla_i_arr(G_CHANNELS-1 downto 0);
-	signal	i_cha_fb_sla_s2m	: fb_mas_i_sla_o_arr(G_CHANNELS-1 downto 0);
+	signal	i_cha_fb_per_m2s	: fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
+	signal	i_cha_fb_per_s2m	: fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
 
 	signal	r_cha_sel			: unsigned(numbits(G_CHANNELS)-1 downto 0);
 
 	signal	i_child_int			: std_logic_vector(G_CHANNELS-1 downto 0);
 	signal	i_child_cpu_halt	: std_logic_vector(G_CHANNELS-1 downto 0);
 
-	signal	r_sel_sla_rdy		: std_logic;
-	signal	r_sel_sla_ack		: std_logic;
+	signal	r_sel_per_rdy		: std_logic;
+	signal	r_sel_per_ack		: std_logic;
 
 begin
 
 	int_o <= or_reduce(i_child_int);
 	cpu_halt_o <= or_reduce(i_child_cpu_halt);
 
-	p_sla_state:process(fb_syscon_i)
+	p_per_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_sla_state <= idle;
+			r_per_state <= idle;
 			r_cha_sel <= (others => '0');
-			r_sel_sla_rdy <= '0';
-			r_sel_sla_ack <= '0';
+			r_sel_per_rdy <= '0';
+			r_sel_per_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
-			r_sel_sla_ack <= '0';
-			case r_sla_state is
+			r_sel_per_ack <= '0';
+			case r_per_state is
 				when idle =>
-					if fb_sla_m2s_i.cyc = '1' and fb_sla_m2s_i.A_stb = '1' then
-						if unsigned(fb_sla_m2s_i.A(3 downto 0)) = x"F" then
-							r_sla_state <= sel_act;
-							if fb_sla_m2s_i.we = '0' then
-								r_sel_sla_ack <= '1';
-								r_sel_sla_rdy <= '1';
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
+						if unsigned(fb_per_c2p_i.A(3 downto 0)) = x"F" then
+							r_per_state <= sel_act;
+							if fb_per_c2p_i.we = '0' then
+								r_sel_per_ack <= '1';
+								r_sel_per_rdy <= '1';
 							end if;
 						else
-							r_sla_state <= child_act;
+							r_per_state <= child_act;
 						end if;
 					end if;
 				when sel_act =>
-					if fb_sla_m2s_i.we = '1' and fb_sla_m2s_i.D_wr_stb = '1' then
-						r_cha_sel <= unsigned(fb_sla_m2s_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
-						r_sel_sla_ack <= '1';
-						r_sel_sla_rdy <= '1';
-						r_sla_state <= wait_cyc;
+					if fb_per_c2p_i.we = '1' and fb_per_c2p_i.D_wr_stb = '1' then
+						r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
+						r_sel_per_ack <= '1';
+						r_sel_per_rdy <= '1';
+						r_per_state <= wait_cyc;
 					end if;
 				when wait_cyc =>
 				   -- already ack'd wait for cyc/a_stb to go low
 				when others => null;
 			end case;
-			if fb_sla_m2s_i.cyc = '0' or fb_sla_m2s_i.A_stb = '0' then
-				r_sla_state <= idle;
-				r_sel_sla_rdy <= '0';
+			if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.A_stb = '0' then
+				r_per_state <= idle;
+				r_sel_per_rdy <= '0';
 			end if;
 
 		end if;
@@ -154,13 +154,13 @@ begin
 		-- fishbone signals		
 		fb_syscon_i							=> fb_syscon_i,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_cha_fb_sla_m2s(I),
-		fb_sla_s2m_o						=> i_cha_fb_sla_s2m(I),
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_cha_fb_per_m2s(I),
+		fb_per_p2c_o						=> i_cha_fb_per_s2m(I),
 
-		-- master interface (dma)
-		fb_mas_m2s_o						=> fb_mas_m2s_o(I),
-		fb_mas_s2m_i						=> fb_mas_s2m_i(I),
+		-- controller interface (dma)
+		fb_con_c2p_o						=> fb_con_c2p_o(I),
+		fb_con_p2c_i						=> fb_con_p2c_i(I),
 
 		int_o									=> i_child_int(I),
 		cpu_halt_o							=> i_child_cpu_halt(I),
@@ -170,47 +170,47 @@ begin
 
 	end generate;
 
-	p_sla_cha_sel_o:process(fb_syscon_i, r_sla_state, r_cha_sel, i_cha_fb_sla_s2m, fb_sla_m2s_i, r_sel_sla_rdy, r_sel_sla_ack)	
-	variable v_sla_rdy_ctdn:unsigned(RDY_CTDN_LEN-1 downto 0);
+	p_per_cha_sel_o:process(fb_syscon_i, r_per_state, r_cha_sel, i_cha_fb_per_s2m, fb_per_c2p_i, r_sel_per_rdy, r_sel_per_ack)	
+	variable v_per_rdy_ctdn:unsigned(RDY_CTDN_LEN-1 downto 0);
 	begin		
-		if r_sel_sla_rdy = '1' then
-			v_sla_rdy_ctdn := RDY_CTDN_MIN;
+		if r_sel_per_rdy = '1' then
+			v_per_rdy_ctdn := RDY_CTDN_MIN;
 		else 
-			v_sla_rdy_ctdn := RDY_CTDN_MAX;
+			v_per_rdy_ctdn := RDY_CTDN_MAX;
 		end if;
 
 
-		fb_sla_s2m_o <= (
+		fb_per_p2c_o <= (
 			D_rd => (others => '-'),
 			rdy_ctdn => RDY_CTDN_MAX,
 			ack => '0',
 			nul => '0'
 			);
-		if r_sla_state = child_act then
+		if r_per_state = child_act then
 			for I in 0 to G_CHANNELS-1 loop
 				if r_cha_sel = I then
-					fb_sla_s2m_o <= i_cha_fb_sla_s2m(I);
+					fb_per_p2c_o <= i_cha_fb_per_s2m(I);
 				end if;
 			end loop;
-		elsif r_sla_state = sel_act or r_sla_state = wait_cyc then
-			fb_sla_s2m_o <= (
+		elsif r_per_state = sel_act or r_per_state = wait_cyc then
+			fb_per_p2c_o <= (
 				D_rd => PADBITS & std_logic_vector(r_cha_sel),
-				rdy_ctdn => v_sla_rdy_ctdn,
-				ack => r_sel_sla_ack,
+				rdy_ctdn => v_per_rdy_ctdn,
+				ack => r_sel_per_ack,
 				nul => '0'
 				);
 		end if;
 	end process;
 					
-	p_sla_cha_sel_i:process(r_cha_sel, fb_sla_m2s_i)
+	p_per_cha_sel_i:process(r_cha_sel, fb_per_c2p_i)
 	begin
 		for I in 0 to G_CHANNELS-1 loop
 			if r_cha_sel = I then
 				-- this assumes that the child channels will
 				-- ignore selects to register F!
-				i_cha_fb_sla_m2s(I) <= fb_sla_m2s_i;
+				i_cha_fb_per_m2s(I) <= fb_per_c2p_i;
 			else
-				i_cha_fb_sla_m2s(I) <= (
+				i_cha_fb_per_m2s(I) <= (
 						cyc => '0',
 						we => '0',
 						A => (others => '-'),

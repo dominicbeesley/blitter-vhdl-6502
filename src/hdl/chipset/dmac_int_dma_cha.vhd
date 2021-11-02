@@ -31,7 +31,6 @@
 -- Tool versions: 
 -- Description: 		
 --
--- Der_mas_cycencies: 
 --
 -- Revision: 
 -- Revision 0.01 - File Created
@@ -57,13 +56,13 @@ entity fb_DMAC_int_dma_cha is
 		-- fishbone signals		
 		fb_syscon_i							: in		fb_syscon_t;
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						: in		fb_mas_o_sla_i_t;
-		fb_sla_s2m_o						: out		fb_mas_i_sla_o_t;
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						: in		fb_con_o_per_i_t;
+		fb_per_p2c_o						: out		fb_con_i_per_o_t;
 
-		-- master interface (dma)
-		fb_mas_m2s_o						: out		fb_mas_o_sla_i_t;
-		fb_mas_s2m_i						: in		fb_mas_i_sla_o_t;
+		-- controller interface (dma)
+		fb_con_c2p_o						: out		fb_con_o_per_i_t;
+		fb_con_p2c_i						: in		fb_con_i_per_o_t;
 
 		int_o									: out		STD_LOGIC;		-- interrupt active hi
 		cpu_halt_o							: out		STD_LOGIC;
@@ -156,16 +155,16 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 		return ret;
 	end;
 
-	signal	r_sla_state				: sla_state_t;
-	signal	r_sla_addr				: std_logic_vector(3 downto 0);
-	signal 	i_sla_D_rd				: std_logic_vector(7 downto 0);
+	signal	r_per_state				: sla_state_t;
+	signal	r_per_addr				: std_logic_vector(3 downto 0);
+	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 
 	signal	r_dma_state				: dma_state_type;
 	signal	i_dma_state_next		: dma_state_type;
 
 	signal	i_next_addr				: std_logic_vector(15 downto 0);
-	signal	i_next_mas_addr		: std_logic_vector(23 downto 0);					-- the address for the next master cycle
-	signal	r_mas_addr				: std_logic_vector(23 downto 0);					-- the address for the current master cycle
+	signal	i_next_con_addr		: std_logic_vector(23 downto 0);					-- the address for the next controller cycle
+	signal	r_con_addr				: std_logic_vector(23 downto 0);					-- the address for the current controller cycle
 
 	signal	r_ctl_act				: std_logic;
 	signal	r_ctl_step_src			: step_type;
@@ -195,11 +194,11 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	signal 	r_pause_ct_dn			: unsigned(11 downto 0);
 	signal	r_pause_ct_dn_finished:std_logic;
 
-	signal	r_mas_state				: mas_state_type;
-	signal	r_mas_cyc				: std_logic;
+	signal	r_con_state				: mas_state_type;
+	signal	r_con_cyc				: std_logic;
 
-	signal	r_sla_rdy				: std_logic;
-	signal 	r_sla_ack				: std_logic;
+	signal	r_per_rdy				: std_logic;
+	signal 	r_per_ack				: std_logic;
 
 	signal	i_state_change_clken	: std_logic;
 begin
@@ -247,34 +246,34 @@ begin
 		end case;
 	end process;
 
-	p_master_cycle_state:process(fb_syscon_i)
+	p_controller_cycle_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_mas_state <= idle;
-			r_mas_cyc <= '0';
+			r_con_state <= idle;
+			r_con_cyc <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
-				case r_mas_state is
+				case r_con_state is
 					when idle =>
 						if dma_halt_i = '0' then
 							case r_dma_state is
 								when sMemAccSRC|sMemAccSRC2 =>
 									if r_ctl_step_src /= nop then
-										r_mas_cyc <= '1';
-										r_mas_state <= waitack;
+										r_con_cyc <= '1';
+										r_con_state <= waitack;
 									end if;
 								when sMemAccDEST|sMemAccDEST2 =>
 									if r_ctl_step_dest /= nop then
-										r_mas_cyc <= '1';
-										r_mas_state <= waitack;
+										r_con_cyc <= '1';
+										r_con_state <= waitack;
 									end if;
 								when others => null;						
 							end case;
 						end if;
 					when waitack =>
-						if fb_mas_s2m_i.ack = '1' then
-							r_mas_cyc <= '0';
-							r_mas_state <= idle;
+						if fb_con_p2c_i.ack = '1' then
+							r_con_cyc <= '0';
+							r_con_state <= idle;
 						end if;
 					when others => null;
 				end case;
@@ -283,7 +282,7 @@ begin
 	end process;
 
 	i_state_change_clken <= 
-		fb_mas_s2m_i.ack when r_mas_cyc = '1' else
+		fb_con_p2c_i.ack when r_con_cyc = '1' else
 		'1' when
 				r_dma_state = sIdle 
 			or r_dma_state = sFinish 
@@ -296,7 +295,7 @@ begin
 			else
 		'0';
 
-	p_stat: process(fb_syscon_i, fb_mas_s2m_i)
+	p_stat: process(fb_syscon_i, fb_con_p2c_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_dma_state <= sIdle;
@@ -394,7 +393,7 @@ begin
 		end case;		
 	end process;
 
-	p_regs_wr : process(fb_syscon_i, fb_sla_m2s_i)
+	p_regs_wr : process(fb_syscon_i, fb_per_c2p_i)
 	begin
 
 
@@ -436,17 +435,17 @@ begin
 					when sMemAccSRC =>
 						if r_ctl_step_src /= nop then
 							if r_ctl_extend = '1' and r_ctl2_stepsize = wordswapsrc then
-								r_data(7 downto 0) <= fb_mas_s2m_i.D_rd;
+								r_data(7 downto 0) <= fb_con_p2c_i.D_rd;
 							else
-								r_data(15 downto 8) <= fb_mas_s2m_i.D_rd;
+								r_data(15 downto 8) <= fb_con_p2c_i.D_rd;
 							end if;
 						end if;
 					when sMemAccSRC2 =>
 						if r_ctl_step_src /= nop then						
 							if r_ctl_extend = '1' and r_ctl2_stepsize = wordswapsrc then
-								r_data(15 downto 8) <= fb_mas_s2m_i.D_rd;
+								r_data(15 downto 8) <= fb_con_p2c_i.D_rd;
 							else
-								r_data(7 downto 0) <= fb_mas_s2m_i.D_rd;
+								r_data(7 downto 0) <= fb_con_p2c_i.D_rd;
 							end if;
 						end if;
 					when others => null;
@@ -460,7 +459,7 @@ begin
 					when others => null;
 				end case;
 
-				r_mas_addr <= i_next_mas_addr;
+				r_con_addr <= i_next_con_addr;
 
 				if (r_dma_state = sMemAccDEST and (r_ctl_extend = '0' or r_ctl2_stepsize = byte))
 				or (r_dma_state = sMemAccDEST2) then
@@ -480,55 +479,55 @@ begin
 				end if;
 			end if;
 
-			if fb_sla_m2s_i.cyc = '1' 
-				and fb_sla_m2s_i.D_wr_stb = '1' 
-				and fb_sla_m2s_i.we = '1' 
-				and r_sla_ack = '1' 
+			if fb_per_c2p_i.cyc = '1' 
+				and fb_per_c2p_i.D_wr_stb = '1' 
+				and fb_per_c2p_i.we = '1' 
+				and r_per_ack = '1' 
 				then
 
-				case to_integer(unsigned(r_sla_addr)) is
+				case to_integer(unsigned(r_per_addr)) is
 					when A_CTL =>
-						r_ctl_act <= fb_sla_m2s_i.D_wr(7);
-						r_ctl_extend <= fb_sla_m2s_i.D_wr(5);
-						r_ctl_halt <= fb_sla_m2s_i.D_wr(4);
-						r_ctl_step_src <= to_step(fb_sla_m2s_i.D_wr(1 downto 0));
-						r_ctl_step_dest <= to_step(fb_sla_m2s_i.D_wr(3 downto 2));
+						r_ctl_act <= fb_per_c2p_i.D_wr(7);
+						r_ctl_extend <= fb_per_c2p_i.D_wr(5);
+						r_ctl_halt <= fb_per_c2p_i.D_wr(4);
+						r_ctl_step_src <= to_step(fb_per_c2p_i.D_wr(1 downto 0));
+						r_ctl_step_dest <= to_step(fb_per_c2p_i.D_wr(3 downto 2));
 						r_ctl2_if <= '0';
 					when A_SRC_ADDR_BANK =>
-						r_src_addr_bank <= fb_sla_m2s_i.D_wr(7 downto 0);
+						r_src_addr_bank <= fb_per_c2p_i.D_wr(7 downto 0);
 					when A_SRC_ADDR =>
-						r_src_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;
+						r_src_addr(15 downto 8) <= fb_per_c2p_i.D_wr;
 					when A_SRC_ADDR + 1=>
-						r_src_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_src_addr(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_DEST_ADDR_BANK =>
-						r_dest_addr_bank <= fb_sla_m2s_i.D_wr(7 downto 0);
+						r_dest_addr_bank <= fb_per_c2p_i.D_wr(7 downto 0);
 					when A_DEST_ADDR =>
-						r_dest_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;
+						r_dest_addr(15 downto 8) <= fb_per_c2p_i.D_wr;
 					when A_DEST_ADDR + 1 =>
-						r_dest_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_dest_addr(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_COUNT =>
-						r_count(15 downto 8) <= UNSIGNED(fb_sla_m2s_i.D_wr);
+						r_count(15 downto 8) <= UNSIGNED(fb_per_c2p_i.D_wr);
 						r_count_finish <= '0';
 					when A_COUNT + 1 =>
-						r_count(7 downto 0) <= UNSIGNED(fb_sla_m2s_i.D_wr);
+						r_count(7 downto 0) <= UNSIGNED(fb_per_c2p_i.D_wr);
 						r_count_finish <= '0';
 					when A_DATA =>
-						r_data(15 downto 8) <= fb_sla_m2s_i.D_wr;
-						r_data(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_data(15 downto 8) <= fb_per_c2p_i.D_wr;
+						r_data(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_CTL2 =>
 						r_ctl2_if <= '0';												-- TODO : move to a read reg?
-						r_ctl2_ie <= fb_sla_m2s_i.D_wr(1);
-						r_ctl2_pause <= fb_sla_m2s_i.D_wr(0);
-						r_ctl2_stepsize <= bits2stepsize(fb_sla_m2s_i.D_wr(3 downto 2));
+						r_ctl2_ie <= fb_per_c2p_i.D_wr(1);
+						r_ctl2_pause <= fb_per_c2p_i.D_wr(0);
+						r_ctl2_stepsize <= bits2stepsize(fb_per_c2p_i.D_wr(3 downto 2));
 					when A_PAUSE_VAL =>
-						r_pause_val <= fb_sla_m2s_i.D_wr;
+						r_pause_val <= fb_per_c2p_i.D_wr;
 					when others => null;
 				end case;
 			end if;
 		end if;
 	end process;
 
-	p_regs_rd: process(r_sla_addr, 	
+	p_regs_rd: process(r_per_addr, 	
 		r_ctl_act,
 		r_src_addr_bank,
 		r_src_addr,
@@ -547,42 +546,42 @@ begin
 		r_ctl2_stepsize
 		)
 	begin
-		case to_integer(unsigned(r_sla_addr)) is
+		case to_integer(unsigned(r_per_addr)) is
 			when A_CTL =>
-				i_sla_D_rd <= 	r_ctl_act 
+				i_per_D_rd <= 	r_ctl_act 
 									& '0'
 									& r_ctl_extend
 									& r_ctl_halt
 									& to_std_logic_vector(r_ctl_step_dest) 
 									& to_std_logic_vector(r_ctl_step_src);
 			when A_SRC_ADDR_BANK =>
-				i_sla_D_rd <= r_src_addr_bank;
+				i_per_D_rd <= r_src_addr_bank;
 			when A_SRC_ADDR =>
-				i_sla_D_rd <= r_src_addr(15 downto 8);
+				i_per_D_rd <= r_src_addr(15 downto 8);
 			when A_SRC_ADDR + 1 =>
-				i_sla_D_rd <= r_src_addr(7 downto 0);
+				i_per_D_rd <= r_src_addr(7 downto 0);
 			when A_DEST_ADDR_BANK =>
-				i_sla_D_rd <= r_dest_addr_bank;
+				i_per_D_rd <= r_dest_addr_bank;
 			when A_DEST_ADDR =>
-				i_sla_D_rd <= r_dest_addr(15 downto 8);
+				i_per_D_rd <= r_dest_addr(15 downto 8);
 			when A_DEST_ADDR + 1 =>
-				i_sla_D_rd <= r_dest_addr(7 downto 0);
+				i_per_D_rd <= r_dest_addr(7 downto 0);
 			when A_COUNT =>
-				i_sla_D_rd <= std_logic_vector(r_count(15 downto 8));
+				i_per_D_rd <= std_logic_vector(r_count(15 downto 8));
 			when A_COUNT + 1 =>
-				i_sla_D_rd <= std_logic_vector(r_count(7 downto 0));
+				i_per_D_rd <= std_logic_vector(r_count(7 downto 0));
 			when A_DATA =>
-				i_sla_D_rd <= r_data(15 downto 8);
+				i_per_D_rd <= r_data(15 downto 8);
 			when A_CTL2 =>
-				i_sla_D_rd <= r_ctl2_if
+				i_per_D_rd <= r_ctl2_if
 								 & "000"
 								 & stepsize2bits(r_ctl2_stepsize)
 								 & r_ctl2_ie
 								 & r_ctl2_pause;
 			when A_PAUSE_VAL =>
-				i_sla_D_rd <= r_pause_val;
+				i_per_D_rd <= r_pause_val;
 			when others => 
-				i_sla_D_rd <= (others => '-');
+				i_per_D_rd <= (others => '-');
 		end case;
 	end process;
 
@@ -593,34 +592,34 @@ begin
 	int_o <=			r_ctl2_if when r_ctl2_ie = '1' else
 						'0';
 
-	p_sla_state:process(fb_syscon_i, fb_sla_m2s_i)
+	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_sla_state <= idle;
-			r_sla_rdy <= '0';
-			r_sla_ack <= '0';
+			r_per_state <= idle;
+			r_per_rdy <= '0';
+			r_per_ack <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
-				r_sla_ack <= '0';
-				case r_sla_state is
+				r_per_ack <= '0';
+				case r_per_state is
 					when idle =>
 						-- idle, wait for a new request
-						if fb_sla_m2s_i.cyc = '1' and fb_sla_m2s_i.a_stb = '1' then
-							r_sla_addr <= fb_sla_m2s_i.A(3 downto 0);
-							r_sla_state <= addr;
+						if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
+							r_per_addr <= fb_per_c2p_i.A(3 downto 0);
+							r_per_state <= addr;
 						end if;
 					when addr =>
 						-- address has had time to settle, read regs
-						fb_sla_s2m_o.D_rd <= i_sla_D_rd;
-						if fb_sla_m2s_i.we = '0' or fb_sla_m2s_i.D_wr_stb = '1' then
-							r_sla_state <= wait_cyc;
+						fb_per_p2c_o.D_rd <= i_per_D_rd;
+						if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
+							r_per_state <= wait_cyc;
 						end if;
 					when wait_cyc =>
-						r_sla_rdy <= '1';
-						r_sla_ack <= '1';
-						if fb_sla_m2s_i.cyc = '0' or fb_sla_m2s_i.a_stb = '0' then
-							r_sla_state <= idle;
-							r_sla_rdy <= '0';
+						r_per_rdy <= '1';
+						r_per_ack <= '1';
+						if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
+							r_per_state <= idle;
+							r_per_rdy <= '0';
 						end if;
 					when others => null;
 				end case;
@@ -628,12 +627,12 @@ begin
 		end if;
 	end process;
 
-	fb_sla_s2m_o.rdy_ctdn <= RDY_CTDN_MIN when r_sla_rdy = '1' else
+	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
 									 RDY_CTDN_MAX;
-	fb_sla_s2m_o.ack <= r_sla_ack;
-	fb_sla_s2m_o.nul <= '0';
+	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.nul <= '0';
 
-	i_next_mas_addr <=
+	i_next_con_addr <=
 				 		r_src_addr_bank & std_logic_vector(unsigned(r_src_addr) + 1) 
 								when i_dma_state_next = sMemAccSRC and r_ctl_extend = '1' and r_ctl2_stepsize = wordswapsrc else 
 						r_src_addr_bank & r_src_addr
@@ -653,14 +652,14 @@ begin
 						(others => '1');
 
 
-	fb_mas_m2s_o.cyc <= r_mas_cyc;
-  	fb_mas_m2s_o.we <= '1' when r_dma_state = sMemAccDEST or r_dma_state = sMemAccDEST2 else
+	fb_con_c2p_o.cyc <= r_con_cyc;
+  	fb_con_c2p_o.we <= '1' when r_dma_state = sMemAccDEST or r_dma_state = sMemAccDEST2 else
   							 '0';
-  	fb_mas_m2s_o.A <= r_mas_addr;
-  	fb_mas_m2s_o.A_stb <= r_mas_cyc;
-	fb_mas_m2s_o.D_wr	 <=	r_data(7 downto 0) when r_dma_state = sMemAccDEST and (r_ctl_extend = '1' and r_ctl2_stepsize = wordswapdest) else
+  	fb_con_c2p_o.A <= r_con_addr;
+  	fb_con_c2p_o.A_stb <= r_con_cyc;
+	fb_con_c2p_o.D_wr	 <=	r_data(7 downto 0) when r_dma_state = sMemAccDEST and (r_ctl_extend = '1' and r_ctl2_stepsize = wordswapdest) else
 									r_data(7 downto 0) when r_dma_state = sMemAccDEST2 and (r_ctl_extend = '0' or r_ctl2_stepsize /= wordswapdest) else
 									r_data(15 downto 8);
-  	fb_mas_m2s_o.D_wr_stb <= r_mas_cyc;
+  	fb_con_c2p_o.D_wr_stb <= r_con_cyc;
 	
 end Behavioral;

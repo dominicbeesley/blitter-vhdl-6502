@@ -103,13 +103,13 @@ entity fb_dmac_blit is
 		-- fishbone signals		
 		fb_syscon_i							: in		fb_syscon_t;
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						: in		fb_mas_o_sla_i_t;
-		fb_sla_s2m_o						: out		fb_mas_i_sla_o_t;
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						: in		fb_con_o_per_i_t;
+		fb_per_p2c_o						: out		fb_con_i_per_o_t;
 
-		-- master interface (dma)
-		fb_mas_m2s_o						: out		fb_mas_o_sla_i_t;
-		fb_mas_s2m_i						: in		fb_mas_i_sla_o_t;
+		-- controller interface (dma)
+		fb_con_c2p_o						: out		fb_con_o_per_i_t;
+		fb_con_p2c_i						: in		fb_con_i_per_o_t;
 
 		cpu_halt_o							: out		std_logic;
 		blit_halt_i							: in		std_logic
@@ -165,18 +165,18 @@ architecture Behavioral of fb_dmac_blit is
 	);
 	TYPE 		state_cha_A 		IS (sMemAccA, sShiftA1, sShiftA2, sShiftA3, sShiftA4, sShiftA5, sShiftA6, sShiftA7);
 
-	-- slave interface sigs
-	type		sla_state_t		is (idle, addr, wait_cyc);
+	-- peripheral interface sigs
+	type		per_state_t		is (idle, addr, wait_cyc);
 
-	signal	r_sla_state				: sla_state_t;
-	signal	r_sla_addr				: std_logic_vector(6 downto 0);
-	signal 	i_sla_D_rd				: std_logic_vector(7 downto 0);
-	signal	r_sla_rdy				: std_logic;
-	signal 	r_sla_ack				: std_logic;
+	signal	r_per_state				: per_state_t;
+	signal	r_per_addr				: std_logic_vector(6 downto 0);
+	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
+	signal	r_per_rdy				: std_logic;
+	signal 	r_per_ack				: std_logic;
 
-	-- master cycle sigs
-	type		mas_state_type is (idle, waitack);
-	signal	r_mas_state				: mas_state_type;
+	-- controller cycle sigs
+	type		con_state_type is (idle, waitack);
+	signal	r_con_state				: con_state_type;
 
 
 	-- registers
@@ -587,8 +587,8 @@ begin
 			r_clken_addr_calc_start <= '0';
 			case r_blit_state is
 				when sMemAccA|sMemAccB|sMemAccC|sMemAccE|sMemAccD => --|sMemAccD_min|sMemAccC_min =>
-					-- memory access states - wait for master ack, special case for memaccd when not actually execing
-					if (r_mas_state = waitack and fb_mas_s2m_i.ack = '1') or (r_blit_state = sMemAccD and r_BLTCON_execD = '0') then 
+					-- memory access states - wait for controller ack, special case for memaccd when not actually execing
+					if (r_con_state = waitack and fb_con_p2c_i.ack = '1') or (r_blit_state = sMemAccD and r_BLTCON_execD = '0') then 
 						r_accA_state_cur <= i_accA_state_next;
 						r_blit_state <= i_state_next;
 						r_clken_addr_calc_start <= '1';
@@ -778,7 +778,7 @@ begin
 				r_y_count <= unsigned(r_height);
 				r_cha_A_first <= true;
 				cpu_halt_o <= '1';
-			elsif (fb_mas_s2m_i.ack = '1' or r_BLTCON_execD = '0') and r_blit_state = sMemAccD then
+			elsif (fb_con_p2c_i.ack = '1' or r_BLTCON_execD = '0') and r_blit_state = sMemAccD then
 				if r_row_countdn = 0 then
 					r_row_countdn <= unsigned(r_width);
 					r_cha_A_first <= true;
@@ -789,7 +789,7 @@ begin
 						r_cha_A_first <= false;
 					end if;
 				end if;
-			elsif fb_mas_s2m_i.ack = '1' and r_blit_state = sMemAccA then
+			elsif fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA then
 				i_cha_A_last_mask <= i_cha_A_last;	
 			elsif r_blit_state = sFinish then
 				cpu_halt_o <= '0';		
@@ -871,7 +871,7 @@ begin
 
 
 			--TODO: 8MHz
-			if (r_mas_state = waitack and fb_mas_s2m_i.ack = '1') 
+			if (r_con_state = waitack and fb_con_p2c_i.ack = '1') 
 			or ((r_blit_state = sMemAccC_min or r_blit_state = sMemAccD_min) and
 				 i_next_addr_ready = '1'
 				) then
@@ -894,12 +894,12 @@ begin
 				case r_blit_state is
 					when sMemAccA =>
 						r_cha_A_data_pre <= r_cha_A_data(6 downto 0);			
-						r_cha_A_data <= fb_mas_s2m_i.D_rd;
+						r_cha_A_data <= fb_con_p2c_i.D_rd;
 					when sMemAccB =>
 						r_cha_B_data_pre <= r_cha_B_data(6 downto 0);			
-						r_cha_B_data <= fb_mas_s2m_i.D_rd;
+						r_cha_B_data <= fb_con_p2c_i.D_rd;
 					when sMemAccC | sMemAccC_min =>
-						r_cha_C_data <= fb_mas_s2m_i.D_rd;
+						r_cha_C_data <= fb_con_p2c_i.D_rd;
 					when others => null;
 				end case;
 			end if;
@@ -908,108 +908,108 @@ begin
 				r_BLTCON_collision <= '0';
 			end if;
 
-			if fb_sla_m2s_i.cyc = '1' 
-				and fb_sla_m2s_i.A_stb = '1'
-				and fb_sla_m2s_i.D_wr_stb = '1' 
-				and fb_sla_m2s_i.we = '1' 
-				and r_sla_ack = '1' 
+			if fb_per_c2p_i.cyc = '1' 
+				and fb_per_c2p_i.A_stb = '1'
+				and fb_per_c2p_i.D_wr_stb = '1' 
+				and fb_per_c2p_i.we = '1' 
+				and r_per_ack = '1' 
 				then 
-				case to_integer(unsigned(r_sla_addr)) is
+				case to_integer(unsigned(r_per_addr)) is
 					when A_BLTCON =>
-						if fb_sla_m2s_i.D_wr(7) = '1' then
+						if fb_per_c2p_i.D_wr(7) = '1' then
 							r_BLTCON_act <= '1';
-							r_BLTCON_cell <= fb_sla_m2s_i.D_wr(6);
-							r_BLTCON_mode <= fb_sla_m2s_i.D_wr(5 downto 4);
-							r_BLTCON_line <= fb_sla_m2s_i.D_wr(3);
-							r_BLTCON_collision <= fb_sla_m2s_i.D_wr(2);
-							r_BLTCON_wrap <= fb_sla_m2s_i.D_wr(1);
+							r_BLTCON_cell <= fb_per_c2p_i.D_wr(6);
+							r_BLTCON_mode <= fb_per_c2p_i.D_wr(5 downto 4);
+							r_BLTCON_line <= fb_per_c2p_i.D_wr(3);
+							r_BLTCON_collision <= fb_per_c2p_i.D_wr(2);
+							r_BLTCON_wrap <= fb_per_c2p_i.D_wr(1);
 						else
-							r_BLTCON_execA <= fb_sla_m2s_i.D_wr(0);
-							r_BLTCON_execB <= fb_sla_m2s_i.D_wr(1);
-							r_BLTCON_execC <= fb_sla_m2s_i.D_wr(2);
-							r_BLTCON_execD <= fb_sla_m2s_i.D_wr(3);
-							r_BLTCON_execE <= fb_sla_m2s_i.D_wr(4);
+							r_BLTCON_execA <= fb_per_c2p_i.D_wr(0);
+							r_BLTCON_execB <= fb_per_c2p_i.D_wr(1);
+							r_BLTCON_execC <= fb_per_c2p_i.D_wr(2);
+							r_BLTCON_execD <= fb_per_c2p_i.D_wr(3);
+							r_BLTCON_execE <= fb_per_c2p_i.D_wr(4);
 						end if;
 					when A_FUNCGEN =>
-						r_FUNCGEN <= fb_sla_m2s_i.D_wr;
+						r_FUNCGEN <= fb_per_c2p_i.D_wr;
 					when A_WIDTH =>
-						r_width(7 downto 0) <= unsigned(fb_sla_m2s_i.D_wr);
+						r_width(7 downto 0) <= unsigned(fb_per_c2p_i.D_wr);
 					when A_HEIGHT =>
-						r_height(7 downto 0) <= unsigned(fb_sla_m2s_i.D_wr);
+						r_height(7 downto 0) <= unsigned(fb_per_c2p_i.D_wr);
 					when A_SHIFT => -- TODO: maybe split to two addresses to make calcs easier?
-						r_shift_A <= fb_sla_m2s_i.D_wr(2 downto 0);
-						r_shift_B <= fb_sla_m2s_i.D_wr(6 downto 4);
+						r_shift_A <= fb_per_c2p_i.D_wr(2 downto 0);
+						r_shift_B <= fb_per_c2p_i.D_wr(6 downto 4);
 					when A_MASK_FIRST =>
-						r_mask_first <= fb_sla_m2s_i.D_wr;
+						r_mask_first <= fb_per_c2p_i.D_wr;
 					when A_MASK_LAST =>
-						r_mask_last <= fb_sla_m2s_i.D_wr;
+						r_mask_last <= fb_per_c2p_i.D_wr;
 					when A_DATA_A =>
 						r_cha_A_data_pre <= r_cha_A_data(6 downto 0);			
-						r_cha_A_data <= fb_sla_m2s_i.D_wr;
+						r_cha_A_data <= fb_per_c2p_i.D_wr;
 
 					when A_ADDR_A + 0 =>
-						r_cha_A_addr(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_A_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_A + 1 =>
-						r_cha_A_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;			
+						r_cha_A_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_A + 2 =>
-						r_cha_A_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;			
+						r_cha_A_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
 					when A_DATA_B =>
 						r_cha_B_data_pre <= r_cha_B_data (6 downto 0);
-						r_cha_B_data <= fb_sla_m2s_i.D_wr;
+						r_cha_B_data <= fb_per_c2p_i.D_wr;
 					when A_ADDR_B + 0 =>
-						r_cha_B_addr(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_B_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_B + 1 =>
-						r_cha_B_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;			
+						r_cha_B_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_B + 2 =>
-						r_cha_B_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;	
+						r_cha_B_addr(7 downto 0) <= fb_per_c2p_i.D_wr;	
 					when A_ADDR_C + 0 =>
-						r_cha_C_addr(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_C_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_C + 1 =>
-						r_cha_C_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;			
+						r_cha_C_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_C + 2 =>
-						r_cha_C_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;			
+						r_cha_C_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_D + 0 =>
-						r_cha_D_addr(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_D + 1 =>
-						r_cha_D_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;			
+						r_cha_D_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_D + 2 =>
-						r_cha_D_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;			
+						r_cha_D_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_E + 0 =>
-						r_cha_E_addr(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_E_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_E + 1 =>
-						r_cha_E_addr(15 downto 8) <= fb_sla_m2s_i.D_wr;			
+						r_cha_E_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
 					when A_ADDR_E + 2 =>
-						r_cha_E_addr(7 downto 0) <= fb_sla_m2s_i.D_wr;			
+						r_cha_E_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
 					when A_STRIDE_A =>
-						r_cha_A_stride(15 downto 8) <= fb_sla_m2s_i.D_wr; -- note 16 bits for line mode
+						r_cha_A_stride(15 downto 8) <= fb_per_c2p_i.D_wr; -- note 16 bits for line mode
 					when A_STRIDE_A + 1 =>
-						r_cha_A_stride(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_A_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_STRIDE_B =>
-						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= fb_sla_m2s_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_B + 1 =>
-						r_cha_B_stride(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_B_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_STRIDE_C =>
-						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= fb_sla_m2s_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_C + 1 =>
-						r_cha_C_stride(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_C_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when A_STRIDE_D =>
-						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= fb_sla_m2s_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_D + 1 =>
-						r_cha_D_stride(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
 
 					when A_ADDR_D_MIN => 
-						r_cha_D_addr_min(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_min(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_D_MIN+1 => 
-						r_cha_D_addr_min(15 downto 8) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_min(15 downto 8) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_D_MIN+2 => 
-						r_cha_D_addr_min(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_min(7 downto 0) <= fb_per_c2p_i.D_wr;
 
 					when A_ADDR_D_MAX => 
-						r_cha_D_addr_max(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_max(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_D_MAX+1 => 
-						r_cha_D_addr_max(15 downto 8) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_max(15 downto 8) <= fb_per_c2p_i.D_wr;
 					when A_ADDR_D_MAX+2 => 
-						r_cha_D_addr_max(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_cha_D_addr_max(7 downto 0) <= fb_per_c2p_i.D_wr;
 
 					when others => null;
 				end case;
@@ -1018,7 +1018,7 @@ begin
 	end process;
 
 
-	p_regs_rd: process(r_sla_addr, r_BLTCON_act,
+	p_regs_rd: process(r_per_addr, r_BLTCON_act,
 		r_FUNCGEN, 
 		r_mask_first, r_mask_last,
 		r_width, r_height, r_shift_A, r_shift_B,
@@ -1034,9 +1034,9 @@ begin
 		r_BLTCON_wrap, r_cha_D_addr_min, r_cha_D_addr_max
 		)
 	begin
-		case to_integer(unsigned(r_sla_addr)) is
+		case to_integer(unsigned(r_per_addr)) is
 			when A_BLTCON =>
-				i_sla_D_rd <= r_BLTCON_act 
+				i_per_D_rd <= r_BLTCON_act 
 							& r_BLTCON_cell
 							& r_BLTCON_mode
 							& r_BLTCON_line
@@ -1044,92 +1044,92 @@ begin
 							& r_BLTCON_wrap
 							& "0";
 			when A_FUNCGEN =>
-				i_sla_D_rd <= r_FUNCGEN;
+				i_per_D_rd <= r_FUNCGEN;
 			when A_WIDTH =>
-				i_sla_D_rd <= std_logic_vector(r_width);
+				i_per_D_rd <= std_logic_vector(r_width);
 			when A_HEIGHT =>			
-				i_sla_D_rd <= std_logic_vector(r_height);
+				i_per_D_rd <= std_logic_vector(r_height);
 			when A_SHIFT =>
-				i_sla_D_rd <= "0" & r_shift_B & "0" & r_shift_A;
+				i_per_D_rd <= "0" & r_shift_B & "0" & r_shift_A;
 			when A_MASK_FIRST =>
-				i_sla_D_rd <= r_mask_first;
+				i_per_D_rd <= r_mask_first;
 			when A_MASK_LAST =>
-				i_sla_D_rd <= r_mask_last;
+				i_per_D_rd <= r_mask_last;
 			when A_DATA_A =>
-				i_sla_D_rd <= r_cha_A_data;
+				i_per_D_rd <= r_cha_A_data;
 			when A_ADDR_A =>				
-				i_sla_D_rd <= BANK8(r_cha_A_addr(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_A_addr(23 downto 16));
 			when A_ADDR_A + 1 =>
-				i_sla_D_rd <= r_cha_A_addr(15 downto 8);
+				i_per_D_rd <= r_cha_A_addr(15 downto 8);
 			when A_ADDR_A + 2 =>
-				i_sla_D_rd <= r_cha_A_addr(7 downto 0);
+				i_per_D_rd <= r_cha_A_addr(7 downto 0);
 			when A_DATA_B =>
-				i_sla_D_rd <= r_cha_B_data;
+				i_per_D_rd <= r_cha_B_data;
 			when A_ADDR_B =>
-				i_sla_D_rd <= BANK8(r_cha_B_addr(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_B_addr(23 downto 16));
 			when A_ADDR_B + 1 =>
-				i_sla_D_rd <= r_cha_B_addr(15 downto 8);
+				i_per_D_rd <= r_cha_B_addr(15 downto 8);
 			when A_ADDR_B + 2 =>
-				i_sla_D_rd <= r_cha_B_addr(7 downto 0);
+				i_per_D_rd <= r_cha_B_addr(7 downto 0);
 			when A_ADDR_C =>
-				i_sla_D_rd <= BANK8(r_cha_C_addr(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_C_addr(23 downto 16));
 			when A_ADDR_C + 1 =>
-				i_sla_D_rd <= r_cha_C_addr(15 downto 8);
+				i_per_D_rd <= r_cha_C_addr(15 downto 8);
 			when A_ADDR_C + 2 =>
-				i_sla_D_rd <= r_cha_C_addr(7 downto 0);
+				i_per_D_rd <= r_cha_C_addr(7 downto 0);
 			when A_ADDR_D =>
-				i_sla_D_rd <= BANK8(r_cha_D_addr(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_D_addr(23 downto 16));
 			when A_ADDR_D + 1 =>
-				i_sla_D_rd <= r_cha_D_addr(15 downto 8);
+				i_per_D_rd <= r_cha_D_addr(15 downto 8);
 			when A_ADDR_D + 2 =>
-				i_sla_D_rd <= r_cha_D_addr(7 downto 0);
+				i_per_D_rd <= r_cha_D_addr(7 downto 0);
 			when A_ADDR_E =>
-				i_sla_D_rd <= BANK8(r_cha_E_addr(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_E_addr(23 downto 16));
 			when A_ADDR_E + 1 =>
-				i_sla_D_rd <= r_cha_E_addr(15 downto 8);
+				i_per_D_rd <= r_cha_E_addr(15 downto 8);
 			when A_ADDR_E + 2 =>
-				i_sla_D_rd <= r_cha_E_addr(7 downto 0);
+				i_per_D_rd <= r_cha_E_addr(7 downto 0);
 			when A_STRIDE_A =>
-				i_sla_D_rd <= std_logic_vector(resize(signed(r_cha_A_stride(15 downto 8)), 8));
+				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_A_stride(15 downto 8)), 8));
 			when A_STRIDE_A + 1 =>
-				i_sla_D_rd <= r_cha_A_stride(7 downto 0);
+				i_per_D_rd <= r_cha_A_stride(7 downto 0);
 			when A_STRIDE_B =>
-				i_sla_D_rd <= std_logic_vector(resize(signed(r_cha_B_stride(G_STRIDE_HIGH					 downto 8)), 8));
+				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_B_stride(G_STRIDE_HIGH					 downto 8)), 8));
 			when A_STRIDE_B + 1 =>
-				i_sla_D_rd <= r_cha_B_stride(7 downto 0);
+				i_per_D_rd <= r_cha_B_stride(7 downto 0);
 			when A_STRIDE_C =>
-				i_sla_D_rd <= std_logic_vector(resize(signed(r_cha_C_stride(G_STRIDE_HIGH					 downto 8)), 8));
+				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_C_stride(G_STRIDE_HIGH					 downto 8)), 8));
 			when A_STRIDE_C + 1 =>
-				i_sla_D_rd <= r_cha_C_stride(7 downto 0);
+				i_per_D_rd <= r_cha_C_stride(7 downto 0);
 			when A_STRIDE_D =>
-				i_sla_D_rd <= std_logic_vector(resize(signed(r_cha_D_stride(G_STRIDE_HIGH					 downto 8)), 8));
+				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_D_stride(G_STRIDE_HIGH					 downto 8)), 8));
 			when A_STRIDE_D + 1 =>
-				i_sla_D_rd <= r_cha_D_stride(7 downto 0);		
+				i_per_D_rd <= r_cha_D_stride(7 downto 0);		
 
 			when A_ADDR_D_MIN =>
-				i_sla_D_rd <= BANK8(r_cha_D_addr_min(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_D_addr_min(23 downto 16));
 			when A_ADDR_D_MIN + 1 =>
-				i_sla_D_rd <= r_cha_D_addr_min(15 downto 8);
+				i_per_D_rd <= r_cha_D_addr_min(15 downto 8);
 			when A_ADDR_D_MIN + 2 =>
-				i_sla_D_rd <= r_cha_D_addr_min(7 downto 0);
+				i_per_D_rd <= r_cha_D_addr_min(7 downto 0);
 
 			when A_ADDR_D_MAX =>
-				i_sla_D_rd <= BANK8(r_cha_D_addr_max(23 downto 16));
+				i_per_D_rd <= BANK8(r_cha_D_addr_max(23 downto 16));
 			when A_ADDR_D_MAX + 1 =>
-				i_sla_D_rd <= r_cha_D_addr_max(15 downto 8);
+				i_per_D_rd <= r_cha_D_addr_max(15 downto 8);
 			when A_ADDR_D_MAX + 2 =>
-				i_sla_D_rd <= r_cha_D_addr_max(7 downto 0);
+				i_per_D_rd <= r_cha_D_addr_max(7 downto 0);
 
 			when others =>
-				i_sla_D_rd <= (others => '1');
+				i_per_D_rd <= (others => '1');
 		end case;
 	end process;
 
-	p_mas_state: process(fb_syscon_i)
+	p_con_state: process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_mas_state <= idle;
-			fb_mas_m2s_o <= (
+			r_con_state <= idle;
+			fb_con_c2p_o <= (
 				cyc => '0',
 				we => '0',
 				A => (others => '-'),
@@ -1139,13 +1139,13 @@ begin
 				);
 		else
 			if rising_edge(fb_syscon_i.clk) then
-				case r_mas_state is
+				case r_con_state is
 					when idle => 
 						if blit_halt_i = '0' then
 						   case r_blit_state is
 						   	when sMemAccA =>
-									r_mas_state <= waitack;
-									fb_mas_m2s_o <= (
+									r_con_state <= waitack;
+									fb_con_c2p_o <= (
 										cyc => '1',
 										we => '0',
 										A => std_logic_vector(r_cha_A_addr),
@@ -1154,8 +1154,8 @@ begin
 										D_wr_stb => '0'
 										);
 						   	when sMemAccB =>
-									r_mas_state <= waitack;
-									fb_mas_m2s_o <= (
+									r_con_state <= waitack;
+									fb_con_c2p_o <= (
 										cyc => '1',
 										we => '0',
 										A => std_logic_vector(r_cha_B_addr),
@@ -1164,8 +1164,8 @@ begin
 										D_wr_stb => '0'
 										);
 						   	when sMemAccC => -- |sMemAccC_min =>
-									r_mas_state <= waitack;
-									fb_mas_m2s_o <= (
+									r_con_state <= waitack;
+									fb_con_c2p_o <= (
 										cyc => '1',
 										we => '0',
 										A => std_logic_vector(r_cha_C_addr),
@@ -1175,8 +1175,8 @@ begin
 										);
 						   	when sMemAccD => --|sMemAccD_min =>
 						   		if r_BLTCON_execD = '1' then
-										r_mas_state <= waitack;
-										fb_mas_m2s_o <= (
+										r_con_state <= waitack;
+										fb_con_c2p_o <= (
 											cyc => '1',
 											we => '1',
 											A => std_logic_vector(r_cha_D_addr),
@@ -1186,8 +1186,8 @@ begin
 											);
 									end if;
 						   	when sMemAccE =>
-									r_mas_state <= waitack;
-									fb_mas_m2s_o <= (
+									r_con_state <= waitack;
+									fb_con_c2p_o <= (
 										cyc => '1',
 										we => '1',
 										A => std_logic_vector(r_cha_E_addr),
@@ -1199,9 +1199,9 @@ begin
 							end case;
 						end if;
 					when waitack =>
-						if fb_mas_s2m_i.ack = '1' then
-							r_mas_state <= idle;
-							fb_mas_m2s_o.cyc <= '0';
+						if fb_con_p2c_i.ack = '1' then
+							r_con_state <= idle;
+							fb_con_c2p_o.cyc <= '0';
 						end if;
 					when others => null;
 				end case;
@@ -1210,32 +1210,32 @@ begin
 	end process;
 
 
-	p_sla_state:process(fb_syscon_i, fb_sla_m2s_i)
+	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_sla_state <= idle;
-			r_sla_rdy <= '0';
-			r_sla_ack <= '0';
-			r_sla_addr <= (others => '0');
+			r_per_state <= idle;
+			r_per_rdy <= '0';
+			r_per_ack <= '0';
+			r_per_addr <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			r_sla_ack <= '0';
-			case r_sla_state is
+			r_per_ack <= '0';
+			case r_per_state is
 				when idle =>
-					if fb_sla_m2s_i.cyc = '1' and fb_sla_m2s_i.a_stb = '1' then
-						r_sla_addr <= not fb_sla_m2s_i.A(6) & "0" & fb_sla_m2s_i.A(4 downto 0);
-						r_sla_state <= addr;
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
+						r_per_addr <= not fb_per_c2p_i.A(6) & "0" & fb_per_c2p_i.A(4 downto 0);
+						r_per_state <= addr;
 					end if;
 				when addr =>
-					fb_sla_s2m_o.D_rd <= i_sla_D_rd;
-					if fb_sla_m2s_i.we = '0' or fb_sla_m2s_i.D_wr_stb = '1' then
-						r_sla_state <= wait_cyc;
-						r_sla_rdy <= '1';
-						r_sla_ack <= '1';
+					fb_per_p2c_o.D_rd <= i_per_D_rd;
+					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
+						r_per_state <= wait_cyc;
+						r_per_rdy <= '1';
+						r_per_ack <= '1';
 					end if;
 				when wait_cyc => 
-					if fb_sla_m2s_i.cyc = '0' or fb_sla_m2s_i.a_stb = '0' then
-						r_sla_state <= idle;
-						r_sla_rdy <= '0';
+					if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
+						r_per_state <= idle;
+						r_per_rdy <= '0';
 					end if;				
 				when others => null;
 			end case;
@@ -1243,10 +1243,10 @@ begin
 		end if;
 	end process;
 
-	fb_sla_s2m_o.rdy_ctdn <= RDY_CTDN_MIN when r_sla_rdy = '1' else
+	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
 									 RDY_CTDN_MAX;
-	fb_sla_s2m_o.ack <= r_sla_ack;
-	fb_sla_s2m_o.nul <= '0';
+	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.nul <= '0';
 
 end Behavioral;
 

@@ -60,13 +60,13 @@ entity fb_DMAC_int_sound is
 		-- fishbone signals		
 		fb_syscon_i							: in		fb_syscon_t;
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						: in		fb_mas_o_sla_i_t;
-		fb_sla_s2m_o						: out		fb_mas_i_sla_o_t;
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						: in		fb_con_o_per_i_t;
+		fb_per_p2c_o						: out		fb_con_i_per_o_t;
 
-		-- master interface (dma)
-		fb_mas_m2s_o						: out		fb_mas_o_sla_i_t;
-		fb_mas_s2m_i						: in		fb_mas_i_sla_o_t;
+		-- controller interface (dma)
+		fb_con_c2p_o						: out		fb_con_o_per_i_t;
+		fb_con_p2c_i						: in		fb_con_i_per_o_t;
 
 		cpu_halt_o							: out		STD_LOGIC;
 
@@ -85,19 +85,19 @@ architecture Behavioral of fb_DMAC_int_sound is
 
 	constant PADBITS						: std_logic_vector(8-CEIL_LOG2(G_CHANNELS-1)-1 downto 0) := (others => '0');
 
-	type		sla_state_t	is (idle, child_act, sel_act, wait_cyc);
+	type		per_state_t	is (idle, child_act, sel_act, wait_cyc);
 
 	type		snd_dat_arr is array(natural range <>) of signed(7 downto 0);
 
 	type		cha_addr_arr is array(natural range <>) of unsigned(23 downto 0);
 	type		cha_addr_offs_arr is array(natural range <>) of unsigned(15 downto 0);
 
-	signal	r_sla_state 				: sla_state_t;
-	signal   r_sla_sel_rdy				: std_logic;
-	signal   r_sla_sel_ack				: std_logic;
+	signal	r_per_state 				: per_state_t;
+	signal   r_per_sel_rdy				: std_logic;
+	signal   r_per_sel_ack				: std_logic;
 
-	signal	i_cha_fb_sla_m2s			: fb_mas_o_sla_i_arr(G_CHANNELS-1 downto 0);
-	signal	i_cha_fb_sla_s2m			: fb_mas_i_sla_o_arr(G_CHANNELS-1 downto 0);
+	signal	i_cha_fb_per_m2s			: fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
+	signal	i_cha_fb_per_s2m			: fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
 
 	signal	r_cha_sel					: unsigned(CEIL_LOG2(G_CHANNELS-1)-1 downto 0);
 	signal	r_ovr_vol					: unsigned(5 downto 0);
@@ -113,12 +113,12 @@ architecture Behavioral of fb_DMAC_int_sound is
 
 	signal	r_reg_snd_clk				: std_logic_vector(5 downto 0);
 
-	type		mas_state_t	is (idle, start, startcy, start2, act);
-	-- master interface signals from channels
-	signal	r_mas_state					: mas_state_t;
+	type		con_state_t	is (idle, start, startcy, start2, act);
+	-- controller interface signals from channels
+	signal	r_con_state					: con_state_t;
 
-	signal	r_mas_addrplusoffs		: unsigned(23 downto 0);
-	signal	r_mas_cyc					: std_logic;
+	signal	r_con_addrplusoffs		: unsigned(23 downto 0);
+	signal	r_con_cyc					: std_logic;
 	
 	signal	i_cha_data_req				: std_logic_vector(G_CHANNELS-1 downto 0);
 	signal	i_cha_data_ack 			: std_logic_vector(G_CHANNELS-1 downto 0);
@@ -198,52 +198,52 @@ begin
 
 	snd_dat_o <= r_tot_snd_dat;
 
-	p_sla_state:process(fb_syscon_i, fb_sla_m2s_i)
+	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
 	variable v_rs:natural range 0 to 15;
 	begin
-		v_rs := to_integer(unsigned(fb_sla_m2s_i.A(3 downto 0)));
+		v_rs := to_integer(unsigned(fb_per_c2p_i.A(3 downto 0)));
 		if fb_syscon_i.rst = '1' then
-			r_sla_state <= idle;
+			r_per_state <= idle;
 			r_cha_sel <= (others => '0');
 			r_ovr_vol <= (others => '1');
-			r_sla_sel_rdy <= '0';
-			r_sla_sel_ack <= '0';
+			r_per_sel_rdy <= '0';
+			r_per_sel_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
-			r_sla_sel_ack <= '0';
+			r_per_sel_ack <= '0';
 
-			case r_sla_state is
+			case r_per_state is
 				when idle =>
-					if fb_sla_m2s_i.cyc = '1' and fb_sla_m2s_i.A_stb = '1' then
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
 						if v_rs = A_CHA_SEL or v_rs = A_OVR_VOL then
-							r_sla_state <= sel_act;
-							if fb_sla_m2s_i.we = '0' then
-								r_sla_sel_rdy <= '1';
-								r_sla_sel_ack <= '1';
+							r_per_state <= sel_act;
+							if fb_per_c2p_i.we = '0' then
+								r_per_sel_rdy <= '1';
+								r_per_sel_ack <= '1';
 							end if;
 						else
-							r_sla_state <= child_act;
+							r_per_state <= child_act;
 						end if;
 					end if;
 				when sel_act =>
-					if fb_sla_m2s_i.we = '1' and fb_sla_m2s_i.D_wr_stb = '1' then
+					if fb_per_c2p_i.we = '1' and fb_per_c2p_i.D_wr_stb = '1' then
 						if v_rs = A_CHA_SEL then
-							r_cha_sel <= unsigned(fb_sla_m2s_i.D_wr(CEIL_LOG2(G_CHANNELS-1)-1 downto 0));
+							r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(CEIL_LOG2(G_CHANNELS-1)-1 downto 0));
 						elsif v_rs = A_OVR_VOL then
-							r_ovr_vol <= unsigned(fb_sla_m2s_i.D_wr(7 downto 2));
+							r_ovr_vol <= unsigned(fb_per_c2p_i.D_wr(7 downto 2));
 						end if;
-						r_sla_sel_rdy <= '1';
-						r_sla_sel_ack <= '1';
-						r_sla_state <= wait_cyc;
+						r_per_sel_rdy <= '1';
+						r_per_sel_ack <= '1';
+						r_per_state <= wait_cyc;
 					end if;
 				when wait_cyc =>
 					-- do nothing just wait for cyc/a_stb to go low
 				when others => null;
 			end case;
 
-			if fb_sla_m2s_i.cyc = '0' or fb_sla_m2s_i.a_stb = '0' then
-				r_sla_state <= idle;
-				r_sla_sel_rdy <= '0';
+			if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
+				r_per_state <= idle;
+				r_per_sel_rdy <= '0';
 			end if;
 		end if;
 	end process;
@@ -259,11 +259,11 @@ begin
 		-- fishbone signals		
 		fb_syscon_i							=> fb_syscon_i,
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						=> i_cha_fb_sla_m2s(I),
-		fb_sla_s2m_o						=> i_cha_fb_sla_s2m(I),
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						=> i_cha_fb_per_m2s(I),
+		fb_per_p2c_o						=> i_cha_fb_per_s2m(I),
 
-		-- master interface (dma)
+		-- controller interface (dma)
 		data_req_o							=> i_cha_data_req(I),
 		data_ack_i							=> i_cha_data_ack(I),
 		data_addr_o							=> i_cha_data_addr(I),
@@ -279,52 +279,52 @@ begin
 	end generate;
 
 		
-	p_sla_cha_sel_o:process(fb_syscon_i, r_sla_sel_ack, r_sla_state, r_ovr_vol, r_cha_sel, i_cha_fb_sla_s2m, 
-													fb_sla_m2s_i, r_sla_sel_rdy)	
+	p_per_cha_sel_o:process(fb_syscon_i, r_per_sel_ack, r_per_state, r_ovr_vol, r_cha_sel, i_cha_fb_per_s2m, 
+													fb_per_c2p_i, r_per_sel_rdy)	
 	variable v_rs:natural range 0 to 15;
 	variable v_rdy_ctdn:unsigned(RDY_CTDN_LEN-1 downto 0);
 	begin
-		v_rs := to_integer(unsigned(fb_sla_m2s_i.A(3 downto 0)));
-		if r_sla_sel_rdy = '1' then
+		v_rs := to_integer(unsigned(fb_per_c2p_i.A(3 downto 0)));
+		if r_per_sel_rdy = '1' then
 			v_rdy_ctdn := RDY_CTDN_MIN;
 		else 
 			v_rdy_ctdn := RDY_CTDN_MAX;
 		end if;
-		fb_sla_s2m_o <= fb_s2m_unsel;
-		if r_sla_state = child_act then
+		fb_per_p2c_o <= fb_p2c_unsel;
+		if r_per_state = child_act then
 			for I in 0 to G_CHANNELS-1 loop
 				if r_cha_sel = I then
-					fb_sla_s2m_o <= i_cha_fb_sla_s2m(I);
+					fb_per_p2c_o <= i_cha_fb_per_s2m(I);
 				end if;
 			end loop;
-		elsif r_sla_state = sel_act or r_sla_state = wait_cyc then
+		elsif r_per_state = sel_act or r_per_state = wait_cyc then
 			if v_rs = A_OVR_VOL then
-				fb_sla_s2m_o <= (
+				fb_per_p2c_o <= (
 					D_rd => std_logic_vector(r_ovr_vol) & "00",
 					rdy_ctdn => v_rdy_ctdn,
-					ack => r_sla_sel_ack,
+					ack => r_per_sel_ack,
 					nul => '0'
 					);				
 			else
-				fb_sla_s2m_o <= (
+				fb_per_p2c_o <= (
 					D_rd => PADBITS & std_logic_vector(r_cha_sel),
 					rdy_ctdn => v_rdy_ctdn,
-					ack => r_sla_sel_ack,
+					ack => r_per_sel_ack,
 					nul => '0'
 					);
 			end if;
 		end if;
 	end process;
 					
-	p_sla_cha_sel_i:process(r_cha_sel, fb_sla_m2s_i)
+	p_per_cha_sel_i:process(r_cha_sel, fb_per_c2p_i)
 	begin
 		for I in 0 to G_CHANNELS-1 loop
 			if r_cha_sel = I then
 				-- this assumes that the child channels will
 				-- ignore selects to register F!
-				i_cha_fb_sla_m2s(I) <= fb_sla_m2s_i;
+				i_cha_fb_per_m2s(I) <= fb_per_c2p_i;
 			else
-				i_cha_fb_sla_m2s(I) <= (
+				i_cha_fb_per_m2s(I) <= (
 						cyc => '0',
 						we => '0',
 						A => (others => '1'),
@@ -338,30 +338,30 @@ begin
 
 					
 
-	i_cha_data_ack <= r_cha_data_cur_oh when r_mas_state = act and fb_mas_s2m_i.ack = '1' else
+	i_cha_data_ack <= r_cha_data_cur_oh when r_con_state = act and fb_con_p2c_i.ack = '1' else
 							(others => '0');
 
-	i_cha_data_data <= signed(fb_mas_s2m_i.D_rd);
+	i_cha_data_data <= signed(fb_con_p2c_i.D_rd);
 
 	i_cur_cha_addr <= i_cha_data_addr(to_integer(r_cha_data_cur_ix));
 	i_cur_cha_addr_offs <= i_cha_data_addr_offs(to_integer(r_cha_data_cur_ix));
 	
-	fb_mas_m2s_o.cyc <= r_mas_cyc;
-	fb_mas_m2s_o.a_stb <= r_mas_cyc;
-	fb_mas_m2s_o.A <= std_logic_vector(r_mas_addrplusoffs);
-	fb_mas_m2s_o.we <= '0';
-	fb_mas_m2s_o.D_wr <= (others => '0');
-	fb_mas_m2s_o.D_wr_stb <= '0';
+	fb_con_c2p_o.cyc <= r_con_cyc;
+	fb_con_c2p_o.a_stb <= r_con_cyc;
+	fb_con_c2p_o.A <= std_logic_vector(r_con_addrplusoffs);
+	fb_con_c2p_o.we <= '0';
+	fb_con_c2p_o.D_wr <= (others => '0');
+	fb_con_c2p_o.D_wr_stb <= '0';
 
-	p_mas_state: process(fb_syscon_i)
+	p_con_state: process(fb_syscon_i)
 	variable v_ix: unsigned(numbits(G_CHANNELS)-1 downto 0);
 	variable v_add16 : unsigned(16 downto 0);
 	begin
 		if fb_syscon_i.rst = '1' then
 
-			r_mas_state <= idle;
-			r_mas_cyc <= '0';
-			r_mas_addrplusoffs <= (others => '0');
+			r_con_state <= idle;
+			r_con_cyc <= '0';
+			r_con_addrplusoffs <= (others => '0');
 			cpu_halt_o <= '0';
 			r_cha_data_cur_ix <= (others => '0');
 			r_cha_data_cur_oh <= (others => '0');
@@ -372,7 +372,7 @@ begin
 				+ 	("0" & i_cur_cha_addr_offs)
 				;
 
-			case r_mas_state is
+			case r_con_state is
 				when idle => 
 					--arbitrate, simple priority
 					if or_reduce(i_cha_data_req) = '1' then
@@ -382,33 +382,33 @@ begin
 								r_cha_data_cur_oh <= std_logic_vector(to_unsigned(2**I, r_cha_data_cur_oh'length));
 							end if;
 						end loop;
-						r_mas_state <= start;
+						r_con_state <= start;
 					end if;
 				when start =>
-					r_mas_addrplusoffs(15 downto 0) <= v_add16(15 downto 0);
-					r_mas_addrplusoffs(23 downto 16) <= i_cur_cha_addr(23 downto 16);
+					r_con_addrplusoffs(15 downto 0) <= v_add16(15 downto 0);
+					r_con_addrplusoffs(23 downto 16) <= i_cur_cha_addr(23 downto 16);
 					if v_add16(16) = '1' then
-						r_mas_state <= startcy;
+						r_con_state <= startcy;
 					else
-						r_mas_cyc <= '1';
+						r_con_cyc <= '1';
 						cpu_halt_o <= '1';
-					r_mas_state <= act;
+					r_con_state <= act;
 					end if;
 				when startcy =>
-					r_mas_addrplusoffs(23 downto 16) <= r_mas_addrplusoffs(23 downto 16) + 1;
-					r_mas_cyc <= '1';
+					r_con_addrplusoffs(23 downto 16) <= r_con_addrplusoffs(23 downto 16) + 1;
+					r_con_cyc <= '1';
 					cpu_halt_o <= '1';
-					r_mas_state <= act;						
+					r_con_state <= act;						
 				when act =>
 					if or_reduce(i_cha_data_req and r_cha_data_cur_oh) /= '1' then
-						r_mas_state <= idle;
-						r_mas_cyc <= '0';
+						r_con_state <= idle;
+						r_con_cyc <= '0';
 						cpu_halt_o <= '0';
 						r_cha_data_cur_oh <= (others => '0');
 					end if;
 				when others =>
-					r_mas_cyc <= '0';
-					r_mas_state <= idle;					
+					r_con_cyc <= '0';
+					r_con_state <= idle;					
 			end case;
 		end if;
 	end process;

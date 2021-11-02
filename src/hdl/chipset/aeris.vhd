@@ -60,13 +60,13 @@ entity fb_dmac_aeris is
 		-- fishbone signals		
 		fb_syscon_i							: in		fb_syscon_t;
 
-		-- slave interface (control registers)
-		fb_sla_m2s_i						: in		fb_mas_o_sla_i_t;
-		fb_sla_s2m_o						: out		fb_mas_i_sla_o_t;
+		-- peripheral interface (control registers)
+		fb_per_c2p_i						: in		fb_con_o_per_i_t;
+		fb_per_p2c_o						: out		fb_con_i_per_o_t;
 
-		-- master interface (dma)
-		fb_mas_m2s_o						: out		fb_mas_o_sla_i_t;
-		fb_mas_s2m_i						: in		fb_mas_i_sla_o_t;
+		-- controller interface (dma)
+		fb_con_c2p_o						: out		fb_con_o_per_i_t;
+		fb_con_p2c_i						: in		fb_con_i_per_o_t;
 
 		cpu_halt_o							: out		std_logic;
 
@@ -83,14 +83,14 @@ end fb_dmac_aeris;
 
 architecture Behavioral of fb_dmac_aeris is
 
-	-- slave interface sigs
+	-- peripheral interface sigs
 	type		sla_state_t		is (idle, addr, wait_cyc);
 
-	signal	r_sla_state				: sla_state_t;
-	signal	r_sla_addr				: std_logic_vector(2 downto 0);
-	signal 	i_sla_D_rd				: std_logic_vector(7 downto 0);
-	signal	r_sla_rdy				: std_logic;
-	signal 	r_sla_ack				: std_logic;
+	signal	r_per_state				: sla_state_t;
+	signal	r_per_addr				: std_logic_vector(2 downto 0);
+	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
+	signal	r_per_rdy				: std_logic;
+	signal 	r_per_ack				: std_logic;
 
 
 
@@ -149,7 +149,7 @@ architecture Behavioral of fb_dmac_aeris is
 	signal	ack_vs_edge_pgm: bit := '0';
 	signal	r_ack_hs_waith	: bit := '0';
 
-	signal	r_mas_cyc_ack	: std_logic;
+	signal	r_con_cyc_ack	: std_logic;
 
 	signal	i_ctr_match		: std_logic;		-- '1' when ctrs are >= wait/skip spec
 
@@ -267,7 +267,7 @@ begin
 			r_state <= idle;		
 			r_cpu_halt<= '0';	
 		elsif rising_edge(fb_syscon_i.clk) then 
-			r_mas_cyc_ack <= '0';
+			r_con_cyc_ack <= '0';
 
 			if r_ctl_wait_cyc = '0' then
 				r_pc <= (others => '0');
@@ -278,7 +278,7 @@ begin
 				r_cpu_halt<= '0';	
 			elsif 
 					(	r_state = idle 
-						or (r_state = op_fetch and fb_mas_s2m_i.ack = '1') 
+						or (r_state = op_fetch and fb_con_p2c_i.ack = '1') 
 						or (r_state = exec and r_op(7 downto 4) = x"0") -- wait
 						or (r_state = exec and r_op(7 downto 4) = x"F") -- waith
 					)
@@ -289,7 +289,7 @@ begin
 				r_op_skip <= '0';
 				r_play_started <= '0';
 				r_cpu_halt<= '0';	
-				r_mas_cyc_ack <= '1'; -- force a finish of any master cycle
+				r_con_cyc_ack <= '1'; -- force a finish of any controller cycle
 			else
 				case r_state is
 					when idle =>
@@ -297,20 +297,20 @@ begin
 						r_state <= idle;
 					when op_fetch | play_op_fetch =>
 						-- wait for opcode fetch to complete then go to decode
-						if fb_mas_s2m_i.ack = '1' then
+						if fb_con_p2c_i.ack = '1' then
 							if r_state = play_op_fetch then
 								if r_play_16 = '1' then
 									r_state <= arg_0_fetch; -- always a move16!
 								else
 									r_state <= arg_1_fetch; -- always a move!
 								end if;
-								r_op(3 downto 0) <= fb_mas_s2m_i.D_rd(3 downto 0);
+								r_op(3 downto 0) <= fb_con_p2c_i.D_rd(3 downto 0);
 							else
 								r_state <= decode;
-								r_op <= fb_mas_s2m_i.D_rd;
+								r_op <= fb_con_p2c_i.D_rd;
 							end if;
 							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 							r_ack_hs_waith <= tgl_hs_edge;
 						end if;
 					when decode => 
@@ -329,25 +329,25 @@ begin
 							r_state <= exec;
 						end if;
 					when arg_0_fetch =>
-						if fb_mas_s2m_i.ack = '1' then
-							r_arg_0 <= fb_mas_s2m_i.D_rd;
+						if fb_con_p2c_i.ack = '1' then
+							r_arg_0 <= fb_con_p2c_i.D_rd;
 							r_state <= arg_1_fetch;
 							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 						end if;
 					when arg_1_fetch =>
-						if fb_mas_s2m_i.ack = '1' then
-							r_arg_1 <= fb_mas_s2m_i.D_rd;
+						if fb_con_p2c_i.ack = '1' then
+							r_arg_1 <= fb_con_p2c_i.D_rd;
 							r_state <= arg_2_fetch;
 							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 						end if;
 					when arg_2_fetch =>
-						if fb_mas_s2m_i.ack = '1' then
-							r_arg_2 <= fb_mas_s2m_i.D_rd;
+						if fb_con_p2c_i.ack = '1' then
+							r_arg_2 <= fb_con_p2c_i.D_rd;
 							r_state <= exec;
 							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 						end if;
 					when exec =>
 						if r_op_skip = '1' then
@@ -460,32 +460,32 @@ begin
 						end if;
 					when exec_move =>
 						-- MOVE
-						if fb_mas_s2m_i.ack = '1' then
+						if fb_con_p2c_i.ack = '1' then
 							if r_play_started = '1' then
 								r_state <= play_next;
 							else
 								r_state <= op_fetch;
 							end if;
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 						end if;
 					when exec_move16_0 =>
 						-- MOVE16
-						if fb_mas_s2m_i.ack = '1' then
+						if fb_con_p2c_i.ack = '1' then
 							r_state <= exec_move16_1;
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 							if r_op(4) = '0' then
 								r_arg_1 <= std_logic_vector(unsigned(r_arg_1) + 1);
 							end if;
 						end if;
 					when exec_move16_1 =>
 						-- MOVE
-						if fb_mas_s2m_i.ack = '1' then
+						if fb_con_p2c_i.ack = '1' then
 							if r_play_started = '1' then
 								r_state <= play_next;
 							else
 								r_state <= op_fetch;
 							end if;
-							r_mas_cyc_ack <= '1';
+							r_con_cyc_ack <= '1';
 						end if;
 					when play_next =>
 						r_play_ctr <= std_logic_vector(unsigned(r_play_ctr) - 1);
@@ -516,12 +516,12 @@ begin
 	i_move_D <= r_arg_1 when r_state = exec_move16_0 else
 					r_arg_2;
 
-	p_master:process(r_state, r_pc, r_mas_cyc_ack, r_prog_base, i_move_A, i_move_D)
+	p_controller:process(r_state, r_pc, r_con_cyc_ack, r_prog_base, i_move_A, i_move_D)
 	begin
 
-		if r_mas_cyc_ack = '1' then
-			-- release fishbone for a cycle after it has been acked by slave
-			fb_mas_m2s_o <= (
+		if r_con_cyc_ack = '1' then
+			-- release fishbone for a cycle after it has been acked by peripheral
+			fb_con_c2p_o <= (
 				cyc => '0',
 				we => '-',
 				A => (others => '-'),
@@ -532,7 +532,7 @@ begin
 		else
 			case r_state is 
 				when op_fetch | play_op_fetch | arg_0_fetch | arg_1_fetch | arg_2_fetch =>
-					fb_mas_m2s_o <= (
+					fb_con_c2p_o <= (
 						cyc => '1',
 						we => '0',
 						A => r_prog_base(23 downto 16) & r_pc,
@@ -541,7 +541,7 @@ begin
 						D_wr_stb => '0'
 						);
 				when exec_move | exec_move16_0 | exec_move16_1 =>
-					fb_mas_m2s_o <= (
+					fb_con_c2p_o <= (
 						cyc => '1',
 						we => '1',
 						A => i_move_A,
@@ -550,7 +550,7 @@ begin
 						D_wr_stb => '1'
 						);				
 				when others =>
-					fb_mas_m2s_o <= (
+					fb_con_c2p_o <= (
 						cyc => '0',
 						we => '-',
 						A => (others => '-'),
@@ -574,23 +574,23 @@ begin
 			r_prog_base <= (others => '0');
 			r_ctl_feedback <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if fb_sla_m2s_i.cyc = '1' 
-				and fb_sla_m2s_i.A_stb = '1'
-				and fb_sla_m2s_i.D_wr_stb = '1' 
-				and fb_sla_m2s_i.we = '1' 
-				and r_sla_ack = '1' 
+			if fb_per_c2p_i.cyc = '1' 
+				and fb_per_c2p_i.A_stb = '1'
+				and fb_per_c2p_i.D_wr_stb = '1' 
+				and fb_per_c2p_i.we = '1' 
+				and r_per_ack = '1' 
 				then 
 
-				case to_integer(unsigned(r_sla_addr)) is
+				case to_integer(unsigned(r_per_addr)) is
 					when A_CONTROL =>
-						r_ctl_wait_cyc <= fb_sla_m2s_i.D_wr(7);
-						r_ctl_feedback <= fb_sla_m2s_i.D_wr(3 downto 0);
+						r_ctl_wait_cyc <= fb_per_c2p_i.D_wr(7);
+						r_ctl_feedback <= fb_per_c2p_i.D_wr(3 downto 0);
 					when A_PROGSTART =>
-						r_prog_base(23 downto 16) <= fb_sla_m2s_i.D_wr;
+						r_prog_base(23 downto 16) <= fb_per_c2p_i.D_wr;
 					when A_PROGSTART + 1 =>
-						r_prog_base(15 downto 8) <= fb_sla_m2s_i.D_wr;
+						r_prog_base(15 downto 8) <= fb_per_c2p_i.D_wr;
 					when A_PROGSTART + 2 =>
-						r_prog_base(7 downto 0) <= fb_sla_m2s_i.D_wr;
+						r_prog_base(7 downto 0) <= fb_per_c2p_i.D_wr;
 					when others =>
 						null;
 				end case;
@@ -599,56 +599,56 @@ begin
 
 	end process;
 
-	p_regs_rd:process(r_sla_addr, r_prog_base, r_pc, r_ctl_wait_cyc, r_ctl_feedback)	
+	p_regs_rd:process(r_per_addr, r_prog_base, r_pc, r_ctl_wait_cyc, r_ctl_feedback)	
 	begin
-		case to_integer(unsigned(r_sla_addr)) is
+		case to_integer(unsigned(r_per_addr)) is
 			when A_CONTROL =>
-				i_sla_D_rd <= r_ctl_wait_cyc & "000" & r_ctl_feedback;
+				i_per_D_rd <= r_ctl_wait_cyc & "000" & r_ctl_feedback;
 			when A_PROGSTART =>
-				i_sla_D_rd <= r_prog_base(23 downto 16);
+				i_per_D_rd <= r_prog_base(23 downto 16);
 			when A_PROGSTART + 1 =>
-				i_sla_D_rd <= r_prog_base(15 downto 8);
+				i_per_D_rd <= r_prog_base(15 downto 8);
 			when A_PROGSTART + 2 =>
-				i_sla_D_rd <= r_prog_base(7 downto 0);
+				i_per_D_rd <= r_prog_base(7 downto 0);
 			when A_PC =>
-				i_sla_D_rd <= r_prog_base(23 downto 16);
+				i_per_D_rd <= r_prog_base(23 downto 16);
 			when A_PC + 1 =>
-				i_sla_D_rd <= r_pc(15 downto 8);
+				i_per_D_rd <= r_pc(15 downto 8);
 			when A_PC + 2 =>
-				i_sla_D_rd <= r_pc(7 downto 0);
+				i_per_D_rd <= r_pc(7 downto 0);
 			when others =>
-				i_sla_D_rd <= (others => '-');
+				i_per_D_rd <= (others => '-');
 		end case;
 	end process;
 
-	p_sla_state:process(fb_syscon_i, fb_sla_m2s_i)
+	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_sla_state <= idle;
-			r_sla_rdy <= '0';
-			r_sla_ack <= '0';
-			r_sla_addr <= (others => '0');
+			r_per_state <= idle;
+			r_per_rdy <= '0';
+			r_per_ack <= '0';
+			r_per_addr <= (others => '0');
 		else
 			if rising_edge(fb_syscon_i.clk) then
-				r_sla_ack <= '0';
+				r_per_ack <= '0';
 	
-				case r_sla_state is
+				case r_per_state is
 					when idle =>
-						if fb_sla_m2s_i.cyc = '1' and fb_sla_m2s_i.a_stb = '1' then
-							r_sla_addr <= fb_sla_m2s_i.A(2 downto 0);
-							r_sla_state <= addr;
+						if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
+							r_per_addr <= fb_per_c2p_i.A(2 downto 0);
+							r_per_state <= addr;
 						end if;
 					when addr =>
-						fb_sla_s2m_o.D_rd <= i_sla_D_rd;
-						if fb_sla_m2s_i.we = '0' or fb_sla_m2s_i.D_wr_stb = '1' then
-							r_sla_state <= wait_cyc;
-							r_sla_rdy <= '1';
-							r_sla_ack <= '1';
+						fb_per_p2c_o.D_rd <= i_per_D_rd;
+						if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
+							r_per_state <= wait_cyc;
+							r_per_rdy <= '1';
+							r_per_ack <= '1';
 						end if;
 					when wait_cyc =>
-						if fb_sla_m2s_i.cyc = '0' or fb_sla_m2s_i.a_stb = '0' then
-							r_sla_state <= idle;
-							r_sla_rdy <= '0';
+						if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
+							r_per_state <= idle;
+							r_per_rdy <= '0';
 						end if;
 
 					when others => null;
@@ -660,10 +660,10 @@ begin
 	end process;
 
 
-	fb_sla_s2m_o.rdy_ctdn <= RDY_CTDN_MIN when r_sla_rdy = '1' else
+	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
 									 RDY_CTDN_MAX;
-	fb_sla_s2m_o.ack <= r_sla_ack;
-	fb_sla_s2m_o.nul <= '0';
+	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.nul <= '0';
 
 	dbg_state_o <= "0000" when r_state = idle else
 		"0001" when r_state = op_fetch else
