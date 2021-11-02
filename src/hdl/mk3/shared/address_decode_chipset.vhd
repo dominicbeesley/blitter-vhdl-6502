@@ -27,7 +27,7 @@
 -- 
 -- Create Date:    	28/7/2020
 -- Design Name: 
--- Module Name:    	add2slave
+-- Module Name:    	address_decode_chipset
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -53,7 +53,7 @@ use work.mk3blit_pack.all;
 entity address_decode_chipset is
 	generic (
 		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_SLAVE_COUNT				: natural := 9;
+		G_PERIPHERAL_COUNT				: natural := 9;
 		G_INCL_CS_DMA				: boolean := false;
 		G_DMA_CHANNELS				: natural := 2;
 		G_INCL_CS_BLIT				: boolean := false;
@@ -65,8 +65,8 @@ entity address_decode_chipset is
 	);
 	port(
 		addr_i						: in		std_logic_vector(7 downto 0);
-		slave_sel_o					: out		unsigned(numbits(G_SLAVE_COUNT)-1 downto 0);
-		slave_sel_oh_o				: out		std_logic_vector(G_SLAVE_COUNT-1 downto 0)
+		peripheral_sel_o					: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
+		peripheral_sel_oh_o				: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
 	);
 end address_decode_chipset;
 
@@ -80,28 +80,28 @@ begin
 
 			a := addr_i(7 downto 4);
 
-			slave_sel_oh_o <= (others => '0');
+			peripheral_sel_oh_o <= (others => '0');
 			if a = x"8" and G_INCL_CS_SND then
-				slave_sel_o <= to_unsigned(SLAVE_NO_CHIPSET_SOUND, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(SLAVE_NO_CHIPSET_SOUND) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET_SOUND, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET_SOUND) <= '1';
 			elsif a = x"9" and G_INCL_CS_DMA then
-				slave_sel_o <= to_unsigned(SLAVE_NO_CHIPSET_DMA, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(SLAVE_NO_CHIPSET_DMA) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET_DMA, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET_DMA) <= '1';
 			elsif a = x"B" and G_INCL_CS_AERIS then
-				slave_sel_o <= to_unsigned(SLAVE_NO_CHIPSET_AERIS, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(SLAVE_NO_CHIPSET_AERIS) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET_AERIS, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET_AERIS) <= '1';
 			elsif a = x"D" and G_INCL_CS_EEPROM then
-				slave_sel_o <= to_unsigned(SLAVE_NO_CHIPSET_EEPROM, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(SLAVE_NO_CHIPSET_EEPROM) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET_EEPROM, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET_EEPROM) <= '1';
 			elsif (a = x"6" or a = x"7" or a = x"A") and G_INCL_CS_BLIT then -- official address 6,7,A
-				slave_sel_o <= to_unsigned(SLAVE_NO_CHIPSET_BLIT, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(SLAVE_NO_CHIPSET_BLIT) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET_BLIT, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET_BLIT) <= '1';
 			else
 			--TODO: investigate - making BLITTER default here causes sparkles in DEMO65 and 
 			--crashes and random wrong tiles in ADVENT65
 			--seemingly no ill effects to Paula though which is strange
-				slave_sel_o <= to_unsigned(0, numbits(G_SLAVE_COUNT));
-				slave_sel_oh_o(0) <= '1';
+				peripheral_sel_o <= to_unsigned(0, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(0) <= '1';
 			end if;
 		end process;
 

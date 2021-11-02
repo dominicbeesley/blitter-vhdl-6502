@@ -90,8 +90,8 @@ entity fb_memctl is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		-- debug
 
@@ -114,8 +114,8 @@ architecture rtl of fb_memctl is
 			, restore		-- a store was made to FE32 put everything back		
 		);
 
-	signal	r_mas_ack						:	std_logic;
-	signal	r_mas_rdy						:	std_logic;
+	signal	r_con_ack						:	std_logic;
+	signal	r_con_rdy						:	std_logic;
 
 	signal	r_turbo_lo						:	std_logic_vector(7 downto 0);
 
@@ -157,17 +157,17 @@ begin
 	noice_debug_shadow_o <= r_noice_debug_shadow;
 	noice_debug_inhibit_cpu_o <= r_noice_debug_inhibit_cpu;
 
-	fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN when r_mas_rdy = '1' else
+	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_con_rdy = '1' else
 								RDY_CTDN_MAX;
-	fb_s2m_o.ack <= r_mas_ack;
-	fb_s2m_o.nul <= '0';
+	fb_p2c_o.ack <= r_con_ack;
+	fb_p2c_o.nul <= '0';
 
-	fb_s2m_o.D_rd <= 		-- FE37 - lomem turbo map
+	fb_p2c_o.D_rd <= 		-- FE37 - lomem turbo map
 								r_turbo_lo 
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 7 else
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 7 else
 								-- FE36 - 2Mhz throttle
 								r_throttle_cpu_2MHz & "0000000" 
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 6 else
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 6 else
 								-- FE31 / swmos register
 								r_noice_debug_act
 							& 	r_noice_debug_5C
@@ -177,7 +177,7 @@ begin
 							&	r_noice_debug_shadow
 							&	'0'
 							&	r_swmos_shadow 
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 1 else		
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 1 else		
 								-- FE32 / swmos "save" register
 								"000"													-- return to non-debug
 							&	r_flex_shadow
@@ -185,18 +185,18 @@ begin
 							&	r_noice_debug_shadow_saved
 							&	'0'
 							&	r_swmos_shadow
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 2 else	
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 2 else	
 							not(cfgbits_i(7 downto 0))
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 14 else
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 14 else
 							not(cfgbits_i(15 downto 8))
-								when unsigned(fb_m2s_i.A(3 downto 0)) = 15 else
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 15 else
 							x"A5";
 
 	p_fb_state:process(fb_syscon_i)
 	begin
 
 		if rising_edge(fb_syscon_i.clk) then
-			r_mas_ack <= '0';
+			r_con_ack <= '0';
 			if fb_syscon_i.rst = '1' then
 				fb_state <= idle;
 				r_turbo_lo <= (others => '0');
@@ -210,46 +210,46 @@ begin
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
 				end if;		
-				r_mas_rdy <= '0';
+				r_con_rdy <= '0';
 			else
 					case fb_state is
 					when idle =>
-						r_mas_rdy <= '0';
-						if (fb_m2s_i.cyc = '1' and fb_m2s_i.A_stb = '1') then
-							if fb_m2s_i.we = '1' then
-								if fb_m2s_i.D_wr_stb = '1' then
-									case to_integer(unsigned(fb_m2s_i.A(2 downto 0))) is
+						r_con_rdy <= '0';
+						if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+							if fb_c2p_i.we = '1' then
+								if fb_c2p_i.D_wr_stb = '1' then
+									case to_integer(unsigned(fb_c2p_i.A(2 downto 0))) is
 										when 7 =>
-											r_turbo_lo <= fb_m2s_i.D_wr;
+											r_turbo_lo <= fb_c2p_i.D_wr;
 										when 6 =>
-											r_throttle_cpu_2MHz <= fb_m2s_i.D_wr(7);
+											r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
 										when 5 => 
-											DEBUG_REG_o <= fb_m2s_i.D_wr;
+											DEBUG_REG_o <= fb_c2p_i.D_wr;
 										when 1 =>
-											r_swmos_shadow <= fb_m2s_i.D_wr(0);
-											-- r_swmos_noice_shadow <= fb_m2s_i.D_wr(2); -- this is done in the debug
+											r_swmos_shadow <= fb_c2p_i.D_wr(0);
+											-- r_swmos_noice_shadow <= fb_c2p_i.D_wr(2); -- this is done in the debug
 																										-- state machine after the next cycle
-											r_noice_debug_en <= fb_m2s_i.D_wr(3);
-											r_flex_shadow <= fb_m2s_i.D_wr(4);
-											r_65816_boot <= fb_m2s_i.D_wr(5);
+											r_noice_debug_en <= fb_c2p_i.D_wr(3);
+											r_flex_shadow <= fb_c2p_i.D_wr(4);
+											r_65816_boot <= fb_c2p_i.D_wr(5);
 											r_noice_debug_written_en <= '1';
-											r_noice_debug_written_val <= fb_m2s_i.D_wr(2);
+											r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
 										when 2 => 
 											r_swmos_save_written_en <= '1';
 										when others =>
 									end case;
 									fb_state <= wait_cyc;
-									r_mas_rdy <= '1';
-									r_mas_ack <= '1';
+									r_con_rdy <= '1';
+									r_con_ack <= '1';
 								end if;
 							else
 								fb_state <= wait_cyc;
-								r_mas_rdy <= '1';
-								r_mas_ack <= '1';
+								r_con_rdy <= '1';
+								r_con_ack <= '1';
 							end if;
 						end if;
 					when wait_cyc =>
-						if fb_m2s_i.cyc = '0' or fb_m2s_i.a_stb = '0' then
+						if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
 							fb_state <= idle;
 							r_noice_debug_written_en <= '0';
 							r_swmos_save_written_en <= '0';
@@ -298,11 +298,11 @@ begin
 						r_noice_state <= start5C;
 						r_noice_debug_inhibit_cpu <= '1';
 					elsif r_swmos_save_written_en = '1' 
-							and r_mas_rdy = '1'
+							and r_con_rdy = '1'
 							and r_noice_debug_en = '1' then								-- restore state
 						r_noice_state <= restore;
 					elsif r_noice_debug_written_en = '1'
-							and r_mas_rdy = '1'
+							and r_con_rdy = '1'
 							and r_noice_debug_en = '1'		
 							and r_noice_debug_written_val /= r_noice_debug_shadow							
 							then 															-- write to SWMOS_DEBUG _after_ next instruction

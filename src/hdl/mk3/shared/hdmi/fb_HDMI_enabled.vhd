@@ -30,28 +30,28 @@ architecture rtl of fb_hdmi is
 
 	--=========== FISHBONE ============--
 
-	constant SLAVE_COUNT 				: positive := 4;
-	constant SLAVE_N_MEM 				: natural := 0;
-	constant SLAVE_N_VIDPROC 			: natural := 1;
-	constant SLAVE_N_CRTC 				: natural := 2;
-	constant SLAVE_N_I2C					: natural := 3;
+	constant PERIPHERAL_COUNT 				: positive := 4;
+	constant PERIPHERAL_N_MEM 				: natural := 0;
+	constant PERIPHERAL_N_VIDPROC 			: natural := 1;
+	constant PERIPHERAL_N_CRTC 				: natural := 2;
+	constant PERIPHERAL_N_I2C					: natural := 3;
 	
-	-- intcon slave->master
-	signal i_sla_m2s_intcon				: fb_mas_o_sla_i_arr(SLAVE_COUNT-1 downto 0);
-	signal i_sla_s2m_intcon				: fb_mas_i_sla_o_arr(SLAVE_COUNT-1 downto 0);
-		-- intcon to slave sel
-	signal i_intcon_slave_sel_addr	: std_logic_vector(23 downto 0);	
-	signal i_intcon_slave_sel			: unsigned(numbits(SLAVE_COUNT)-1 downto 0);  -- address decoded selected slave
-	signal i_intcon_slave_sel_oh		: std_logic_vector(SLAVE_COUNT-1 downto 0);	-- address decoded selected slaves as one-hot		
+	-- intcon peripheral->controller
+	signal i_per_c2p_intcon				: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
+	signal i_per_p2c_intcon				: fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
+		-- intcon to peripheral sel
+	signal i_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);	
+	signal i_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
+	signal i_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
-	signal i_ram_fb_m2s					: fb_mas_o_sla_i_t;
-	signal i_ram_fb_s2m					: fb_mas_i_sla_o_t;
-	signal i_crtc_fb_m2s					: fb_mas_o_sla_i_t;
-	signal i_crtc_fb_s2m					: fb_mas_i_sla_o_t;
-	signal i_vidproc_fb_m2s				: fb_mas_o_sla_i_t;
-	signal i_vidproc_fb_s2m				: fb_mas_i_sla_o_t;
-	signal i_i2c_fb_m2s					: fb_mas_o_sla_i_t;
-	signal i_i2c_fb_s2m					: fb_mas_i_sla_o_t;
+	signal i_ram_fb_m2s					: fb_con_o_per_i_t;
+	signal i_ram_fb_s2m					: fb_con_i_per_o_t;
+	signal i_crtc_fb_m2s					: fb_con_o_per_i_t;
+	signal i_crtc_fb_s2m					: fb_con_i_per_o_t;
+	signal i_vidproc_fb_m2s				: fb_con_o_per_i_t;
+	signal i_vidproc_fb_s2m				: fb_con_i_per_o_t;
+	signal i_i2c_fb_m2s					: fb_con_o_per_i_t;
+	signal i_i2c_fb_s2m					: fb_con_i_per_o_t;
 
 
 	-- DVI PLL
@@ -100,8 +100,8 @@ begin
 	)
 	port map(
 		fb_syscon_i		=> fb_syscon_i,
-		fb_m2s_i			=> i_vidproc_fb_m2s,
-		fb_s2m_o			=> i_vidproc_fb_s2m,
+		fb_c2p_i			=> i_vidproc_fb_m2s,
+		fb_p2c_o			=> i_vidproc_fb_s2m,
 		CLKEN_CRTC_o	=> i_clken_crtc,
 		RAM_D_i			=> i_D_pxbyte,
 		nINVERT_i		=> '1',
@@ -123,8 +123,8 @@ begin
 	port map (
 
 		fb_syscon_i		=> fb_syscon_i,
-		fb_m2s_i			=> i_crtc_fb_m2s,
-		fb_s2m_o			=> i_crtc_fb_s2m,
+		fb_c2p_i			=> i_crtc_fb_m2s,
+		fb_p2c_o			=> i_crtc_fb_s2m,
 		CLKEN_CRTC_i	=> i_clken_crtc,
 		
 		-- Display interface
@@ -149,8 +149,8 @@ begin
 	port map(
 
 		fb_syscon_i		=> fb_syscon_i,
-		fb_m2s_i			=> i_ram_fb_m2s,
-		fb_s2m_o			=> i_ram_fb_s2m,
+		fb_c2p_i			=> i_ram_fb_m2s,
+		fb_p2c_o			=> i_ram_fb_s2m,
 	
 		-- vga signals
 	
@@ -174,8 +174,8 @@ begin
 		-- fishbone signals
 
 		fb_syscon_i							=> fb_syscon_i,
-		fb_m2s_i								=> i_i2c_fb_m2s,
-		fb_s2m_o								=> i_i2c_fb_s2m
+		fb_c2p_i								=> i_i2c_fb_m2s,
+		fb_p2c_o								=> i_i2c_fb_s2m
 	);
 
 
@@ -262,62 +262,62 @@ begin
 -- FISHBONE interconnection
 --====================================================================
 
-	i_ram_fb_m2s <= i_sla_m2s_intcon(SLAVE_N_MEM);
-	i_vidproc_fb_m2s <= i_sla_m2s_intcon(SLAVE_N_VIDPROC);
-	i_crtc_fb_m2s <= i_sla_m2s_intcon(SLAVE_N_CRTC);
-	i_i2c_fb_m2s <= i_sla_m2s_intcon(SLAVE_N_I2C);
+	i_ram_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_MEM);
+	i_vidproc_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_VIDPROC);
+	i_crtc_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_CRTC);
+	i_i2c_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_I2C);
 
-	i_sla_s2m_intcon(SLAVE_N_MEM) <= i_ram_fb_s2m;
-	i_sla_s2m_intcon(SLAVE_N_VIDPROC) <= i_vidproc_fb_s2m;
-	i_sla_s2m_intcon(SLAVE_N_CRTC) <= i_crtc_fb_s2m;
-	i_sla_s2m_intcon(SLAVE_N_I2C) <= i_i2c_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_MEM) <= i_ram_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_VIDPROC) <= i_vidproc_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_CRTC) <= i_crtc_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_I2C) <= i_i2c_fb_s2m;
 
 
-	e_fb_intcon: entity work.fb_intcon_one_master_many_slave
+	e_fb_intcon: entity work.fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
-		G_SLAVE_COUNT 						=> SLAVE_COUNT,
+		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
 		G_ADDRESS_WIDTH 					=> 24
 		)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,
 
-		-- slave ports connect to masters
-		fb_mas_m2s_i						=> fb_m2s_i,
-		fb_mas_s2m_o						=> fb_s2m_o,
+		-- peripheral ports connect to controllers
+		fb_con_c2p_i						=> fb_c2p_i,
+		fb_con_p2c_o						=> fb_p2c_o,
 
-		-- master ports connect to slaves
-		fb_sla_m2s_o						=> i_sla_m2s_intcon,
-		fb_sla_s2m_i						=> i_sla_s2m_intcon,
+		-- controller ports connect to peripherals
+		fb_per_c2p_o						=> i_per_c2p_intcon,
+		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		slave_sel_addr_o					=> i_intcon_slave_sel_addr,
-		slave_sel_i							=> i_intcon_slave_sel,
-		slave_sel_oh_i						=> i_intcon_slave_sel_oh
+		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_i							=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
 
-	p_sel:process(i_intcon_slave_sel_addr)
+	p_sel:process(i_intcon_peripheral_sel_addr)
 	begin
-		i_intcon_slave_sel_oh <= (others => '0');
+		i_intcon_peripheral_sel_oh <= (others => '0');
 
 
 		-- official addresses:
 		-- FB FE00, FE01 - CRTC
 		-- FB FE2x - VIDPROC
 		-- FB FEDx - i2c
-		if i_intcon_slave_sel_addr(16 downto 8) = "1" & x"FE" then
-			if i_intcon_slave_sel_addr(7) = '1' then
-				i_intcon_slave_sel <= to_unsigned(SLAVE_N_I2C, numbits(SLAVE_COUNT));
-				i_intcon_slave_sel_oh(SLAVE_N_I2C) <= '1';		
-			elsif i_intcon_slave_sel_addr(5) = '1' then
-				i_intcon_slave_sel <= to_unsigned(SLAVE_N_VIDPROC, numbits(SLAVE_COUNT));
-				i_intcon_slave_sel_oh(SLAVE_N_VIDPROC) <= '1';
+		if i_intcon_peripheral_sel_addr(16 downto 8) = "1" & x"FE" then
+			if i_intcon_peripheral_sel_addr(7) = '1' then
+				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_I2C, numbits(PERIPHERAL_COUNT));
+				i_intcon_peripheral_sel_oh(PERIPHERAL_N_I2C) <= '1';		
+			elsif i_intcon_peripheral_sel_addr(5) = '1' then
+				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_VIDPROC, numbits(PERIPHERAL_COUNT));
+				i_intcon_peripheral_sel_oh(PERIPHERAL_N_VIDPROC) <= '1';
 			else
-				i_intcon_slave_sel <= to_unsigned(SLAVE_N_CRTC, numbits(SLAVE_COUNT));
-				i_intcon_slave_sel_oh(SLAVE_N_CRTC) <= '1';				
+				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_CRTC, numbits(PERIPHERAL_COUNT));
+				i_intcon_peripheral_sel_oh(PERIPHERAL_N_CRTC) <= '1';				
 			end if;
 		else
-			i_intcon_slave_sel <= to_unsigned(SLAVE_N_MEM, numbits(SLAVE_COUNT));
-			i_intcon_slave_sel_oh(SLAVE_N_MEM) <= '1';
+			i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_MEM, numbits(PERIPHERAL_COUNT));
+			i_intcon_peripheral_sel_oh(PERIPHERAL_N_MEM) <= '1';
 		end if;
 	end process;
 

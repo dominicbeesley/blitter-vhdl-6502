@@ -46,15 +46,6 @@ use ieee.numeric_std.all;
 library work;
 
 entity mk3_erc_68000 is
-	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_DMA_CHANNELS						: natural := 2;
-		G_SND_CHANNELS						: natural := 4;
-		G_MASTER_COUNT						: natural := 9;
-		G_SLAVE_COUNT						: natural := 10;
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
-	);
 	port(
 
 		-- crystal osc 48Mhz - on WS board
@@ -105,7 +96,7 @@ entity mk3_erc_68000 is
 
 
 		
-		SYS_RDY_i							: in		std_logic; -- Master only?
+		SYS_RDY_i							: in		std_logic; -- BBC Master only?
 		SYS_nNMI_i							: in		std_logic;
 		SYS_nIRQ_i							: in		std_logic;
 		SYS_PHI0_i							: in		std_logic;

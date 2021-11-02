@@ -45,15 +45,6 @@ use ieee.numeric_std.all;
 library work;
 
 entity mk3_board_erc is
-	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_DMA_CHANNELS						: natural := 2;
-		G_SND_CHANNELS						: natural := 4;
-		G_MASTER_COUNT						: natural := 9;
-		G_SLAVE_COUNT						: natural := 10;
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
-	);
 	port(
 
 		-- crystal osc 48Mhz - on WS board
@@ -104,7 +95,7 @@ entity mk3_board_erc is
 
 
 		-- test these as outputs!!!
-		SYS_RDY_i							: out 		std_logic; -- Master only?-- WARNING
+		SYS_RDY_i							: out 		std_logic; -- BBC Master only?-- WARNING
 		SYS_nNMI_i							: out 		std_logic;-- WARNING
 		SYS_nIRQ_i							: out 		std_logic;-- WARNING
 		SYS_PHI0_i							: out 		std_logic;-- WARNING

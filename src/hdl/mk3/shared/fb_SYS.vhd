@@ -72,7 +72,7 @@ entity fb_sys is
 		SYS_D_io								: inout	std_logic_vector(7 downto 0);
 		
 		-- SYS signals are connected direct to the BBC cpu socket
-		SYS_RDY_i							: in		std_logic; -- Master only?
+		SYS_RDY_i							: in		std_logic; -- BBC Master only?
 		SYS_SYNC_o							: out		std_logic;
 		SYS_PHI0_i							: in		std_logic;
 		SYS_PHI1_o							: out		std_logic;
@@ -82,8 +82,8 @@ entity fb_sys is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		sys_ROMPG_o							: out		std_logic_vector(7 downto 0);		-- a shadow copy of the mainboard rom
 																										-- paging register, used to select
@@ -117,10 +117,10 @@ architecture rtl of fb_sys is
 		addrlatched_rd, 
 		-- write address latched
 		addrlatched_wr, 
-		-- master has dropped cycle wait for end of sys cycle
+		-- controller has dropped cycle wait for end of sys cycle
 		wait_sys_end, 
-		-- sys cycle ended wait for master to drop
-		wait_mas_rel_rd,
+		-- sys cycle ended wait for controller to drop
+		wait_con_rel_rd,
 		--jim_dev_wr, -- this needs to be in parallel with a normal write to pass thru to SYS
 		jim_dev_rd,
 		jim_page_lo_wr,
@@ -146,8 +146,8 @@ architecture rtl of fb_sys is
 	signal	i_SYScyc_end_clken: std_logic;							-- goes to 1 for single cycle when sys cycle ended
 	signal	i_SYScyc_st_clken	: std_logic;							-- goes to 1 for single cycle near start of sys cycle, in time for the motherboard cycle stretch logic
 
-	signal	i_mas_cyc			: std_logic;							-- cyc and a_stb = '1'
-	signal	r_mas_cyc			: std_logic; 							-- goes to zero if cyc/a_stb dropped
+	signal	i_con_cyc			: std_logic;							-- cyc and a_stb = '1'
+	signal	r_con_cyc			: std_logic; 							-- goes to zero if cyc/a_stb dropped
 
 	signal	r_sys_d				: std_logic_vector(7 downto 0);
 	signal	r_sys_RnW			: std_logic;
@@ -176,7 +176,7 @@ begin
 					(others => 'Z');
 	SYS_RnW_o <= r_sys_RnW;
 
-	i_mas_cyc <= fb_m2s_i.cyc and fb_m2s_i.a_stb;
+	i_con_cyc <= fb_c2p_i.cyc and fb_c2p_i.a_stb;
 
 	sys_ROMPG_o <= r_sys_ROMPG;
 
@@ -195,7 +195,7 @@ begin
 	-- new: 21/7/21 - always read rom paging register from SYS (which will read as nothing!)
 	i_D_rd <= SYS_D_io;
 
-	fb_s2m_o.D_rd <= i_D_rd when state = addrlatched_rd else
+	fb_p2c_o.D_rd <= i_D_rd when state = addrlatched_rd else
 						  r_D_rd;
 
 	p_state:process(fb_syscon_i)
@@ -204,7 +204,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			state <= idle;
 
-			r_mas_cyc <= '0';
+			r_con_cyc <= '0';
 			r_ack <= '0';
 
 			r_sys_A <= DEFAULT_SYS_ADDR;
@@ -213,7 +213,7 @@ begin
 
 			r_sys_ROMPG <= (others => '0');
 
-			fb_s2m_o.rdy_ctdn <= RDY_CTDN_MAX;
+			fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 
 			r_JIM_en <= '0';
 			r_JIM_page <= (others => '0');
@@ -230,8 +230,8 @@ begin
 
 						debug_jim_hi_wr_o <= '0';
 
-						r_mas_cyc <= '0';
-						fb_s2m_o.rdy_ctdn <= RDY_CTDN_MAX;
+						r_con_cyc <= '0';
+						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 
 						if i_SYScyc_st_clken = '1' then
 							-- default idle cycle, drop busses
@@ -240,27 +240,27 @@ begin
 
 
 
-							if i_mas_cyc = '1' then
+							if i_con_cyc = '1' then
 
-								r_sys_A <= fb_m2s_i.A(15 downto 0);
-								r_mas_cyc <= '1';
+								r_sys_A <= fb_c2p_i.A(15 downto 0);
+								r_con_cyc <= '1';
 
 
-								if fb_m2s_i.A(15 downto 0) = x"FCFF" and fb_m2s_i.we = '0' and r_JIM_en = '1' then
+								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_dev_rd;
-								elsif fb_m2s_i.A(15 downto 0) = x"FCFE" and fb_m2s_i.we = '1' and r_JIM_en = '1' then
+								elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
 									state <= jim_page_lo_wr;
-								elsif fb_m2s_i.A(15 downto 0) = x"FCFD" and fb_m2s_i.we = '1' and r_JIM_en = '1' then
+								elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
 									state <= jim_page_hi_wr;
 									debug_jim_hi_wr_o <= '1';
-								elsif fb_m2s_i.A(15 downto 0) = x"FCFE" and fb_m2s_i.we = '0' and r_JIM_en = '1' then
+								elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_page_lo_rd;
-								elsif fb_m2s_i.A(15 downto 0) = x"FCFD" and fb_m2s_i.we = '0' and r_JIM_en = '1' then
+								elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_page_hi_rd;
 									debug_jim_hi_wr_o <= '1';
 								else
 
-									if fb_m2s_i.we = '1' then
+									if fb_c2p_i.we = '1' then
 										r_sys_RnW <= '0';							
 										state <= addrlatched_wr;
 									else
@@ -274,7 +274,7 @@ begin
 
 					when addrlatched_rd =>
 
-						if i_mas_cyc = '0' or r_mas_cyc = '0' then
+						if i_con_cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
@@ -282,17 +282,17 @@ begin
 							end if;
 						else
 
-							fb_s2m_o.rdy_ctdn <= i_sys_rdy_ctdn_rd;
+							fb_p2c_o.rdy_ctdn <= i_sys_rdy_ctdn_rd;
 							if i_sys_rdy_ctdn_rd = RDY_CTDN_MIN then
-								state <= wait_mas_rel_rd;		
+								state <= wait_con_rel_rd;		
 								r_ack <= '1';		
 								r_D_rd <= i_D_rd;				
 							end if;
 						end if;
-					when wait_mas_rel_rd =>
+					when wait_con_rel_rd =>
 						-- read cycle was finished, return to idle
 
-						if i_mas_cyc = '0' or r_mas_cyc = '0' then
+						if i_con_cyc = '0' or r_con_cyc = '0' then
 							state <= idle;
 						end if;					
 
@@ -301,106 +301,106 @@ begin
 						-- put something in to retry if not, probably will mess up
 						-- anyway if writing to a hardware reg?
 
-						if i_mas_cyc = '0' or r_mas_cyc = '0' then
+						if i_con_cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
 								state <= wait_sys_end;
 							end if;
-						elsif fb_m2s_i.D_wr_stb = '1' then
+						elsif fb_c2p_i.D_wr_stb = '1' then
                      if r_sys_A(15 downto 0) = x"FE05" and cfg_sys_type_i = SYS_ELK then
                         -- TODO: fix this properly, for now just munge the number to match
                         -- the mappings from the BBC, this will not allow any external ROMs!
-                        r_sys_ROMPG <= fb_m2s_i.D_wr xor "00001100";       -- write to both shadow register and SYS
+                        r_sys_ROMPG <= fb_c2p_i.D_wr xor "00001100";       -- write to both shadow register and SYS
 							elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
-								r_sys_ROMPG <= fb_m2s_i.D_wr;			-- write to both shadow register and SYS
+								r_sys_ROMPG <= fb_c2p_i.D_wr;			-- write to both shadow register and SYS
 							end if;
 							if r_sys_A(15 downto 0) = x"FCFF" then
-								if fb_m2s_i.D_wr = G_JIM_DEVNO then
+								if fb_c2p_i.D_wr = G_JIM_DEVNO then
 									r_JIM_en <= '1';
 								else
 									r_JIM_en <= '0';
 								end if;
 							end if;
-							r_sys_D <= fb_m2s_i.D_wr;
+							r_sys_D <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
+							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
 							state <= wait_sys_end;
 						end if;
 
 
 					when wait_sys_end =>
-						-- master has released wait for end of this cycle
+						-- controller has released wait for end of this cycle
 						if i_SYScyc_end_clken = '1' then
 							state <= idle;
 						end if;
 
 					when jim_dev_rd =>
-						fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-						state <= wait_mas_rel_rd;		
+						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= G_JIM_DEVNO xor x"FF";				
 					when jim_page_lo_rd =>
-						fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-						state <= wait_mas_rel_rd;		
+						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(7 downto 0);				
 					when jim_page_hi_rd =>
-						fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-						state <= wait_mas_rel_rd;		
+						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(15 downto 8);				
 
 					when jim_page_lo_wr =>
-						if i_mas_cyc = '0' or r_mas_cyc = '0' then
+						if i_con_cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
 								state <= wait_sys_end;
 							end if;
-						elsif fb_m2s_i.D_wr_stb = '1' then
-							r_JIM_page(7 downto 0) <= fb_m2s_i.D_wr;
+						elsif fb_c2p_i.D_wr_stb = '1' then
+							r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-							state <= wait_mas_rel_rd;
+							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+							state <= wait_con_rel_rd;
 						end if;
 					when jim_page_hi_wr =>
-						if i_mas_cyc = '0' or r_mas_cyc = '0' then
+						if i_con_cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
 								state <= wait_sys_end;
 							end if;
-						elsif fb_m2s_i.D_wr_stb = '1' then
-							r_JIM_page(15 downto 8) <= fb_m2s_i.D_wr;
+						elsif fb_c2p_i.D_wr_stb = '1' then
+							r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-							state <= wait_mas_rel_rd;
+							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+							state <= wait_con_rel_rd;
 						end if;
 					when others =>
 						-- catch all
 						state <= idle;
 						
 						r_sys_RnW <= '1';
-						fb_s2m_o.rdy_ctdn <= RDY_CTDN_MAX;
-						r_mas_cyc <= '0';
+						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
+						r_con_cyc <= '0';
 
 				end case;
 
-				if cfg_sys_type_i = SYS_BBC and r_mas_cyc = '1' and i_SYScyc_st_clken = '1' then
+				if cfg_sys_type_i = SYS_BBC and r_con_cyc = '1' and i_SYScyc_st_clken = '1' then
 					-- a cycle has overrun, release the bus
 					r_sys_RnW <= '1';
-					fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
+					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
 					r_ack <= '1';
 					state <= idle;
 					r_sys_A <= DEFAULT_SYS_ADDR;
 					r_sys_RnW <= '1';
 				end if;
 
-				if i_mas_cyc = '0' then
-					-- master has dropped the cycle
-					r_mas_cyc <= '0';
-					fb_s2m_o.rdy_ctdn <= RDY_CTDN_MAX;
+				if i_con_cyc = '0' then
+					-- controller has dropped the cycle
+					r_con_cyc <= '0';
+					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 					r_ack <= '0';
 
 				end if;
@@ -411,8 +411,8 @@ begin
 	end process;
 
 
-	fb_s2m_o.ack <= r_ack;
-	fb_s2m_o.nul <= '0';
+	fb_p2c_o.ack <= r_ack;
+	fb_p2c_o.nul <= '0';
 
 
    --TODO: see if the dll can be made to run reliably from phi0

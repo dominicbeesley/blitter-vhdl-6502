@@ -46,12 +46,12 @@
 -- ---------+--------------+-------------------------------------------------------------------------
 --	STAT=0	|	Read			|	Status register:
 --				|					|	Bit 7 : BUSY 	flag, when set a shift is in operation
---				|					|	Bit 6 : ACK  	0 if previous operation was ack'd either by master or slave
+--				|					|	Bit 6 : ACK  	0 if previous operation was ack'd either by controller or peripheral
 --				|					|	
 --	CTL=0		|  Write			|	Bit 7 : BUSY 	1 start a new operation when the current one completes
 --				|					|						if 0 cancel a stop condition
 --				|					|						will be generated as soon as the clock is released by 
---				|					|						the slave, any pending operation will be terminated
+--				|					|						the peripheral, any pending operation will be terminated
 --				|					|	Bit 6 : ACK  	if 0 and operation is a read acknowledge it afterwards
 --				|					|	Bit 2	: STOP	send a stop condition after this operation
 --				|					|	Bit 1	: START	send a start condition before this operation
@@ -111,8 +111,8 @@ entity fb_i2c is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t
 
 	);
 end fb_i2c;
@@ -131,8 +131,8 @@ architecture rtl of fb_i2c is
 
 	signal	r_state_cyc			: state_cyc_t;	
 
-	signal	r_mas_ack			:	std_logic;
-	signal	r_mas_rdy			:	std_logic;
+	signal	r_con_ack			:	std_logic;
+	signal	r_con_rdy			:	std_logic;
 
 	signal	r_dat_wr				: 	std_logic_vector(7 downto 0);		-- write data latch
 	signal	r_ctl_busy			:	std_logic;								-- busy written to status register
@@ -156,11 +156,11 @@ architecture rtl of fb_i2c is
 begin
 
 
-	fb_s2m_o.rdy_ctdn <= 
-		RDY_CTDN_MIN when r_mas_rdy = '1' else
+	fb_p2c_o.rdy_ctdn <= 
+		RDY_CTDN_MIN when r_con_rdy = '1' else
 		RDY_CTDN_MAX;
-	fb_s2m_o.ack <= r_mas_ack;
-	fb_s2m_o.nul <= '0';
+	fb_p2c_o.ack <= r_con_ack;
+	fb_p2c_o.nul <= '0';
 
 	I2C_SDA_io <= 	'0' when r_i2c_sda = '0' else
 						'Z';
@@ -215,7 +215,7 @@ begin
 				else
 					r_shift(8 downto 1) <= r_dat_wr;
 				end if;
-				r_shift(0) <= r_ctl_ack or not r_ctl_rnw;		-- set ack in shift register to 1 for writes (to read ack from slave)
+				r_shift(0) <= r_ctl_ack or not r_ctl_rnw;		-- set ack in shift register to 1 for writes (to read ack from peripheral)
 				r_4ph_run <= '1';
 				if r_ctl_busy = '0' then
 					-- go straight to do a stop bit
@@ -286,8 +286,8 @@ begin
 
 		if fb_syscon_i.rst = '1' then
 			r_state_cyc <= idle;
-			r_mas_ack <= '0';
-			r_mas_rdy <= '0';
+			r_con_ack <= '0';
+			r_con_rdy <= '0';
 			r_ctl_written <= '0';
 			r_dat_wr <= (others => '0');
 			r_ctl_busy <= '0';
@@ -298,46 +298,46 @@ begin
 			r_ctl_written <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
-				r_mas_ack <= '0';
+				r_con_ack <= '0';
 
 				case r_state_cyc is
 					when idle =>
-						r_mas_rdy <= '0';
-						if (fb_m2s_i.cyc = '1' and fb_m2s_i.A_stb = '1') then
-							if fb_m2s_i.we = '1' and fb_m2s_i.D_wr_stb = '1' then
-								if (fb_m2s_i.A(0) = '0') then
-									r_ctl_busy <= fb_m2s_i.D_wr(7);
-									r_ctl_ack <= fb_m2s_i.D_wr(6);
-									r_ctl_stop <= fb_m2s_i.D_wr(2);
-									r_ctl_start <= fb_m2s_i.D_wr(1);
-									r_ctl_rnw <= fb_m2s_i.D_wr(0);
+						r_con_rdy <= '0';
+						if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+							if fb_c2p_i.we = '1' and fb_c2p_i.D_wr_stb = '1' then
+								if (fb_c2p_i.A(0) = '0') then
+									r_ctl_busy <= fb_c2p_i.D_wr(7);
+									r_ctl_ack <= fb_c2p_i.D_wr(6);
+									r_ctl_stop <= fb_c2p_i.D_wr(2);
+									r_ctl_start <= fb_c2p_i.D_wr(1);
+									r_ctl_rnw <= fb_c2p_i.D_wr(0);
 
 									r_ctl_written <= not r_ctl_written_ack;
 								else
-									r_dat_wr <= fb_m2s_i.D_wr;
+									r_dat_wr <= fb_c2p_i.D_wr;
 								end if;
 								r_state_cyc <= wait_cyc;
-								r_mas_rdy <= '1';
-								r_mas_ack <= '1';
-							elsif fb_m2s_i.we = '0' then
-								if (fb_m2s_i.A(0) = '0') then
+								r_con_rdy <= '1';
+								r_con_ack <= '1';
+							elsif fb_c2p_i.we = '0' then
+								if (fb_c2p_i.A(0) = '0') then
 									if r_state_i2c = idle and r_ctl_written = r_ctl_written_ack then
-										fb_s2m_o.D_rd(7) <= '0';
+										fb_p2c_o.D_rd(7) <= '0';
 									else
-										fb_s2m_o.D_rd(7) <= '1';
+										fb_p2c_o.D_rd(7) <= '1';
 									end if;
-									fb_s2m_o.D_rd(6) <= r_stat_ack;
-									fb_s2m_o.D_rd(5 downto 0) <= (others => '0');
+									fb_p2c_o.D_rd(6) <= r_stat_ack;
+									fb_p2c_o.D_rd(5 downto 0) <= (others => '0');
 								else
-									fb_s2m_o.D_rd <= r_dat_rd;
+									fb_p2c_o.D_rd <= r_dat_rd;
 								end if;
 								r_state_cyc <= wait_cyc;
-								r_mas_rdy <= '1';
-								r_mas_ack <= '1';
+								r_con_rdy <= '1';
+								r_con_ack <= '1';
 							end if;
 						end if;
 					when wait_cyc =>
-						if fb_m2s_i.cyc = '0' or fb_m2s_i.a_stb = '0' then
+						if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
 							r_state_cyc <= idle;
 						end if;
 					when others =>

@@ -156,7 +156,7 @@ architecture rtl of fb_cpu_65c02 is
 	signal r_cpu_res			: std_logic;
 
 	signal r_boot_65816_dly	: std_logic_vector(2 downto 0) := (others => '1');
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a master cycle
+	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
 	signal r_D_WR_stb			: std_logic;
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 

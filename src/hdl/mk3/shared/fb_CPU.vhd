@@ -35,11 +35,11 @@
 --
 -- Revision: 
 -- Additional Comments: 
---		This component provides a fishbone master wrapper around the CPU socket _and_ the T65
+--		This component provides a fishbone controller wrapper around the CPU socket _and_ the T65
 --	core. The actual device in use is selected by the cfg_t65_i and cfg_hard_cpu_type_i input signals.
 --		Each type of processor is split out into its own wrapper named fb_CPU_<cpu name>  - these are not
 -- fishbone wrappers per-se but instead provide a simplified set of signals to enable the state machine
--- to direct the fishbone master interface. This was done to simplify development and may well need to 
+-- to direct the fishbone controller interface. This was done to simplify development and may well need to 
 -- be rationalised to better utilize resources.
 --
 ----------------------------------------------------------------------------------
@@ -129,8 +129,8 @@ entity fb_cpu is
 
 		-- fishbone signals
 		fb_syscon_i								: in	fb_syscon_t;
-		fb_m2s_o									: out fb_mas_o_sla_i_t;
-		fb_s2m_i									: in	fb_mas_i_sla_o_t;
+		fb_c2p_o									: out fb_con_o_per_i_t;
+		fb_p2c_i									: in	fb_con_i_per_o_t;
 
 		-- chipset control signals
 		cpu_halt_i								: in  std_logic;
@@ -447,7 +447,7 @@ begin
 
 
 	G_BL_RD:FOR I in G_BYTELANES-1 downto 0 GENERATE
-		i_wrap_D_rd(7+I*8 downto I*8) <= fb_s2m_i.D_rd when r_acked(I) = '0' else 
+		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
 															r_D_rd(7+I*8 downto I*8);
 	END GENERATE;
 	
@@ -514,7 +514,7 @@ begin
 						r_wrap_D_WR_stb <= '0';
 						for I in G_BYTELANES-1 downto 0 loop
 							if r_acked(I) = '0' then
-								r_D_rd(7+I*8 downto I*8) <= fb_s2m_i.D_rd;
+								r_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd;
 								r_acked(I) <= '1';
 							end if;
 						end loop;
@@ -574,12 +574,12 @@ begin
 	);
 
 
-  	fb_m2s_o.cyc <= r_wrap_cyc;
-  	fb_m2s_o.we <= r_wrap_we;
-  	fb_m2s_o.A <= r_wrap_phys_A;
-  	fb_m2s_o.A_stb <= r_wrap_cyc;
-  	fb_m2s_o.D_wr <=  r_wrap_D_wr;
-  	fb_m2s_o.D_wr_stb <= r_wrap_D_wr_stb;
+  	fb_c2p_o.cyc <= r_wrap_cyc;
+  	fb_c2p_o.we <= r_wrap_we;
+  	fb_c2p_o.A <= r_wrap_phys_A;
+  	fb_c2p_o.A_stb <= r_wrap_cyc;
+  	fb_c2p_o.D_wr <=  r_wrap_D_wr;
+  	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
 
 
 
@@ -632,7 +632,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		wrap_D_WR_o								=> i_t65_wrap_D_WR,
 		wrap_ack_o								=> i_t65_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 		wrap_D_rd_i								=> i_wrap_D_rd(7 downto 0),
 
@@ -680,7 +680,7 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		wrap_D_WR_o								=> i_6x09_wrap_D_WR,
 		wrap_ack_o								=> i_6x09_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -738,7 +738,7 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		wrap_D_WR_o								=> i_z80_wrap_D_WR,
 		wrap_ack_o								=> i_z80_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -801,7 +801,7 @@ g68k:IF G_INCL_CPU_68k GENERATE
 		wrap_D_WR_o								=> i_68k_wrap_D_WR,
 		wrap_ack_o								=> i_68k_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -866,8 +866,8 @@ END GENERATE;
 --		wrap_D_WR_o								=> i_6502_wrap_D_WR,
 --		wrap_ack_o								=> i_6502_wrap_ack,
 --
---		wrap_dtack_i							=> fb_s2m_i.dtack,
---		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+--		wrap_dtack_i							=> fb_p2c_i.dtack,
+--		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 --		wrap_cyc_i								=> r_wrap_cyc,
 --
 --		-- chipset control signals
@@ -933,7 +933,7 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 		wrap_D_WR_o								=> i_65c02_wrap_D_WR,
 		wrap_ack_o								=> i_65c02_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -994,7 +994,7 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		wrap_D_WR_o								=> i_65816_wrap_D_WR,
 		wrap_ack_o								=> i_65816_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals

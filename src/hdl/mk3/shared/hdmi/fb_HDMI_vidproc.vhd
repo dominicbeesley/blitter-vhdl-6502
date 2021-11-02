@@ -36,8 +36,8 @@ entity fb_HDMI_vidproc is
 		-- fishbone signals for cpu/dma port
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		
 		-- Clock enable output to CRTC
@@ -93,8 +93,8 @@ begin
 		nRESET		=> not fb_syscon_i.rst,
 		CLKEN_CRTC	=> CLKEN_CRTC_o,
 		ENABLE		=> i_fb_wrcyc_stb,
-		A0				=> fb_m2s_i.A(0),
-		DI_CPU		=> fb_m2s_i.D_wr,
+		A0				=> fb_c2p_i.A(0),
+		DI_CPU		=> fb_c2p_i.D_wr,
 		DI_RAM		=> RAM_D_i,
 		nINVERT		=> nINVERT_i,
 		DISEN			=> DISEN_i,
@@ -127,18 +127,18 @@ begin
 
 	-- FISHBONE wrapper for CPU/DMA access
 
-	i_fb_wrcyc_stb <= fb_m2s_i.cyc and fb_m2s_i.A_stb and fb_m2s_i.we and fb_m2s_i.D_wr_stb;
-	i_fb_rdcyc		<=  fb_m2s_i.cyc and fb_m2s_i.A_stb and not fb_m2s_i.we;
+	i_fb_wrcyc_stb <= fb_c2p_i.cyc and fb_c2p_i.A_stb and fb_c2p_i.we and fb_c2p_i.D_wr_stb;
+	i_fb_rdcyc		<=  fb_c2p_i.cyc and fb_c2p_i.A_stb and not fb_c2p_i.we;
 
-	fb_s2m_o.nul <= '0';
-	fb_s2m_o.ack <= r_ack;
+	fb_p2c_o.nul <= '0';
+	fb_p2c_o.ack <= r_ack;
 
 	-- TODO: This could give a better countdown but can't be bothered and it's unlikely
 	-- to cause performance issues except for busy palette writes - might deliberately 
 	-- delay this even more to a character cycle and count down to that?
-	fb_s2m_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
+	fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
 								RDY_CTDN_MAX;
-	fb_s2m_o.D_rd <= (others => '1');
+	fb_p2c_o.D_rd <= (others => '1');
 
 	p_ack:process(fb_syscon_i)
 	begin

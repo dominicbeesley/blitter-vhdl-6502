@@ -135,7 +135,7 @@ architecture rtl of fb_cpu_65816 is
 															-- this should be before A/CYC
 
 	signal i_vma				: std_logic;		-- '1' if VPA or VDA
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a master cycle
+	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);

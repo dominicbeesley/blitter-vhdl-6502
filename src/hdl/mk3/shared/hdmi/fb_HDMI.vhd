@@ -36,8 +36,8 @@ entity fb_HDMI is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		HDMI_SCL_io							: inout	std_logic;
 		HDMI_SDA_io							: inout	std_logic;

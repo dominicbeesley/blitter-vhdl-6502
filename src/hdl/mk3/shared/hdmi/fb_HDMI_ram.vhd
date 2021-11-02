@@ -36,8 +36,8 @@ entity fb_HDMI_ram is
 		-- fishbone signals for cpu/dma port
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		-- vga signals
 
@@ -56,12 +56,12 @@ architecture rtl of fb_HDMI_ram is
 
 begin
 
-	i_fb_wrcyc_stb <= fb_m2s_i.cyc and fb_m2s_i.A_stb and fb_m2s_i.we and fb_m2s_i.D_wr_stb;
-	i_fb_rdcyc		<=  fb_m2s_i.cyc and fb_m2s_i.A_stb and not fb_m2s_i.we;
+	i_fb_wrcyc_stb <= fb_c2p_i.cyc and fb_c2p_i.A_stb and fb_c2p_i.we and fb_c2p_i.D_wr_stb;
+	i_fb_rdcyc		<=  fb_c2p_i.cyc and fb_c2p_i.A_stb and not fb_c2p_i.we;
 
-	fb_s2m_o.nul <= '0';
-	fb_s2m_o.ack <= r_ack;
-	fb_s2m_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
+	fb_p2c_o.nul <= '0';
+	fb_p2c_o.ack <= r_ack;
+	fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
 								to_unsigned(1, RDY_CTDN_LEN) when i_fb_wrcyc_stb = '1' else
 								to_unsigned(1, RDY_CTDN_LEN) when i_fb_rdcyc = '1' else
 								RDY_CTDN_MAX;
@@ -82,11 +82,11 @@ begin
 	e_ram: entity work.hdmi_blockram
 	port map
 	(
-		address_a => 	fb_m2s_i.A(G_MEM_ADDR_WIDTH-1 downto 0),
+		address_a => 	fb_c2p_i.A(G_MEM_ADDR_WIDTH-1 downto 0),
 		clock_a => 		fb_syscon_i.clk,
-		data_a => 		fb_m2s_i.D_wr,
+		data_a => 		fb_c2p_i.D_wr,
 		wren_a => 		i_fb_wrcyc_stb,
-		q_a => 			fb_s2m_o.D_rd,
+		q_a => 			fb_p2c_o.D_rd,
 
 		address_b => 	hdmi_ram_addr_i(G_MEM_ADDR_WIDTH-1 downto 0),
 		clock_b => 		hdmi_ram_clk_i,

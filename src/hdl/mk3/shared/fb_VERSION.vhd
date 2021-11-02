@@ -55,8 +55,8 @@ entity fb_version is
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
-		fb_m2s_i								: in		fb_mas_o_sla_i_t;
-		fb_s2m_o								: out		fb_mas_i_sla_o_t
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t
 	);
 end fb_version;
 
@@ -74,10 +74,10 @@ architecture rtl of fb_version is
 begin
 
 
-	fb_s2m_o.rdy_ctdn <= (others => '0') when state = wrel else to_unsigned(1, RDY_CTDN_LEN);
-	fb_s2m_o.ack <= r_ack;
-	fb_s2m_o.nul <= '0';
-	fb_s2m_o.D_rd <= r_Q;
+	fb_p2c_o.rdy_ctdn <= (others => '0') when state = wrel else to_unsigned(1, RDY_CTDN_LEN);
+	fb_p2c_o.ack <= r_ack;
+	fb_p2c_o.nul <= '0';
+	fb_p2c_o.D_rd <= r_Q;
 
 	e_version:entity work.version_rom port map (
 		A => r_A,
@@ -97,9 +97,9 @@ begin
 				r_ack <= '0';
 				case state is
 					when idle =>
-						if fb_m2s_i.cyc = '1' and fb_m2s_i.A_stb = '1' then
+						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
 							state <= act;
-							r_A <= fb_m2s_i.A(7 downto 0);
+							r_A <= fb_c2p_i.A(7 downto 0);
 						end if;
 					when act =>
 						r_Q <= i_Q;
@@ -111,7 +111,7 @@ begin
 						state <= idle;
 				end case;
 
-				if fb_m2s_i.cyc = '0' or fb_m2s_i.A_stb = '0' then
+				if fb_c2p_i.cyc = '0' or fb_c2p_i.A_stb = '0' then
 					state <= idle;
 				end if;
 

@@ -46,9 +46,9 @@ begin
 	VGA_VS_o			<= '1';
 	VGA_BLANK_o		<= '1';
 
-	fb_s2m_o.rdy_ctdn <= RDY_CTDN_MIN;
-	fb_s2m_o.nul <= '1';
-	fb_s2m_o.ack <= '1';
-	fb_s2m_o.D_Rd <= (others => '0');
+	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+	fb_p2c_o.nul <= '1';
+	fb_p2c_o.ack <= '1';
+	fb_p2c_o.D_Rd <= (others => '0');
 
 end rtl_disabled;
