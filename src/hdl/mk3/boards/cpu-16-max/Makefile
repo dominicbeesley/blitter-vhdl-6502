@@ -60,7 +60,7 @@ output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).
 
 output_files/$(PROJECT).sof output_files/$(PROJECT).asm.rpt: $(PROJECT).qsf output_files/$(PROJECT).fit.rpt asm.chg
 	quartus_asm $(ASM_ARGS) $(PROJECT)
-	{ if [ -e version.tag ]; then cat version.tag; fi ; date +'_%Y%m%d_%H%M%S'; } | tr -d "\n" | tr ":" "_" > output_files/$(PROJECT).sof.ver
+	{ if [ -e version.tag ]; then cat version.tag; fi ; date +'_%Y%m%d_%H%M%S'; } | tr -d "\r\n" | tr ":" "_" > output_files/$(PROJECT).sof.ver
 	cp output_files/$(PROJECT).sof output_files/$(PROJECT).$$(cat output_files/$(PROJECT).sof.ver).sof
 
 
