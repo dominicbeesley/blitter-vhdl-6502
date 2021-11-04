@@ -1,8 +1,0 @@
-Some parts of this project have been taken from source on the internet:
-
-
-Thanks to:
-
-* [Benjamin Krill](https://git.krll.de/public/snippets/src/branch/master/vhdl/rrarbiter.vhd) for round robin arbiter
-* T65 core - Daniel Wallner, Mike Johnson, Wolfgang Scherr Morten Leikvoll and many others
-* Various files from Mike Sterling's [BeebFPGA](core https://www.mike-stirling.com/retro-fpga/bbc-micro-on-an-fpga/bbc-micro-on-an-fpga-design-detail/)
