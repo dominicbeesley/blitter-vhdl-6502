@@ -22,16 +22,16 @@
 -- ----------------------------------------------------------------------
 
 
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company: 				Dossytronics
+-- Engineer: 				Dominic Beesley
 -- 
--- Create Date:    		9/3/2018
+-- Create Date:    		9/11/2021
 -- Design Name: 
--- Module Name:    		work.mk3blit_pack
+-- Module Name:    		work.hdmi_pack
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		board build configuration 
+-- Description: 			HDMI shared definitions
 -- Dependencies: 
 --
 -- Revision: 
@@ -40,53 +40,52 @@
 --
 ----------------------------------------------------------------------------------
 
+
+
 library ieee;
-use IEEE.math_real.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-package mk3blit_pack is
-	type cpu_type is (CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008);
-	type sys_type is (SYS_BBC, SYS_ELK);
+library work;
+use work.common.all;
+use work.fishbone.all;
 
-	constant GBUILD_INCL_HDMI	: boolean := false;
-
-
-
-	constant PERIPHERAL_COUNT		: natural := 6;
-	constant PERIPHERAL_NO_VERSION	: natural := 0;
-	constant PERIPHERAL_NO_SYS	 	: natural := 1;
-	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
-	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
-	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
-	constant PERIPHERAL_NO_HDMI		: natural := 5;
-	
-
-	constant CONTROLLER_COUNT		: natural := 2;
-	-- not 0 is highest priority!
-	constant MAS_NO_CPU		: natural := 1;
-	constant MAS_NO_CHIPSET		: natural := 0;
+package HDMI_pack is
 
 
-	constant PERIPHERAL_COUNT_CHIPSET	: natural := 5;
-	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
-	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
-	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 2;
-	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 3;
-	constant PERIPHERAL_NO_CHIPSET_EEPROM: natural := 4;
+	component fb_HDMI is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural
+	);
+	port(
 
+		CLK_48M_i							: in		std_logic;
 
-	constant CONTROLLER_COUNT_CHIPSET	: natural := 5;
-	constant MAS_NO_CHIPSET_BLIT	: natural := 4;
-	constant MAS_NO_CHIPSET_DMA_1	: natural := 3; 
-	constant MAS_NO_CHIPSET_DMA_0	: natural := 2;
-	constant MAS_NO_CHIPSET_SND	: natural := 1; 
-	constant MAS_NO_CHIPSET_AERIS	: natural := 0; 
+		-- fishbone signals
 
+		fb_syscon_i							: in		fb_syscon_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
+		HDMI_SCL_io							: inout	std_logic;
+		HDMI_SDA_io							: inout	std_logic;
+		HDMI_HPD_i							: in		std_logic;
+		HDMI_CK_o							: out		std_logic;
+		HDMI_R_o								: out		std_logic;
+		HDMI_G_o								: out		std_logic;
+		HDMI_B_o								: out		std_logic;
 
+		-- debug video	
 
-end mk3blit_pack;
+		VGA_R_o								: out		std_logic;
+		VGA_G_o								: out		std_logic;
+		VGA_B_o								: out		std_logic;
+		VGA_HS_o								: out		std_logic;
+		VGA_VS_o								: out		std_logic;
+		VGA_BLANK_o							: out		std_logic
 
+	);
+	end component;
+end package HDMI_pack;
 
-package body mk3blit_pack is
-
-end mk3blit_pack;

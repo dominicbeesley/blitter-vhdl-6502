@@ -184,11 +184,6 @@ begin
 	SYS_PHI2_o <= i_gen_phi2;
 	SYS_A_o <= r_sys_A;
 
-	i_sys_rdy_ctdn_rd <= RDY_CTDN_MAX when i_sys_rdy_ctdn = RDY_CTDN_MAX else 
-								RDY_CTDN_MIN when i_sys_rdy_ctdn <= CYCLES_SETUP else
-								i_sys_rdy_ctdn - CYCLES_SETUP;
-
-
 --	-- latch to try and squeeze a bit of time at end of sys cycle - RAM reads are tight
 --	i_D_rd <= r_sys_ROMPG when r_sys_A(15 downto 0) = x"FE30" else
 --				 SYS_D_io;
@@ -422,7 +417,8 @@ begin
 	e_dll:entity work.fb_SYS_clock_dll
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+		CYCLES_SETUP => CYCLES_SETUP
 	)
 	port map (
       cfg_sys_type_i          => cfg_sys_type_i,
@@ -431,6 +427,7 @@ begin
 		sys_phi2_i					=> i_gen_phi2,
 		sys_slow_cyc_i				=> i_sys_slow_cyc,
 		sys_rdyctdn_o				=> i_sys_rdy_ctdn,
+		sys_rdyctdn_rd_o			=> i_sys_rdy_ctdn_rd,
 		sys_cyc_start_clken_o	=> i_SYScyc_st_clken,
 		sys_cyc_end_clken_o		=> i_SYScyc_end_clken,
 

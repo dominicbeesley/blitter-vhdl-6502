@@ -50,9 +50,11 @@ use work.mk3blit_pack.all;
 
 entity fb_sys_clock_dll is
    generic (
-      SIM                              : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      SIM                              : boolean := false;     -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                       : natural;
-
+      CYCLES_SETUP                     : natural;              -- number of cycles we expect data to be ready before
+                                                               -- phi2, note this is pretty tight on a Model B so 0 might
+                                                               -- prove to be safest
       NEW_EDGE_META                    : natural := 2;
       NEW_EDGE_LENDIV2                 : natural := 2;
       NEW_EDGE_EXTRA                   : natural := 2;
@@ -82,6 +84,7 @@ entity fb_sys_clock_dll is
       sys_dll_lock_o                   : out    std_logic;
 
       sys_rdyctdn_o                    : out    unsigned(RDY_CTDN_LEN-1 downto 0);
+      sys_rdyctdn_rd_o                 : out    unsigned(RDY_CTDN_LEN-1 downto 0);
 
       sys_cyc_start_clken_o            : out    std_logic;                    -- fires towards the start of the cycle 
                                                                               -- - in time to register an address on 
@@ -100,7 +103,8 @@ architecture rtl of fb_sys_clock_dll is
    signal   r_new_oh_ring_clock : std_logic_vector(CLOCKSPEED/2 downto 0) := (0 => '1', others => '0')
                                                                         ;  -- note this is one longer than needed for 
                                                                            -- an extra position when stretching
-   signal   r_ctdn : unsigned(RDY_CTDN_LEN-1 downto 0);
+   signal   r_ctdn      : unsigned(RDY_CTDN_LEN-1 downto 0);
+   signal   r_ctdn_rd   : unsigned(RDY_CTDN_LEN-1 downto 0);
 
    signal   r_new_dll_lock    : std_logic;
    signal   r_new_dll_fast    : std_logic;
@@ -124,6 +128,7 @@ architecture rtl of fb_sys_clock_dll is
                                                                               -- counts number of 2m cycles since last 
                                                                               -- fast cycles per 1m cycle
 begin
+
 
    -- clock sizing assertions
    -- must give enough even resolution for a 16 MHz clock i.e. be divisible by 32
@@ -313,18 +318,27 @@ begin
    begin
       if fb_syscon_i.rst = '1' then
          r_ctdn <= (others => '1');
+         r_ctdn_rd <= (others => '1');
       elsif rising_edge(fb_syscon_i.clk) then
          if cfg_sys_type_i = SYS_ELK then
             if i_start_clken_nostretch then
                r_ctdn <= RDY_CTDN_MAX;
+               r_ctdn_rd <= RDY_CTDN_MAX;
             elsif i_new_edge_clken = '1' then
                r_ctdn <= RDY_CTDN_MIN;
+               r_ctdn_rd <= RDY_CTDN_MIN;
             end if;
          else
             if i_2M_clken = '1' then
                r_ctdn <= to_unsigned((CLOCKSPEED / 2) - G_2M_DATA_SETUP, r_ctdn'length);
-            elsif r_ctdn > 0 then
-               r_ctdn <= r_ctdn - 1;
+               r_ctdn_rd <= to_unsigned((CLOCKSPEED / 2) - G_2M_DATA_SETUP - CYCLES_SETUP, r_ctdn_rd'length);
+            else
+               if r_ctdn > 0 then
+                  r_ctdn <= r_ctdn - 1;
+               end if;
+               if r_ctdn_rd > 0 then
+                  r_ctdn_rd <= r_ctdn_rd - 1;
+               end if;
             end if;           
          end if;
       end if;
@@ -335,9 +349,14 @@ begin
    sys_rdyctdn_o <=
          r_ctdn when cfg_sys_type_i = SYS_ELK else
          RDY_CTDN_MAX when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
-         r_ctdn when r_ctdn <= RDY_CTDN_MAX else
-         RDY_CTDN_MAX;           
+         r_ctdn;
 
+   sys_rdyctdn_rd_o <=
+         r_ctdn_rd when cfg_sys_type_i = SYS_ELK else
+         RDY_CTDN_MAX when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
+         r_ctdn_rd;
+
+         
    i_notslo <=
          '0' when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
          '1';

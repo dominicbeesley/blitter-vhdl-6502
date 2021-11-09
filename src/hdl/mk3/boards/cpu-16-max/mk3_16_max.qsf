@@ -111,6 +111,7 @@ set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D0_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D1_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D2_o
 set_global_assignment -name SDC_FILE mk3_16_max.sdc
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_disabled.vhd
 set_global_assignment -name VHDL_FILE mk3blit_pack.vhd
