@@ -8,18 +8,18 @@ entity version_rom is port (
  Q : out std_logic_vector(7 downto 0)
 );
 end version_rom;
--- 35c62a5M 2021-11-09:15:39:55
+-- 53ebaa2M 2021-11-09:21:58:57
 -- dev-general:github.com/dominicbeesley/blitter-vhdl-6502.git
 architecture rtl of version_rom is
 begin
 Q <=
-   x"33" when unsigned(A) = 0 else 
-   x"35" when unsigned(A) = 1 else 
-   x"63" when unsigned(A) = 2 else 
-   x"36" when unsigned(A) = 3 else 
-   x"32" when unsigned(A) = 4 else 
+   x"35" when unsigned(A) = 0 else 
+   x"33" when unsigned(A) = 1 else 
+   x"65" when unsigned(A) = 2 else 
+   x"62" when unsigned(A) = 3 else 
+   x"61" when unsigned(A) = 4 else 
    x"61" when unsigned(A) = 5 else 
-   x"35" when unsigned(A) = 6 else 
+   x"32" when unsigned(A) = 6 else 
    x"4D" when unsigned(A) = 7 else 
    x"20" when unsigned(A) = 8 else 
    x"32" when unsigned(A) = 9 else 
@@ -33,14 +33,14 @@ Q <=
    x"30" when unsigned(A) = 17 else 
    x"39" when unsigned(A) = 18 else 
    x"3A" when unsigned(A) = 19 else 
-   x"31" when unsigned(A) = 20 else 
-   x"35" when unsigned(A) = 21 else 
+   x"32" when unsigned(A) = 20 else 
+   x"31" when unsigned(A) = 21 else 
    x"3A" when unsigned(A) = 22 else 
-   x"33" when unsigned(A) = 23 else 
-   x"39" when unsigned(A) = 24 else 
+   x"35" when unsigned(A) = 23 else 
+   x"38" when unsigned(A) = 24 else 
    x"3A" when unsigned(A) = 25 else 
    x"35" when unsigned(A) = 26 else 
-   x"35" when unsigned(A) = 27 else 
+   x"37" when unsigned(A) = 27 else 
    x"0D" when unsigned(A) = 28 else 
    x"64" when unsigned(A) = 29 else 
    x"65" when unsigned(A) = 30 else 
