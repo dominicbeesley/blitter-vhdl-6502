@@ -441,10 +441,6 @@ begin
 
 	debug_wrap_cyc_o <= r_wrap_cyc;
 
-	--NOTE: this can't be moved to SYS otherwise it hogs the intercon and blocks aeris, best left here
-	i_iorb_cs <= '1' when i_wrap_phys_A(23 downto 4) = x"FFFE4" and cfg_sys_type_i /= SYS_ELK else 
-					 '0';
-
 
 	G_BL_RD:FOR I in G_BYTELANES-1 downto 0 GENERATE
 		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
@@ -570,7 +566,9 @@ begin
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
 		A_i									=> i_wrap_A_log,
-		A_o									=> i_wrap_phys_A
+		A_o									=> i_wrap_phys_A,
+
+		IORB_CS_o							=> i_iorb_cs
 	);
 
 

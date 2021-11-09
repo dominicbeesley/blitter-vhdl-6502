@@ -79,7 +79,10 @@ entity log2phys is
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
 		-- mapped address
-		A_o									: out std_logic_vector(23 downto 0)
+		A_o									: out std_logic_vector(23 downto 0);
+
+		-- for 65xx is the IORB of the SYS VIA being accessed
+		IORB_CS_o							: out std_logic
 
 	);
 end log2phys;
@@ -148,6 +151,7 @@ begin
 	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i)
 	begin
 		A_o <= A_i;
+		IORB_CS_o <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
 				A_o <= r_pagrom_A & A_i(13 downto 0);
@@ -166,6 +170,10 @@ begin
 				end if;
 			elsif A_i(15) = '0' and turbo_lo_mask_i(to_integer(unsigned(A_i(14 downto 12)))) = '1' then
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF
+			end if;
+
+			if A_i(15 downto 4) = x"FE4" and cfg_sys_type_i /= SYS_ELK then
+				IORB_CS_o <='1';
 			end if;
 		end if;
 	end process p_A0;
