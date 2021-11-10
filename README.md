@@ -30,7 +30,11 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	    chipset					The Chipset (Blitter/Paula/Aeris/DMA etc) (used various revisions of board)
 	    library					Shared by many projects
 	      3rdparty					Code from other projects
+	        HamsterWorks				Stuff from Mike Field for HDMI
+	        MikeStirling				Stuff from Mike Stirling/Hoglet from the BeebFPGA project
+	        Missing					Where to place missing 3rd party libraries with incompatible licences
 	        T6502					The T65 core
+	        TG68					The TG68 core
 	      fishbone					The Fishbone Bus basic components and definitions
 	    mk3						Projects and files relevant to the Mk.3 board
 	      boards					contains individual builds

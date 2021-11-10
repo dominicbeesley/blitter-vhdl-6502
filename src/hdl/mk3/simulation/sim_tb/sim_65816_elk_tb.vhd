@@ -109,7 +109,7 @@ begin
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../sim_asm/test_asm/blit-bringup2-rom0.rom",
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
 		G_SIM_SYS_TYPE => SIM_SYS_ELK
 	)
@@ -216,7 +216,7 @@ begin
 		SND_L_o 								=> open,
 		SND_R_o 								=> open,
 		
-		HDMI_SCL_o 							=> open,
+		HDMI_SCL_io							=> open,
 		HDMI_SDA_io 						=> open,
 		HDMI_HPD_i 							=> '1',
 		HDMI_CK_o 							=> open,
@@ -251,7 +251,7 @@ begin
 		SYS_AUX_io 							=> i_SYS_AUX_io,
 		SYS_AUX_o 							=> open,
 
-		I2C_SCL_o 							=> open,
+		I2C_SCL_io 							=> open,
 		I2C_SDA_io 							=> open,
 
 		exp_PORTA_io 						=> i_exp_PORTA_io_blit,
@@ -360,7 +360,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../sim_asm/test_asm/blit-bringup2-rom0.rom",
+		romfile => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)

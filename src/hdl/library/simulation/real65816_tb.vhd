@@ -99,7 +99,6 @@ ARCHITECTURE Behavioral OF real_65816_tb IS
 
 	SIGNAL  	i_RnW				: STD_LOGIC;
 	SIGNAL	i_cpu_A			: STD_LOGIC_VECTOR(23 downto 0);
-	SIGNAL  	i_SYNC			: STD_LOGIC;
 
 	SIGNAL	i_cpu_D_out		: STD_LOGIC_VECTOR(7 downto 0);
 	SIGNAL	i_cpu_D_out_dly_hold : STD_LOGIC_VECTOR(7 downto 0);
@@ -163,28 +162,28 @@ BEGIN
 
 
 
-	e_t65816cput: ENTITY work.T65_816 PORT MAP (
-	    Mode    => "10",								--65816
-	    Res_n   => nRESET,
-	    Enable  => '1',
-	    Clk     => i_cpu_clk,
-	    Rdy     => RDY,
-	    Abort_n => '1',
-	    IRQ_n   => nIRQ,
-	    NMI_n   => nNMI,
-	    SO_n    => '1',
-	    R_W_n   => i_RnW,
-	    Sync    => i_SYNC,
-	    EF      => i_EF,
-	    MF      => i_MF,
-	    XF      => i_XF,
-	    ML_n    => i_MLB,
-	    VP_n    => i_VPB,
-	    VDA     => i_VDA,
-	    VPA     => i_VPA,
-	    A       => i_cpu_A,
-	    DI      => i_cpu_D_in,
-	    DO      => i_cpu_D_out
-	  );
+	--TODO E/M/X flags
+	e_t65816cput: entity work.P65C816
+   port map ( 
+      CLK		=> i_cpu_clk,
+		RST_N		=> nRESET,
+		CE			=> '1',
+		  
+		RDY_IN	=> RDY,
+      NMI_N		=> nNMI,
+		IRQ_N		=> nIRQ,
+		ABORT_N	=> '1',
+      D_IN		=> i_cpu_D_in,
+      D_OUT    => i_cpu_D_out,
+      A_OUT    => i_cpu_A,
+      WE  		=> i_RnW,
+		RDY_OUT 	=> open,
+		VPA 		=> i_VPA,
+		VDA 		=> i_VDA,
+		MLB 		=> i_MLB,
+		VPB 		=> i_VPB
+    );
+
+
 
 END Behavioral;
