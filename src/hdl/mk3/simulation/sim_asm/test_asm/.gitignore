@@ -1,0 +1,7 @@
+*.da.s
+*.lst
+*.map
+*.o
+*.rom
+*.sy2
+*.sym.noi

@@ -1,0 +1,3173 @@
+m255
+K4
+z2
+!s11e MIXED_VERSIONS
+!s11f vlog 2020.1 2020.02, Feb 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/simulation/modelsim
+Eaddress_decode
+Z1 w1635870865
+Z2 DPx4 ieee 9 math_real 0 22 gNk<PdFJ<XNPcfef`f?Z81
+Z3 DPx4 work 12 mk3blit_pack 0 22 hXc0kjzP6i3Ve9Tz`iLLb3
+Z4 DPx4 work 8 fishbone 0 22 FmNQz@KL;QSb1jTmMabY>2
+Z5 DPx4 work 6 common 0 22 B?[`Z_hO`SQ9:enb:VFfM2
+Z6 DPx4 ieee 11 numeric_std 0 22 aU^R8eGcicLcUFIaBQSL>3
+Z7 DPx3 std 6 textio 0 22 zE1`LPoLg^DX3Oz^4Fj1K3
+Z8 DPx4 ieee 14 std_logic_1164 0 22 cVAk:aDinOX8^VGI1ekP<3
+!i122 29
+R0
+Z9 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode.vhd
+Z10 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode.vhd
+l0
+Z11 L53 1
+VB@d2R1NeCzaZ^7HM`aVBZ2
+!s100 l7UzdACiKLf9bm3SjCCFU2
+Z12 OV;C;2020.1;71
+33
+Z13 !s110 1636552815
+!i10b 1
+Z14 !s108 1636552815.000000
+Z15 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode.vhd|
+Z16 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode.vhd|
+!i113 1
+Z17 o-2008 -work work
+Z18 tExplicit 1 CvgOpt 0
+Artl
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+Z19 DEx4 work 14 address_decode 0 22 B@d2R1NeCzaZ^7HM`aVBZ2
+!i122 29
+l68
+L67 39
+VTl`zzK?TV8Foi8XzLnamH0
+!s100 <g><Qi[e^[PSSUfo9IkcX3
+R12
+33
+R13
+!i10b 1
+R14
+R15
+R16
+!i113 1
+R17
+R18
+Eaddress_decode_chipset
+Z20 w1635870978
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+!i122 20
+R0
+Z21 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode_chipset.vhd
+Z22 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode_chipset.vhd
+l0
+R11
+VIo[o<0G:a7hRIU`fcdhFS1
+!s100 hIZez155NJMlDZ>:M0z9V0
+R12
+33
+Z23 !s110 1636552812
+!i10b 1
+Z24 !s108 1636552812.000000
+Z25 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode_chipset.vhd|
+Z26 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/address_decode_chipset.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+Z27 DEx4 work 22 address_decode_chipset 0 22 Io[o<0G:a7hRIU`fcdhFS1
+!i122 20
+l74
+L73 36
+VDEV5dldj9Nma7?``0GdBh0
+!s100 OeX^j4^<1HGj2hg[8]2Z]3
+R12
+33
+R23
+!i10b 1
+R24
+R25
+R26
+!i113 1
+R17
+R18
+Ebbc_clk_gen
+Z28 w1636552004
+R7
+R8
+!i122 63
+R0
+Z29 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/bbc_clock_gen.vhd
+Z30 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/bbc_clock_gen.vhd
+l0
+Z31 L48 1
+Vbck6gQZG_?ZECC:R781gG0
+!s100 S5<kZee2Wo8TIBF;e2SOF1
+R12
+33
+Z32 !s110 1636552824
+!i10b 1
+Z33 !s108 1636552824.000000
+Z34 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/bbc_clock_gen.vhd|
+Z35 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/bbc_clock_gen.vhd|
+!i113 1
+R17
+R18
+Artl
+Z36 DEx4 work 4 ls51 0 22 UWCohBmhMd8L8zAD`zkMn3
+Z37 DEx4 work 4 ls32 0 22 RmmJczD<AUPm?Ndkk>XfI0
+Z38 DEx4 work 4 ls04 0 22 0E^CeATaLeQd8anaGkFA:1
+Z39 DEx4 work 4 ls74 0 22 fz488P5hLjLG@Z5_T3A6k3
+R7
+R8
+Z40 DEx4 work 11 bbc_clk_gen 0 22 bck6gQZG_?ZECC:R781gG0
+!i122 63
+l80
+L65 134
+Vk3T:[E16h0c^OBE:S2zHB1
+!s100 VEQA6Wn8_Y5V3EkFjMhmH2
+R12
+33
+R32
+!i10b 1
+R33
+R34
+R35
+!i113 1
+R17
+R18
+Ebbc_slow_cyc
+Z41 w1635859758
+R7
+R8
+!i122 64
+R0
+Z42 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/bbc_slow_cyc.vhd
+Z43 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/bbc_slow_cyc.vhd
+l0
+Z44 L47 1
+VTa;O5L`?SXn<YL[8;zZ1G0
+!s100 gWoleb?k>[WQcDeVD^ZnP3
+R12
+33
+Z45 !s110 1636552825
+!i10b 1
+R33
+Z46 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/bbc_slow_cyc.vhd|
+Z47 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/bbc_slow_cyc.vhd|
+!i113 1
+R17
+R18
+Artl
+R7
+R8
+Z48 DEx4 work 12 bbc_slow_cyc 0 22 Ta;O5L`?SXn<YL[8;zZ1G0
+!i122 64
+l56
+L54 21
+VckedKfOm<o6CD0kV`HX9Y1
+!s100 AZSj1cm3giUdQiI[J:L0P0
+R12
+33
+R45
+!i10b 1
+R33
+R46
+R47
+!i113 1
+R17
+R18
+Eblit_addr
+Z49 w1635792396
+Z50 DPx4 work 10 blit_types 0 22 >0J`ibX]md]IeKZeSB5NW3
+R6
+R7
+R8
+!i122 35
+R0
+Z51 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_addr.vhd
+Z52 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_addr.vhd
+l0
+Z53 L50 1
+Vc;6]D8_2H4E2Ajj3D9oX`1
+!s100 @4M=6_jU1O8SSbzW>N;jU0
+R12
+33
+Z54 !s110 1636552816
+!i10b 1
+Z55 !s108 1636552816.000000
+Z56 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_addr.vhd|
+Z57 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_addr.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R50
+R6
+R7
+R8
+Z58 DEx4 work 9 blit_addr 0 22 c;6]D8_2H4E2Ajj3D9oX`1
+!i122 35
+l87
+L79 103
+V4_f>cg=n:SY@1hiDMSMC;1
+!s100 W0Sf^REYoLb]=PSYd@cKl2
+R12
+33
+R54
+!i10b 1
+R55
+R56
+R57
+!i113 1
+R17
+R18
+Pblit_types
+!i122 9
+w1635792415
+R0
+8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_types.vhd
+FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_types.vhd
+l0
+Z59 L41 1
+V>0J`ibX]md]IeKZeSB5NW3
+!s100 MdZ;>DJUTX_@bzE[_6DGK1
+R12
+33
+Z60 !s110 1636552809
+!i10b 1
+Z61 !s108 1636552809.000000
+!s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_types.vhd|
+!s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_types.vhd|
+!i113 1
+R17
+R18
+Eclockreg
+Z62 w1635863247
+R6
+R7
+R8
+!i122 6
+R0
+Z63 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/clockreg.vhd
+Z64 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/clockreg.vhd
+l0
+Z65 L51 1
+VOS95FkA<dcTl<Fk>6Q:jF0
+!s100 KDh7RGWY;7V2`ZcmdGjj<0
+R12
+33
+R60
+!i10b 1
+R61
+Z66 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/clockreg.vhd|
+Z67 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/clockreg.vhd|
+!i113 1
+R17
+R18
+Aarch
+R6
+R7
+R8
+Z68 DEx4 work 8 clockreg 0 22 OS95FkA<dcTl<Fk>6Q:jF0
+!i122 6
+l66
+L63 20
+VY@l=UMf=7aK3g6BV;3N;V1
+!s100 mo9lEkLVGj;kdCeQh2;4z2
+R12
+33
+R60
+!i10b 1
+R61
+R66
+R67
+!i113 1
+R17
+R18
+Eclocks_pll
+Z69 w1635792783
+R5
+R6
+R7
+R8
+!i122 30
+R0
+Z70 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/clocks_pll.vhd
+Z71 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/clocks_pll.vhd
+l0
+Z72 L49 1
+Vz_P6aKSYbCg8iM0]K6BLO3
+!s100 ^;Ob>=JzJ]Hd1=df`PL2C3
+R12
+33
+R13
+!i10b 1
+R14
+Z73 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/clocks_pll.vhd|
+Z74 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/clocks_pll.vhd|
+!i113 1
+R17
+R18
+Artl
+Z75 DEx4 work 7 pllmain 0 22 >eFkIaaPOWD6D=>oR?XOd2
+R5
+R6
+R7
+R8
+Z76 DEx4 work 10 clocks_pll 0 22 z_P6aKSYbCg8iM0]K6BLO3
+!i122 30
+l84
+L70 82
+VegFY8EnEKeK9kG5LlX]Uc3
+!s100 a`dBfn?Q4WcO:<POL?Eo62
+R12
+33
+R13
+!i10b 1
+R14
+R73
+R74
+!i113 1
+R17
+R18
+Pcommon
+!i122 50
+Z77 w1635792614
+R0
+Z78 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/common.vhd
+Z79 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/common.vhd
+l0
+L40 1
+VB?[`Z_hO`SQ9:enb:VFfM2
+!s100 BKhc>fRk:O7ZnjP@fBYzk0
+R12
+33
+b1
+Z80 !s110 1636552821
+!i10b 1
+Z81 !s108 1636552821.000000
+Z82 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/common.vhd|
+Z83 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/common.vhd|
+!i113 1
+R17
+R18
+Bbody
+R5
+R2
+!i122 50
+l0
+R53
+VhTlM@mDmKI9NlP;Xb1m[X0
+!s100 YjBVCa>;?4k9oliE>E8og0
+R12
+33
+R80
+!i10b 1
+R81
+R82
+R83
+!i113 1
+R17
+R18
+Edac_1bit
+Z84 w1635792423
+R6
+R7
+R8
+!i122 10
+R0
+Z85 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dac_1bit.vhd
+Z86 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dac_1bit.vhd
+l0
+R44
+VGUWVjGb^=T5BaKK>j?[0a1
+!s100 5B=5VnZR^SNMV<0J]8XcH2
+R12
+33
+Z87 !s110 1636552810
+!i10b 1
+Z88 !s108 1636552810.000000
+Z89 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dac_1bit.vhd|
+Z90 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dac_1bit.vhd|
+!i113 1
+R17
+R18
+Adac_1bit_arc
+R6
+R7
+R8
+Z91 DEx4 work 8 dac_1bit 0 22 GUWVjGb^=T5BaKK>j?[0a1
+!i122 10
+l66
+L62 37
+VT^=7Nm[VC>TCTQ`S]IeJN1
+!s100 YL3Cz`:fjaWzz1dmTG>I11
+R12
+33
+R87
+!i10b 1
+R88
+R89
+R90
+!i113 1
+R17
+R18
+Eelk_clk_gen
+Z92 w1636551945
+R6
+R7
+R8
+!i122 65
+R0
+Z93 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/elk_clock_gen.vhd
+Z94 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/elk_clock_gen.vhd
+l0
+R65
+Va^Z9P8iDk`j9WKYJMgBVi0
+!s100 9JeGS;1@Ta?05mCTjCD[G1
+R12
+33
+R45
+!i10b 1
+Z95 !s108 1636552825.000000
+Z96 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/elk_clock_gen.vhd|
+Z97 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/bbc/elk_clock_gen.vhd|
+!i113 1
+R17
+R18
+Artl
+R6
+R7
+R8
+Z98 DEx4 work 11 elk_clk_gen 0 22 a^Z9P8iDk`j9WKYJMgBVi0
+!i122 65
+l85
+L70 103
+VdT;khCGFZ0mzFGkdLm;DV2
+!s100 a6b<dhO@@JAeDim9KSfHZ1
+R12
+33
+R45
+!i10b 1
+R95
+R96
+R97
+!i113 1
+R17
+R18
+Eelk_slow_cyc
+Z99 w1635859745
+R7
+R8
+!i122 66
+R0
+Z100 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/elk_slow_cyc.vhd
+Z101 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/elk_slow_cyc.vhd
+l0
+R44
+VfdNlQ1R3^NYBmdLA42=6K2
+!s100 d:HYaA<=<;<5`08BkdP161
+R12
+33
+R45
+!i10b 1
+R95
+Z102 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/elk_slow_cyc.vhd|
+Z103 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/bbc/elk_slow_cyc.vhd|
+!i113 1
+R17
+R18
+Artl
+R7
+R8
+Z104 DEx4 work 12 elk_slow_cyc 0 22 fdNlQ1R3^NYBmdLA42=6K2
+!i122 66
+l57
+L55 15
+VCoRgPj^^A16d<UDmll1UI2
+!s100 KKzADdWCSJJHERHR3XjoT3
+R12
+33
+R45
+!i10b 1
+R95
+R102
+R103
+!i113 1
+R17
+R18
+Efb_arbiter_prior
+Z105 w1635792474
+R5
+Z106 DPx8 synopsys 10 attributes 0 22 dc>JdEHRM@6GGENe5bZ?D1
+Z107 DPx4 ieee 14 std_logic_misc 0 22 dN]HY6l5ohPcZ:TaC@B;53
+R6
+R7
+R8
+!i122 16
+R0
+Z108 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_prior.vhd
+Z109 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_prior.vhd
+l0
+R72
+V?1ZnklOPh<`ZL0@2UND]k3
+!s100 oJzTk6HhKAL=Ed:kcbHge2
+R12
+33
+Z110 !s110 1636552811
+!i10b 1
+Z111 !s108 1636552811.000000
+Z112 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_prior.vhd|
+Z113 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_prior.vhd|
+!i113 1
+R17
+R18
+Artl
+R5
+R106
+R107
+R6
+R7
+R8
+Z114 DEx4 work 16 fb_arbiter_prior 0 22 ?1ZnklOPh<`ZL0@2UND]k3
+!i122 16
+l65
+L64 14
+VVoRPWU3BzO8zCI;>3mEcn0
+!s100 XI77]Tl[cFaSX^Qa3SRYG1
+R12
+33
+R110
+!i10b 1
+R111
+R112
+R113
+!i113 1
+R17
+R18
+Efb_arbiter_roundrobin
+Z115 w1635792497
+R5
+R106
+R107
+R6
+R7
+R8
+!i122 17
+R0
+Z116 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_roundrobin.vhd
+Z117 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_roundrobin.vhd
+l0
+R59
+Vf3Z_zL==@6:@`WII8T4Wb3
+!s100 88jX=dHl8SGJFN5INICRJ1
+R12
+33
+R110
+!i10b 1
+R111
+Z118 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_roundrobin.vhd|
+Z119 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_arbiter_roundrobin.vhd|
+!i113 1
+R17
+R18
+Artl
+R5
+R106
+R107
+R6
+R7
+R8
+Z120 DEx4 work 21 fb_arbiter_roundrobin 0 22 f3Z_zL==@6:@`WII8T4Wb3
+!i122 17
+l64
+L55 55
+VfnFMBUjK2^dTIfT`k?EVG2
+!s100 10@CfbH5n`VW?TPD^P1BW2
+R12
+33
+R110
+!i10b 1
+R111
+R118
+R119
+!i113 1
+R17
+R18
+Efb_cpu
+Z121 w1636495939
+R2
+R3
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 47
+R0
+Z122 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU.vhd
+Z123 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU.vhd
+l0
+L59 1
+VZKXCIFN8]>:m8`OFGjzoU2
+!s100 0Yicch8LVDkG5=KFH>K>b0
+R12
+33
+Z124 !s110 1636552820
+!i10b 1
+Z125 !s108 1636552820.000000
+Z126 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU.vhd|
+Z127 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU.vhd|
+!i113 1
+R17
+R18
+Artl
+Z128 DEx4 work 12 fb_cpu_65816 0 22 8]YlUP7E[[ZaY?h4CJZB?0
+Z129 DEx4 work 12 fb_cpu_65c02 0 22 E4lBz7kI=IY1mfMd_LaOQ2
+Z130 DEx4 work 10 fb_cpu_68k 0 22 eCkJH][<hF32?lF<_3PV41
+Z131 DEx4 work 10 fb_cpu_z80 0 22 W4hnJ;Zk7k78G8IB7[5hU2
+Z132 DEx4 work 11 fb_cpu_6x09 0 22 MFHg66c8h9okT9d]mUaPh0
+Z133 DEx4 work 10 fb_cpu_t65 0 22 a[B5lNTh`a>BX<Cd`Pz=73
+Z134 DEx4 work 8 log2phys 0 22 ZNj3fBbJah`c5K7U?cFPI1
+R2
+R3
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z135 DEx4 work 6 fb_cpu 0 22 ZKXCIFN8]>:m8`OFGjzoU2
+!i122 47
+l365
+L152 1024
+V:W?ci0eRBlEkRTjPJ:>Tk1
+!s100 oIG_oe0S^B`Vn6F7Sahm:3
+R12
+33
+R124
+!i10b 1
+R125
+R126
+R127
+!i113 1
+R17
+R18
+Efb_cpu_65816
+Z136 w1635871129
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 25
+R0
+Z137 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65816.vhd
+Z138 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65816.vhd
+l0
+R53
+V8]YlUP7E[[ZaY?h4CJZB?0
+!s100 6nReC3@0dRW^VVMRPFKN`3
+R12
+33
+Z139 !s110 1636552814
+!i10b 1
+Z140 !s108 1636552813.000000
+Z141 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65816.vhd|
+Z142 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65816.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+R128
+!i122 25
+l156
+L115 267
+VFM5HCgDB9Po06dQYVO;=M1
+!s100 GnhTSka5;3g?hSnUlOoOj2
+R12
+33
+R139
+!i10b 1
+R140
+R141
+R142
+!i113 1
+R17
+R18
+Efb_cpu_65c02
+Z143 w1635871168
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 26
+R0
+Z144 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65C02.vhd
+Z145 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65C02.vhd
+l0
+Z146 L54 1
+VE4lBz7kI=IY1mfMd_LaOQ2
+!s100 Pkj?47bSc_DWc_6D@UHMI0
+R12
+33
+R139
+!i10b 1
+Z147 !s108 1636552814.000000
+Z148 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65C02.vhd|
+Z149 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_65C02.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+R129
+!i122 26
+l185
+L119 282
+V2SX>IL48L83]V<l_^Z4o[2
+!s100 Z:CmPbiO6BW60f6h<N2TE0
+R12
+33
+R139
+!i10b 1
+R147
+R148
+R149
+!i113 1
+R17
+R18
+Efb_cpu_68k
+Z150 w1635793052
+R2
+R3
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 28
+R0
+Z151 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_68K.vhd
+Z152 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_68K.vhd
+l0
+Z153 L52 1
+VeCkJH][<hF32?lF<_3PV41
+!s100 >aG>9Y<]`@PzP3;aLC?o62
+R12
+33
+R139
+!i10b 1
+R147
+Z154 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_68K.vhd|
+Z155 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_68K.vhd|
+!i113 1
+R17
+R18
+Artl
+Z156 DEx4 work 9 metadelay 0 22 i_=]NCSmei=VOc>4^fo[72
+R2
+R3
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+R130
+!i122 28
+l200
+L119 431
+VR3YBC=U<^F`VRgFe<na0k3
+!s100 ABjaJ[O2aHglj7f7@f51_3
+R12
+33
+R139
+!i10b 1
+R147
+R154
+R155
+!i113 1
+R17
+R18
+Efb_cpu_6x09
+Z157 w1635793035
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 24
+R0
+Z158 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_6x09.vhd
+Z159 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_6x09.vhd
+l0
+R65
+VMFHg66c8h9okT9d]mUaPh0
+!s100 lK^]N9ha88gDT9HfNY]i[1
+R12
+33
+Z160 !s110 1636552813
+!i10b 1
+R140
+Z161 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_6x09.vhd|
+Z162 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_6x09.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+R132
+!i122 24
+l230
+L112 321
+VZgi85^X2MU32o00;QHfmT0
+!s100 k=?Flzj3iAN<;a:WG2KPV3
+R12
+33
+R160
+!i10b 1
+R140
+R161
+R162
+!i113 1
+R17
+R18
+Efb_cpu_t65
+Z163 w1635793076
+R2
+R3
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 46
+R0
+Z164 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_t65.vhd
+Z165 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_t65.vhd
+l0
+R65
+Va[B5lNTh`a>BX<Cd`Pz=73
+!s100 YF;3`j3YMLWGzNj7h6O6R1
+R12
+33
+Z166 !s110 1636552819
+!i10b 1
+Z167 !s108 1636552819.000000
+Z168 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_t65.vhd|
+Z169 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_t65.vhd|
+!i113 1
+R17
+R18
+Artl
+Z170 DPx4 work 8 t65_pack 0 22 eO8b?mE8jMKmYjfbHNLB]3
+Z171 DEx4 work 3 t65 0 22 0i:f8a93h316THZHF6IhB0
+R2
+R3
+R4
+R106
+R107
+R6
+R7
+R8
+R133
+!i122 46
+l138
+L101 177
+VV81hA<2go96:TKlWJJYBL1
+!s100 Q_`Hn_FGRi][KTnW:n<G70
+R12
+33
+R166
+!i10b 1
+R167
+R168
+R169
+!i113 1
+R17
+R18
+Efb_cpu_z80
+Z172 w1635793081
+R2
+R3
+R5
+R4
+R6
+R7
+R8
+!i122 27
+R0
+Z173 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_Z80.vhd
+Z174 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_Z80.vhd
+l0
+Z175 L55 1
+VW4hnJ;Zk7k78G8IB7[5hU2
+!s100 ggX_XN3OkGIYElKiYVmlk0
+R12
+33
+R139
+!i10b 1
+R147
+Z176 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_Z80.vhd|
+Z177 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_CPU_Z80.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R5
+R4
+R6
+R7
+R8
+R131
+!i122 27
+l157
+L115 167
+Ve:PYT]4TU=diHK5GPl=V03
+!s100 mC@A]F9e@8JE:8A:i4k8B1
+R12
+33
+R139
+!i10b 1
+R147
+R176
+R177
+!i113 1
+R17
+R18
+Efb_dmac_aeris
+Z178 w1635868587
+R5
+R50
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 36
+R0
+Z179 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/aeris.vhd
+Z180 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/aeris.vhd
+l0
+R146
+VVRk6=V_Ha6AH3OR[^R8[e0
+!s100 V?HaNI4AOYOz:gOGUP]bl1
+R12
+33
+Z181 !s110 1636552817
+!i10b 1
+R55
+Z182 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/aeris.vhd|
+Z183 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/aeris.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R5
+R50
+R4
+R106
+R107
+R6
+R7
+R8
+Z184 DEx4 work 13 fb_dmac_aeris 0 22 VRk6=V_Ha6AH3OR[^R8[e0
+!i122 36
+l168
+L84 599
+VT4::R8f]1K]RGAN05h8i13
+!s100 LM?b6DSlle:c:=I9]E5YN2
+R12
+33
+R181
+!i10b 1
+R55
+R182
+R183
+!i113 1
+R17
+R18
+Efb_dmac_blit
+Z185 w1635869017
+R50
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 43
+R0
+Z186 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_int.vhd
+Z187 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_int.vhd
+l0
+L97 1
+VHb7iB2WW]2IChD=L`6S7=3
+!s100 `WcezG^Xk][F;KPX:;ig22
+R12
+33
+R166
+!i10b 1
+Z188 !s108 1636552818.000000
+Z189 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_int.vhd|
+Z190 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/blit_int.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R58
+R50
+R4
+R106
+R107
+R6
+R7
+R8
+Z191 DEx4 work 12 fb_dmac_blit 0 22 Hb7iB2WW]2IChD=L`6S7=3
+!i122 43
+l274
+L143 1109
+V1;<IF3DYTC0[kS?V8;[Cz2
+!s100 SRaMa`Jg_II?JOi8`VofT2
+R12
+33
+R166
+!i10b 1
+R188
+R189
+R190
+!i113 1
+R17
+R18
+Efb_dmac_int_dma
+Z192 w1635868740
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 45
+R0
+Z193 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma.vhd
+Z194 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma.vhd
+l0
+R65
+V1P:<N2:M=kXg4CDaPO0mm3
+!s100 [9X5bYc6j;bH09jB2z38e1
+R12
+33
+R166
+!i10b 1
+R167
+Z195 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma.vhd|
+Z196 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+Z197 DEx4 work 19 fb_dmac_int_dma_cha 0 22 gVieH_aGif[[LnAQH5nDD0
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z198 DEx4 work 15 fb_dmac_int_dma 0 22 1P:<N2:M=kXg4CDaPO0mm3
+!i122 45
+l98
+L79 146
+VON66m[K_M>5fo0UL:LmCN2
+!s100 Q`ljK^el<Uo^ol?RDP0dk3
+R12
+33
+R166
+!i10b 1
+R167
+R195
+R196
+!i113 1
+R17
+R18
+Efb_dmac_int_dma_cha
+Z199 w1635868831
+R4
+R6
+R7
+R8
+!i122 38
+R0
+Z200 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma_cha.vhd
+Z201 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma_cha.vhd
+l0
+R72
+VgVieH_aGif[[LnAQH5nDD0
+!s100 mK`3IOd4`[]:EgA:[Wia51
+R12
+33
+R181
+!i10b 1
+Z202 !s108 1636552817.000000
+Z203 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma_cha.vhd|
+Z204 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_dma_cha.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R4
+R6
+R7
+R8
+R197
+!i122 38
+l204
+L86 580
+VYASLS=I>^PhzfI0FQ>38L3
+!s100 3DV62feaiANQiD6YhBeVF0
+R12
+33
+R181
+!i10b 1
+R202
+R203
+R204
+!i113 1
+R17
+R18
+Efb_dmac_int_sound
+Z205 w1635869056
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 44
+R0
+Z206 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound.vhd
+Z207 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound.vhd
+l0
+R11
+Vdk:O1>]G[17IWQH6@680o0
+!s100 h9bQ20RA;HGK]=Z8BZfWI3
+R12
+33
+R166
+!i10b 1
+R167
+Z208 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound.vhd|
+Z209 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+Z210 DEx4 work 21 fb_dmac_int_sound_cha 0 22 UN5V:ASU_>0::lE^L986B0
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z211 DEx4 work 17 fb_dmac_int_sound 0 22 dk:O1>]G[17IWQH6@680o0
+!i122 44
+l134
+L84 335
+VKj^P;XO>;fg:O8E4ae9mG2
+!s100 >fhVEI7Sel:i>?24_h^^Q2
+R12
+33
+R166
+!i10b 1
+R167
+R208
+R209
+!i113 1
+R17
+R18
+Efb_dmac_int_sound_cha
+Z212 w1635869112
+R4
+R6
+R7
+R8
+!i122 37
+R0
+Z213 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound_cha.vhd
+Z214 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound_cha.vhd
+l0
+R153
+VUN5V:ASU_>0::lE^L986B0
+!s100 F[N[CC5WL2N8fN:iEmI_91
+R12
+33
+R181
+!i10b 1
+R202
+Z215 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound_cha.vhd|
+Z216 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/chipset/dmac_int_sound_cha.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R4
+R6
+R7
+R8
+R210
+!i122 37
+l126
+L90 277
+V]Hz]3DLg:=A@eJ[Jf58:k0
+!s100 :3Y^MEXRB^BfoNlNZ^R<82
+R12
+33
+R181
+!i10b 1
+R202
+R215
+R216
+!i113 1
+R17
+R18
+Efb_hdmi
+Z217 w1636551077
+R4
+R5
+R6
+R7
+R8
+!i122 13
+R0
+Z218 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/fb_HDMI_disabled.vhd
+Z219 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/fb_HDMI_disabled.vhd
+l0
+L28 1
+VmFkPL;GTzD4b@0CaiCE8O0
+!s100 7Ead0=Aj2jIlR>1CzV;Kk3
+R12
+33
+R87
+!i10b 1
+R88
+Z220 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/fb_HDMI_disabled.vhd|
+Z221 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/fb_HDMI_disabled.vhd|
+!i113 1
+R17
+R18
+Artl
+R4
+R5
+R6
+R7
+R8
+DEx4 work 7 fb_hdmi 0 22 mFkPL;GTzD4b@0CaiCE8O0
+!i122 13
+l65
+L64 25
+VnDZjemkMd2KJ31TQzN=cW1
+!s100 ImZnKYYRNj=O3ng<@5iQj0
+R12
+33
+R87
+!i10b 1
+R88
+R220
+R221
+!i113 1
+R17
+R18
+Efb_i2c
+Z222 w1635871223
+R5
+R4
+R2
+R6
+R7
+R8
+!i122 32
+R0
+Z223 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_i2c.vhd
+Z224 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_i2c.vhd
+l0
+L99 1
+VHH9d4jbf4hzLS7TPFlYD23
+!s100 HU95DWl@@TWIGn3758iBR1
+R12
+33
+R54
+!i10b 1
+R14
+Z225 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_i2c.vhd|
+Z226 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_i2c.vhd|
+!i113 1
+R17
+R18
+Artl
+R5
+R4
+R2
+R6
+R7
+R8
+Z227 DEx4 work 6 fb_i2c 0 22 HH9d4jbf4hzLS7TPFlYD23
+!i122 32
+l156
+L120 233
+VoQDOmDN6HYm?>>z@83:973
+!s100 [cYD17gQ`z=i`i>ef[E4z3
+R12
+33
+R54
+!i10b 1
+R14
+R225
+R226
+!i113 1
+R17
+R18
+Efb_intcon_many_to_one
+Z228 w1635869550
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 39
+R0
+Z229 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_many_to_one.vhd
+Z230 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_many_to_one.vhd
+l0
+R31
+VK5QnLodQ3PAT7Z@ZcKEmK1
+!s100 f5=zJKGe?K4cRY@fGUR7D0
+R12
+33
+R181
+!i10b 1
+R202
+Z231 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_many_to_one.vhd|
+Z232 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_many_to_one.vhd|
+!i113 1
+R17
+R18
+Artl
+R114
+R120
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z233 DEx4 work 21 fb_intcon_many_to_one 0 22 K5QnLodQ3PAT7Z@ZcKEmK1
+!i122 39
+l94
+L70 134
+VIf[E7`k5e]0:3U:120TLM3
+!s100 PEfXTA:hI5Y4i_iCnkGZW2
+R12
+33
+R181
+!i10b 1
+R202
+R231
+R232
+!i113 1
+R17
+R18
+Efb_intcon_one_to_many
+Z234 w1635870146
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 15
+R0
+Z235 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_one_to_many.vhd
+Z236 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_one_to_many.vhd
+l0
+R72
+V4k>FNhW:ADRoBlZ^5V;M43
+!s100 zXAZaNl9CHd;77@R?2Z9]1
+R12
+33
+R110
+!i10b 1
+R111
+Z237 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_one_to_many.vhd|
+Z238 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_one_to_many.vhd|
+!i113 1
+R17
+R18
+Artl
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z239 DEx4 work 21 fb_intcon_one_to_many 0 22 4k>FNhW:ADRoBlZ^5V;M43
+!i122 15
+l95
+L77 98
+VjX9mM<WLeP1E3YRa_L^Al2
+!s100 g<VGN9ST21YTf_MWoTLJ=2
+R12
+33
+R110
+!i10b 1
+R111
+R237
+R238
+!i113 1
+R17
+R18
+Efb_intcon_shared
+Z240 w1635870415
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+!i122 40
+R0
+Z241 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_shared.vhd
+Z242 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_shared.vhd
+l0
+R72
+V==?OQAQlDn7kClf<`V=X>0
+!s100 @zCb7[3Fizb0NBLW0d;NF2
+R12
+33
+Z243 !s110 1636552818
+!i10b 1
+R188
+Z244 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_shared.vhd|
+Z245 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_shared.vhd|
+!i113 1
+R17
+R18
+Artl
+R114
+R120
+R5
+R4
+R106
+R107
+R6
+R7
+R8
+Z246 DEx4 work 16 fb_intcon_shared 0 22 ==?OQAQlDn7kClf<`V=X>0
+!i122 40
+l101
+L78 166
+VlWHO9WoR<:F6Gc:981PYZ3
+!s100 _ooXf;L`gz_MdP9^gNbAA0
+R12
+33
+R243
+!i10b 1
+R188
+R244
+R245
+!i113 1
+R17
+R18
+Efb_mem
+Z247 w1636554166
+R4
+R6
+R7
+R8
+!i122 76
+R0
+Z248 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_MEM.vhd
+Z249 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_MEM.vhd
+l0
+R65
+V`SYYd^>GbWaAg_9QoH1]N0
+!s100 dOnL9E@TXmIM`ezgg>cS>2
+R12
+33
+Z250 !s110 1636554172
+!i10b 1
+Z251 !s108 1636554172.000000
+Z252 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_MEM.vhd|
+Z253 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_MEM.vhd|
+!i113 1
+R17
+R18
+Artl
+R4
+R6
+R7
+R8
+DEx4 work 6 fb_mem 0 22 `SYYd^>GbWaAg_9QoH1]N0
+!i122 76
+l90
+L82 157
+VP0EVHO]5zUAN@?5UzRnUF3
+!s100 9AgB?@KPC0E4nH[dSz2=<0
+R12
+33
+R250
+!i10b 1
+R251
+R252
+R253
+!i113 1
+R17
+R18
+Efb_memctl
+Z254 w1635871294
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 34
+R0
+Z255 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_memctl.vhd
+Z256 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_memctl.vhd
+l0
+R146
+VZ`_LIbhzoPdB^CLlPRAPY3
+!s100 1n9lhQoFcnFTI6h7AVob=2
+R12
+33
+R54
+!i10b 1
+R55
+Z257 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_memctl.vhd|
+Z258 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_memctl.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+Z259 DEx4 work 9 fb_memctl 0 22 Z`_LIbhzoPdB^CLlPRAPY3
+!i122 34
+l143
+L103 274
+V]oE@fT^aUGQP_HW@nm4j_0
+!s100 hnC??^=:YFH4>nNAj6bLY1
+R12
+33
+R54
+!i10b 1
+R55
+R257
+R258
+!i113 1
+R17
+R18
+Efb_sys
+R121
+R2
+R3
+R5
+R4
+R6
+R7
+R8
+!i122 42
+R0
+Z260 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS.vhd
+Z261 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS.vhd
+l0
+R11
+VEXj^oRmN0B;K;8[@8H]O12
+!s100 d8fY^MLc?QJnUQbG=iVcK2
+R12
+33
+R243
+!i10b 1
+R188
+Z262 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS.vhd|
+Z263 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS.vhd|
+!i113 1
+R17
+R18
+Artl
+R48
+Z264 DEx4 work 13 fb_sys_phigen 0 22 VdgSYKLAkGF^M`mXDk^GL2
+Z265 DEx4 work 16 fb_sys_clock_dll 0 22 PAWUO@>iCBQOz=4>[Di]01
+R2
+R3
+R5
+R4
+R6
+R7
+R8
+Z266 DEx4 work 6 fb_sys 0 22 EXj^oRmN0B;K;8[@8H]O12
+!i122 42
+l167
+L111 354
+VIQBkBenVHfJ0P7oo3>9?b0
+!s100 WTj;<IkL_RTEDeTNG20@T0
+R12
+33
+R243
+!i10b 1
+R188
+R262
+R263
+!i113 1
+R17
+R18
+Efb_sys_clock_dll
+R121
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 22
+R0
+Z267 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_clock_dll.vhd
+Z268 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_clock_dll.vhd
+l0
+R65
+VPAWUO@>iCBQOz=4>[Di]01
+!s100 Kz0`4oC:Q3O>^PU;W`g^13
+R12
+33
+R160
+!i10b 1
+R140
+Z269 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_clock_dll.vhd|
+Z270 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_clock_dll.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+R265
+!i122 22
+l130
+L99 268
+VUKI<2G7Sb_:lWjRFf_Y6n0
+!s100 8WnBOGlhb2<l;Wnh;UHdG0
+R12
+33
+R160
+!i10b 1
+R140
+R269
+R270
+!i113 1
+R17
+R18
+Efb_sys_phigen
+Z271 w1635793273
+R4
+R6
+R7
+R8
+!i122 21
+R0
+Z272 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_phigen.vhd
+Z273 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_phigen.vhd
+l0
+R72
+VVdgSYKLAkGF^M`mXDk^GL2
+!s100 :0?IfPa_gDib0AKXS4WDo0
+R12
+33
+R23
+!i10b 1
+R24
+Z274 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_phigen.vhd|
+Z275 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_SYS_phigen.vhd|
+!i113 1
+R17
+R18
+Artl
+R4
+R6
+R7
+R8
+R264
+!i122 21
+l74
+L67 24
+V;^gDn[YcB6<UC@Kh2DOQ<1
+!s100 KA>BCCMogETR^=Rh@Bf902
+R12
+33
+R23
+!i10b 1
+R24
+R274
+R275
+!i113 1
+R17
+R18
+Efb_syscon
+Z276 w1635792553
+R5
+R4
+R6
+R7
+R8
+!i122 14
+R0
+Z277 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_syscon.vhd
+Z278 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_syscon.vhd
+l0
+R153
+V7hkOmm`jMWKkhkTP<TBGk0
+!s100 FgTMBPCifa@YfIN^aJ2RK1
+R12
+33
+R110
+!i10b 1
+R88
+Z279 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_syscon.vhd|
+Z280 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_syscon.vhd|
+!i113 1
+R17
+R18
+Artl
+R68
+R5
+R4
+R6
+R7
+R8
+Z281 DEx4 work 9 fb_syscon 0 22 7hkOmm`jMWKkhkTP<TBGk0
+!i122 14
+l99
+L75 117
+Vi]Q5EdkjE9JKK_[m`IWCS0
+!s100 DOI3hB1AO?[3j9lXW=AF72
+R12
+33
+R110
+!i10b 1
+R88
+R279
+R280
+!i113 1
+R17
+R18
+Efb_version
+Z282 w1635871678
+R4
+R6
+R7
+R8
+!i122 23
+R0
+Z283 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_VERSION.vhd
+Z284 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_VERSION.vhd
+l0
+R72
+Ve8Eh6z1oc2hbEU]NhZiU;1
+!s100 CHD;eZ2mfIG4oNz;1=P^Z3
+R12
+33
+R160
+!i10b 1
+R140
+Z285 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_VERSION.vhd|
+Z286 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/fb_VERSION.vhd|
+!i113 1
+R17
+R18
+Artl
+R106
+R107
+Z287 DEx4 work 11 version_rom 0 22 3XXz2CmI=9_^N8_AU_Wbi3
+R4
+R6
+R7
+R8
+Z288 DEx4 work 10 fb_version 0 22 e8Eh6z1oc2hbEU]NhZiU;1
+!i122 23
+l74
+L63 62
+VHdGJi1Ii2CzTCF<9PEPLZ3
+!s100 F:]GF]9_7_PH0CXYaIZlK3
+R12
+33
+R160
+!i10b 1
+R140
+R285
+R286
+!i113 1
+R17
+R18
+Pfishbone
+Z289 DBx4 ieee 11 numeric_std 4 body 22 g_7F]fA0eD^jGFXGLS>z40
+R7
+R8
+!i122 3
+Z290 w1635870481
+R0
+Z291 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fishbone_pack.vhd
+Z292 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fishbone_pack.vhd
+l0
+R44
+VFmNQz@KL;QSb1jTmMabY>2
+!s100 FW;f1o?iZQg_fVbO]D7zo0
+R12
+33
+b1
+Z293 !s110 1636552808
+!i10b 1
+Z294 !s108 1636552808.000000
+Z295 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fishbone_pack.vhd|
+Z296 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fishbone_pack.vhd|
+!i113 1
+R17
+R18
+Bbody
+R4
+R289
+R7
+R8
+!i122 3
+l0
+Z297 L154 1
+V8Z475Q=`]KW2gJM3R@UPd2
+!s100 NZ:5zLYfkDF9;XSU1FjCS2
+R12
+33
+R293
+!i10b 1
+R294
+R295
+R296
+!i113 1
+R17
+R18
+Phdmi_pack
+R4
+R5
+R6
+R7
+R8
+!i122 12
+R121
+R0
+8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/HDMI_pack.vhd
+FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/HDMI_pack.vhd
+l0
+R11
+Vn7;WmHS0jA]YC<=F^^eiQ3
+!s100 B_fBgWa]HS9LTCX>PboBG2
+R12
+33
+R87
+!i10b 1
+R88
+!s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/HDMI_pack.vhd|
+!s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/hdmi/HDMI_pack.vhd|
+!i113 1
+R17
+R18
+Elog2phys
+R121
+R2
+R3
+R4
+R6
+R7
+R8
+!i122 31
+R0
+Z298 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/log2phys.vhd
+Z299 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/log2phys.vhd
+l0
+R65
+VZNj3fBbJah`c5K7U?cFPI1
+!s100 Q_LCS<F9]R?k2;MbldF<30
+R12
+33
+R13
+!i10b 1
+R14
+Z300 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/log2phys.vhd|
+Z301 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/log2phys.vhd|
+!i113 1
+R17
+R18
+Artl
+R2
+R3
+R4
+R6
+R7
+R8
+R134
+!i122 31
+l94
+L90 92
+Vf_o>iW7BFgS]z=U6JHI5E0
+!s100 l:8Kl>@;>DK^^dT637[>]0
+R12
+33
+R13
+!i10b 1
+R14
+R300
+R301
+!i113 1
+R17
+R18
+Els02
+Z302 w1636551273
+R7
+R8
+!i122 58
+R0
+Z303 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls02.vhd
+Z304 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls02.vhd
+l0
+R44
+V??H6NRW[AQoMBWRfeJRIO3
+!s100 I=3V:GgKg:iYmmhC`_H;N1
+R12
+33
+Z305 !s110 1636552823
+!i10b 1
+Z306 !s108 1636552823.000000
+Z307 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls02.vhd|
+Z308 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls02.vhd|
+!i113 1
+R17
+R18
+Abehav
+R7
+R8
+DEx4 work 4 ls02 0 22 ??H6NRW[AQoMBWRfeJRIO3
+!i122 58
+l59
+Z309 L58 11
+V0gQH<<K`k57C_@W5CS2ZF2
+!s100 ^nBEMAUP7RW`BZ9cVMXh`1
+R12
+33
+R305
+!i10b 1
+R306
+R307
+R308
+!i113 1
+R17
+R18
+Els04
+Z310 w1636551285
+R7
+R8
+!i122 59
+R0
+Z311 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls04.vhd
+Z312 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls04.vhd
+l0
+Z313 L46 1
+V0E^CeATaLeQd8anaGkFA:1
+!s100 7J[GRn?Yfjn<N1dlV>@XJ2
+R12
+33
+R305
+!i10b 1
+R306
+Z314 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls04.vhd|
+Z315 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls04.vhd|
+!i113 1
+R17
+R18
+Abehav
+R7
+R8
+R38
+!i122 59
+l58
+L57 11
+VdJBcQZYZbB2O<jaNP3NmT0
+!s100 TCRVzX:h<_^<idIz?:CN13
+R12
+33
+R305
+!i10b 1
+R306
+R314
+R315
+!i113 1
+R17
+R18
+Els32
+Z316 w1636551294
+R7
+R8
+!i122 60
+R0
+Z317 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls32.vhd
+Z318 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls32.vhd
+l0
+R44
+VRmmJczD<AUPm?Ndkk>XfI0
+!s100 kez]WOHoGW[X0kj0k:C<a2
+R12
+33
+R32
+!i10b 1
+R306
+Z319 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls32.vhd|
+Z320 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls32.vhd|
+!i113 1
+R17
+R18
+Abehav
+R7
+R8
+R37
+!i122 60
+l59
+R309
+V@D@I@EB9[PBXI9m;1OaGN0
+!s100 7U9Gkl0c;0Z68m^:MM_1m1
+R12
+33
+R32
+!i10b 1
+R306
+R319
+R320
+!i113 1
+R17
+R18
+Els51
+Z321 w1636551304
+R7
+R8
+!i122 61
+R0
+Z322 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls51.vhd
+Z323 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls51.vhd
+l0
+R44
+VUWCohBmhMd8L8zAD`zkMn3
+!s100 ;RAJ1ES_I?<^hb26AjDzB3
+R12
+33
+R32
+!i10b 1
+R33
+Z324 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls51.vhd|
+Z325 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls51.vhd|
+!i113 1
+R17
+R18
+Abehav
+R7
+R8
+R36
+!i122 61
+l60
+L59 11
+VH<W=_GKz^YW<O_?Yf2jAL0
+!s100 i>mRkS3oo8B_Azz=_YO4i3
+R12
+33
+R32
+!i10b 1
+R33
+R324
+R325
+!i113 1
+R17
+R18
+Els74
+Z326 w1636551313
+R7
+R8
+!i122 62
+R0
+Z327 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls74.vhd
+Z328 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls74.vhd
+l0
+R44
+Vfz488P5hLjLG@Z5_T3A6k3
+!s100 ^`S:kCa43ncS56e_Ng]]j3
+R12
+33
+R32
+!i10b 1
+R33
+Z329 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls74.vhd|
+Z330 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ls74.vhd|
+!i113 1
+R17
+R18
+Abehav
+R7
+R8
+R39
+!i122 62
+l62
+L61 44
+VH8en9ke^ZYdOVM0S^]ACC2
+!s100 h[e1`aBdh4LG>eWlG3HcG0
+R12
+33
+R32
+!i10b 1
+R33
+R329
+R330
+!i113 1
+R17
+R18
+Emetadelay
+Z331 w1635859254
+R6
+R7
+R8
+!i122 5
+R0
+Z332 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/metadelay.vhd
+Z333 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/metadelay.vhd
+l0
+R44
+Vi_=]NCSmei=VOc>4^fo[72
+!s100 FX4ZW=M=bg@G=I7;ScN:>2
+R12
+33
+R60
+!i10b 1
+R61
+Z334 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/metadelay.vhd|
+Z335 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/metadelay.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R6
+R7
+R8
+R156
+!i122 5
+l62
+L58 20
+V_^egg^T23Qne4>8OFG>AD1
+!s100 @OD<FD?eoKab>VhWofGLl1
+R12
+33
+R60
+!i10b 1
+R61
+R334
+R335
+!i113 1
+R17
+R18
+Emk3blit
+R121
+Z336 DPx4 work 9 hdmi_pack 0 22 n7;WmHS0jA]YC<=F^^eiQ3
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+!i122 48
+R0
+Z337 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/mk3blit.vhd
+Z338 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/mk3blit.vhd
+l0
+R146
+VL9B45@l2^]4RSMPWE<Czb1
+!s100 4Dz?8OBi6We02bBmQjY8P3
+R12
+33
+R124
+!i10b 1
+R125
+Z339 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/mk3blit.vhd|
+Z340 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/shared/mk3blit.vhd|
+!i113 1
+R17
+R18
+Artl
+R135
+R266
+DEx4 work 6 fb_mem 0 22 Z1hY6iloQ^0PWh6mZMX8d1
+R259
+R288
+R227
+R91
+R211
+R184
+R50
+R191
+R198
+R27
+R233
+R239
+R106
+R107
+R246
+R19
+R281
+R76
+R336
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+Z341 DEx4 work 7 mk3blit 0 22 L9B45@l2^]4RSMPWE<Czb1
+!i122 48
+l408
+L178 1055
+VoOEP5Z?PTDKTHL:bO^fKE3
+!s100 WdhA1AI_SPS:=QVi]06[42
+R12
+33
+R124
+!i10b 1
+R125
+R339
+R340
+!i113 1
+R17
+R18
+Pmk3blit_pack
+R2
+!i122 1
+R121
+R0
+Z342 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_pack.vhd
+Z343 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_pack.vhd
+l0
+R313
+VhXc0kjzP6i3Ve9Tz`iLLb3
+!s100 Y8IcMN1ghRK_7OY[8WOHS2
+R12
+33
+R293
+!i10b 1
+R294
+Z344 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_pack.vhd|
+Z345 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_pack.vhd|
+!i113 1
+R17
+R18
+Bbody
+R3
+R2
+!i122 1
+l0
+L90 1
+V?P;BK<e1[BY^25nn68Z[23
+!s100 6Uob?TV<W[]8SebVQDLjL1
+R12
+33
+R293
+!i10b 1
+R294
+R344
+R345
+!i113 1
+R17
+R18
+Emk3blit_top
+Z346 w1635872001
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+!i122 49
+R0
+Z347 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_top.vhd
+Z348 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_top.vhd
+l0
+L29 1
+VC7<RbZFT5LdPO;dGD[;k]0
+!s100 oHVg=RoT?1nzVcEC:R`nX2
+R12
+33
+R80
+!i10b 1
+R125
+Z349 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_top.vhd|
+Z350 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/mk3blit_top.vhd|
+!i113 1
+R17
+R18
+Artl
+R336
+R341
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+Z351 DEx4 work 11 mk3blit_top 0 22 C7<RbZFT5LdPO;dGD[;k]0
+!i122 49
+l130
+L128 84
+VP8^=fXFod1UjQRJX9fg7V1
+!s100 =AN6E]b^F:M3YO9J0TP]J3
+R12
+33
+R80
+!i10b 1
+R125
+R349
+R350
+!i113 1
+R17
+R18
+Epllmain
+Z352 w1632845294
+R7
+R8
+!i122 11
+R0
+Z353 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/pllmain.vhd
+Z354 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/pllmain.vhd
+l0
+L43 1
+V>eFkIaaPOWD6D=>oR?XOd2
+!s100 l7_;?8gB0Ej`W>gOl@PW`3
+R12
+33
+R87
+!i10b 1
+R88
+Z355 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/pllmain.vhd|
+Z356 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/pllmain.vhd|
+!i113 1
+R17
+R18
+Asyn
+R7
+R8
+R75
+!i122 11
+l148
+L56 186
+VWH0;>E4179WogoEIJOL]N2
+!s100 JgRDQX5;<XN@EZhC1fOO:1
+R12
+33
+R87
+!i10b 1
+R88
+R355
+R356
+!i113 1
+R17
+R18
+vpllmain_altpll
+R293
+!i10b 1
+!s100 bGR3;2dj2og2oVRUMMcXO2
+!s11b Dg1SIo80bB@j0V0VzS_@n1
+IDQXPdi>k2f8[>oiec>68[1
+VDg1SIo80bB@j0V0VzS_@n1
+R0
+w1635863284
+8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db/pllmain_altpll.v
+FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db/pllmain_altpll.v
+!i122 0
+L0 30 80
+OV;L;2020.1;71
+r1
+!s85 0
+31
+R294
+!s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db/pllmain_altpll.v|
+!s90 -reportprogress|300|-vlog01compat|-work|work|+incdir+E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db/pllmain_altpll.v|
+!i113 1
+o-vlog01compat -work work
+!s92 -vlog01compat -work work +incdir+E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/db
+tCvgOpt 0
+Eram_tb
+Z357 w1636551439
+R5
+R6
+R7
+R8
+!i122 52
+R0
+Z358 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ram_tb.vhd
+Z359 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ram_tb.vhd
+l0
+R65
+V=S37PFJ0Mkkeg8ZB5]D020
+!s100 ]1nemgAa<>;14;VEia;CC1
+R12
+33
+R80
+!i10b 1
+R81
+Z360 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ram_tb.vhd|
+Z361 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/ram_tb.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R5
+R6
+R7
+R8
+Z362 DEx4 work 6 ram_tb 0 22 =S37PFJ0Mkkeg8ZB5]D020
+!i122 52
+l106
+L83 125
+VXjzmO=cnJzTgQX^N;5Ja92
+!s100 ME^[z[RW[[AgOahoPggdb3
+R12
+33
+R80
+!i10b 1
+R81
+R360
+R361
+!i113 1
+R17
+R18
+Ereal_65816_tb
+Z363 w1636551671
+R6
+R7
+R8
+!i122 57
+R0
+Z364 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/real65816_tb.vhd
+Z365 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/real65816_tb.vhd
+l0
+R72
+VeRK@gMdGNDQ1QmS=J:R`M2
+!s100 <Jkz6:K1;^YBVZzYAAFT93
+R12
+33
+R305
+!i10b 1
+R306
+Z366 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/real65816_tb.vhd|
+Z367 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/real65816_tb.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+Z368 DPx4 work 12 t65_816_pack 0 22 f0lKJGHmFH@b8SD3cIW^o0
+Z369 DEx4 work 7 t65_816 0 22 Cnz4j1Xk_dVD_`XhQgBeN0
+R6
+R7
+R8
+Z370 DEx4 work 13 real_65816_tb 0 22 eRK@gMdGNDQ1QmS=J:R`M2
+!i122 57
+l114
+L79 112
+V2G@I<VMVLRZ]mBf;B[UN=3
+!s100 eTY@z6enl;?2=hkFijWz32
+R12
+33
+R305
+!i10b 1
+R306
+R366
+R367
+!i113 1
+R17
+R18
+Erom_tb
+Z371 w1636551688
+R5
+R6
+R7
+R8
+!i122 51
+R0
+Z372 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/rom_tb.vhd
+Z373 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/rom_tb.vhd
+l0
+R72
+VaO>RR0;YV5U2`::aCK2X]2
+!s100 0o=ZaVCaJ`T=OSCM][cmO3
+R12
+33
+R80
+!i10b 1
+R81
+Z374 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/rom_tb.vhd|
+Z375 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/simulation/rom_tb.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R5
+R6
+R7
+R8
+Z376 DEx4 work 6 rom_tb 0 22 aO>RR0;YV5U2`::aCK2X]2
+!i122 51
+l74
+L66 45
+VJL3Zho8Ke1<cEY<cefH1=3
+!s100 CJ11PW87cBRFWb;bIeJA11
+R12
+33
+R80
+!i10b 1
+R81
+R374
+R375
+!i113 1
+R17
+R18
+Esim_65816_tb
+Z377 w1636553679
+R6
+R7
+R8
+!i122 73
+R0
+Z378 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/simulation/sim_tb/sim_65816_tb.vhd
+Z379 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/simulation/sim_tb/sim_65816_tb.vhd
+l0
+L22 1
+V;6eBA=4O4El^O7Rj;mJab1
+!s100 b:<SiL4Bl2zhz:ojEOfO`1
+R12
+33
+Z380 !s110 1636553870
+!i10b 1
+Z381 !s108 1636553869.000000
+Z382 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/simulation/sim_tb/sim_65816_tb.vhd|
+Z383 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/simulation/sim_tb/sim_65816_tb.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R362
+R370
+R3
+R4
+R5
+R351
+R2
+Z384 DPx4 work 12 sim_sys_pack 0 22 J`EAjD;FojCCP=]iGFj^F0
+Z385 DEx4 work 10 sim_sys_tb 0 22 DalE`h23Q9=gAUaIOZm2E2
+R6
+R7
+R8
+DEx4 work 12 sim_65816_tb 0 22 ;6eBA=4O4El^O7Rj;mJab1
+!i122 73
+l104
+L25 395
+VmGMaL:P@o4988iO5L4^I10
+!s100 0;YYXY:fKf:FQZ4LVGalz3
+R12
+33
+R380
+!i10b 1
+R381
+R382
+R383
+!i113 1
+R17
+R18
+Psim_sys_pack
+R2
+!i122 67
+Z386 w1629293580
+R0
+Z387 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_pack.vhd
+Z388 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_pack.vhd
+l0
+L23 1
+VJ`EAjD;FojCCP=]iGFj^F0
+!s100 NX3fXOOzS^=OW4C2m4_YM3
+R12
+33
+R45
+!i10b 1
+R95
+Z389 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_pack.vhd|
+Z390 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_pack.vhd|
+!i113 1
+R17
+R18
+Bbody
+R384
+R2
+!i122 67
+l0
+L31 1
+VL7;MhA=j7FnUmmlO3HC6V1
+!s100 3YQo[QZhKYN9UbV0W2C0;2
+R12
+33
+R45
+!i10b 1
+R95
+R389
+R390
+!i113 1
+R17
+R18
+Esim_sys_tb
+Z391 w1634140141
+R2
+R384
+R6
+R7
+R8
+!i122 68
+R0
+Z392 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_tb.vhd
+Z393 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_tb.vhd
+l0
+L27 1
+VDalE`h23Q9=gAUaIOZm2E2
+!s100 i8CKP6AN<1bfTE4d@nm;A1
+R12
+33
+Z394 !s110 1636552826
+!i10b 1
+R95
+Z395 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_tb.vhd|
+Z396 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../simulation/sim_tb/sim_SYS_tb.vhd|
+!i113 1
+R17
+R18
+Abehavioral
+R104
+R98
+R48
+R40
+R376
+R5
+R362
+R2
+R384
+R6
+R7
+R8
+R385
+!i122 68
+l92
+L58 216
+Vc:JNjX46_ImVlK^6oFiG_1
+!s100 XE[:4574<BQd9?Y:^TS5A1
+R12
+33
+R394
+!i10b 1
+R95
+R395
+R396
+!i113 1
+R17
+R18
+Et65
+Z397 w1631884256
+R170
+R6
+R7
+R8
+!i122 41
+R0
+Z398 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd
+Z399 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd
+l0
+Z400 L134 1
+V0i:f8a93h316THZHF6IhB0
+!s100 k1;ceJDO2^;785_eh]D]E0
+R12
+33
+R243
+!i10b 1
+R188
+Z401 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd|
+Z402 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd|
+!i113 1
+R17
+R18
+Artl
+Z403 DEx4 work 7 t65_alu 0 22 DI^[II0nC<Jf>0Vza?Fn72
+Z404 DPx4 ieee 15 std_logic_arith 0 22 [G314=:2zXJ`VORJe1J@Z1
+Z405 DPx4 ieee 18 std_logic_unsigned 0 22 ;eZjO2D4ZDz<]0>8AL<ne1
+Z406 DEx4 work 9 t65_mcode 0 22 :6mjEihE<JA1QCBNLGhA_0
+R170
+R6
+R7
+R8
+R171
+!i122 41
+l247
+Z407 L164 538
+V0ZcnQ7RU]JUaz><P5:SB:1
+!s100 feF2mmk26ogHTKPGe=Wa;2
+R12
+33
+R243
+!i10b 1
+R188
+R401
+R402
+!i113 1
+R17
+R18
+Et65_816
+Z408 w1636561078
+R368
+R6
+R7
+R8
+!i122 77
+R0
+Z409 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502_816/T65_816.vhd
+Z410 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502_816/T65_816.vhd
+l0
+R400
+VCnz4j1Xk_dVD_`XhQgBeN0
+!s100 S77AZk=4>z;^DHSMSQUOI3
+R12
+33
+Z411 !s110 1636561090
+!i10b 1
+Z412 !s108 1636561089.000000
+Z413 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502_816/T65_816.vhd|
+!s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502_816/T65_816.vhd|
+!i113 1
+R17
+R18
+Artl
+Z414 DEx4 work 11 t65_816_alu 0 22 DSh>6F1A_ogBT7dWEKKOJ1
+R404
+R405
+Z415 DEx4 work 13 t65_816_mcode 0 22 QJK;H?mkaGj0G:aPVeK2?1
+R368
+R6
+R7
+R8
+R369
+!i122 77
+l247
+R407
+VXcLUkNmo>hXW>;;cl:BNb3
+!s100 g=F4NWcbd6O?F8zX[eHSd1
+R12
+33
+R411
+!i10b 1
+R412
+R413
+Z416 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502_816/T65_816.vhd|
+!i113 1
+R17
+R18
+Et65_816_alu
+Z417 w1629293581
+R368
+R6
+R7
+R8
+!i122 54
+R0
+Z418 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_ALU.vhd
+Z419 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_ALU.vhd
+l0
+Z420 L57 1
+VDSh>6F1A_ogBT7dWEKKOJ1
+!s100 X?SLH=n0>@>L5^Aog1>kZ0
+R12
+33
+Z421 !s110 1636552822
+!i10b 1
+Z422 !s108 1636552822.000000
+Z423 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_ALU.vhd|
+Z424 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_ALU.vhd|
+!i113 1
+R17
+R18
+Artl
+R368
+R6
+R7
+R8
+R414
+!i122 54
+l84
+Z425 L69 225
+VUVDaCUjgI1NhiMA=:GIMe2
+!s100 >Sb[3cKEP;3Ifo3?XjWeF3
+R12
+33
+R421
+!i10b 1
+R422
+R423
+R424
+!i113 1
+R17
+R18
+Et65_816_mcode
+R417
+R368
+R404
+R405
+R6
+R7
+R8
+!i122 55
+R0
+Z426 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_MCode.vhd
+Z427 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_MCode.vhd
+l0
+Z428 L58 1
+VQJK;H?mkaGj0G:aPVeK2?1
+!s100 GESdHQj8]@BTI33TA]AF^0
+R12
+33
+R421
+!i10b 1
+R422
+Z429 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_MCode.vhd|
+Z430 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_MCode.vhd|
+!i113 1
+R17
+R18
+Artl
+R368
+R404
+R405
+R6
+R7
+R8
+R415
+!i122 55
+l99
+Z431 L94 1172
+V^d`[5]C<H@YhUTRnnK=]93
+!s100 ;n6lEW;Fn9L9hI;[SB0;70
+R12
+33
+R421
+!i10b 1
+R422
+R429
+R430
+!i113 1
+R17
+R18
+Pt65_816_pack
+R7
+R8
+!i122 53
+R417
+R0
+Z432 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_Pack.vhd
+Z433 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_Pack.vhd
+l0
+R175
+Vf0lKJGHmFH@b8SD3cIW^o0
+!s100 K7i8Ve=M3OD<9TgJX0WB51
+R12
+33
+b1
+R421
+!i10b 1
+R81
+Z434 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_Pack.vhd|
+Z435 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/../../../library/3rdparty/T6502_816/T65_816_Pack.vhd|
+!i113 1
+R17
+R18
+Bbody
+R368
+R7
+R8
+!i122 53
+l0
+R297
+VU@82FFmjDXcQ]oU;>D^1B1
+!s100 @Ya0:DUmGn]C[=>Ak8Nmf1
+R12
+33
+R421
+!i10b 1
+R81
+R434
+R435
+!i113 1
+R17
+R18
+Et65_alu
+R397
+R170
+R6
+R7
+R8
+!i122 19
+R0
+Z436 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd
+Z437 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd
+l0
+R420
+VDI^[II0nC<Jf>0Vza?Fn72
+!s100 mhdhVn3BBn[UCaLbHZ9C_0
+R12
+33
+R23
+!i10b 1
+R24
+Z438 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd|
+Z439 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd|
+!i113 1
+R17
+R18
+Artl
+R170
+R6
+R7
+R8
+R403
+!i122 19
+l84
+R425
+V^;T]zHcQDeIYHDPan_Zli3
+!s100 oVMfT6Z7PfGYi6LAGezom1
+R12
+33
+R23
+!i10b 1
+R24
+R438
+R439
+!i113 1
+R17
+R18
+Et65_mcode
+Z440 w1631884257
+R170
+R404
+R405
+R6
+R7
+R8
+!i122 18
+R0
+Z441 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd
+Z442 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd
+l0
+R428
+V:6mjEihE<JA1QCBNLGhA_0
+!s100 K:D_U<<HKUVloWhR12IGV1
+R12
+33
+R23
+!i10b 1
+R111
+Z443 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd|
+Z444 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd|
+!i113 1
+R17
+R18
+Artl
+R170
+R404
+R405
+R6
+R7
+R8
+R406
+!i122 18
+l99
+R431
+V1TK@h@KeHVNMF=iK4__GY1
+!s100 4aPZk5N?XYnIm]iK<`VLh3
+R12
+33
+R23
+!i10b 1
+R111
+R443
+R444
+!i113 1
+R17
+R18
+Pt65_pack
+R7
+R8
+!i122 8
+R440
+R0
+Z445 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd
+Z446 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd
+l0
+R175
+VeO8b?mE8jMKmYjfbHNLB]3
+!s100 VCE6QlBhTeTd95bNlUckX1
+R12
+33
+b1
+R60
+!i10b 1
+R61
+Z447 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd|
+Z448 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd|
+!i113 1
+R17
+R18
+Bbody
+R170
+R7
+R8
+!i122 8
+l0
+R297
+VSRVG_MMzBT@AOck2RzK2E0
+!s100 J_99BnUe^e;H2?a^1_VR[3
+R12
+33
+R60
+!i10b 1
+R61
+R447
+R448
+!i113 1
+R17
+R18
+Eversion_rom
+Z449 w1636500218
+R106
+R107
+R6
+R7
+R8
+!i122 2
+R0
+Z450 8E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/version.vhd
+Z451 FE:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/version.vhd
+l0
+L6 1
+V3XXz2CmI=9_^N8_AU_Wbi3
+!s100 _S:^mdXRXXA`3cRZTMjoj3
+R12
+33
+R293
+!i10b 1
+R294
+Z452 !s90 -reportprogress|300|-2008|-work|work|E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/version.vhd|
+Z453 !s107 E:/Users/dominic/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/version.vhd|
+!i113 1
+R17
+R18
+Artl
+R106
+R107
+R6
+R7
+R8
+R287
+!i122 2
+l14
+L13 93
+Vb:i=7f[3C?@7HIiF;ZggT1
+!s100 [fdS;J><QJ<?N1_I8?QXl2
+R12
+33
+R293
+!i10b 1
+R294
+R452
+R453
+!i113 1
+R17
+R18

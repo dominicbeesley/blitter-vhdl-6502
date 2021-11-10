@@ -1,0 +1,250 @@
+F00:0001       STACK		:=	$1000
+F00:0002       screen_ptr	:=	$1000
+F00:0003       
+F00:0004       		;section "code"
+F00:0005       		org $8D0000
+F00:0006       
+F00:0007       
+F00:0008       runfrom_sys:	nop
+               S01:008D0000:  4E 71
+F00:0009       		nop
+               S01:008D0002:  4E 71
+F00:0010       		nop
+               S01:008D0004:  4E 71
+F00:0011       		nop
+               S01:008D0006:  4E 71
+F00:0012       		nop
+               S01:008D0008:  4E 71
+F00:0013       		rts
+               S01:008D000A:  4E 75
+F00:0014       runfrom_sys_end:
+F00:0015       
+F00:0016       handle_res:	
+F00:0017       		; copy vectors to low page
+F00:0018       
+F00:0019       		trap	#0
+               S01:008D000C:  4E 40
+F00:0020       
+F00:0021       		move.l	#$5A6996A5, D0
+               S01:008D000E:  20 3C 5A 69 96 A5
+F00:0022       		move.l	#$A496695A, D1
+               S01:008D0014:  22 3C A4 96 69 5A
+F00:0023       
+F00:0024       		; quick load store test to chipram
+F00:0025       		lea.l	$2000, A0
+               S01:008D001A:  41 F8 20 00
+F00:0026       		move.l	D0,(A0)
+               S01:008D001E:  20 80
+F00:0027       		move.l  (A0),D2
+               S01:008D0020:  24 10
+F00:0028       
+F00:0029       
+F00:0030       		; quick byte store test
+F00:0031       		move.b	D0, 0
+               S01:008D0022:  11 C0 00 00
+F00:0032       		move.b	D1, 1
+               S01:008D0026:  11 C1 00 01
+F00:0033       		move.b	0, D1
+               S01:008D002A:  12 38 00 00
+F00:0034       		move.b	1, D0
+               S01:008D002E:  10 38 00 01
+F00:0035       
+F00:0036       		moveq 	#(v_end-v_start)/4, D1
+               S01:008D0032:  72 21
+F00:0037       		lea.l	0, A0
+               S01:008D0034:  91 C8
+F00:0038       		lea.l	v_start(PC),A1
+               S01:008D0036:  43 FA 3E C8
+F00:0039       .lp0:		move.l	(A1)+,(A0)+
+               S01:008D003A:  20 D9
+F00:0040       		dbf	D1,.lp0	
+               S01:008D003C:  51 C9 FF FC
+F00:0041       
+F00:0042       		; reset boot
+F00:0043       		move.b	#$D1,$FFFFFCFF
+               S01:008D0040:  11 FC 00 D1 FC FF
+F00:0044       
+F00:0045       		trap	#0
+               S01:008D0046:  4E 40
+F00:0046       
+F00:0047       		; test 1m cycles
+F00:0048       ;		move.b	#1,D0
+F00:0049       ;		move.b	D0,$FFE00
+F00:0050       ;		move.b	D0,$FFE00
+F00:0051       ;		move.b	D0,$FFE00
+F00:0052       ;		move.b	D0,$FFE00
+F00:0053       ;
+F00:0054       ;		; test 2m cycles
+F00:0055       ;		add.b	#1,$FF2000
+F00:0056       ;		add.b	#1,$FF2000
+F00:0057       ;		add.b	#1,$FF2000
+F00:0058       ;		add.b	#1,$FF2000
+F00:0059       ;		add.b	#1,$FF2000
+F00:0060       ;		add.b	#1,$FF2000
+F00:0061       ;
+F00:0062       ;		moveq	#runfrom_sys_end-runfrom_sys-1,D1
+F00:0063       ;		lea.l	$FFFF2000,A0
+F00:0064       ;		lea.l	runfrom_sys(PC),A1
+F00:0065       ;.;lp		move.b	(A1)+,(A0)+
+F00:0066       ;		dbf	D1,.lp
+F00:0067       ;
+F00:0068       ;		jsr	$FFFF2000
+F00:0069       
+F00:0070       		jsr	cls
+               S01:008D0048:  61 0A
+F00:0071       		lea.l	(test_d,PC),A0
+               S01:008D004A:  41 FA 00 62
+F00:0072       		jsr	PrString
+               S01:008D004E:  61 1C
+F00:0073       here:		jmp	here(PC)
+               S01:008D0050:  4E FA FF FE
+F00:0074       
+F00:0075       
+F00:0076       cls:		movea.l	(screen_start),A0
+               S01:008D0054:  20 7A 00 4E
+F00:0077       		move.l A0,(screen_ptr)
+               S01:008D0058:  21 C8 10 00
+F00:0078       		move.w	(screen_len),D0
+               S01:008D005C:  30 3A 00 4A
+F00:0079       ;;		clr.b	D1
+F00:0080       		move.b	#$A5, D1
+               S01:008D0060:  12 3C 00 A5
+F00:0081       .lp:		move.b	D1,(A0)+
+               S01:008D0064:  10 C1
+F00:0082       		dbf	D0,.lp
+               S01:008D0066:  51 C8 FF FC
+F00:0083       		rts
+               S01:008D006A:  4E 75
+F00:0084       
+F00:0085       PrString:	move.b	(A0)+,D0
+               S01:008D006C:  10 18
+F00:0086       		beq	.ex
+               S01:008D006E:  67 04
+F00:0087       		jsr	OSWRCH
+               S01:008D0070:  61 04
+F00:0088       		bra	PrString
+               S01:008D0072:  60 F8
+F00:0089       .ex:		rts
+               S01:008D0074:  4E 75
+F00:0090       
+F00:0091       OSWRCH:		movem.l	D1/A0-A1,-(A7)
+               S01:008D0076:  48 E7 40 C0
+F00:0092       		clr.w	D1
+               S01:008D007A:  42 41
+F00:0093       		move.b	D0,D1
+               S01:008D007C:  12 00
+F00:0094       		sub.b	#32,D1
+               S01:008D007E:  92 3C 00 20
+F00:0095       		bcs	.ex
+               S01:008D0082:  65 1A
+F00:0096       		rol.w	#3,D1
+               S01:008D0084:  E7 59
+F00:0097       		movea.l	(screen_ptr),A1
+               S01:008D0086:  22 78 10 00
+F00:0098       		lea	font(PC),A0
+               S01:008D008A:  41 FA 00 38
+F00:0099       		lea.l	0(A0,D1.W),A0
+               S01:008D008E:  41 F0 10 00
+F00:0100       		move.l	(A0)+,D1
+               S01:008D0092:  22 18
+F00:0101       		move.l	D1,(A1)+
+               S01:008D0094:  22 C1
+F00:0102       		move.l	(A0)+,D1
+               S01:008D0096:  22 18
+F00:0103       		move.l	D1,(A1)+
+               S01:008D0098:  22 C1
+F00:0104       		move.l	A1,(screen_ptr)
+               S01:008D009A:  21 C9 10 00
+F00:0105       .ex:		movem.l	(A7)+,D1/A0-A1
+               S01:008D009E:  4C DF 03 02
+F00:0106       		rts
+               S01:008D00A2:  4E 75
+F00:0107       
+F00:0108       
+F00:0109       
+F00:0110       screen_start:	dc.l	$FFFF5800			; assume mode 4
+               S01:008D00A4:  FF FF 58 00
+F00:0111       screen_len:	dc.w	$2800				; mode 4 screen size
+               S01:008D00A8:  28 00
+F00:0112       screen_ptr_org:	dc.l	$FFFF5800+8*320			; somewhere in mode 4
+               S01:008D00AA:  FF FF 62 00
+F00:0113       
+F00:0114       message:	
+F00:0115       
+F00:0116       test_d:		dc.b	"Blitter Board 68008", 0
+               S01:008D00AE:  42 6C 69 74 74 65 72 20 42 6F 61 72 64 20 36 38
+               S01:008D00BE:  30 30 38
+               S01:008D00C1:  00
+F00:0117       
+F00:0118       handle_trap0:	rte
+               S01:008D00C2:  4E 73
+F00:0119       
+F00:0120       
+F00:0121       font:		incbin	font.bin
+               S01:008D00C4:  00 00 00 00 00 00 00 00 18 18 18 18 18 00 18 00
+               S01:008D00D4:  6C 6C 6C 00 00 00 00 00 36 36 7F 36 7F 36 36 00
+F00:0122       
+F00:0123       
+F00:0124       ;		section "romvectors"
+F00:0125       		org	$8D3F00
+F00:0126       v_start:
+F00:0127       v_stack:	dc.l	STACK
+               S02:008D3F00:  00 00 10 00
+F00:0128       v_reset:	dc.l	handle_res
+               S02:008D3F04:  00 8D 00 0C
+F00:0129       
+F00:0130       		org	$8D3F80
+F00:0131       v_trap0:	dc.l	handle_trap0
+               S03:008D3F80:  00 8D 00 C2
+F00:0132       v_end:
+F00:0133       
+
+
+Sections:
+S01  seg8d0000
+S02  seg8d3f00
+S03  seg8d3f80
+
+
+Sources:
+F00  boot68008_testbench_mos.asm
+
+
+Symbols:
+v_trap0 EXPR(9256832=0x8d3f80) UNUSED ABS 
+v_reset EXPR(9256708=0x8d3f04) UNUSED ABS 
+v_stack EXPR(9256704=0x8d3f00) UNUSED ABS 
+handle_trap0 EXPR(9240770=0x8d00c2) ABS 
+message EXPR(9240750=0x8d00ae) UNUSED ABS 
+screen_ptr_org EXPR(9240746=0x8d00aa) UNUSED ABS 
+font EXPR(9240772=0x8d00c4) ABS 
+ OSWRCH .ex EXPR(9240734=0x8d009e) ABS 
+OSWRCH EXPR(9240694=0x8d0076) ABS 
+ PrString .ex EXPR(9240692=0x8d0074) ABS 
+ cls .lp EXPR(9240676=0x8d0064) ABS 
+screen_len EXPR(9240744=0x8d00a8) ABS 
+screen_start EXPR(9240740=0x8d00a4) ABS 
+here EXPR(9240656=0x8d0050) ABS 
+PrString EXPR(9240684=0x8d006c) ABS 
+test_d EXPR(9240750=0x8d00ae) ABS 
+cls EXPR(9240660=0x8d0054) ABS 
+ handle_res .lp0 EXPR(9240634=0x8d003a) ABS 
+v_start EXPR(9256704=0x8d3f00) ABS 
+v_end EXPR(9256836=0x8d3f84) ABS 
+handle_res EXPR(9240588=0x8d000c) ABS 
+runfrom_sys_end EXPR(9240588=0x8d000c) UNUSED ABS 
+runfrom_sys EXPR(9240576=0x8d0000) UNUSED ABS 
+screen_ptr EXPR(4096=0x1000) EQU 
+STACK EXPR(4096=0x1000) EQU 
+_MOVEMBYTES EXPR(12=0xc) INTERNAL 
+ MOVEMSIZE EXPR(4=0x4) INTERNAL 
+_MOVEMREGS EXPR(770=0x302) INTERNAL 
+__LINE__ EXPR(133=0x85) INTERNAL 
+__FO EXPR(0=0x0) INTERNAL 
+__RS EXPR(0=0x0) INTERNAL 
+REPTN EXPR(-1=0xffffffff) INTERNAL 
+__VASM EXPR(1=0x1) INTERNAL 
+MACH_CHIPKIT EXPR(0=0x0) UNUSED 
+MACH_BEEB EXPR(1=0x1) UNUSED 
+
+There have been no errors.

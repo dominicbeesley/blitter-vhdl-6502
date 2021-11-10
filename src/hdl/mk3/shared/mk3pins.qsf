@@ -242,3 +242,5 @@ set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D0_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D1_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D2_o
 
+
+
