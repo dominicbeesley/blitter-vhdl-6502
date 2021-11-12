@@ -21,7 +21,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_68008_tb is
 generic (
-	G_MOSROMFILE : string := "../../../sim_asm/test_asm68k/boot68008_testbench_mos.bin"
+	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm68k/boot68008_testbench_mos.bin"
 	);
 end sim_68008_tb;
 
@@ -244,7 +244,7 @@ begin
 		SYS_AUX_io 							=> i_SYS_AUX_io,
 		SYS_AUX_o 							=> open,
 
-		I2C_SCL_o 							=> open,
+		I2C_SCL_io 							=> open,
 		I2C_SDA_io 							=> open,
 
 		exp_PORTA_io 						=> i_exp_PORTA_io_blit,
