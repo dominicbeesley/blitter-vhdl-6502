@@ -198,8 +198,8 @@ begin
 		);
 	
 	sys_slow_ram <= '0';
-	sys_slow_hw_dl <= sys_slow_hw after 40 ns;
-	sys_slow_ram_dl <= sys_slow_ram after 40 ns;
+	sys_slow_hw_dl <= sys_slow_hw after 30 ns;
+	sys_slow_ram_dl <= sys_slow_ram after 30 ns;
 	sys_ram_en <= '1';
 
 	END GENERATE;

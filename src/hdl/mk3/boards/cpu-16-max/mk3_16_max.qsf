@@ -268,28 +268,19 @@ set_instance_assignment -name IO_STANDARD LVDS -to HDMI_CK_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D0_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D1_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D2_o
+
+
 source ../sim_tb/sim_t65.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_tb -section_id sim_t65_tb
 
 source ../../simulation/sim_tb/sim_65816.qsf
 
 source ../sim_tb/sim_t65_elk.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_elk_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_elk_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_elk_tb -section_id sim_t65_elk_tb
 
 source ../../simulation/sim_tb/sim_65816_elk.qsf
 
 source ../sim_tb/sim_68008.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_68008_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68008_tb -section_id sim_68008_tb
+
 source ../sim_tb/sim_68000.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_68000_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68000_tb -section_id sim_68000_tb
 
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
@@ -350,7 +341,7 @@ set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_elk_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_tb -section_id eda_simulation
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68008_elk_tb
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68008_elk_tb -section_id sim_68008_elk_tb
 set_global_assignment -name EDA_TEST_BENCH_NAME sim_68008_elk_tb -section_id eda_simulation
