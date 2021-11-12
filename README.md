@@ -30,6 +30,7 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	    chipset					The Chipset (Blitter/Paula/Aeris/DMA etc) (used various revisions of board)
 	    library					Shared by many projects
 	      3rdparty					Code from other projects
+	      	I2C_minion				I2c peripheral from Peter Samarin
 	        HamsterWorks				Stuff from Mike Field for HDMI
 	        MikeStirling				Stuff from Mike Stirling/Hoglet from the BeebFPGA project
 	        Missing					Where to place missing 3rd party libraries with incompatible licences

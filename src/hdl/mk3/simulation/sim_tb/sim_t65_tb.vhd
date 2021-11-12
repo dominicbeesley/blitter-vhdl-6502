@@ -84,7 +84,7 @@ begin
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../sim_asm/test_asm/blit-bringup2-rom0.rom",
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
 	)
 	port map (
@@ -342,7 +342,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "E:/Users/dominic/programming/6502/6502-general/Blitter/roms/bltutil/build/bltutil.rom",
+		romfile => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)
