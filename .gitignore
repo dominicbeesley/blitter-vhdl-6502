@@ -1,2 +1,7 @@
 *.bak
 src/hdl/mk3/boards/cpu-16-max/mk3_16_max.out.sdc
+src/hdl/mk3/boards/cpu-16-max/mk3_16_max.qsf.cmp
+src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.bin
+src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.lst
+*.bin
+*.lst

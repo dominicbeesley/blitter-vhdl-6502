@@ -73,7 +73,7 @@ begin
 		peripheral_sel_oh_o <= (others => '0');
 		if (addr_i(23 downto 22) = "11") then														-- "11xx xxxx"
 			-- peripherals/sys
-			if (addr_i(19 downto 17) = "101" and G_INCL_HDMI) then							-- "11xx 101x"		FA-FB
+			if addr_i(19 downto 17) = "101" then							-- "11xx 101x"		FA-FB
 					-- hdmi
 					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				

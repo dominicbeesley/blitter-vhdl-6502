@@ -54,7 +54,8 @@ entity fb_mem is
 		G_SWRAM_SLOT						: natural := 1;								-- when set address range $60 0000 - $7F 0000 goes to this MEM_nCE
 																									--  defaults to 1 for min_04 on rev.2
 		G_FAST_IS_10						: boolean := false;							-- when true run RAM(1..3) at 10ns
-		G_SLOW_IS_45						: boolean := false							-- when true run BB RAM at 45ns else 55ns		
+		G_SLOW_IS_45						: boolean := false;							-- when true run BB RAM at 45ns else 55ns		
+		G_FLASH_IS_45						: boolean := false							-- when true run Flash at 45ns else 55ns
 	);
 	port(
 
@@ -141,7 +142,11 @@ begin
 								-- work out which memory chip and what speed
 								if fb_c2p_i.A(23) = '1' then
 									MEM_ROM_nCE_o <= '0';
-									v_st_first := wait2;
+									IF G_FLASH_IS_45 then
+										v_st_first := wait3;
+									else
+										v_st_first := wait1;
+									end if;
 									v_rdy_first := 7;
 								elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
 									MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
@@ -151,7 +156,7 @@ begin
 											v_st_first := wait3;
 											v_rdy_first := 6;
 										else
-											v_st_first := wait2;
+											v_st_first := wait1;
 											v_rdy_first := 7;
 										end if;
 									elsif G_FAST_IS_10 then

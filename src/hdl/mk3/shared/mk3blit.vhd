@@ -1098,6 +1098,9 @@ begin
 			elsif exp_PORTEFG_io(3 downto 0) = "0011" then
 				r_cfg_hard_cpu_type <= CPU_68008;
 				r_cfg_cpubits <= "000";
+			elsif  exp_PORTEFG_io(3 downto 0) = "0111" then
+				r_cfg_hard_cpu_type <= CPU_6x09;
+				r_cfg_cpubits <= "110";			
 			else
 				r_cfg_hard_cpu_type <= CPU_65816;
 				r_cfg_cpubits <= "001";

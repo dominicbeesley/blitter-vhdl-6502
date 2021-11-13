@@ -390,14 +390,15 @@ begin
 								end if;
 							end if;
 						else
-							if cfg_cpu_speed_i = '1' then
-								r_state <= wr_l;
-								r_cyc_o(0) <= '1';
-								r_WE <= '1';
-								r_lastcyc <= '1';
-							else
+--							if cfg_cpu_speed_i = '1' then
+--								r_state <= wr_l;
+--								r_cyc_o(0) <= '1';
+--								r_WE <= '1';
+--								r_lastcyc <= '1';
+--								r_A_log <= i_A_log;
+--							else
 								r_state <= idle_wr_ds;
-							end if;
+--							end if;
 						end if;
 						--TODO: - should this be staggered to avoid two drivers?
 						r_PORTF_nOE <= '0';
@@ -409,7 +410,7 @@ begin
 							r_state <= wr_u;
 							r_cyc_o(1) <= '1';
 							r_WE <= '1';
-							r_lastcyc <= CPUSKT_A_i(0);
+							r_lastcyc <= CPUSKT_A_i(0) or cfg_cpu_speed_i;
 							r_A_log <= i_A_log;
 							r_WR_stb <= '1';
 						else
