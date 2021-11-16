@@ -428,7 +428,7 @@ begin
 
 	e_fb_syscon: entity work.fb_syscon
 	generic map (
-		SIM => false,
+		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
