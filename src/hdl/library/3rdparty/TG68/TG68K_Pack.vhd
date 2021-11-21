@@ -20,6 +20,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
+
+-- Dominic Beesley 21/11/2021
+-- NOTE: This is a forked version of TG68K which initialises many of the signals
+-- that are left uninitialised in the original core - causing multiple annoying
+-- simulation warnings
+
+
 library IEEE;
 use IEEE.std_logic_1164.all;
 

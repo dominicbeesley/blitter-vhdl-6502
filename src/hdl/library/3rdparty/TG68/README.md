@@ -1,3 +1,8 @@
+# Changes
+
+Note: this version has been forked from the main project 20/11/2021. There were a lot of uninitialised values that are used in arithmetic in the VHDL. Whilst that is not a problem in synthesis in simulation it creates many false warnings and slows down the simulation. 
+
+
 # TG68K.C
 
 switchable 68K CPU-Core

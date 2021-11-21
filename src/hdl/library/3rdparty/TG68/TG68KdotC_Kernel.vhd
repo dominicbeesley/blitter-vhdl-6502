@@ -21,6 +21,12 @@
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 
+-- Dominic Beesley 21/11/2021
+-- NOTE: This is a forked version of TG68K which initialises many of the signals
+-- that are left uninitialised in the original core - causing multiple annoying
+-- simulation warnings
+
+
 -- 14.10.2020 TG bugfix chk2.b
 -- 13.10.2020 TG go back to old aligned design and bugfix chk2
 -- 11.10.2020 TG next try CHK2 flags
