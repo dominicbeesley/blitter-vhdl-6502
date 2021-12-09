@@ -9,6 +9,8 @@ simulation
 *.rpt
 makefile.deps
 *.cof
+version.tag
+version.vhd
 
 
 

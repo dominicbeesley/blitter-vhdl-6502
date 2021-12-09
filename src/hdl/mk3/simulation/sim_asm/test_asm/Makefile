@@ -1,5 +1,7 @@
 .PHONY:		all clean
 
+SCRIPTS=../../../../../scripts
+
 ASMTARGETS=	blit-bringup2-rom0.rom 
 TARGETS=	$(ASMTARGETS) 
 
@@ -26,7 +28,7 @@ all:		$(TARGETS)
 
 %.rom:		%.o $(LIBS)
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(basename $@).cfg $< $(LIBS)
-		../../../../scripts/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
+		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
 		da65 -S 0xC000 --comments 4 $(basename $@).rom >$(basename $@).da.s
 
 
