@@ -1,0 +1,14 @@
+*/db
+*/incremental_db
+*/output_files
+*/simulation
+*/*.qws
+*/*.qdf
+*/*.chg
+*/*.bak
+*/*.rpt
+*/makefile.deps
+*/*.cof
+*/version.tag
+*/version.vhd
+*/*.out.sdc
