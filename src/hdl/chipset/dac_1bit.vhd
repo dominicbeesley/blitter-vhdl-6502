@@ -47,7 +47,8 @@ use IEEE.NUMERIC_STD.ALL;
 entity dac_1bit is
 	Generic (
 		G_SAMPLE_SIZE		: natural := 10;
-		G_SYNC_DEPTH		: natural := 1
+		G_SYNC_DEPTH		: natural := 1;
+		G_PWM					: boolean := false
 	);
    Port (
 		rst_i					: in  	std_logic;
@@ -79,6 +80,7 @@ begin
 		end process;
 	end generate;
 
+GG_PWM:IF G_PWM GENERATE
 	p_pwm: process(clk_dac, rst_i)
 	variable ctr:signed(G_SAMPLE_SIZE-1 downto 0);
 	begin
@@ -94,6 +96,23 @@ begin
 			ctr := ctr + 1;
 		end if;
 	end process;
+END GENERATE;
+GG_SIG:IF not G_PWM GENERATE
+
+   process (clk_dac)
+   variable samu:unsigned(G_SAMPLE_SIZE downto 0); -- 1 larger than sample?
+   variable sum:unsigned(G_SAMPLE_SIZE downto 0);
+   begin		
+		if rising_edge(clk_dac) then
+		   samu := unsigned(to_signed(2**(G_SAMPLE_SIZE-1), G_SAMPLE_SIZE+1) + r_arr_clk_dac(0));
+			bitstream <= sum(G_SAMPLE_SIZE);
+			-- signed to unsigned expand to 9 bits
+         sum := unsigned("0" & sum(G_SAMPLE_SIZE-1 downto 0)) + unsigned("0" & samu(G_SAMPLE_SIZE-1 downto 0));
+		end if; 
+   end process;
+
+
+END GENERATE;
 
 end dac_1bit_arc;
 
