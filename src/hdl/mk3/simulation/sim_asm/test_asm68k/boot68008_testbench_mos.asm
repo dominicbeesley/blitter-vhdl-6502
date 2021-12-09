@@ -27,6 +27,10 @@ handle_res:
 		move.l  (A0),D2
 
 
+		; quick TAS check
+		tas	(A0)
+
+
 		; quick byte store test
 		move.b	D0, 0
 		move.b	D1, 1
