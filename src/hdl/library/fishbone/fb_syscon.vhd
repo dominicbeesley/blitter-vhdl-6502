@@ -74,6 +74,14 @@ end fb_syscon;
 
 architecture rtl of fb_syscon is
 
+	function SKIP_RESET(VAL:natural; QUICKVAL:natural) return natural is
+	begin
+		if SIM then
+			return QUICKVAL;
+		else
+			return VAL;
+		end if;
+	end SKIP_RESET;
 
 
 	signal	i_fb_syscon						: fb_syscon_t;
@@ -81,8 +89,8 @@ architecture rtl of fb_syscon is
 	signal	r_rst_state						: fb_rst_state_t := powerup;
 
 	constant RST_COUNT_FULL					: natural := 2**(ceil_log2(CLOCKSPEED * 3 * 1000000)-1)-1; -- full reset 3 seconds (ish)
-	constant RST_PUP_MAX						: natural := CLOCKSPEED * 10;				-- quickly force a full  reset at powerup
-	constant RST_RUN							: natural := CLOCKSPEED * 50;				-- for reset noise/debounce 50 us
+	constant RST_PUP_MAX						: natural := SKIP_RESET(CLOCKSPEED * 10, CLOCKSPEED);				-- quickly force a full  reset at powerup
+	constant RST_RUN							: natural := SKIP_RESET(CLOCKSPEED * 50, CLOCKSPEED);				-- for reset noise/debounce 50 us
 	constant RST_CTR_LEN						: natural := ceil_log2(RST_COUNT_FULL);
 
 

@@ -89,17 +89,18 @@ architecture Behavioral of sim_68000_tb is
 
 
 	signal	i_cpu_CLK							: std_logic;
-	signal	i_CPU_nRES							: std_logic;
-	signal	i_cpu_ipl							: std_logic_vector(2 downto 0);
-	signal	i_cpu_DTACK							: std_logic;
-	signal	i_cpu_a								: std_logic_vector(31 downto 0);
-	signal	i_cpu_d_out							: std_logic_vector(15 downto 0);
-	signal	i_cpu_d_in							: std_logic_vector(15 downto 0);
-	signal	i_CPU_AS								: std_logic;
-	signal	i_CPU_LDS							: std_logic;
-	signal	i_CPU_UDS							: std_logic;
-	signal	i_CPU_RnW							: std_logic;
-	signal	i_cpu_drive_data					: std_logic;
+	signal	i_cpu_IPL							: std_logic_vector(2 downto 0);
+	signal	i_cpu_nDTACK						: std_logic;
+	signal	i_cpu_A								: std_logic_vector(31 downto 0);
+	signal	i_cpu_AS								: std_logic;
+	signal	i_cpu_LDS							: std_logic;
+	signal	i_cpu_UDS							: std_logic;
+	signal	i_cpu_RnW							: std_logic;
+	signal	i_CPU_FC								: std_logic_vector(2 downto 0);
+	signal	i_cpu_BERR							: std_logic;
+	signal	i_cpu_nVPA							: std_logic;
+	signal	i_cpu_nVMA							: std_logic;
+	signal	i_cpu_E								: std_logic;
 
 begin
 	
@@ -270,67 +271,63 @@ begin
 
 
 
-	e_cpu:entity work.TG68
+	e_cpu:entity work.TG68K
+	generic map (
+		cpu			  => "00"
+	)
 	port map (
-		clk           => i_cpu_CLK,
-		reset         => i_CPU_nRES,
-      clkena_in     => '1',
-      data_in       => i_cpu_d_in,
-      IPL           => i_cpu_ipl,
-      dtack         => i_cpu_DTACK,
-      addr          => i_cpu_a,
-      data_out      => i_cpu_d_out,
-      as            => i_CPU_AS,
-      lds            => i_CPU_LDS,
-      uds            => i_CPU_UDS,
-      rw            => i_CPU_RnW,
-      drive_data    => i_cpu_drive_data
+		clk          		=> i_cpu_CLK,
+		reset        		=> i_exp_PORTD_io(9),
+		halt					=> i_exp_PORTD_io(10),
+      berr					=> i_CPU_BERR,
+      ipl           		=> i_cpu_IPL,
+      addr          		=> i_cpu_A,
+      fc						=> i_cpu_FC,
+      data(15 downto 8)	=> i_exp_PORTEFG_io(11 downto 4),
+      data(7 downto 0)	=> i_exp_PORTA_io_cpu,     
+      as            		=> i_cpu_AS,
+      uds            	=> i_CPU_UDS,
+      lds            	=> i_cpu_LDS,
+      rw            		=> i_cpu_RnW,
+      dtack         		=> i_cpu_nDTACK,
+      e						=> i_cpu_E,
+      VPA					=> i_cpu_nVPA,
+      VMA					=> i_cpu_nVMA
    );
 
-	i_cpu_d_in <= i_exp_PORTEFG_io(11 downto 4) & i_exp_PORTA_io_cpu;
 
-	i_exp_PORTA_io_cpu <= i_cpu_d_out(7 downto 0) when i_cpu_drive_data = '1' else
-								 (others => 'Z');
-
---TODO: model delays on port F?
-	i_exp_PORTF(11 downto 4) <= i_cpu_d_out(15 downto 8) when i_cpu_drive_data = '1' else
-								 (others => 'Z');
-
-
-	--TODO: WARNING: vpa, berr, ignored
+	--TODO: WARNING: berr, ignored
+	i_cpu_nVPA <= i_exp_PORTB_o_cpu(0);
+	i_cpu_BERR <= not i_exp_PORTB_o_cpu(1); 
 	i_cpu_CLK <= i_exp_PORTB_o_cpu(2);
-	i_cpu_ipl <= i_exp_PORTB_o_cpu(5) & i_exp_PORTB_o_cpu(4) & i_exp_PORTB_o_cpu(5);
-	i_cpu_DTACK <= i_exp_PORTB_o_cpu(7);
+	i_cpu_IPL <= i_exp_PORTB_o_cpu(6) & i_exp_PORTB_o_cpu(4) & i_exp_PORTB_o_cpu(5);
+	i_cpu_nDTACK <= i_exp_PORTB_o_cpu(7);
 
-	i_exp_PORTC_io <= 
+	i_exp_PORTC_io <= 	
 		(	
 			0 => i_cpu_LDS,
-			7 downto 1 => i_cpu_a(7 downto 1),
-			11 downto 8 => i_cpu_a(19 downto 16)
+			7 downto 1 => i_cpu_A(7 downto 1),
+			11 downto 8 => i_cpu_A(19 downto 16)
 		);
-
-	--TODO: WARNING: this is a massive bodge as tg68 doesn't do fc*, E, BG, BREQ signals and ignores bidire res/halt?
+	--TODO: WARNING: this is incomplete as tg68 doesn't do BG, BREQ signals 
 	i_exp_PORTD_io <= (
-		0 => '0' -- E
+		0 => i_CPU_E -- E
 	,	1 => i_CPU_RnW
 	,  2 => i_CPU_UDS
-	,  3 => '0' -- FC0
-	,	4 => '0' -- FC2
-	,	5 => i_CPU_AS
-	,  6 => '0' -- FC1
+	,  3 => i_CPU_FC(0)
+	,	4 => i_CPU_FC(2)
+	,	5 => i_cpu_AS
+	,  6 => i_CPU_FC(1)
 	,  7 => '0' -- BG
 	,  8 => 'Z' -- BR
-	,  9 => 'Z' -- RES
-	, 10 => 'Z' -- HALT
-	, 11 => 'H' -- spare
+	, 11 => i_CPU_nVMA
+	, others => 'Z'
 		);
 
-	i_CPU_nRES <= i_exp_PORTD_io(9);
-	--i_CPU_nHALT <= i_exp_PORTD_io(10);
 
 	i_exp_PORTE <= (
-		7 downto 0 => i_cpu_a(15 downto 8),
-		11 downto 8 => i_cpu_a(23 downto 20),
+		7 downto 0 => i_cpu_A(15 downto 8),
+		11 downto 8 => i_cpu_A(23 downto 20),
 		others => 'H'
 	);
 
