@@ -39,7 +39,9 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	      fishbone					The Fishbone Bus basic components and definitions
 	    mk3						Projects and files relevant to the Mk.3 board
 	      boards					contains individual builds
+	        cpu-04-min				MAX10 4000LE build with minimal options
 	      	cpu-16-max				MAX10 16000LE build with all options except HDMI
+	      	cpu-16-hdmi				MAX10 16000LE build with all options including HDMI
 	      shared					HDL shared between all mk.3 builds
 	      testing					Projects for board testing and production
 	        mk3-board-erc				A simple Project to perform board ERC  
