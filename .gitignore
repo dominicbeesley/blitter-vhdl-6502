@@ -5,3 +5,6 @@ src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.bin
 src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.lst
 *.bin
 *.lst
+*.sublime-project
+*.sublime-workspace
+
