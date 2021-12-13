@@ -65,7 +65,7 @@ architecture Behavioral of dvid is
 	signal y			    : std_logic_vector(3 downto 0);
 	
 begin   
-   c_blue <= not (vsync & hsync);
+   c_blue <= vsync & hsync;
    
    TDMS_encoder_red:   TDMS_encoder PORT MAP(clk => clk_pixel, data => red_p,   c => c_red,   blank => blank, encoded => encoded_red);
    TDMS_encoder_green: TDMS_encoder PORT MAP(clk => clk_pixel, data => green_p, c => c_green, blank => blank, encoded => encoded_green);

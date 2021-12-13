@@ -78,18 +78,29 @@ architecture rtl of fb_hdmi is
 	signal i_vsync_DVI					: std_logic;
 	signal i_hsync_DVI					: std_logic;
 	signal i_blank_DVI					: std_logic;
+
+	signal r_vsync_DVI					: std_logic;
+	signal r_hsync_DVI					: std_logic;
+	signal r_blank_DVI					: std_logic;
+
+
 	signal i_R_DVI							: std_logic_vector(7 downto 0);
 	signal i_G_DVI							: std_logic_vector(7 downto 0);
 	signal i_B_DVI							: std_logic_vector(7 downto 0);
 
+	signal r_R_DVI							: std_logic_vector(7 downto 0);
+	signal r_G_DVI							: std_logic_vector(7 downto 0);
+	signal r_B_DVI							: std_logic_vector(7 downto 0);
+
+
 begin
 
-	VGA_R_o <= i_R_DVI(7);
-	VGA_G_o <= i_G_DVI(7);
-	VGA_B_o <= i_B_DVI(7);
-	VGA_VS_o <= i_vsync_DVI;
-	VGA_HS_o <= i_hsync_DVI;
-	VGA_BLANK_o <= i_blank_DVI;
+	VGA_R_o <= r_R_DVI(7);
+	VGA_G_o <= r_G_DVI(7);
+	VGA_B_o <= r_B_DVI(7);
+	VGA_VS_o <= r_vsync_DVI;
+	VGA_HS_o <= r_hsync_DVI;
+	VGA_BLANK_o <= r_blank_DVI;
 
 
 
@@ -143,24 +154,48 @@ begin
 		end if;
 	end process;
 
-	i_hsync_DVI <= '0' when r_ctr_x >= 24 and r_ctr_x < 150 else
+
+	i_hsync_DVI <= '0' when r_ctr_x < 126 else
 						'1';
 
 
 
 	i_vsync_DVI <= '0' when r_ctr_y < 3 or
-								(r_ctr_y = 312 and r_ctr_x >= 863) or
+								(r_ctr_y = 312 and r_ctr_x >= 864) or
 								r_ctr_y = 313 or
 								r_ctr_y = 314 or
 								(r_ctr_y = 315 and r_ctr_x < 864)
 						else
 						'1';
 
-	i_blank_DVI <= '1' when r_ctr_x < 288 or 
+	i_blank_DVI <= '1' when r_ctr_x < 264 or r_ctr_x >= (1728-24) or
 									r_ctr_y >= 623 or 
 									r_ctr_y < 22 or
 									(r_ctr_y >= 310 and r_ctr_y < 335) else
 						'0';
+
+	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
+					(others => '0');
+	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 0)) when r_ctr_x(6) = '1' else 
+				  	(others => '0');
+	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
+
+
+
+	p_reg:process(i_clk_hdmi_pixel)
+	begin
+		if rising_edge(i_clk_hdmi_pixel) then
+			r_hsync_DVI <= i_hsync_DVI;
+			r_vsync_DVI <= i_vsync_DVI;
+			r_blank_DVI <= i_blank_DVI;
+
+			r_R_DVI <= i_R_DVI;
+			r_G_DVI <= i_G_DVI;
+			r_B_DVI <= i_B_DVI;
+
+
+		end if;
+	end process;
 
 
 	p_ctr_y_log:process(i_clk_hdmi_pixel)
@@ -178,31 +213,17 @@ begin
 		end if;
 	end process;
 
-	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
-					(others => '0');
-	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 0)) when r_ctr_x(6) = '1' else 
-				  	(others => '0');
-	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
-
-
-
-	VGA_R_o <= i_R_DVI(7);
-	VGA_G_o <= i_G_DVI(7);
-	VGA_B_o <= i_B_DVI(7);
-	VGA_VS_o <= i_vsync_DVI;
-	VGA_HS_o <= i_hsync_DVI;
-	VGA_BLANK_o <= i_blank_DVI;
 
 	e_dvid:entity work.dvid
    port map ( 
    	clk       => i_clk_hdmi_tmds,
       clk_pixel => i_clk_hdmi_pixel,
-      red_p     => i_R_dvi,
-      green_p   => i_G_dvi,
-      blue_p    => i_B_dvi,
-      blank     => i_blank_dvi,
-      hsync     => not i_hsync_dvi,
-      vsync     => not i_vsync_dvi,
+      red_p     => r_R_dvi,
+      green_p   => r_G_dvi,
+      blue_p    => r_B_dvi,
+      blank     => r_blank_dvi,
+      hsync     => r_hsync_dvi,
+      vsync     => r_vsync_dvi,
       red_s     => HDMI_R_o,
       green_s   => HDMI_G_o,
       blue_s    => HDMI_B_o,
