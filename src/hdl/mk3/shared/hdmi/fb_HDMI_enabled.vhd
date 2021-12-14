@@ -140,7 +140,7 @@ begin
 
 
 	-- CEA-861-D 1440x576i/50 @27M (21)
-	-- measured from start of blank by line, lines in r_ctr_y are numbered as in CEA-861-D minus 1 i.e. 0 to 624 (instead of 1 to 625)
+	-- measured from start of HS by line, lines in r_ctr_y are numbered as in CEA-861-D minus 1 i.e. 0 to 624 (instead of 1 to 625)
 
 	p_screengen:process(i_clk_hdmi_pixel)
 	begin
@@ -180,7 +180,7 @@ begin
 
 	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
 					(others => '0');
-	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 0)) when r_ctr_x(6) = '1' else 
+	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 1)) & "0" when r_ctr_x(6) = '1' else 
 				  	(others => '0');
 	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
 
