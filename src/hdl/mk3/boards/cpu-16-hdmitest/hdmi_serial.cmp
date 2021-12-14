@@ -1,9 +1,0 @@
-	component hdmi_serial is
-		port (
-			tx_inclock   : in  std_logic                     := 'X';             -- tx_inclock
-			tx_syncclock : in  std_logic                     := 'X';             -- tx_syncclock
-			tx_in        : in  std_logic_vector(39 downto 0) := (others => 'X'); -- tx_in
-			tx_out       : out std_logic_vector(3 downto 0)                      -- tx_out
-		);
-	end component hdmi_serial;
-

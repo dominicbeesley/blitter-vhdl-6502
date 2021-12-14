@@ -92,6 +92,10 @@ architecture rtl of fb_hdmi is
 	signal r_G_DVI							: std_logic_vector(7 downto 0);
 	signal r_B_DVI							: std_logic_vector(7 downto 0);
 
+	signal i_R_encoded					: std_logic_vector(9 downto 0);
+	signal i_G_encoded					: std_logic_vector(9 downto 0);
+	signal i_B_encoded					: std_logic_vector(9 downto 0);
+
 
 begin
 
@@ -214,24 +218,55 @@ begin
 	end process;
 
 
-	e_dvid:entity work.dvid
-   port map ( 
-   	clk       => i_clk_hdmi_tmds,
-      clk_pixel => i_clk_hdmi_pixel,
-      red_p     => r_R_dvi,
-      green_p   => r_G_dvi,
-      blue_p    => r_B_dvi,
-      blank     => r_blank_dvi,
-      hsync     => r_hsync_dvi,
-      vsync     => r_vsync_dvi,
-      red_s     => HDMI_R_o,
-      green_s   => HDMI_G_o,
-      blue_s    => HDMI_B_o,
-      clock_s   => HDMI_CK_o
-   );
+--	e_dvid:entity work.dvid
+--   port map ( 
+--   	clk       => i_clk_hdmi_tmds,
+--      clk_pixel => i_clk_hdmi_pixel,
+--      red_p     => r_R_dvi,
+--      green_p   => r_G_dvi,
+--      blue_p    => r_B_dvi,
+--      blank     => r_blank_dvi,
+--      hsync     => r_hsync_dvi,
+--      vsync     => r_vsync_dvi,
+--      red_s     => HDMI_R_o,
+--      green_s   => HDMI_G_o,
+--      blue_s    => HDMI_B_o,
+--      clock_s   => HDMI_CK_o
+--   );
+
+	e_spirkov:entity work.hdmi
+	port map (
+		I_CLK_PIXEL => i_clk_hdmi_pixel,
+		I_R => i_R_DVI,
+		I_G => i_G_DVI,
+		I_B => i_B_DVI,
+		I_BLANK => i_blank_DVI,
+		I_HSYNC => i_hsync_DVI,
+		I_VSYNC => i_vsync_DVI,
+		I_ASPECT_169 => '1',
+
+		I_AUDIO_ENABLE => '1',
+		I_AUDIO_PCM_L => (others => '0'),
+		I_AUDIO_PCM_R => (others => '1'),
+
+		O_RED => i_R_encoded,
+		O_GREEN => i_G_encoded,
+		O_BLUE => i_B_encoded
+	);
 
 
-
+	e_hdmi_serial:entity work.hdmi_out_altera_max10
+	port map (
+		clock_pixel_i => i_clk_hdmi_pixel,
+		clock_tdms_i => i_clk_hdmi_tmds,
+		red_i => i_R_encoded,
+		green_i => i_G_encoded,
+		blue_i => i_B_encoded,
+		red_s => HDMI_R_o,
+		green_s => HDMI_G_o,
+		blue_s => HDMI_B_o,
+		clock_s => HDMI_CK_o
+	);
 
 
 --====================================================================
