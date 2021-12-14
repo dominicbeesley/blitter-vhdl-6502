@@ -7,11 +7,10 @@
 --                'blank' should be asserted during the non-display 
 --                portions of the frame
 --
--- This file hacked D.Beesley Feb 2014 for Altera / DE0 Nano
+-- This file hacked D.Beesley Dec 2021 for MAX 10 SERDES
 --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-
 
 entity dvid is
     Port ( clk       : in  STD_LOGIC;
@@ -39,30 +38,30 @@ architecture Behavioral of dvid is
       );
    END COMPONENT;
 	
-	component dd_out
-	PORT
-	(
-		datain_h		: IN STD_LOGIC_VECTOR (3 DOWNTO 0);
-		datain_l		: IN STD_LOGIC_VECTOR (3 DOWNTO 0);
-		outclock		: IN STD_LOGIC ;
-		dataout		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
-	);
-	END component;
+--	component dd_out
+--	PORT
+--	(
+--		datain_h		: IN STD_LOGIC_VECTOR (3 DOWNTO 0);
+--		datain_l		: IN STD_LOGIC_VECTOR (3 DOWNTO 0);
+--		outclock		: IN STD_LOGIC ;
+--		dataout		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
+--	);
+--	END component;
 
    signal encoded_red, encoded_green, encoded_blue : std_logic_vector(9 downto 0);
    signal latched_red, latched_green, latched_blue : std_logic_vector(9 downto 0) := (others => '0');
-   signal shift_red,   shift_green,   shift_blue   : std_logic_vector(9 downto 0) := (others => '0');
    
-   signal shift_clock   : std_logic_vector(9 downto 0) := "1110000011";
+--   signal shift_red,   shift_green,   shift_blue   : std_logic_vector(9 downto 0) := (others => '0');   
+--   signal shift_clock   : std_logic_vector(9 downto 0) := "1110000011";
 
    
    constant c_red       : std_logic_vector(1 downto 0) := (others => '0');
    constant c_green     : std_logic_vector(1 downto 0) := (others => '0');
    signal   c_blue      : std_logic_vector(1 downto 0);
 
-	signal tmds				: std_logic_vector(3 downto 0);
-	signal x				   : std_logic_vector(3 downto 0);
-	signal y			    : std_logic_vector(3 downto 0);
+--	signal tmds				: std_logic_vector(3 downto 0);
+--	signal x				   : std_logic_vector(3 downto 0);
+--	signal y			    : std_logic_vector(3 downto 0);
 	
 begin   
    c_blue <= vsync & hsync;
@@ -88,20 +87,20 @@ begin
 --	od_blue : domDDR2 port map (q => blue_s, d0 => shift_blue(0), d1 => shift_blue(1), ck0 => clk, ck1 => clk_n);
 --	od_clock : domDDR2 port map (q => clock_s, d0 => shift_clock(0), d1 => shift_clock(1), ck0 => clk, ck1 => clk_n);
 
-  y <= shift_blue(1) & shift_green(1) & shift_red(1) & shift_clock (1);
-  x <= shift_blue(0) & shift_green(0) & shift_red(0) & shift_clock (0);
-	ddr : dd_out port map (
-			datain_h => x
-		,	datain_l => y
-		,  outclock => clk
-		,  dataout => tmds
-		);
+--  y <= shift_blue(1) & shift_green(1) & shift_red(1) & shift_clock (1);
+--  x <= shift_blue(0) & shift_green(0) & shift_red(0) & shift_clock (0);
+--	ddr : dd_out port map (
+--			datain_h => x
+--		,	datain_l => y
+--		,  outclock => clk
+--		,  dataout => tmds
+--		);
 		
-	--note reverse of how they are in top-level
-	blue_s <= tmds(3);
-	green_s <= tmds(2);
-	red_s <= tmds(1);
-	clock_s <= tmds(0);
+--	--note reverse of how they are in top-level
+--	blue_s <= tmds(3);
+--	green_s <= tmds(2);
+--	red_s <= tmds(1);
+--	clock_s <= tmds(0);
 
    process(clk_pixel)
    begin
@@ -112,21 +111,32 @@ begin
       end if;
    end process;
 
-   process(clk)
-   begin
-      if rising_edge(clk) then 
-         if shift_clock = "1110000011" then
-            shift_red   <= latched_red;
-            shift_green <= latched_green;
-            shift_blue  <= latched_blue;
-         else
-            shift_red   <= "00" & shift_red  (9 downto 2);
-            shift_green <= "00" & shift_green(9 downto 2);
-            shift_blue  <= "00" & shift_blue (9 downto 2);
-         end if;
-         shift_clock <= shift_clock(1 downto 0) & shift_clock(9 downto 2);
-      end if;
-   end process;
-   
+--   process(clk)
+--   begin
+--      if rising_edge(clk) then 
+--         if shift_clock = "1110000011" then
+--            shift_red   <= latched_red;
+--            shift_green <= latched_green;
+--            shift_blue  <= latched_blue;
+--         else
+--            shift_red   <= "00" & shift_red  (9 downto 2);
+--            shift_green <= "00" & shift_green(9 downto 2);
+--            shift_blue  <= "00" & shift_blue (9 downto 2);
+--         end if;
+--         shift_clock <= shift_clock(1 downto 0) & shift_clock(9 downto 2);
+--      end if;
+--   end process;
+  
+   e_hdmi_ser:entity work.hdmi_serial
+   port map (
+      tx_inclock => clk_pixel,
+      tx_syncclock => clk,
+      tx_in => "1110000011" & "0101010101" & "1100110011" & "1110001110",
+      tx_out(0) => clock_s,
+      tx_out(1) => red_s,
+      tx_out(2) => green_s,
+      tx_out(3) => blue_s
+   );
+
 end Behavioral;
 

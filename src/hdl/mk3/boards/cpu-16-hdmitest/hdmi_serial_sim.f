@@ -1,0 +1,2 @@
+hdmi_serial_sim/hdmi_serial.vhd
+hdmi_serial_sim/altera_soft_lvds/altera_soft_lvds_tx_SzWJL.v
