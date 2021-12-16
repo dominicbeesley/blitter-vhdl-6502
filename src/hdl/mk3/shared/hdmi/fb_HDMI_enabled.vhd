@@ -178,12 +178,22 @@ begin
 									(r_ctr_y >= 310 and r_ctr_y < 335) else
 						'0';
 
-	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
-					(others => '0');
-	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 1)) & "0" when r_ctr_x(6) = '1' else 
-				  	(others => '0');
-	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
+--	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
+--					(others => '0');
+--	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 1)) & "0" when r_ctr_x(6) = '1' else 
+--				  	(others => '0');
+--	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
 
+	i_R_DVI <= "11000000" when r_ctr_y_log(4) = '1' and r_ctr_x(5) = r_ctr_y_log(4) else "00011111";
+	i_G_DVI <= "11000000" when r_ctr_y_log(5) = '1' and r_ctr_x(5) = r_ctr_y_log(4) else "00011111";
+	i_B_DVI <= "11000000" when r_ctr_y_log(6) = '1' and r_ctr_x(5) = r_ctr_y_log(4) else "00011111";
+
+
+--	i_R_DVI <= (std_logic_vector(r_ctr_x(5 downto 0)) & "00") when r_ctr_x(4 downto 3) = not r_ctr_y_log(4 downto 3) else
+--					(others => '0');
+--	i_G_DVI <= std_logic_vector(r_ctr_x(7 downto 1)) & "0" when r_ctr_x(6) = '1' else 
+--				  	(others => '0');
+--	i_B_DVI <= std_logic_vector(r_ctr_y_log(7 downto 0));
 
 
 	p_reg:process(i_clk_hdmi_pixel)
@@ -193,9 +203,15 @@ begin
 			r_vsync_DVI <= i_vsync_DVI;
 			r_blank_DVI <= i_blank_DVI;
 
-			r_R_DVI <= i_R_DVI;
-			r_G_DVI <= i_G_DVI;
-			r_B_DVI <= i_B_DVI;
+			if (i_blank_DVI = '1') then
+				r_R_DVI <= (others => '0');
+				r_G_DVI <= (others => '0');
+				r_B_DVI <= (others => '0');
+			else
+				r_R_DVI <= i_R_DVI;
+				r_G_DVI <= i_G_DVI;
+				r_B_DVI <= i_B_DVI;
+			end if;
 
 
 		end if;
