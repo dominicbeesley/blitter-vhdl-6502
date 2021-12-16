@@ -167,11 +167,20 @@ begin
          // Byte3: 00 = 0(SC1:SC0=0 No scaling)
          // Byte4: 00 = 0(VIC6:VIC0=0 custom resolution)
          // Byte5: 00 = 0(PR5:PR0=0 No repeation)
+//ORG:         if (i_aspect_169) begin
+//ORG:            subpacket[0]=56'h000000002A1035;
+//ORG:         end else begin
+//ORG:            subpacket[0]=56'h00000000191046;
+//ORG:         end
+
          if (i_aspect_169) begin
-            subpacket[0]=56'h000000002A1035;
+            subpacket[0]=56'h000116002A101E;
          end else begin
-            subpacket[0]=56'h00000000191046;
+            subpacket[0]=56'h00011500191030;
          end
+
+
+
          subpacket[1]=56'h00000000000000;
       end else begin
          packetHeader=24'h0A0184;  // infoframe audio packet
