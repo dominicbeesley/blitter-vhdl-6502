@@ -34,7 +34,8 @@ entity hdmi is
       I_BLANK        : in std_logic;
       I_HSYNC        : in std_logic;
       I_VSYNC        : in std_logic;
-      I_ASPECT_169   : in std_logic;
+--      I_ASPECT_169   : in std_logic;
+      I_AVI_DATA     : in std_logic_vector(111 downto 0);
       -- PCM audio
       I_AUDIO_ENABLE : in std_logic;
       I_AUDIO_PCM_L  : in std_logic_vector(15 downto 0);
@@ -62,7 +63,7 @@ port (
    i_vSync        : in  std_logic;
    i_blank        : in  std_logic;
    i_audio_enable : in  std_logic;
-   i_aspect_169   : in  std_logic;
+   i_avi_data     : in  std_logic_vector(111 downto 0);
    i_audioL       : in  std_logic_vector(15 downto 0);
    i_audioR       : in  std_logic_vector(15 downto 0);
    o_d0           : out std_logic_vector(3 downto 0);
@@ -352,7 +353,8 @@ port map(
    i_hSync        => I_HSYNC,
    i_vSync        => I_VSYNC,
    i_audio_enable => I_AUDIO_ENABLE,
-   i_aspect_169   => I_ASPECT_169,
+--   i_aspect_169   => I_ASPECT_169,
+   i_avi_data     => I_AVI_DATA,
    i_audioL       => I_AUDIO_PCM_L,
    i_audioR       => I_AUDIO_PCM_R,
    o_d0           => dataPacket0,

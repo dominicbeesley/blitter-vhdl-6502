@@ -101,6 +101,10 @@ architecture rtl of fb_hdmi is
 
 	signal i_audio							: std_logic_vector(15 downto 0);
 
+	signal r_avi							: std_logic_vector(111 downto 0) := x"0000000000000000011500191030";
+
+	signal r_avi_lat						: std_logic_vector(111 downto 0) := x"0000000000000000011500191030";
+
 begin
 
 	VGA_R_o <= r_R_DVI(7);
@@ -263,7 +267,8 @@ begin
 		I_BLANK => i_blank_DVI,
 		I_HSYNC => i_hsync_DVI,
 		I_VSYNC => i_vsync_DVI,
-		I_ASPECT_169 => '1',
+--		I_ASPECT_169 => r_fbhdmi_169,
+		I_AVI_DATA => r_avi_lat,
 
 		I_AUDIO_ENABLE => '1',
 		I_AUDIO_PCM_L => i_audio,
@@ -300,7 +305,60 @@ begin
 -- FISHBONE frig
 --====================================================================
 
-	fb_p2c_o.ack <= '1';
+	p_hdmi_regs:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+
+		else
+			if rising_edge(fb_syscon_i.clk) then
+
+				if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
+					if fb_c2p_i.we = '1' and fb_c2p_i.D_wr_stb = '1' then
+						case to_integer(unsigned(fb_c2p_i.A(3 downto 0))) is
+							when 0 =>
+								r_avi(7 downto 0) <= fb_c2p_i.D_wr;
+							when 1 =>
+								r_avi(15 downto 8) <= fb_c2p_i.D_wr;
+							when 2 =>
+								r_avi(23 downto 16) <= fb_c2p_i.D_wr;
+							when 3 =>
+								r_avi(31 downto 24) <= fb_c2p_i.D_wr;
+							when 4 =>
+								r_avi(39 downto 32) <= fb_c2p_i.D_wr;
+							when 5 =>
+								r_avi(47 downto 40) <= fb_c2p_i.D_wr;
+							when 6 =>
+								r_avi(55 downto 48) <= fb_c2p_i.D_wr;
+							when 7 =>
+								r_avi(63 downto 56) <= fb_c2p_i.D_wr;
+							when 8 =>
+								r_avi(71 downto 64) <= fb_c2p_i.D_wr;
+							when 9 =>
+								r_avi(79 downto 72) <= fb_c2p_i.D_wr;
+							when 10 =>
+								r_avi(87 downto 80) <= fb_c2p_i.D_wr;
+							when 11 =>
+								r_avi(95 downto 88) <= fb_c2p_i.D_wr;
+							when 12 =>
+								r_avi(103 downto 96) <= fb_c2p_i.D_wr;
+							when 13 =>
+								r_avi(111 downto 104) <= fb_c2p_i.D_wr;
+							when 15 =>
+								r_avi_lat <= r_avi;
+							when others => null;
+
+						end case;
+					end if;
+				end if;
+
+			end if;
+		end if;
+
+	end process;
+
+
+
+	fb_p2c_o.ack <= fb_c2p_i.D_wr_stb when fb_c2p_i.we = '1' else '1';
 	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
 
 

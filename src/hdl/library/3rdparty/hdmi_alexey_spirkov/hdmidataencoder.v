@@ -16,7 +16,8 @@ module hdmidataencoder
    input          i_vSync,
    input          i_blank,
    input          i_audio_enable,
-   input          i_aspect_169,
+//   input          i_aspect_169,
+   input [111:0]  i_avi_data,
    input [15:0]   i_audioL,
    input [15:0]   i_audioR,
    output [3:0]   o_d0,
@@ -173,15 +174,19 @@ begin
 //ORG:            subpacket[0]=56'h00000000191046;
 //ORG:         end
 
-         if (i_aspect_169) begin
-            subpacket[0]=56'h000116002A101E;
-         end else begin
-            subpacket[0]=56'h00011500191030;
-         end
+//         if (i_aspect_169) begin
+//            subpacket[0]=56'h000116002A101E;
+//         end else begin
+//            subpacket[0]=56'h00011500191030;
+//         end
+//
+//
+//
+//         subpacket[1]=56'h00000000000000;
 
+         subpacket[0] = i_avi_data[55:0];
+         subpacket[1] = i_avi_data[111:56];
 
-
-         subpacket[1]=56'h00000000000000;
       end else begin
          packetHeader=24'h0A0184;  // infoframe audio packet
          // Byte0: Checksum (256-(S%256))%256
