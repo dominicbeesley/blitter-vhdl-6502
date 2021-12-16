@@ -81,30 +81,11 @@ set_global_assignment -name VHDL_SHOW_LMF_MAPPING_MESSAGES OFF
 
 source ../../shared/mk3pins.qsf
 source ../../simulation/sim_tb/sim_t65.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_tb -section_id sim_t65_tb
 source ../../simulation/sim_tb/sim_65816.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_65816_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_65816_tb -section_id sim_65816_tb
 source ../../simulation/sim_tb/sim_t65_elk.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_elk_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_elk_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_elk_tb -section_id sim_t65_elk_tb
 source ../../simulation/sim_tb/sim_65816_elk.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_65816_elk_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_65816_elk_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_65816_elk_tb -section_id sim_65816_elk_tb
 source ../../simulation/sim_tb/sim_68008.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_68008_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68008_tb -section_id sim_68008_tb
 source ../../simulation/sim_tb/sim_68000.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_68000_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68000_tb -section_id sim_68000_tb
-source ../../simulation/sim_tb/sim_68000_elk.qsf
 
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
@@ -123,10 +104,6 @@ set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hdmi_alexey_s
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmi_out_altera_max10.vhd
 
-
-
-# set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/TDMS_Encoder.vhd
-# set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/dvid.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
