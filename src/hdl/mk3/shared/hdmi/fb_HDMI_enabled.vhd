@@ -55,7 +55,9 @@ entity fb_HDMI is
 		VGA_B_o								: out		std_logic;
 		VGA_HS_o								: out		std_logic;
 		VGA_VS_o								: out		std_logic;
-		VGA_BLANK_o							: out		std_logic
+		VGA_BLANK_o							: out		std_logic;
+
+		PCM_L_i								: in		signed(9 downto 0)
 
 	);
 end fb_HDMI;
@@ -96,6 +98,8 @@ architecture rtl of fb_hdmi is
 	signal i_G_encoded					: std_logic_vector(9 downto 0);
 	signal i_B_encoded					: std_logic_vector(9 downto 0);
 
+
+	signal i_audio							: std_logic_vector(15 downto 0);
 
 begin
 
@@ -262,8 +266,8 @@ begin
 		I_ASPECT_169 => '1',
 
 		I_AUDIO_ENABLE => '1',
-		I_AUDIO_PCM_L => (others => '0'),
-		I_AUDIO_PCM_R => (others => '1'),
+		I_AUDIO_PCM_L => i_audio,
+		I_AUDIO_PCM_R => i_audio,
 
 		O_RED => i_R_encoded,
 		O_GREEN => i_G_encoded,
@@ -284,6 +288,13 @@ begin
 		clock_s => HDMI_CK_o
 	);
 
+
+	p_snd:process(i_clk_hdmi_pixel)
+	begin
+		if rising_edge(i_clk_hdmi_pixel) then
+			i_audio <= std_logic_vector(PCM_L_i) & "000000";
+		end if;
+	end process;
 
 --====================================================================
 -- FISHBONE frig
