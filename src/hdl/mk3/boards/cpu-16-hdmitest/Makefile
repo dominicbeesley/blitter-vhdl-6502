@@ -92,8 +92,8 @@ output_files/$(PROJECT).pof: output_files/$(PROJECT).sof
 
 
 Makefile.deps: $(PROJECT).qsf
-	perl $(SCRIPTS)/perl/getdeps.pl output_files/$(PROJECT).map.rpt VHDL_FILE QIP_FILE < $(PROJECT).qsf > Makefile.deps
+	perl $(SCRIPTS)/perl/getdeps.pl output_files/$(PROJECT).map.rpt VERILOG_FILE VHDL_FILE QIP_FILE < $(PROJECT).qsf > Makefile.deps
 	perl $(SCRIPTS)/perl/getdeps.pl output_files/$(PROJECT).fit.rpt SDC_FILE < $(PROJECT).qsf >> Makefile.deps
-	perl $(SCRIPTS)/perl/getdeps.pl version.vhd VHDL_FILE QIP_FILE < $(PROJECT).qsf >> Makefile.deps
+	perl $(SCRIPTS)/perl/getdeps.pl version.vhd VERILOG_FILE VHDL_FILE QIP_FILE < $(PROJECT).qsf >> Makefile.deps
 
 include Makefile.deps

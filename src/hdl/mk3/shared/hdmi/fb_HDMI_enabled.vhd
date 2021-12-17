@@ -55,7 +55,9 @@ entity fb_HDMI is
 		VGA_B_o								: out		std_logic;
 		VGA_HS_o								: out		std_logic;
 		VGA_VS_o								: out		std_logic;
-		VGA_BLANK_o							: out		std_logic
+		VGA_BLANK_o							: out		std_logic;
+
+		PCM_L_i								: in		signed(9 downto 0)
 
 	);
 end fb_HDMI;
@@ -66,11 +68,12 @@ architecture rtl of fb_hdmi is
 
 	--=========== FISHBONE ============--
 
-	constant PERIPHERAL_COUNT 				: positive := 4;
+	constant PERIPHERAL_COUNT 				: positive := 5;
 	constant PERIPHERAL_N_MEM 				: natural := 0;
-	constant PERIPHERAL_N_VIDPROC 			: natural := 1;
-	constant PERIPHERAL_N_CRTC 				: natural := 2;
-	constant PERIPHERAL_N_I2C					: natural := 3;
+	constant PERIPHERAL_N_VIDPROC 		: natural := 1;
+	constant PERIPHERAL_N_CRTC 			: natural := 2;
+	constant PERIPHERAL_N_I2C				: natural := 3;
+	constant PERIPHERAL_N_HDMI_CTL		: natural := 4;
 	
 	-- intcon peripheral->controller
 	signal i_per_c2p_intcon				: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
@@ -88,6 +91,8 @@ architecture rtl of fb_hdmi is
 	signal i_vidproc_fb_s2m				: fb_con_i_per_o_t;
 	signal i_i2c_fb_m2s					: fb_con_o_per_i_t;
 	signal i_i2c_fb_s2m					: fb_con_i_per_o_t;
+	signal i_hdmictl_fb_m2s				: fb_con_o_per_i_t;
+	signal i_hdmictl_fb_s2m				: fb_con_i_per_o_t;
 
 
 	-- DVI PLL
@@ -117,9 +122,28 @@ architecture rtl of fb_hdmi is
 	signal i_vsync_DVI					: std_logic;
 	signal i_hsync_DVI					: std_logic;
 	signal i_blank_DVI					: std_logic;
+
+	signal r_vsync_DVI					: std_logic;
+	signal r_hsync_DVI					: std_logic;
+	signal r_blank_DVI					: std_logic;
+
+
 	signal i_R_DVI							: std_logic_vector(7 downto 0);
 	signal i_G_DVI							: std_logic_vector(7 downto 0);
 	signal i_B_DVI							: std_logic_vector(7 downto 0);
+
+	signal r_R_DVI							: std_logic_vector(7 downto 0);
+	signal r_G_DVI							: std_logic_vector(7 downto 0);
+	signal r_B_DVI							: std_logic_vector(7 downto 0);
+
+	signal i_R_encoded					: std_logic_vector(9 downto 0);
+	signal i_G_encoded					: std_logic_vector(9 downto 0);
+	signal i_B_encoded					: std_logic_vector(9 downto 0);
+
+
+	signal i_audio							: std_logic_vector(15 downto 0);
+
+	signal i_avi							: std_logic_vector(111 downto 0);
 
 begin
 
@@ -129,6 +153,38 @@ begin
 	VGA_VS_o <= i_vsync_DVI;
 	VGA_HS_o <= i_hsync_DVI;
 	VGA_BLANK_o <= i_blank_DVI;
+
+
+	g_sim_pll:if SIM generate
+
+		p_pll_hdmi_pixel: process
+		begin
+			i_clk_hdmi_pixel <= '1';
+			wait for 18.5 ns;
+			i_clk_hdmi_pixel <= '0';
+			wait for 18.5 ns;
+		end process;
+
+		p_pll_hdmi_tmds: process
+		begin
+			i_clk_hdmi_tmds <= '1';
+			wait for 3.7 ns;
+			i_clk_hdmi_tmds <= '0';
+			wait for 3.7 ns;
+		end process;
+
+	end generate;
+
+	g_not_sim_pll:if not SIM generate
+
+		e_pll_hdmi: entity work.pll_hdmi
+		port map(
+			inclk0 => CLK_48M_i,
+			c1 => i_clk_hdmi_pixel,
+			c0 => i_clk_hdmi_tmds
+		);
+	end generate;
+
 
 	e_vidproc:entity work.fb_HDMI_vidproc
 	generic map (
@@ -196,6 +252,21 @@ begin
 	
 	);
 
+	e_hdmi_ctl:entity work.fb_hdmi_ctl
+	generic map (
+		SIM => SIM
+	)
+	port map(
+
+		fb_syscon_i		=> fb_syscon_i,
+		fb_c2p_i			=> i_hdmictl_fb_m2s,
+		fb_p2c_o			=> i_hdmictl_fb_s2m,
+	
+		avi_o				=> i_avi
+	
+	);
+
+
 	e_fb_i2c:entity work.fb_i2c
 	generic map (
 		SIM									=> SIM,
@@ -215,7 +286,29 @@ begin
 	);
 
 
+	p_reg:process(i_clk_hdmi_pixel)
+	begin
+		if rising_edge(i_clk_hdmi_pixel) then
+			r_hsync_DVI <= i_hsync_DVI;
+			r_vsync_DVI <= i_vsync_DVI;
+			r_blank_DVI <= i_blank_DVI;
 
+			if (i_blank_DVI = '1') then
+				r_R_DVI <= (others => '0');
+				r_G_DVI <= (others => '0');
+				r_B_DVI <= (others => '0');
+			else
+				r_R_DVI <= i_R_DVI;
+				r_G_DVI <= i_G_DVI;
+				r_B_DVI <= i_B_DVI;
+			end if;
+
+
+		end if;
+	end process;
+
+
+	
 --====================================================================
 -- DVI 
 --====================================================================
@@ -247,22 +340,48 @@ begin
 	);
 
 
-	e_dvid:entity work.dvid
-   port map ( 
-   	clk       => i_clk_hdmi_tmds,
-      clk_pixel => i_clk_hdmi_pixel,
-      red_p     => i_R_dvi,
-      green_p   => i_G_dvi,
-      blue_p    => i_B_dvi,
-      blank     => i_blank_dvi,
-      hsync     => i_hsync_dvi,
-      vsync     => i_vsync_dvi,
-      red_s     => HDMI_R_o,
-      green_s   => HDMI_G_o,
-      blue_s    => HDMI_B_o,
-      clock_s   => HDMI_CK_o
-   );
+	e_spirkov:entity work.hdmi
+	port map (
+		I_CLK_PIXEL => i_clk_hdmi_pixel,
+		I_R => i_R_DVI,
+		I_G => i_G_DVI,
+		I_B => i_B_DVI,
+		I_BLANK => i_blank_DVI,
+		I_HSYNC => i_hsync_DVI,
+		I_VSYNC => i_vsync_DVI,
+--		I_ASPECT_169 => r_fbhdmi_169,
+		I_AVI_DATA => i_avi,
 
+		I_AUDIO_ENABLE => '1',
+		I_AUDIO_PCM_L => i_audio,
+		I_AUDIO_PCM_R => i_audio,
+
+		O_RED => i_R_encoded,
+		O_GREEN => i_G_encoded,
+		O_BLUE => i_B_encoded
+	);
+
+
+	e_hdmi_serial:entity work.hdmi_out_altera_max10
+	port map (
+		clock_pixel_i => i_clk_hdmi_pixel,
+		clock_tdms_i => i_clk_hdmi_tmds,
+		red_i => i_R_encoded,
+		green_i => i_G_encoded,
+		blue_i => i_B_encoded,
+		red_s => HDMI_R_o,
+		green_s => HDMI_G_o,
+		blue_s => HDMI_B_o,
+		clock_s => HDMI_CK_o
+	);
+
+
+	p_snd:process(i_clk_hdmi_pixel)
+	begin
+		if rising_edge(i_clk_hdmi_pixel) then
+			i_audio <= std_logic_vector(PCM_L_i) & "000000";
+		end if;
+	end process;
 
 --====================================================================
 -- Screen address calculations 
@@ -340,11 +459,15 @@ begin
 		-- FB FE00, FE01 - CRTC
 		-- FB FE2x - VIDPROC
 		-- FB FEDx - i2c
+		-- FB FEEx - HDMI control
 		if i_intcon_peripheral_sel_addr(16 downto 8) = "1" & x"FE" then
-			if i_intcon_peripheral_sel_addr(7) = '1' then
+			if i_intcon_peripheral_sel_addr(7 downto 4) = x"E" then
+				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_HDMI_CTL, numbits(PERIPHERAL_COUNT));
+				i_intcon_peripheral_sel_oh(PERIPHERAL_N_HDMI_CTL) <= '1';		
+			elsif i_intcon_peripheral_sel_addr(7 downto 4) = x"D" then
 				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_I2C, numbits(PERIPHERAL_COUNT));
 				i_intcon_peripheral_sel_oh(PERIPHERAL_N_I2C) <= '1';		
-			elsif i_intcon_peripheral_sel_addr(5) = '1' then
+			elsif i_intcon_peripheral_sel_addr(7 downto 4) = x"2" then
 				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_VIDPROC, numbits(PERIPHERAL_COUNT));
 				i_intcon_peripheral_sel_oh(PERIPHERAL_N_VIDPROC) <= '1';
 			else
@@ -356,41 +479,6 @@ begin
 			i_intcon_peripheral_sel_oh(PERIPHERAL_N_MEM) <= '1';
 		end if;
 	end process;
-
-
-	g_sim_pll:if SIM generate
-
-		p_pll_hdmi_pixel: process
-		begin
-			i_clk_hdmi_pixel <= '1';
-			wait for 18.5 ns;
-			i_clk_hdmi_pixel <= '0';
-			wait for 18.5 ns;
-		end process;
-
-		p_pll_hdmi_tmds: process
-		begin
-			i_clk_hdmi_tmds <= '1';
-			wait for 3.7 ns;
-			i_clk_hdmi_tmds <= '0';
-			wait for 3.7 ns;
-		end process;
-
-	end generate;
-
-	g_not_sim_pll:if not SIM generate
-
-		e_pll_hdmi: entity work.pll_hdmi
-		port map(
-			inclk0 => CLK_48M_i,
-			c1 => i_clk_hdmi_pixel,
-			c0 => i_clk_hdmi_tmds
-		);
-	end generate;
-
-
-
-
 
 end rtl;
 

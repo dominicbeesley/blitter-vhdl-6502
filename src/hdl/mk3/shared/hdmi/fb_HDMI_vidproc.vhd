@@ -81,9 +81,9 @@ architecture rtl of fb_HDMI_vidproc is
 
 begin
 	
-	R_o <= (others => i_R_TTL);
-	G_o <= (others => i_G_TTL);
-	B_o <= (others => i_B_TTL);
+	R_o <= x"DB" when i_R_TTL = '1' else x"10";
+	G_o <= x"DB" when i_G_TTL = '1' else x"10";
+	B_o <= x"DB" when i_B_TTL = '1' else x"10";
 
 
 	e_vidproc:entity work.vidproc

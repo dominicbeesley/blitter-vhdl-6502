@@ -1227,7 +1227,9 @@ SD_MOSI_o <= '1';
 		VGA_B_o				=> i_vga_debug_b,
 		VGA_HS_o				=> i_vga_debug_hs,
 		VGA_VS_o				=> i_vga_debug_vs,
-		VGA_BLANK_o			=> i_vga_debug_blank
+		VGA_BLANK_o			=> i_vga_debug_blank,
+
+		PCM_L_i				=> i_snd_dat_o
 	);
 
 

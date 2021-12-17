@@ -98,8 +98,14 @@ set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68008_el
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68008_elk_tb -section_id sim_68008_elk_tb
 set_global_assignment -name EDA_TEST_BENCH_NAME sim_68008_elk_tb -section_id eda_simulation
 set_global_assignment -name TOP_LEVEL_ENTITY mk3blit_top
-set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/TDMS_Encoder.vhd
-set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/dvid.vhd
+
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/encoder.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmi_out_altera_max10.vhd
+
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
@@ -108,7 +114,7 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_enabled.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ctl.vhd
 set_global_assignment -name SDC_FILE mk3_16_hdmitest.sdc
 set_global_assignment -name VHDL_FILE mk3blit_pack.vhd
 set_global_assignment -name VHDL_FILE mk3blit_top.vhd
