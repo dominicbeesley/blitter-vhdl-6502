@@ -40,6 +40,11 @@
 --
 -- (C) 2011 Mike Stirling
 --
+
+-- Dominic Beesley Dec 2021 
+-- Interlace Hsync is not correctly centred: add a separate counter for delayed hsync
+
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -102,6 +107,8 @@ signal r17_light_pen_l	:	unsigned(7 downto 0);
 -- Timing generation
 -- Horizontal counter counts position on line
 signal h_counter		:	unsigned(7 downto 0);
+signal h_counter_int	:	unsigned(7 downto 0);
+
 -- HSYNC counter counts duration of sync pulse
 signal h_sync_counter	:	unsigned(3 downto 0);
 -- Row counter counts current character row
@@ -114,7 +121,7 @@ signal v_sync_counter	:	unsigned(3 downto 0);
 signal field_counter	:	unsigned(5 downto 0);
 
 -- Internal signals
-signal h_sync_start		:	std_logic;
+signal h_sync_start	:	std_logic;
 signal h_half_way		:	std_logic;
 signal h_display		:	std_logic;
 signal hs				:	std_logic;
@@ -325,8 +332,12 @@ begin
 		
 		if h_counter = r02_h_sync_pos then
 			h_sync_start <= '1';
+			h_counter_int <= (others => '0');
+		else
+			h_counter_int <= h_counter_int + 1;
 		end if;
-		if h_counter = "0" & r02_h_sync_pos(7 downto 1) then
+
+		if h_counter_int = r02_h_sync_pos then
 			h_half_way <= '1';
 		end if;
 	end process;
@@ -355,7 +366,7 @@ begin
 				h_display <= '0';
 			end if;
 			
-			-- Horizontal sync
+			-- Hoizontal sync
 			if h_sync_start = '1' or hs = '1' then
 				-- In horizontal sync
 				hs <= '1';
