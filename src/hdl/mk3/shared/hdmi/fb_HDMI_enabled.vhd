@@ -57,7 +57,11 @@ entity fb_HDMI is
 		VGA_VS_o								: out		std_logic;
 		VGA_BLANK_o							: out		std_logic;
 
-		PCM_L_i								: in		signed(9 downto 0)
+		PCM_L_i								: in		signed(9 downto 0);
+
+		debug_vsync_det_o			: out std_logic;
+		debug_hsync_det_o			: out std_logic
+
 
 	);
 end fb_HDMI;
@@ -315,8 +319,9 @@ begin
 
 	e_synch:entity work.dvi_synchro
 	port map (
-		clk_pixel_dvi => i_clk_hdmi_pixel,
 
+		fb_syscon_i		=> fb_syscon_i,
+		clken_crtc_i	=> i_clken_crtc,
 
 		-- input signals in the local clock domain
 		VSYNC_CRTC_i	=> i_vsync_CRTC,
@@ -329,13 +334,18 @@ begin
 
 		-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
+		clk_pixel_dvi => i_clk_hdmi_pixel,
+
 		VSYNC_DVI_o		=> i_vsync_dvi,
 		HSYNC_DVI_o		=> i_hsync_dvi,
 		BLANK_DVI_o		=> i_blank_dvi,
 
 		R_DVI_o			=> i_R_DVI,
 		G_DVI_o			=> i_G_DVI,
-		B_DVI_o			=> i_B_DVI
+		B_DVI_o			=> i_B_DVI,
+
+		debug_hsync_det_o => debug_hsync_det_o,
+		debug_vsync_det_o => debug_vsync_det_o
 
 	);
 
@@ -362,6 +372,8 @@ begin
 	);
 
 
+G_NOTSIM_SERIAL:IF NOT SIM GENERATE
+
 	e_hdmi_serial:entity work.hdmi_out_altera_max10
 	port map (
 		clock_pixel_i => i_clk_hdmi_pixel,
@@ -375,6 +387,7 @@ begin
 		clock_s => HDMI_CK_o
 	);
 
+END GENERATE;
 
 	p_snd:process(i_clk_hdmi_pixel)
 	begin

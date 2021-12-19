@@ -103,4 +103,13 @@ begin
 		end if;
 	end process;
 
+	fb_p2c_o.nul <= '0';
+	fb_p2c_o.ack <= 	'1' when fb_c2p_i.a_stb = '1' and fb_c2p_i.cyc = '1' and (fb_c2p_i.we = '0' or fb_c2p_i.D_wr_stb ='1') -- instant read/write
+						 	else '0';
+	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when fb_c2p_i.a_stb = '1' and fb_c2p_i.cyc = '1' and (fb_c2p_i.we = '0' or fb_c2p_i.D_wr_stb ='1') -- instant read/write
+						 		else RDY_CTDN_MAX;
+
+	fb_p2c_o.D_rd <= (others => '1');
+
+
 end rtl;

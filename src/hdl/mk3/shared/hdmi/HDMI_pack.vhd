@@ -85,7 +85,11 @@ package HDMI_pack is
 		VGA_VS_o								: out		std_logic;
 		VGA_BLANK_o							: out		std_logic;
 
-		PCM_L_i								: in		signed(9 downto 0)
+		PCM_L_i								: in		signed(9 downto 0);
+
+		debug_vsync_det_o			: out std_logic;
+		debug_hsync_det_o			: out std_logic
+
 
 	);
 	end component;
