@@ -70,6 +70,7 @@ begin
 	port map (
 		CLOCK		=> fb_syscon_i.clk,
 		CLKEN		=> CLKEN_CRTC_i,
+		CLKEN_ADR=> CLKEN_CRTC_i,
 		nRESET	=> not fb_syscon_i.rst,
 
 		-- Bus interface
@@ -88,7 +89,9 @@ begin
 		
 		-- Memory interface
 		MA			=> MA_o,
-		RA			=> RA_o
+		RA			=> RA_o,
+
+		VGA		=> '0'
 	);
 
 
