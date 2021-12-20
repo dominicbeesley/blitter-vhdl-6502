@@ -64,20 +64,22 @@ package mk3blit_pack is
 	constant MAS_NO_CHIPSET			: natural := 0;
 
 
-	constant PERIPHERAL_COUNT_CHIPSET	: natural := 3;
+	constant PERIPHERAL_COUNT_CHIPSET	: natural := 5;
 	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
 	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
-	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 1;--unused
-	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 1;--unused
-	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 2;
+	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 2;
+	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 3;
+	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 4;
 
 
-	constant CONTROLLER_COUNT_CHIPSET	: natural := 2;
-	constant MAS_NO_CHIPSET_BLIT		: natural := 2; -- unused 4;
-	constant MAS_NO_CHIPSET_DMA_1		: natural := 2; -- unused;
-	constant MAS_NO_CHIPSET_DMA_0		: natural := 1;
-	constant MAS_NO_CHIPSET_SND		: natural := 0; -- when used 1;
-	constant MAS_NO_CHIPSET_AERIS		: natural := 0; -- unused
+	constant CONTROLLER_COUNT_CHIPSET	: natural := 5;
+	constant MAS_NO_CHIPSET_BLIT	: natural := 4;
+	constant MAS_NO_CHIPSET_DMA_1	: natural := 3; 
+	constant MAS_NO_CHIPSET_DMA_0	: natural := 2;
+	constant MAS_NO_CHIPSET_SND	: natural := 1; 
+	constant MAS_NO_CHIPSET_AERIS	: natural := 0; 
+
+
 
 
 end mk3blit_pack;
