@@ -94,6 +94,7 @@ architecture rtl of dvi_synchro is
 	signal	r_odd						: std_logic := '0';
 	signal	r_odd_next				: std_logic := '0';
 	signal	r_field_next			: std_logic := '0';
+	signal	r_field_next_but_one	: std_logic := '0';
 
 begin
 
@@ -155,7 +156,7 @@ begin
 				r_vsync_lead_pulse <= '1';
 			end if;
 
-			if r_line_counter(0) = '1' then
+			if r_line_counter(0) = '0' then
 				R_DVI_o <= R_ULA_i;
 				G_DVI_o <= G_ULA_i;
 				B_DVI_o <= B_ULA_i;
@@ -171,7 +172,7 @@ begin
 		if rising_edge(clk_pixel_dvi) then
 
 			if r_vsync_lead_pulse = '1' then
-				r_field_next <= '1';
+				r_field_next_but_one <= '1';
 				if r_line_counter >= C_PIXELS_PER_LINE / 4 and r_line_counter < C_PIXELS_PER_LINE * 3 / 4 then
 					r_odd_next <= '1';
 				else
@@ -181,12 +182,19 @@ begin
 
 			if r_hsync_lead_pulse = '1' then
 
+				-- delay vsync detect by another line
+				if r_field_next_but_one = '1' then
+					r_field_next <= '1';
+					r_field_next_but_one <= '0';
+				else
+					r_field_next <= '0';
+				end if;
+
 				-- leading edge of sync, reset counter
 				r_line_counter <= (others => '0');
 				if r_field_next = '1' then
 					r_odd <= r_odd_next;
 					r_field_counter <= to_unsigned(0, r_field_counter'length);
-					r_field_next <= '0';
 				else
 					r_field_counter <= r_field_counter + 1;
 				end if;
@@ -196,7 +204,9 @@ begin
 
 			if r_field_counter < C_FIELD_BLANK_BACK 
 				or (r_odd = '1' and r_field_counter = C_FIELD_BLANK_BACK)
-				or r_field_counter >= C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT then
+				or (r_odd = '1' and r_field_counter > C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT)
+				or (r_odd = '0' and r_field_counter >= C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT)
+				then
 				r_blank_field <= '1';
 			else
 				r_blank_field <= '0';
@@ -204,7 +214,8 @@ begin
 
 			if r_line_counter < C_LINE_BLANK_BACK
 				or (r_odd = '1' and r_line_counter = C_LINE_BLANK_BACK)
-				or r_line_counter >= C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT then
+				or r_line_counter > C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
+				then
 				r_blank_line <= '1';
 			else
 				r_blank_line <= '0';
