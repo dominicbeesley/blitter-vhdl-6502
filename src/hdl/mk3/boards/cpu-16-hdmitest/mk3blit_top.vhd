@@ -136,7 +136,7 @@ e_top:entity work.mk3blit
 		
 		G_INCL_CHIPSET						=> true,
 		G_INCL_CS_DMA						=> true,
-		G_DMA_CHANNELS						=> 1,
+		G_DMA_CHANNELS						=> 2,
 		G_INCL_CS_BLIT						=> true,
 		G_INCL_CS_SND						=> true,
 		G_INCL_CS_AERIS					=> true,
