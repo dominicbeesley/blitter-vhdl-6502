@@ -169,15 +169,24 @@ end generate;
 		begin
 			if rising_edge(fb_syscon_i.clk) then
 				for I in G_CONTROLLER_COUNT-1 downto 0 loop
-					-- TODO: check if moving data to own shared register saves space
 					fb_con_p2c_o(I).D_rd 		<= i_s2m.D_rd;
-					if r_cyc_act_oh(I) = '1' then
-						fb_con_p2c_o(I).rdy_ctdn 	<= i_s2m.rdy_ctdn;
-					else
+
+					if i_cyc_req(to_integer(r_cyc_grant_ix)) = '0' then
 						fb_con_p2c_o(I).rdy_ctdn 	<= RDY_CTDN_MAX;
+						fb_con_p2c_o(I).ack 			<= '0';
+						fb_con_p2c_o(I).nul 			<= '0';
+
+					else
+						-- TODO: check if moving data to own shared register saves space
+						if r_cyc_act_oh(I) = '1' then
+							fb_con_p2c_o(I).rdy_ctdn 	<= i_s2m.rdy_ctdn;
+						else
+							fb_con_p2c_o(I).rdy_ctdn 	<= RDY_CTDN_MAX;
+						end if;
+						fb_con_p2c_o(I).ack 			<= i_s2m.ack and r_cyc_act_oh(I);				
+						fb_con_p2c_o(I).nul 			<= i_s2m.nul and r_cyc_act_oh(I);
+
 					end if;
-					fb_con_p2c_o(I).ack 			<= i_s2m.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).nul 			<= i_s2m.nul and r_cyc_act_oh(I);
 				end loop;
 			end if;
 		end process;
