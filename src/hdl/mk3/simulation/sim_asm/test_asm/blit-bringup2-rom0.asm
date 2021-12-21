@@ -375,6 +375,33 @@ sample_to_blit:
 	WORDBE	256		;				0 STRIDE_D
 
 
+dollar_copy_to_HDMI_settings:
+	.byte	BLITCON_EXEC_B + BLITCON_EXEC_D					;0
+	.byte	$CC		; copy B to D, ignore A, C	FUNCGEN		;1
+	.byte	0		; 				WIDTH		;2
+	.byte	7		;				HEIGHT		;3
+	.byte	0		;				SHIFT		;4
+	.byte	0		;				MASK_FIRST	;5
+	.byte	0		;				MASK_LAST	;6
+	.byte	$AA		;				DATA_A		;7
+	.byte	0		;				ADDR_A_BANK	;8
+	WORDBE	0		;				ADDR_A		;9
+	.byte	$55		;				DATA_B		;B
+	.byte	$FF		;				ADDR_B_BANK	;C
+	WORDBE	(mostbl_chardefs+8*('$'-' '));			ADDR_B		;D
+	.byte	0		;				ADDR_C_BANK	;F
+	WORDBE	0		;				ADDR_C		;10
+	.byte	$FA		;				ADDR_D_BANK	;12
+	WORDBE	$0		;				ADDR_D		;13
+	.byte	$00		;				ADDR_E_BANK	;15
+	WORDBE	$0		;				ADDR_E		;16
+	WORDBE	1		;				STRIDE_A	;18
+	WORDBE	1		;				STRIDE_B	;1A
+	WORDBE	1		;				STRIDE_C	;1C
+	WORDBE	1		;				STRIDE_D	;1E
+	.byte	BLITCON_ACT_ACT + BLITCON_ACT_MODE_1BBP		;BLTCON ACT	;0
+
+
 
 dollar_copy_to_SRAM_settings:
 	.byte	BLITCON_EXEC_B + BLITCON_EXEC_D					;0
@@ -547,6 +574,9 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 	dex
 	bne	pplp
 
+	jsr testDMAC_to_hdmi
+
+	jsr testDMAC_simple
 
 
 	; test i2c interface 
@@ -783,9 +813,6 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 	bpl	@lprts
 	jsr	$FD00
 
-	jsr testDMAC_simple
-
-
 
 ;;	jsr	illegalops
 
@@ -1014,6 +1041,27 @@ HERE:	jmp	HERE
 	STA	jim_DMAC_DMA_CTL
 
 skipahead:
+
+testDMAC_to_hdmi:
+	jsr	jimDMACPAGE
+	ldx	#<dollar_copy_to_HDMI_settings
+	ldy	#>dollar_copy_to_HDMI_settings
+	jsr	blit
+	rts
+
+blit:	stx	$70
+	sty	$71
+	ldy	#DMAC_STRIDE_D_offs+2
+	lda	($70),Y
+	pha
+	dey
+@lp:	lda	($70),Y
+	sta	jim_DMAC_BLITCON,Y
+	dey
+	bpl	@lp
+	pla
+	sta	jim_DMAC_BLITCON
+	rts	
 
 
 testDMAC_simple:
