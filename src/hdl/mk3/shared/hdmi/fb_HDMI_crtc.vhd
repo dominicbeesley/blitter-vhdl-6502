@@ -117,7 +117,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1' then
+			if (i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1') and CLKEN_CRTC_i = '1' then
 				r_ack <= '1';
 			else
 				r_ack <= '0';
