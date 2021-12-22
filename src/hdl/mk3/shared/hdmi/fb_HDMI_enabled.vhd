@@ -19,6 +19,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
 
 library work;
@@ -150,6 +151,13 @@ architecture rtl of fb_hdmi is
 
 	signal i_avi							: std_logic_vector(111 downto 0);
 
+	signal i_R_TTX							: std_logic;
+	signal i_G_TTX							: std_logic;
+	signal i_B_TTX							: std_logic;
+	signal i_TTX							: std_logic;
+
+	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
+
 begin
 
 	VGA_R_o <= i_R_DVI(7);
@@ -208,12 +216,14 @@ begin
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		CURSOR_i				=> i_cursor_CRTC,
-		R_TTX_i				=> '0',
-		G_TTX_i				=> '0',
-		B_TTX_i				=> '0',
+		R_TTX_i				=> i_R_TTX,
+		G_TTX_i				=> i_G_TTX,
+		B_TTX_i				=> i_B_TTX,
 		R_o					=> i_ULA_R,
 		G_o					=> i_ULA_G,
-		B_o					=> i_ULA_B
+		B_o					=> i_ULA_B,
+
+		TTX_o					=> i_TTX
 
 	);
 
@@ -241,6 +251,47 @@ begin
 		RA_o					=> i_crtc_RA
 
 	);
+
+	p_ttx_px_clk:process(fb_syscon_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			r_ttx_pixel_clken <= r_ttx_pixel_clken(0) & r_ttx_pixel_clken(r_ttx_pixel_clken'high downto 1);
+		end if;
+	end process;
+
+	e_ttx:entity work.saa5050
+	port map (
+    CLOCK       => CLK_48M_i,
+    -- 6 MHz dot clock enable
+    CLKEN       => r_ttx_pixel_clken(0),
+    -- Async reset
+    nRESET      => not fb_syscon_i.rst,
+
+    -- Indicates special VGA Mode 7 (720x576p)
+    VGA         => '0',
+
+    -- Character data input (in the bus clock domain)
+    DI_CLOCK    => fb_syscon_i.clk,
+    DI_CLKEN    => i_clken_crtc_adr,
+    DI          => i_D_pxbyte(6 downto 0),
+
+    -- Timing inputs
+    -- General line reset (not used)
+    GLR         => not i_hsync_CRTC,
+    -- Data entry window - high during VSYNC.
+    -- Resets ROM row counter and drives 'flash' signal
+    DEW         => i_vsync_CRTC,
+    -- Character rounding select - high during even field
+    CRS         => not i_crtc_RA(0),
+    -- Load output shift register enable - high during active video
+    LOSE        => i_disen_CRTC,
+
+    -- Video out
+    R           => i_R_TTX,
+    G           => i_G_TTX,
+    B           => i_B_TTX,
+    Y           => open
+    );
 
 
 
@@ -418,10 +469,11 @@ END GENERATE;
 			-- No adjustment
 			aa := unsigned(i_crtc_ma(11 downto 8));
 		else
-				aa := unsigned(i_crtc_ma(11 downto 8)) + 6;
+			aa := unsigned(i_crtc_ma(11 downto 8)) + 6;
 		end if;
 		
-		if i_crtc_ma(13) = '0' then
+--		if i_crtc_ma(13) = '0' then
+		if i_TTX = '0' then
 			-- HI RES
 			i_A_pxbyte <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
 		else
@@ -440,11 +492,14 @@ END GENERATE;
 	i_vidproc_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_VIDPROC);
 	i_crtc_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_CRTC);
 	i_i2c_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_I2C);
+	i_hdmictl_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_HDMI_CTL);
 
 	i_per_p2c_intcon(PERIPHERAL_N_MEM) <= i_ram_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_VIDPROC) <= i_vidproc_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_CRTC) <= i_crtc_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_I2C) <= i_i2c_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_HDMI_CTL) <= i_hdmictl_fb_s2m;
+
 
 
 	e_fb_intcon: entity work.fb_intcon_one_to_many

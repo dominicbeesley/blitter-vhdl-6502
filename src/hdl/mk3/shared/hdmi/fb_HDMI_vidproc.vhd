@@ -54,6 +54,9 @@ entity fb_HDMI_vidproc is
 		DISEN_i								:	in	std_logic;
 		CURSOR_i								:	in	std_logic;
 		
+		-- Teletext enabled
+		TTX_o									:  out std_logic;
+
 		-- Video in (teletext mode)
 		R_TTX_i								:	in	std_logic;
 		G_TTX_i								:	in	std_logic;
@@ -156,7 +159,9 @@ begin
 		G					=> i_G,
 		B					=> i_B,
 
-		VGA				=> '0'
+		VGA				=> '0',
+
+		TTXT				=> TTX_o
 	);
 
 

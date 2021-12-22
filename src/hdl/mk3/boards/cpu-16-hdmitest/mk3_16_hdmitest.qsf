@@ -110,6 +110,8 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
@@ -166,3 +168,7 @@ set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name QIP_FILE ../../shared/hdmi/hdmi_blockram.qip
 set_global_assignment -name QIP_FILE pll_hdmi.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+
+
+# mode 7 rom bodge
+set_global_assignment -name max_number_of_registers_from_uninferred_rams 1000000
