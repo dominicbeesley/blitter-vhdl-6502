@@ -108,6 +108,7 @@ architecture rtl of fb_hdmi is
 	signal i_A_pxbyte						: std_logic_vector(16 downto 0);
 
 	signal i_clken_crtc					: std_logic;
+	signal i_clken_crtc_adr				: std_logic;
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(7 downto 0);
@@ -195,20 +196,24 @@ begin
 		SIM => SIM
 	)
 	port map(
-		fb_syscon_i		=> fb_syscon_i,
-		fb_c2p_i			=> i_vidproc_fb_m2s,
-		fb_p2c_o			=> i_vidproc_fb_s2m,
-		CLKEN_CRTC_o	=> i_clken_crtc,
-		RAM_D_i			=> i_D_pxbyte,
-		nINVERT_i		=> '1',
-		DISEN_i			=> i_disen_CRTC,
-		CURSOR_i			=> i_cursor_CRTC,
-		R_TTX_i			=> '0',
-		G_TTX_i			=> '0',
-		B_TTX_i			=> '0',
-		R_o				=> i_ULA_R,
-		G_o				=> i_ULA_G,
-		B_o				=> i_ULA_B
+		fb_syscon_i			=> fb_syscon_i,
+		fb_c2p_i				=> i_vidproc_fb_m2s,
+		fb_p2c_o				=> i_vidproc_fb_s2m,
+
+		CLK_48M_i			=> CLK_48M_i,
+
+		CLKEN_CRTC_o		=> i_clken_crtc,
+		CLKEN_CRTC_ADR_o	=> i_clken_crtc_adr,
+		RAM_D_i				=> i_D_pxbyte,
+		nINVERT_i			=> '1',
+		DISEN_i				=> i_disen_CRTC,
+		CURSOR_i				=> i_cursor_CRTC,
+		R_TTX_i				=> '0',
+		G_TTX_i				=> '0',
+		B_TTX_i				=> '0',
+		R_o					=> i_ULA_R,
+		G_o					=> i_ULA_G,
+		B_o					=> i_ULA_B
 
 	);
 
@@ -218,21 +223,22 @@ begin
 	)
 	port map (
 
-		fb_syscon_i		=> fb_syscon_i,
-		fb_c2p_i			=> i_crtc_fb_m2s,
-		fb_p2c_o			=> i_crtc_fb_s2m,
-		CLKEN_CRTC_i	=> i_clken_crtc,
+		fb_syscon_i			=> fb_syscon_i,
+		fb_c2p_i				=> i_crtc_fb_m2s,
+		fb_p2c_o				=> i_crtc_fb_s2m,
+		CLKEN_CRTC_i		=> i_clken_crtc,
+		CLKEN_CRTC_ADR_i	=> i_clken_crtc_adr,
 		
 		-- Display interface
-		VSYNC_o			=> i_vsync_CRTC,
-		HSYNC_o			=> i_hsync_CRTC,
-		DE_o				=> i_disen_CRTC,
-		CURSOR_o			=> i_cursor_CRTC,
-		LPSTB_i			=> '0',
+		VSYNC_o				=> i_vsync_CRTC,
+		HSYNC_o				=> i_hsync_CRTC,
+		DE_o					=> i_disen_CRTC,
+		CURSOR_o				=> i_cursor_CRTC,
+		LPSTB_i				=> '0',
 		
 		-- Memory interface
-		MA_o				=> i_crtc_MA,
-		RA_o				=> i_crtc_RA
+		MA_o					=> i_crtc_MA,
+		RA_o					=> i_crtc_RA
 
 	);
 
