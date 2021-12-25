@@ -252,7 +252,7 @@ begin
 
 	);
 
-	p_ttx_px_clk:process(fb_syscon_i)
+	p_ttx_px_clk:process(CLK_48M_i)
 	begin
 		if rising_edge(CLK_48M_i) then
 			r_ttx_pixel_clken <= r_ttx_pixel_clken(0) & r_ttx_pixel_clken(r_ttx_pixel_clken'high downto 1);
@@ -462,7 +462,7 @@ END GENERATE;
 
 
 	-- Address translation logic for calculation of display address
-	process(i_crtc_ma,i_crtc_ra)
+	process(i_crtc_ma,i_crtc_ra, i_TTX)
 	variable aa : unsigned(3 downto 0);
 	begin
 		if i_crtc_ma(12) = '0' then

@@ -109,7 +109,7 @@ begin
 	HSYNC_DVI_o <= r_hsync;
 
 
-	p_reg_syncs_crtc:process(fb_syscon_i)
+	p_reg_syncs_crtc:process(fb_syscon_i, clken_crtc_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_hsync_prev_crtc <= '0';

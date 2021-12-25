@@ -110,6 +110,9 @@ set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.
 # Set Clock Groups
 #**************************************************************
 
+set_clock_groups -asynchronous -group [get_clocks {main_pll}] -group [get_clocks {CLK_48M}] 
+set_clock_groups -asynchronous -group [get_clocks {main_pll}] -group [get_clocks {hdmi_pixel}] 
+set_clock_groups -asynchronous -group [get_clocks {CLK_48M}] -group [get_clocks {hdmi_pixel}] 
 
 
 #**************************************************************
@@ -122,6 +125,9 @@ set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*rst_flop}]
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*set_flop}]
 
+
+set_false_path -from [get_registers {e_top|r_cfg_softt65} ]
+set_false_path -from [get_registers {e_top|r_cfg_hard_cpu_type.*} ]
 
 #**************************************************************
 # Set Multicycle Path
@@ -136,13 +142,34 @@ set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
 #blitter addr calcs multi-cycles
 
-set blitpaths [ get_pins {\GBLIT:e_fb_blit|addr_gen|*|*} ]
+set blitpaths [ get_pins {e_top|\GCHIPSET:GBLIT:e_fb_blit|addr_gen|*|*} ]
+set blitpaths2 [ get_registers {e_top|\GCHIPSET:GBLIT:e_fb_blit|*} ]
 
 set_multicycle_path -setup -end -from  $blitpaths  -to  $blitpaths 2
 set_multicycle_path -hold -end -from  $blitpaths  -to  $blitpaths 1
 
+set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths 2
+set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths 1
 
 
+#aeris - not thoroughly checked!
+
+set aeris {e_top|\GCHIPSET:GAERIS:e_fb_aeris}
+set aeris_src_regs [get_registers "$aeris|r_op*"] 
+set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
+set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
+
+set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
+set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 2
+set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 2
+set_multicycle_path -hold -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 2
+set_multicycle_path -hold -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 1
 
 
 #**************************************************************
