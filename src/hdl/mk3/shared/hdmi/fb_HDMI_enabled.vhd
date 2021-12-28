@@ -158,6 +158,9 @@ architecture rtl of fb_hdmi is
 
 	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
 
+	signal i_pixel_double				: std_logic;
+	signal i_audio_enable				: std_logic;
+
 begin
 
 	VGA_R_o <= i_R_DVI(7);
@@ -323,7 +326,9 @@ begin
 		fb_c2p_i			=> i_hdmictl_fb_m2s,
 		fb_p2c_o			=> i_hdmictl_fb_s2m,
 	
-		avi_o				=> i_avi
+		avi_o				=> i_avi,
+		audio_enable_o => i_audio_enable,
+		pixel_double_o	=> i_pixel_double
 	
 	);
 
@@ -379,6 +384,7 @@ begin
 
 		fb_syscon_i		=> fb_syscon_i,
 		clken_crtc_i	=> i_clken_crtc,
+		pixel_double_i => i_pixel_double,
 
 		-- input signals in the local clock domain
 		VSYNC_CRTC_i	=> i_vsync_CRTC,
@@ -419,7 +425,7 @@ begin
 --		I_ASPECT_169 => r_fbhdmi_169,
 		I_AVI_DATA => i_avi,
 
-		I_AUDIO_ENABLE => '1',
+		I_AUDIO_ENABLE => i_audio_enable,
 		I_AUDIO_PCM_L => i_audio,
 		I_AUDIO_PCM_R => i_audio,
 

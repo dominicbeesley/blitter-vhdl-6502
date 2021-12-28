@@ -28,7 +28,8 @@ use work.fishbone.all;
 entity dvi_synchro is
 	port (
 
-		fb_syscon_i					: in		fb_syscon_t;
+		fb_syscon_i					: in	fb_syscon_t;
+		pixel_double_i				: in 	std_logic;
 
 		-- input signals in the local clock domain
 		clken_crtc_i				: in  std_logic;
@@ -134,7 +135,7 @@ begin
 	end process;
 
 
-	p_reg_syncs_dvi:process(clk_pixel_dvi)
+	p_reg_syncs_dvi:process(fb_syscon_i, clk_pixel_dvi)
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -156,7 +157,7 @@ begin
 				r_vsync_lead_pulse <= '1';
 			end if;
 
-			if r_line_counter(0) = '0' then
+			if r_line_counter(0) = '0' or pixel_double_i = '0' then
 				R_DVI_o <= R_ULA_i;
 				G_DVI_o <= G_ULA_i;
 				B_DVI_o <= B_ULA_i;

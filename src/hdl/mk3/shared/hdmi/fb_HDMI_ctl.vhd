@@ -37,7 +37,10 @@ entity fb_HDMI_ctl is
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 
-		avi_o									: out		std_logic_vector(111 downto 0)
+		avi_o									: out		std_logic_vector(111 downto 0);
+
+		pixel_double_o						: out		std_logic;
+		audio_enable_o						: out		std_logic
 
 	);
 end fb_HDMI_ctl;
@@ -50,14 +53,20 @@ architecture rtl of fb_HDMI_ctl is
 	signal r_avi_lat						: std_logic_vector(111 downto 0) := x"0000000000000000011500191030";
 
 
+	signal r_pixel_double				: std_logic;
+	signal r_audio_enable				: std_logic;
+
 begin
 
 	avi_o <= r_avi_lat;
+	pixel_double_o <= r_pixel_double;
+	audio_enable_o <= r_audio_enable;
 
 	p_hdmi_regs:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-
+			r_pixel_double <= '1';
+			r_audio_enable <= '1';
 		else
 			if rising_edge(fb_syscon_i.clk) then
 
@@ -92,6 +101,9 @@ begin
 								r_avi(103 downto 96) <= fb_c2p_i.D_wr;
 							when 13 =>
 								r_avi(111 downto 104) <= fb_c2p_i.D_wr;
+							when 14 =>
+								r_pixel_double <= fb_c2p_i.D_wr(0);
+								r_audio_enable <= fb_c2p_i.D_wr(1);
 							when 15 =>
 								r_avi_lat <= r_avi;
 							when others => null;

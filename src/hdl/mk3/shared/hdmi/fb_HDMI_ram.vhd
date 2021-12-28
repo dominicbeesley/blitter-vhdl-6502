@@ -66,7 +66,7 @@ begin
 								to_unsigned(1, RDY_CTDN_LEN) when i_fb_rdcyc = '1' else
 								RDY_CTDN_MAX;
 
-	p_ack:process(fb_syscon_i.clk, fb_syscon_i.rst)
+	p_ack:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_ack <= '0';
