@@ -8,3 +8,4 @@ src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.lst
 *.sublime-project
 *.sublime-workspace
 
+src/hdl/mk3/shared/hdmi/greybox_tmp/cbx_args.txt
