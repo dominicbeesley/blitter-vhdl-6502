@@ -101,7 +101,7 @@ package fishbone is
 		clk					: std_logic;							-- "fast" clock
 		rst					: std_logic;							-- bus reset
 		rst_state			: fb_rst_state_t;						-- power up etc
-
+		prerun				: std_logic_vector(3 downto 0);	-- one hot that goes from 0001 to 1000 during the prerun state
 	end record fb_syscon_t;
 
 

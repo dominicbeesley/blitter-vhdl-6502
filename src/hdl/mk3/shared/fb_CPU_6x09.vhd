@@ -57,8 +57,8 @@ entity fb_cpu_6x09 is
 	port(
 
 		-- configuration
-		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		cpu_speed_i								: in std_logic;				-- 1 for 3.5MHz, 0 for 2 Mhz
+		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
+		cpu_speed_i								: in std_logic_vector(2 downto 0);
 
 		fb_syscon_i								: in	fb_syscon_t;
 
@@ -227,7 +227,20 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_BA_i		: std_logic;
 	signal i_CPUSKT_AVMA_i	: std_logic;
 
+	signal r_cfg_not6309			: std_logic;
+
 begin
+
+	p_cfg:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.prerun(2) = '1' then
+				r_cfg_not6309 <= cpu_speed_i(2);
+			end if;
+		end if;
+
+	end process;
+
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
@@ -272,7 +285,7 @@ begin
 	wrap_D_wr_stb_o		<= i_D_wr_stb;
 	wrap_ack_o				<= r_wrap_ack;
 
-	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when cpu_speed_i = '1' else
+	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_not6309 = '1' else
 						r_DD_ring(T_tDD_2);
 
 
@@ -282,7 +295,7 @@ begin
 			r_a_stb <= '0';
 			if r_cpu_res = '0' and 
 				r_cpu_6x09_VMA = '1' and (
-				(cpu_speed_i = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
+				(r_cfg_not6309 = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
 				) then
 
 				if noice_debug_inhibit_cpu_i = '1' then
@@ -331,30 +344,30 @@ begin
 
 			case r_state is
 				when phA => 
-					if (cpu_speed_i = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
 						r_state <= phB;
 						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_Q <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phB =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
 						r_state <= phC;
 						r_cpu_E <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phC =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
 						r_state <= phD;
 						r_cpu_Q <= '0';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phD =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1' then
 						if 
 							r_cpu_res = '1' 
 							or r_cpu_6x09_VMA = '0' 
-							or (cpu_speed_i = '1' and r_DS_ring(T_tDS_3) = '1')
+							or (r_cfg_not6309 = '1' and r_DS_ring(T_tDS_3) = '1')
 							or noice_debug_inhibit_cpu_i = '1'
 							or r_DS_ring(T_tDS_2) = '1' then
 							r_state <= phA;

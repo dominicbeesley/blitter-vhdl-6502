@@ -60,7 +60,7 @@ entity fb_cpu_68k is
 		-- configuration
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
 		cfg_mosram_i							: in std_logic;				-- 1 means map boot rom at 7D xxxx else 8D xxxx
-		cfg_cpu_speed_i						: in std_logic;
+		cfg_cpu_speed_i						: in std_logic_vector(2 downto 0);
 		fb_syscon_i								: in	fb_syscon_t;
 
 		-- noice debugger signals to cpu
@@ -197,7 +197,19 @@ architecture rtl of fb_cpu_68k is
 	signal i_cyc_ack_i		: std_logic;
 	signal r_wrap_cyc_dly	: std_logic;
 
+	signal r_cfg_68008		: std_logic;
+
 begin
+	p_cfg:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.prerun(2) = '1' then
+				r_cfg_68008 <= cfg_cpu_speed_i(2);
+			end if;
+		end if;
+
+	end process;
+
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
 	assert G_BYTELANES >= 2 report "G_BYTELANES must be 2 or greater" severity failure;
@@ -256,7 +268,7 @@ begin
 									else '0';
 
 	-- either DS is low or 8 bit
-	i_nDS_either <= i_CPUSKT_nUDS_i when cfg_cpu_speed_i = '1' else -- 68008
+	i_nDS_either <= i_CPUSKT_nUDS_i when r_cfg_68008 = '1' else -- 68008
 						i_CPUSKT_nUDS_i and CPUSKT_A_i(0); -- 68000
 
 	-- register async signals for meta stability and to delay relative to each other
@@ -286,11 +298,11 @@ begin
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
 				r_cpuskt_A_m(23 downto 1) <= CPUSKT_A_i(23 downto 1);
-				if CPUSKT_A_i(19 downto 8) = x"000" and (cfg_cpu_speed_i = '1' or CPUSKT_A_i(23 downto 20) = x"0") then
+				if CPUSKT_A_i(19 downto 8) = x"000" and (r_cfg_68008 = '1' or CPUSKT_A_i(23 downto 20) = x"0") then
 					r_cpuskt_A_vector <= '1';
 				end if;
 
-				if cfg_cpu_speed_i = '1' then
+				if r_cfg_68008 = '1' then
 					r_cpuskt_A_m(0) <= CPUSKT_A_i(0);
 				else
 					r_cpuskt_A_m(0) <= '0';
@@ -305,7 +317,7 @@ begin
 					x"8D3F" & r_cpuskt_A_m(7 downto 0) 	-- boot from Flash at 8D xxxx
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' else
 					r_cpuskt_A_m 
-							when cfg_cpu_speed_i = '0' else
+							when r_cfg_68008 = '0' else
 					x"F" & r_cpuskt_A_m(19 downto 0) 
 							when r_cpuskt_A_m(19 downto 16) = x"F" 
 								or r_cpuskt_A_m(19 downto 16) = x"E"	else -- sys or chipset
@@ -327,7 +339,7 @@ begin
 				else
 					r_cpu_clk <= '1';					
 				end if;
-				if cfg_cpu_speed_i = '1' then
+				if r_cfg_68008 = '1' then
 					r_clkctdn <= to_unsigned(C_CLKD2_10-1, r_clkctdn'length);
 				else
 					r_clkctdn <= to_unsigned(C_CLKD2_20-1, r_clkctdn'length);					
@@ -365,7 +377,7 @@ begin
 					if i_nAS_m = '0' then
 						-- start of cycle
 						if i_RnW_m = '1' then
-							if cfg_cpu_speed_i = '1' then
+							if r_cfg_68008 = '1' then
 								-- don't need to wait to deduce byte lane
 								r_state <= rd_l;
 								r_cyc_o(0) <= '1';
@@ -390,7 +402,7 @@ begin
 								end if;
 							end if;
 						else
---							if cfg_cpu_speed_i = '1' then
+--							if r_cfg_68008 = '1' then
 --								r_state <= wr_l;
 --								r_cyc_o(0) <= '1';
 --								r_WE <= '1';
@@ -410,7 +422,7 @@ begin
 							r_state <= wr_u;
 							r_cyc_o(1) <= '1';
 							r_WE <= '1';
-							r_lastcyc <= CPUSKT_A_i(0) or cfg_cpu_speed_i;
+							r_lastcyc <= CPUSKT_A_i(0) or r_cfg_68008;
 							r_A_log <= i_A_log;
 							r_WR_stb <= '1';
 						else
@@ -424,7 +436,7 @@ begin
 					end if;
 				when rd_u =>
 					if i_cyc_ack_i = '1' then
-						if cfg_cpu_speed_i = '1' or CPUSKT_A_i(0) = '1' then
+						if r_cfg_68008 = '1' or CPUSKT_A_i(0) = '1' then
 							r_state <= wait_as_de;
 						else
 							r_A_log(0) <= '1';
@@ -438,11 +450,11 @@ begin
 						r_state <= wait_as_de;
 					end if;
 				when wr_u =>
-					if cfg_cpu_speed_i = '1' and i_CPUSKT_nUDS_i = '0' then
+					if r_cfg_68008 = '1' and i_CPUSKT_nUDS_i = '0' then
 						r_WR_stb <= '1';
 					end if;
 					if i_cyc_ack_i = '1' then
-						if cfg_cpu_speed_i = '1' or CPUSKT_A_i(0) = '1' then
+						if r_cfg_68008 = '1' or CPUSKT_A_i(0) = '1' then
 							r_state <= wait_as_de;
 						else
 							r_A_log(0) <= '1';
@@ -482,8 +494,8 @@ begin
 			if r_state = idle then
 				r_ndtack <= '1';
 			elsif r_wrap_cyc_dly = '1' and wrap_cyc_i = '1' and r_lastcyc = '1' then
-				if (cfg_cpu_speed_i = '1' and wrap_rdy_ctdn_i <= C_CLKD2_10 * 2) or
-					(cfg_cpu_speed_i = '0' and wrap_rdy_ctdn_i <= C_CLKD2_20 * 2) then 
+				if (r_cfg_68008 = '1' and wrap_rdy_ctdn_i <= C_CLKD2_10 * 2) or
+					(r_cfg_68008 = '0' and wrap_rdy_ctdn_i <= C_CLKD2_20 * 2) then 
 					r_ndtack <= '0';
 				end if;
 			end if;

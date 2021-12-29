@@ -36,7 +36,7 @@
 -- Revision: 
 -- Additional Comments: 
 --		This component provides a fishbone controller wrapper around the CPU socket _and_ the T65
---	core. The actual device in use is selected by the cfg_t65_i and cfg_hard_cpu_type_i input signals.
+--	core. The actual device in use is selected by the configuration on ports F/G.
 --		Each type of processor is split out into its own wrapper named fb_CPU_<cpu name>  - these are not
 -- fishbone wrappers per-se but instead provide a simplified set of signals to enable the state machine
 -- to direct the fishbone controller interface. This was done to simplify development and may well need to 
@@ -74,12 +74,13 @@ entity fb_cpu is
 
 		-- configuration
 
-		cfg_hard_cpu_type_i					: in cpu_type;
-		cfg_hard_cpu_speed_i					: in std_logic;
+		cfg_do6502_debug_o					: out std_logic;
+		cfg_mk2_cpubits_o						: out std_logic_vector(2 downto 0);		-- mk.2 compatible cpu type TODO: get rid?
+		cfg_softt65_o							: out std_logic;
+
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_t65_i								: in std_logic;				-- when 0 enable t65 core
 		cfg_swromx_i							: in std_logic;
 
 
@@ -152,6 +153,20 @@ end fb_cpu;
 architecture rtl of fb_cpu is
 
 	-----------------------------------------------------------------------------
+	-- configuration registers read at boot time
+	-----------------------------------------------------------------------------
+	
+
+	signal r_cfg_hard_cpu_type	: cpu_type;
+	signal r_cfg_cpubits			: std_logic_vector(2 downto 0); 
+	signal r_cfg_do6502_debug_o: std_logic;
+
+	signal r_cfg_pins_cpu_speed: std_logic_vector(2 downto 0);
+	signal r_cfg_pins_cpu_type	: std_logic_vector(3 downto 0);
+
+
+
+	-----------------------------------------------------------------------------
 	-- cpu mapping signals
 	-----------------------------------------------------------------------------
 
@@ -175,13 +190,13 @@ architecture rtl of fb_cpu is
 	signal r_iorb_resetctr		: std_logic;
 
 	-- wrapper enable signals
-	signal i_cpu_en_t65 : std_logic;
-	signal i_cpu_en_6x09 : std_logic;
-	signal i_cpu_en_z80 : std_logic;
-	signal i_cpu_en_68k : std_logic;
---	signal i_cpu_en_6502 : std_logic;
-	signal i_cpu_en_65c02 : std_logic;
-	signal i_cpu_en_65816 : std_logic;
+	signal r_cpu_en_t65 : std_logic;
+	signal r_cpu_en_6x09 : std_logic;
+	signal r_cpu_en_z80 : std_logic;
+	signal r_cpu_en_68k : std_logic;
+--	signal r_cpu_en_6502 : std_logic;
+	signal r_cpu_en_65c02 : std_logic;
+	signal r_cpu_en_65816 : std_logic;
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
@@ -364,6 +379,92 @@ architecture rtl of fb_cpu is
 
 begin
 
+	-- ================================================================================================ --
+	-- BOOT TIME CONFIGURATION
+	-- ================================================================================================ --
+	
+	cfg_mk2_cpubits_o <= r_cfg_cpubits;
+	cfg_softt65_o <= r_cpu_en_t65;
+	cfg_do6502_debug_o <= r_cfg_do6502_debug_o;
+
+	-- PORTEFG nOE's selected in top level p_EFG_en process
+	p_config:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+
+			if fb_syscon_i.prerun(0) = '1' then
+				r_cfg_pins_cpu_type <= exp_PORTEFG_io(3 downto 0);
+
+			end if;
+			if fb_syscon_i.prerun(1) = '1' then
+				-- read port G at boot time
+				r_cpu_en_t65 <= not exp_PORTEFG_io(3);
+				--TODO: this should be all three bits
+				r_cfg_pins_cpu_speed <= exp_PORTEFG_io(11 downto 9);
+			end if;
+			if fb_syscon_i.prerun(2) = '1' then
+
+				r_cpu_en_6x09 <= '0';
+				r_cpu_en_z80 <= '0';
+				r_cpu_en_68k <= '0';
+--				r_cpu_en_6502 <= '0';
+				r_cpu_en_65c02 <= '0';
+				r_cpu_en_65816 <= '0';
+
+
+				if r_cpu_en_t65 = '1' 
+					or r_cfg_hard_cpu_type = CPU_6502  
+					or r_cfg_hard_cpu_type = CPU_65c02 
+					then
+					r_cfg_do6502_debug_o <= '1';
+				else
+					r_cfg_do6502_debug_o <= '0';
+				end if;
+
+			-- unbodge all this and work out a compatible (with mk.2) way
+			-- of encoding all this, or alter BLUTILS ROM
+
+				if r_cfg_pins_cpu_type = "1100" then
+					r_cfg_hard_cpu_type <= CPU_65816;
+					r_cfg_cpubits <= "001";
+					r_cpu_en_65816 <= not(r_cpu_en_t65);
+				elsif r_cfg_pins_cpu_type = "0011" then
+					r_cfg_hard_cpu_type <= CPU_68008;
+					r_cfg_cpubits <= "000";
+					r_cpu_en_68k <= not(r_cpu_en_t65);
+				elsif r_cfg_pins_cpu_type = "0111" then
+					r_cfg_hard_cpu_type <= CPU_6x09;
+					r_cfg_cpubits <= "110";			
+					r_cpu_en_6x09 <= not(r_cpu_en_t65);
+				else
+					r_cfg_hard_cpu_type <= CPU_65816;
+					r_cfg_cpubits <= "001";
+				end if;
+
+	--			if exp_PORTEFG_io(7 downto 4) = "1110" then
+	--				r_cfg_hard_cpu_type <= CPU_65C02;
+	--				r_cfg_cpubits <= "011";
+	--			elsif exp_PORTEFG_io(7 downto 4) = "1100" then
+	--				r_cfg_hard_cpu_type <= CPU_65816;
+	--				r_cfg_cpubits <= "001";
+	--			elsif exp_PORTEFG_io(7 downto 4) = "0111" then
+	--				r_cfg_hard_cpu_type <= CPU_6x09;
+	--				r_cfg_cpubits <= "110";
+	--			elsif exp_PORTEFG_io(7 downto 4) = "0101" then
+	--				r_cfg_hard_cpu_type <= CPU_Z80;
+	--				r_cfg_cpubits <= "100";
+	--			elsif exp_PORTEFG_io(7 downto 4) = "0011" then
+	--				r_cfg_hard_cpu_type <= CPU_68008;
+	--				r_cfg_cpubits <= "000";
+	--			else
+	--				r_cfg_hard_cpu_type <= CPU_6502;
+	--				r_cfg_cpubits <= "111";
+	--			end if;
+		  	end if;
+
+
+		end if;
+	end process;
 
 	-- ================================================================================================ --
 	-- BUFFERS and MULTIPLEXERS
@@ -556,7 +657,7 @@ begin
 		cfg_swram_enable_i				=> cfg_swram_enable_i,
 		cfg_swromx_i						=> cfg_swromx_i,
 		cfg_mosram_i						=> cfg_mosram_i,
-		cfg_t65_i							=> cfg_t65_i,
+		cfg_t65_i							=> r_cpu_en_t65,
       cfg_sys_type_i                => cfg_sys_type_i,
 
 
@@ -580,16 +681,6 @@ begin
   	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
 
 
-
-  	i_cpu_en_t65 	<= '1' when cfg_t65_i = '1' else '0';
-  	i_cpu_en_6x09 	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_6x09 else '0';
-  	i_cpu_en_z80 	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_z80 else '0';
-  	i_cpu_en_68k 	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_68008 else '0';
---  	i_cpu_en_6502 	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_6502 else '0';
-  	i_cpu_en_65c02	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_65c02 else '0';
-  	i_cpu_en_65816	<= '1' when cfg_t65_i = '0' and cfg_hard_cpu_type_i = cpu_65816 else '0';
-
-
 gt65: IF G_INCL_CPU_T65 GENERATE
 	e_t65:entity work.fb_cpu_t65
 	generic map (
@@ -600,7 +691,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 	port map (
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_t65,
+		cpu_en_i									=> r_cpu_en_t65,
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -651,8 +742,8 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_6x09,
-		cpu_speed_i								=> cfg_hard_cpu_speed_i,
+		cpu_en_i									=> r_cpu_en_6x09,
+		cpu_speed_i								=> r_cfg_pins_cpu_speed,
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -710,7 +801,7 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_z80,
+		cpu_en_i									=> r_cpu_en_z80,
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -771,9 +862,9 @@ g68k:IF G_INCL_CPU_68k GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_68k,
+		cpu_en_i									=> r_cpu_en_68k,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_cpu_speed_i						=> cfg_hard_cpu_speed_i,		
+		cfg_cpu_speed_i						=> r_cfg_pins_cpu_speed,		
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -838,7 +929,7 @@ END GENERATE;
 --	port map(
 --
 --		-- configuration
---		cpu_en_i									=> i_cpu_en_6502,
+--		cpu_en_i									=> r_cpu_en_6502,
 --		fb_syscon_i								=> fb_syscon_i,
 --
 --		-- noice debugger signals to cpu
@@ -900,8 +991,8 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_65c02,
-		cpu_speed_i								=> cfg_hard_cpu_speed_i,	
+		cpu_en_i									=> r_cpu_en_65c02,
+		cpu_speed_i								=> r_cfg_pins_cpu_speed,	
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -966,7 +1057,7 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> i_cpu_en_65816,
+		cpu_en_i									=> r_cpu_en_65816,
 		fb_syscon_i								=> fb_syscon_i,
 
 		-- noice debugger signals to cpu
@@ -1021,155 +1112,155 @@ END GENERATE;
 
 	-- multiplex control signals
 
-	i_wrap_cyc				<= i_t65_wrap_cyc				when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_cyc			when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_cyc				when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_cyc				when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_cyc			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_cyc			when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_cyc			when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_wrap_cyc				<= i_t65_wrap_cyc				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_cyc			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_cyc				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_cyc				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_cyc			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_cyc			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_cyc			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 									(others => '0');	
 
-	i_wrap_A_log			<= i_t65_wrap_A_log			when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_A_log			when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_A_log			when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_A_log			when cfg_hard_cpu_type_i = CPU_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_A_log			when cfg_hard_cpu_type_i = CPU_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_A_log		when cfg_hard_cpu_type_i = CPU_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_A_log		when cfg_hard_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 else
+	i_wrap_A_log			<= i_t65_wrap_A_log			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_A_log			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_A_log			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_A_log			when r_cfg_hard_cpu_type = CPU_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_A_log			when r_cfg_hard_cpu_type = CPU_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_A_log		when r_cfg_hard_cpu_type = CPU_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_A_log		when r_cfg_hard_cpu_type = CPU_65816 and G_INCL_CPU_65816 else
 									(others => '0');
-	i_wrap_we				<= i_t65_wrap_we				when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_we				when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_we				when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_we				when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_we				when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_we			when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_we			when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_wrap_we				<= i_t65_wrap_we				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_we				when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_we				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_we				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_we				when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_we			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_we			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 									'0';			
-	i_wrap_D_WR_stb		<= i_t65_wrap_D_WR_stb		when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_D_WR_stb		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_D_WR_stb		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_D_WR_stb		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_D_WR_stb		when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_D_WR_stb	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_D_WR_stb	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_wrap_D_WR_stb		<= i_t65_wrap_D_WR_stb		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_D_WR_stb	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_D_WR_stb	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 									'0';
-	i_wrap_D_WR				<= i_t65_wrap_D_WR			when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_D_WR			when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_wrap_D_WR				<= i_t65_wrap_D_WR			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 									(others => '0');		
 
-	i_wrap_ack				<= i_t65_wrap_ack				when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_ack			when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_ack				when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_ack				when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_ack			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_ack			when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_65816_wrap_ack			when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_wrap_ack				<= i_t65_wrap_ack				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+									i_6x09_wrap_ack			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+									i_z80_wrap_ack				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+									i_68k_wrap_ack				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--									i_6502_wrap_ack			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+									i_65c02_wrap_ack			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+									i_65816_wrap_ack			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 									'0';			
 
 
 
 	-- multiplex CPUSKT output signalsG_INCL_CPU_T65 
 
-	i_exp_PORTB_o 					<= i_6x09_exp_PORTB_o		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTB_o			when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTB_o			when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTB_o			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTB_o		when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_exp_PORTB_o		when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_exp_PORTB_o 					<= i_6x09_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--i_6502_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											( others => '1');
 
-	i_exp_PORTD_o 					<= i_6x09_exp_PORTD_o		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTD_o			when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTD_o			when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTD_o			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTD_o		when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_exp_PORTD_o		when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_exp_PORTD_o 					<= i_6x09_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--i_6502_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											( others => '1');
 
-	i_exp_PORTD_o_en				<= i_6x09_exp_PORTD_o_en	when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTD_o_en		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTD_o_en		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTD_o_en	when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTD_o_en	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_exp_PORTD_o_en	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_exp_PORTD_o_en				<= i_6x09_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_exp_PORTD_o_en		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_exp_PORTD_o_en		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--i_6502_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											( others => '0');
 
-	i_exp_PORTE_nOE				<= i_6x09_exp_PORTE_nOE		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTE_nOE		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTE_nOE		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTE_nOE	when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTE_nOE	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_exp_PORTE_nOE	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_exp_PORTE_nOE				<= i_6x09_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--i_6502_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'1';
 
-	i_exp_PORTF_nOE				<= i_6x09_exp_PORTF_nOE	when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTF_nOE		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTF_nOE		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTF_nOE	when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTF_nOE	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_exp_PORTF_nOE	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_exp_PORTF_nOE				<= i_6x09_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--i_6502_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'1';
 
-	i_hard_cpu_en			 		<= '1'		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											'1'		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											'1'		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
-											--'1'		when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											'1'		when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											'1'		when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_hard_cpu_en			 		<= '1'		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											'1'		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											'1'		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+											--'1'		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											'1'		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											'1'		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'0';
 
 
 
 
-	i_CPU_D_RnW <= '0' 						when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-						i_6x09_CPU_D_RnW 		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-						i_z80_CPU_D_RnW		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-						i_68k_CPU_D_RnW		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---						i_6502_CPU_D_RnW		when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-						i_65c02_CPU_D_RnW		when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-						i_65816_CPU_D_RnW		when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	i_CPU_D_RnW <= '0' 						when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+						i_6x09_CPU_D_RnW 		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+						i_z80_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+						i_68k_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--						i_6502_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+						i_65c02_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+						i_65816_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 						'0';
 
 
 	-- multiplex noice signals
 
-	noice_debug_5c_o				<= i_t65_noice_debug_5c 			when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_5c			when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_5c				when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_5c				when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_5c			when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_5c			when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_noice_debug_5c			when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	noice_debug_5c_o				<= i_t65_noice_debug_5c 			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+											i_6x09_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_noice_debug_5c				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_noice_debug_5c				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--											i_6502_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'0';
-	noice_debug_cpu_clken_o		<= i_t65_noice_debug_cpu_clken 	when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_noice_debug_cpu_clken	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	noice_debug_cpu_clken_o		<= i_t65_noice_debug_cpu_clken 	when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+											i_6x09_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--											i_6502_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'0';
-	noice_debug_A0_tgl_o			<= i_t65_noice_debug_A0_tgl 		when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_noice_debug_A0_tgl		when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	noice_debug_A0_tgl_o			<= i_t65_noice_debug_A0_tgl 		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+											i_6x09_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--											i_6502_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'0';
-	noice_debug_opfetch_o		<= i_t65_noice_debug_opfetch 		when cfg_t65_i = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_opfetch		when cfg_hard_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_opfetch		when cfg_hard_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_opfetch		when cfg_hard_cpu_type_i = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_opfetch		when cfg_hard_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_opfetch	when cfg_hard_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_65816_noice_debug_opfetch	when cfg_hard_cpu_type_i = cpu_65816 and G_INCL_CPU_65816 else
+	noice_debug_opfetch_o		<= i_t65_noice_debug_opfetch 		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
+											i_6x09_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
+											i_z80_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
+											i_68k_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
+--											i_6502_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
+											i_65c02_noice_debug_opfetch	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
+											i_65816_noice_debug_opfetch	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
 											'0';
 
 end rtl;

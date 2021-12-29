@@ -60,8 +60,8 @@ entity fb_cpu_65c02 is
 	port(
 
 		-- configuration
-		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		cpu_speed_i								: in std_logic;				-- 1 for 8MHz else 2MHz
+		cpu_en_i									: in std_logic;									-- 1 when this cpu is the current one
+		cpu_speed_i								: in std_logic_vector(2 downto 0);			
 		fb_syscon_i								: in fb_syscon_t;
 
 		-- noice debugger signals to cpu
@@ -182,7 +182,18 @@ architecture rtl of fb_cpu_65c02 is
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_SYNC_i	: std_logic;
 
+	signal r_cfg_8Mhz			: std_logic;
+
 begin
+	p_cfg:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.prerun(2) = '1' then
+				r_cfg_8MHz <= cpu_speed_i(2);
+			end if;
+		end if;
+
+	end process;
 
 	exp_PORTB_o(0) <= i_CPUSKT_BE_o;
 	exp_PORTB_o(1) <= '1';
@@ -253,8 +264,8 @@ begin
 
 			case r_state is
 				when phi1 =>
-					if (r_substate = SUBSTATE_A_2 and cpu_speed_i = '0') or
-						(r_substate = SUBSTATE_A_8 and cpu_speed_i = '1') then
+					if (r_substate = SUBSTATE_A_2 and r_cfg_8MHz = '0') or
+						(r_substate = SUBSTATE_A_8 and r_cfg_8MHz = '1') then
 	
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
@@ -286,7 +297,7 @@ begin
 
 						r_state <= phi2;
 						r_PHI0 <= '1';
-						if cpu_speed_i = '0' then
+						if r_cfg_8MHz = '0' then
 							r_substate <= SUBSTATEMAX_2;
 						else
 							r_substate <= SUBSTATEMAX_8;
@@ -297,8 +308,8 @@ begin
 
 				when phi2 =>
 
-					if (r_substate = SUBSTATE_D_WR_2 and cpu_speed_i = '0') or
-						(r_substate = SUBSTATE_D_WR_8 and cpu_speed_i = '1') then
+					if (r_substate = SUBSTATE_D_WR_2 and r_cfg_8MHz = '0') or
+						(r_substate = SUBSTATE_D_WR_8 and r_cfg_8MHz = '1') then
 						r_D_WR_stb <= '1';
 					end if;
 
@@ -308,7 +319,7 @@ begin
 							r_state <= phi1;
 							r_PHI0 <= '0';
 							r_throttle_cpu_2MHz <= throttle_cpu_2MHz_i;
-							if cpu_speed_i = '0' then
+							if r_cfg_8MHz = '0' then
 								r_substate <= SUBSTATEMAX_2;
 							else
 								r_substate <= SUBSTATEMAX_8;
@@ -344,8 +355,8 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
-			(r_rdy_ctup >= SUBSTATE_D_2 and cpu_speed_i = '0') or
-			(r_rdy_ctup >= SUBSTATE_D_8 and cpu_speed_i = '1') 
+			(r_rdy_ctup >= SUBSTATE_D_2 and r_cfg_8MHz = '0') or
+			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and
 		(r_throttle_cpu_2MHz = '0' or cpu_2MHz_phi2_clken_i = '1')
 

@@ -106,14 +106,12 @@ architecture rtl of fb_syscon is
 
 begin
 
-	pre_run <= r_prerun_shift;
-
-
 	fb_syscon_o <= i_fb_syscon;
 
 	i_fb_syscon.clk <= clk_fish_i;
 	i_fb_syscon.rst <= '0' when r_rst_state = run else '1';
 	i_fb_syscon.rst_state <= r_rst_state;
+	i_fb_syscon.prerun <= r_prerun_shift;
 
 
 	e_regsigs:entity work.clockreg
