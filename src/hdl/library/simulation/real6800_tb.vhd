@@ -70,7 +70,6 @@ ENTITY real_6800_tb IS
 
 		VMA				: OUT		STD_LOGIC;
 		RnW				: OUT		STD_LOGIC;
-		LIC				: OUT		STD_LOGIC;
 		BA					: OUT		STD_LOGIC
 
 		);

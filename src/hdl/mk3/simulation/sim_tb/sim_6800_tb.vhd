@@ -90,7 +90,6 @@ architecture Behavioral of sim_6800_tb is
 	signal	i_CPU_A				:	std_logic_vector(19 downto 0);
 	signal	i_CPU_RnW			:	std_logic;
 	signal	i_CPU_BS				:	std_logic;		
-	signal	i_CPU_LIC			:	std_logic;
 	signal	i_CPU_BA				:	std_logic;
 	signal	i_CPU_VMA			:	std_logic;		
 	signal	i_CPU_TSC			:	std_logic;
@@ -106,7 +105,7 @@ begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm09/test_rom0.bin",
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
 	)
 	port map (
@@ -342,7 +341,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm09/test_rom0.bin",
+		romfile => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)
