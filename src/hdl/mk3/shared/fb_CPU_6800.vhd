@@ -122,9 +122,9 @@ architecture rtl of fb_cpu_6800 is
    signal r_state 			: t_state;
 
    constant T_MAX_Ph			: natural := (128/4)-2;	-- 2Mhz
-   constant T_MAX_DH			: natural := 1;			-- >10 ns
-   constant T_MAX_DS			: natural := 5;			-- >40 ns
-   constant T_MAX_DD			: natural := 19;			-- >160 ns
+   constant T_MAX_DH			: natural := 2;			-- >10 ns
+   constant T_MAX_DS			: natural := 6;			-- >40 ns
+   constant T_MAX_DD			: natural := 22;			-- >160 ns
    constant T_MAX_AD			: natural := 17;			-- >135 ns
 
    signal r_ph_ring			: std_logic_vector(T_MAX_Ph downto 0); -- max ring counter size for each phase

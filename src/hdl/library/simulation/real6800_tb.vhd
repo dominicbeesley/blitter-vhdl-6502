@@ -96,7 +96,7 @@ ARCHITECTURE Behavioral OF real_6800_tb IS
 
 BEGIN
 
-	i_data_write <= (DBE and not i_RnW_hold) after dly_tddw;
+	i_data_write <= (DBE and not i_RnW_hold) after dly_tddw-dly_dhold;
 
 
 	i_irq <= not(nIRQ);
