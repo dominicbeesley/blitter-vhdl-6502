@@ -290,7 +290,7 @@ begin
 	
 	i_CPUSKT_nRES_o <= (not r_cpu_res) when cpu_en_i = '1' else '0';
 	
-	i_CPUSKT_nNMI_o <= noice_debug_nmi_n_i or nmi_n_i;
+	i_CPUSKT_nNMI_o <= noice_debug_nmi_n_i and nmi_n_i;
 	
 	i_CPUSKT_nIRQ_o <=  irq_n_i;
   	
