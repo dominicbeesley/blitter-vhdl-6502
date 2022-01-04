@@ -29,10 +29,11 @@ entity dvi_synchro is
 	port (
 
 		fb_syscon_i					: in	fb_syscon_t;
+
 		pixel_double_i				: in 	std_logic;
 
 		-- input signals in the local clock domain
-		clken_crtc_i				: in  std_logic;
+		CLK_48M_i					: in 	std_logic;
 		VSYNC_CRTC_i				: in	std_logic;
 		HSYNC_CRTC_i				: in	std_logic;
 		DISEN_CRTC_i				: in	std_logic;
@@ -54,7 +55,8 @@ entity dvi_synchro is
 
 
 		debug_vsync_det_o			: out std_logic;
-		debug_hsync_det_o			: out std_logic
+		debug_hsync_det_o			: out std_logic;
+		debug_hsync_crtc_o		: out std_logic
 
 	);
 end dvi_synchro;
@@ -101,6 +103,7 @@ begin
 
 	debug_vsync_det_o <= r_vsync_lead_ack;
 	debug_hsync_det_o <= r_hsync_lead_ack;
+	debug_hsync_crtc_o <= HSYNC_CRTC_i;
 
 
 	BLANK_DVI_o <= r_blank_field or r_blank_line;
@@ -110,14 +113,14 @@ begin
 	HSYNC_DVI_o <= r_hsync;
 
 
-	p_reg_syncs_crtc:process(fb_syscon_i, clken_crtc_i)
+	p_reg_syncs_crtc:process(fb_syscon_i, CLK_48M_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_hsync_prev_crtc <= '0';
 			r_hsync_lead_crtc <= '0';
 			r_vsync_prev_crtc <= '0';
 			r_vsync_lead_crtc <= '0';
-		elsif rising_edge(fb_syscon_i.clk) and clken_crtc_i = '1' then
+		elsif rising_edge(CLK_48M_i) then
 
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
 				r_hsync_lead_crtc <= not r_hsync_lead_crtc;
@@ -158,9 +161,21 @@ begin
 			end if;
 
 			if r_line_counter(0) = '0' or pixel_double_i = '0' then
-				R_DVI_o <= R_ULA_i;
-				G_DVI_o <= G_ULA_i;
-				B_DVI_o <= B_ULA_i;
+				if DISEN_CRTC_i = '0' then
+					if r_line_counter(2) = '1' then
+						R_DVI_o <= x"AF";
+						G_DVI_o <= x"AF";
+						B_DVI_o <= x"AF";
+					else
+						R_DVI_o <= x"2F";
+						G_DVI_o <= x"2F";
+						B_DVI_o <= x"2F";
+					end if;
+				else
+					R_DVI_o <= R_ULA_i;
+					G_DVI_o <= G_ULA_i;
+					B_DVI_o <= B_ULA_i;
+				end if;
 			end if;
 
 		end if;
@@ -214,7 +229,7 @@ begin
 			end if;
 
 			if r_line_counter < C_LINE_BLANK_BACK
-				or (r_odd = '1' and r_line_counter = C_LINE_BLANK_BACK)
+				--or (r_odd = '1' and r_line_counter = C_LINE_BLANK_BACK)
 				or r_line_counter > C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
 				then
 				r_blank_line <= '1';
