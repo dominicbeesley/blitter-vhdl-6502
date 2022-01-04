@@ -61,7 +61,8 @@ entity fb_HDMI is
 		PCM_L_i								: in		signed(9 downto 0);
 
 		debug_vsync_det_o			: out std_logic;
-		debug_hsync_det_o			: out std_logic
+		debug_hsync_det_o			: out std_logic;
+		debug_hsync_crtc_o		: out std_logic
 
 
 	);
@@ -383,7 +384,7 @@ begin
 	port map (
 
 		fb_syscon_i		=> fb_syscon_i,
-		clken_crtc_i	=> i_clken_crtc,
+		CLK_48M_i		=> CLK_48M_i,
 		pixel_double_i => i_pixel_double,
 
 		-- input signals in the local clock domain
@@ -408,7 +409,8 @@ begin
 		B_DVI_o			=> i_B_DVI,
 
 		debug_hsync_det_o => debug_hsync_det_o,
-		debug_vsync_det_o => debug_vsync_det_o
+		debug_vsync_det_o => debug_vsync_det_o,
+		debug_hsync_crtc_o=> debug_hsync_crtc_o
 
 	);
 

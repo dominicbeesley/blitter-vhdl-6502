@@ -88,7 +88,8 @@ package HDMI_pack is
 		PCM_L_i								: in		signed(9 downto 0);
 
 		debug_vsync_det_o			: out std_logic;
-		debug_hsync_det_o			: out std_logic
+		debug_hsync_det_o			: out std_logic;
+		debug_hsync_crtc_o		: out std_logic
 
 
 	);

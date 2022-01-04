@@ -381,6 +381,7 @@ architecture rtl of mk3blit is
 
 	signal i_debug_hsync_det			: std_logic;
 	signal i_debug_vsync_det			: std_logic;
+	signal i_debug_hsync_crtc			: std_logic;
 
 
 	-----------------------------------------------------------------------------
@@ -1176,7 +1177,7 @@ SYS_AUX_o			<= (
 	0 => i_vga_debug_r,
 	1 => i_debug_vsync_det,
 	2 => i_debug_hsync_det,
-	3 => not (i_vga_debug_hs or i_vga_debug_vs)
+	3 => i_debug_hsync_crtc
 );
 
 SYS_AUX_io(0) <= i_vga_debug_hs;
@@ -1235,7 +1236,8 @@ SD_MOSI_o <= '1';
 		PCM_L_i				=> i_snd_dat_o,
 
 		debug_hsync_det_o => i_debug_hsync_det,
-		debug_vsync_det_o => i_debug_vsync_det
+		debug_vsync_det_o => i_debug_vsync_det,
+		debug_hsync_crtc_o => i_debug_hsync_crtc
 
 	);
 
