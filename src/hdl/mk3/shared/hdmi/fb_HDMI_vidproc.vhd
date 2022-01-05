@@ -63,9 +63,9 @@ entity fb_HDMI_vidproc is
 		B_TTX_i								:	in	std_logic;
 		
 		-- Video out
-		R_o									:	out	std_logic_vector(7 downto 0);
-		G_o									:	out	std_logic_vector(7 downto 0);
-		B_o									:	out	std_logic_vector(7 downto 0)
+		R_o									:	out	std_logic_vector(3 downto 0);
+		G_o									:	out	std_logic_vector(3 downto 0);
+		B_o									:	out	std_logic_vector(3 downto 0)
 
 	);
 end fb_HDMI_vidproc;
@@ -87,48 +87,11 @@ architecture rtl of fb_HDMI_vidproc is
 
 	signal	i_CPU_WR_EN		: std_logic;
 
-	function RGBNULA_TO_DVI(i:unsigned) return natural is
-	begin
-		if i = 0 then
-			return 16;
-		elsif i = 1 then
-			return 30;
-		elsif i = 2 then
-			return 43;
-		elsif i = 3 then
-			return 57;
-		elsif i = 4 then
-			return 70;
-		elsif i = 5 then
-			return 84;
-		elsif i = 6 then
-			return 98;
-		elsif i = 7 then
-			return 111;
-		elsif i = 8 then
-			return 125;
-		elsif i = 9 then
-			return 138;
-		elsif i = 10 then
-			return 152;
-		elsif i = 11 then
-			return 166;
-		elsif i = 12 then
-			return 180;
-		elsif i = 13 then
-			return 193;
-		elsif i = 14 then
-			return 206;
-		else 
-			return 219;
-		end if;
-	end;
-
 begin
 	
-	R_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(unsigned(i_R)),8));
-	G_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(unsigned(i_G)),8));
-	B_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(unsigned(i_B)),8));
+	R_o <= i_R;
+	G_o <= i_G;
+	B_o <= i_B;
 
 
 	e_vidproc:entity work.vidproc

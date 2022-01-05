@@ -22,6 +22,7 @@ use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
+use work.common.all;
 
 
 
@@ -38,9 +39,11 @@ entity dvi_synchro is
 		HSYNC_CRTC_i				: in	std_logic;
 		DISEN_CRTC_i				: in	std_logic;
 
-		R_ULA_i						: in	std_logic_vector(7 downto 0);
-		G_ULA_i						: in	std_logic_vector(7 downto 0);
-		B_ULA_i						: in	std_logic_vector(7 downto 0);
+		R_ULA_i						: in	std_logic_vector(3 downto 0);
+		G_ULA_i						: in	std_logic_vector(3 downto 0);
+		B_ULA_i						: in	std_logic_vector(3 downto 0);
+
+		TTX_i							: in  std_logic;
 
 		-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
@@ -63,6 +66,44 @@ end dvi_synchro;
 
 
 architecture rtl of dvi_synchro is
+
+	function RGBNULA_TO_DVI(i:natural) return natural is
+	begin
+		if i = 0 then
+			return 16;
+		elsif i = 1 then
+			return 30;
+		elsif i = 2 then
+			return 43;
+		elsif i = 3 then
+			return 57;
+		elsif i = 4 then
+			return 70;
+		elsif i = 5 then
+			return 84;
+		elsif i = 6 then
+			return 98;
+		elsif i = 7 then
+			return 111;
+		elsif i = 8 then
+			return 125;
+		elsif i = 9 then
+			return 138;
+		elsif i = 10 then
+			return 152;
+		elsif i = 11 then
+			return 166;
+		elsif i = 12 then
+			return 180;
+		elsif i = 13 then
+			return 193;
+		elsif i = 14 then
+			return 206;
+		else 
+			return 219;
+		end if;
+	end;
+
 	
 
 	constant C_LINES_PER_FIELD  	: natural := 312;		-- +1 for odd frames
@@ -70,14 +111,14 @@ architecture rtl of dvi_synchro is
 	constant C_FIELD_BLANK_BACK 	: natural := 22;		-- +0.5 for "odd" frames, include hsync!
 	constant	C_VSYNC_LINES		 	: natural := 3;
 
+
 	constant C_PIXELS_PER_LINE  	: natural := 1728; -- 64us * 27
 	constant C_LINE_BLANK_FRONT 	: natural := 24;	
 	constant C_LINE_BLANK_BACK  	: natural := 264; 	-- +1 for "odd" frames, includes hsync
 	constant C_HSYNC_PIXELS			: natural := 126;
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
+	constant C_LINE_MARGIN			: natural := 400;		-- margin from start of line to start ouputting pixels
 
-	signal 	r_field_counter		: unsigned(9 downto 0) := (others => '0');	
-	signal   r_line_counter			: unsigned(11 downto 0) := (others => '0');
 
 	signal   r_hsync_prev_crtc		: std_logic;
 	signal	r_hsync_lead_crtc		: std_logic;			-- flips on leading edge of hs from crtc
@@ -89,6 +130,15 @@ architecture rtl of dvi_synchro is
 	signal	r_vsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
 	signal	r_vsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
+	constant C_BUFMAX : natural := 720;
+
+	type		linebuffer_t is array (0 to C_BUFMAX*2) of std_logic_vector(11 downto 0);
+
+	signal	linebuffer: linebuffer_t;
+
+	signal 	r_field_counter		: unsigned(9 downto 0) := (others => '0');	
+	signal   r_line_counter			: unsigned(11 downto 0) := (others => '0');
+
 	signal	r_blank_line			: std_logic := '0';
 	signal	r_blank_field			: std_logic := '0';
 	signal	r_vsync					: std_logic := '0';
@@ -98,6 +148,15 @@ architecture rtl of dvi_synchro is
 	signal	r_odd_next				: std_logic := '0';
 	signal	r_field_next			: std_logic := '0';
 	signal	r_field_next_but_one	: std_logic := '0';
+
+	signal	r_ula_read_wait					: std_logic;
+	signal	r_ula_pixel_ring					: std_logic_vector(3 downto 0);
+	signal	r_line_buffer_counter_ula		:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_line_buffer_counter_dvi		:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_line_buffer_counter_ula_max	:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_line_buffer_counter_dvi_max	:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	i_line_buffer_wren				: std_logic;
+	signal	i_line_buffer_Q					: std_logic_vector(11 downto 0);
 
 begin
 
@@ -112,6 +171,54 @@ begin
 	VSYNC_DVI_o <= r_vsync;
 	HSYNC_DVI_o <= r_hsync;
 
+	e_line_buff:entity work.linebuffer
+	port map (
+		rdclock	=> clk_pixel_dvi, 
+		rdaddress=> std_logic_vector(r_line_buffer_counter_dvi),
+		q			=> i_line_buffer_Q,
+
+		wrclock	=> CLK_48M_i,
+		wraddress=> std_logic_vector(r_line_buffer_counter_ula),
+		data		=> R_ULA_i & G_ULA_i & B_ULA_i,
+		wren		=> i_line_buffer_wren
+	);
+
+
+	i_line_buffer_wren <= '1' when r_line_buffer_counter_ula < r_line_buffer_counter_ula_max 
+												and r_ula_pixel_ring(0) = '1' else
+								 '0';
+			
+
+	p_reg_pix_ula:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+
+			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
+						r_ula_read_wait <= '1';
+			elsif DISEN_CRTC_i = '0' and r_ula_read_wait = '1'  then
+				if r_hsync_lead_crtc = '0' then
+					r_line_buffer_counter_ula <= to_unsigned(0, r_line_buffer_counter_ula'LENGTH);
+					r_line_buffer_counter_ula_max <= to_unsigned(C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
+				else					
+					r_line_buffer_counter_ula <= to_unsigned(C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
+					r_line_buffer_counter_ula_max <= to_unsigned(2*C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
+				end if;
+				r_ula_pixel_ring <= (others => '1');
+			elsif i_line_buffer_wren = '1' then
+				r_ula_read_wait <= '0';
+				if TTX_i = '1' then
+					r_ula_pixel_ring <= "1000";
+				else
+					r_ula_pixel_ring <= "0100";
+				end if;
+
+				r_line_buffer_counter_ula <= r_line_buffer_counter_ula + 1;
+			else
+				r_ula_pixel_ring <= "0" & r_ula_pixel_ring(3 downto 1);
+			end if;
+		end if;
+
+	end process;
 
 	p_reg_syncs_crtc:process(fb_syscon_i, CLK_48M_i)
 	begin
@@ -161,20 +268,30 @@ begin
 			end if;
 
 			if r_line_counter(0) = '0' or pixel_double_i = '0' then
-				if DISEN_CRTC_i = '0' then
-					if r_line_counter(2) = '1' then
-						R_DVI_o <= x"AF";
-						G_DVI_o <= x"AF";
-						B_DVI_o <= x"AF";
-					else
-						R_DVI_o <= x"2F";
-						G_DVI_o <= x"2F";
-						B_DVI_o <= x"2F";
+				if r_line_counter < C_LINE_MARGIN then
+					if r_hsync_lead_ack = '1' then
+						r_line_buffer_counter_dvi <= to_unsigned(0, r_line_buffer_counter_dvi'LENGTH);
+						r_line_buffer_counter_dvi_max <= to_unsigned(C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
+					else					
+						r_line_buffer_counter_dvi <= to_unsigned(C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
+						r_line_buffer_counter_dvi_max <= to_unsigned(2*C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
 					end if;
+
+					R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+					G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+					B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 				else
-					R_DVI_o <= R_ULA_i;
-					G_DVI_o <= G_ULA_i;
-					B_DVI_o <= B_ULA_i;
+					if r_line_buffer_counter_dvi < r_line_buffer_counter_dvi_max then
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(11 downto 8)))),8));						
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(7 downto 4)))),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(3 downto 0)))),8));
+
+						r_line_buffer_counter_dvi <= r_line_buffer_counter_dvi + 1;
+					else
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));				
+					end if;
 				end if;
 			end if;
 
@@ -218,10 +335,10 @@ begin
 				r_line_counter <= r_line_counter + 1;
 			end if;
 
-			if r_field_counter < C_FIELD_BLANK_BACK 
+			if 	(r_field_counter < C_FIELD_BLANK_BACK)
 				or (r_odd = '1' and r_field_counter = C_FIELD_BLANK_BACK)
-				or (r_odd = '1' and r_field_counter > C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT)
 				or (r_odd = '0' and r_field_counter >= C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT)
+				or (r_odd = '1' and r_field_counter > C_LINES_PER_FIELD - C_FIELD_BLANK_FRONT)
 				then
 				r_blank_field <= '1';
 			else

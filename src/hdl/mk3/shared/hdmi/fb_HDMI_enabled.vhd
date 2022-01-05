@@ -113,9 +113,9 @@ architecture rtl of fb_hdmi is
 	signal i_clken_crtc_adr				: std_logic;
 
 	-- RGB signals out of ULA
-	signal i_ULA_R							: std_logic_vector(7 downto 0);
-	signal i_ULA_G							: std_logic_vector(7 downto 0);
-	signal i_ULA_B							: std_logic_vector(7 downto 0);
+	signal i_ULA_R							: std_logic_vector(3 downto 0);
+	signal i_ULA_G							: std_logic_vector(3 downto 0);
+	signal i_ULA_B							: std_logic_vector(3 downto 0);
 
 	-- SYNC signals out of CRTC
 	signal i_vsync_CRTC					: std_logic;
@@ -130,18 +130,10 @@ architecture rtl of fb_hdmi is
 	signal i_hsync_DVI					: std_logic;
 	signal i_blank_DVI					: std_logic;
 
-	signal r_vsync_DVI					: std_logic;
-	signal r_hsync_DVI					: std_logic;
-	signal r_blank_DVI					: std_logic;
-
 
 	signal i_R_DVI							: std_logic_vector(7 downto 0);
 	signal i_G_DVI							: std_logic_vector(7 downto 0);
 	signal i_B_DVI							: std_logic_vector(7 downto 0);
-
-	signal r_R_DVI							: std_logic_vector(7 downto 0);
-	signal r_G_DVI							: std_logic_vector(7 downto 0);
-	signal r_B_DVI							: std_logic_vector(7 downto 0);
 
 	signal i_R_encoded					: std_logic_vector(9 downto 0);
 	signal i_G_encoded					: std_logic_vector(9 downto 0);
@@ -161,6 +153,7 @@ architecture rtl of fb_hdmi is
 
 	signal i_pixel_double				: std_logic;
 	signal i_audio_enable				: std_logic;
+	signal r_pix_audio_enable			: std_logic;
 
 begin
 
@@ -353,26 +346,6 @@ begin
 	);
 
 
-	p_reg:process(i_clk_hdmi_pixel)
-	begin
-		if rising_edge(i_clk_hdmi_pixel) then
-			r_hsync_DVI <= i_hsync_DVI;
-			r_vsync_DVI <= i_vsync_DVI;
-			r_blank_DVI <= i_blank_DVI;
-
-			if (i_blank_DVI = '1') then
-				r_R_DVI <= (others => '0');
-				r_G_DVI <= (others => '0');
-				r_B_DVI <= (others => '0');
-			else
-				r_R_DVI <= i_R_DVI;
-				r_G_DVI <= i_G_DVI;
-				r_B_DVI <= i_B_DVI;
-			end if;
-
-
-		end if;
-	end process;
 
 
 	
@@ -396,6 +369,8 @@ begin
 		G_ULA_i			=> i_ULA_G,
 		B_ULA_i			=> i_ULA_B,
 
+		TTX_i				=> i_TTX,
+
 		-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
 		clk_pixel_dvi => i_clk_hdmi_pixel,
@@ -414,6 +389,14 @@ begin
 
 	);
 
+	-- re-register in other clock domain - TODO: remove?
+	p_r:process(i_clk_hdmi_pixel)
+	begin
+		if rising_edge(i_clk_hdmi_pixel) then
+			r_pix_audio_enable <= i_audio_enable;
+		end if;
+
+	end process;
 
 	e_spirkov:entity work.hdmi
 	port map (
@@ -427,7 +410,7 @@ begin
 --		I_ASPECT_169 => r_fbhdmi_169,
 		I_AVI_DATA => i_avi,
 
-		I_AUDIO_ENABLE => i_audio_enable,
+		I_AUDIO_ENABLE => r_pix_audio_enable,
 		I_AUDIO_PCM_L => i_audio,
 		I_AUDIO_PCM_R => i_audio,
 
