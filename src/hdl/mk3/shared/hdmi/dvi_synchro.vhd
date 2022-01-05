@@ -117,16 +117,17 @@ architecture rtl of dvi_synchro is
 	constant C_LINE_BLANK_BACK  	: natural := 264; 	-- +1 for "odd" frames, includes hsync
 	constant C_HSYNC_PIXELS			: natural := 126;
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
-	constant C_LINE_MARGIN			: natural := 400;		-- margin from start of line to start ouputting pixels
+	constant C_LINE_MARGIN			: natural := 300;		-- margin from start of line to start ouputting pixels
 
+	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 
 	signal   r_hsync_prev_crtc		: std_logic;
-	signal	r_hsync_lead_crtc		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	r_hsync_lead_crtc		: std_logic_vector(C_META-1 downto 0);			-- flips on leading edge of hs from crtc
 	signal	r_hsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
 	signal	r_hsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
 	signal	r_vsync_prev_crtc		: std_logic;
-	signal	r_vsync_lead_crtc		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	r_vsync_lead_crtc		: std_logic_vector(C_META-1 downto 0);			-- flips on leading edge of hs from crtc
 	signal	r_vsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
 	signal	r_vsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
@@ -151,10 +152,11 @@ architecture rtl of dvi_synchro is
 
 	signal	r_ula_read_wait					: std_logic;
 	signal	r_ula_pixel_ring					: std_logic_vector(3 downto 0);
-	signal	r_line_buffer_counter_ula		:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
-	signal	r_line_buffer_counter_dvi		:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
-	signal	r_line_buffer_counter_ula_max	:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
-	signal	r_line_buffer_counter_dvi_max	:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_linebuf_ctr_ula					:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_linebuf_ctr_dvi					:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_linebuf_ctr_ula_max			:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
+	signal	r_linebuf_ctr_ula_prev_max		:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0); -- last pixel captured on previous line
+	signal	r_linebuf_ctr_dvi_max			:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
 	signal	i_line_buffer_wren				: std_logic;
 	signal	i_line_buffer_Q					: std_logic_vector(11 downto 0);
 
@@ -174,18 +176,21 @@ begin
 	e_line_buff:entity work.linebuffer
 	port map (
 		rdclock	=> clk_pixel_dvi, 
-		rdaddress=> std_logic_vector(r_line_buffer_counter_dvi),
+		rdaddress=> std_logic_vector(r_linebuf_ctr_dvi),
 		q			=> i_line_buffer_Q,
 
 		wrclock	=> CLK_48M_i,
-		wraddress=> std_logic_vector(r_line_buffer_counter_ula),
+		wraddress=> std_logic_vector(r_linebuf_ctr_ula),
 		data		=> R_ULA_i & G_ULA_i & B_ULA_i,
 		wren		=> i_line_buffer_wren
 	);
 
 
-	i_line_buffer_wren <= '1' when r_line_buffer_counter_ula < r_line_buffer_counter_ula_max 
-												and r_ula_pixel_ring(0) = '1' else
+	i_line_buffer_wren <= '1' when r_linebuf_ctr_ula < r_linebuf_ctr_ula_max 
+												and r_ula_pixel_ring(0) = '1' 
+												and r_ula_read_wait = '0'
+												else
+
 								 '0';
 			
 
@@ -194,25 +199,27 @@ begin
 		if rising_edge(CLK_48M_i) then
 
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
-						r_ula_read_wait <= '1';
-			elsif DISEN_CRTC_i = '0' and r_ula_read_wait = '1'  then
-				if r_hsync_lead_crtc = '0' then
-					r_line_buffer_counter_ula <= to_unsigned(0, r_line_buffer_counter_ula'LENGTH);
-					r_line_buffer_counter_ula_max <= to_unsigned(C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
+				r_ula_read_wait <= '1';
+				if r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) = '0' then
+					r_linebuf_ctr_ula <= to_unsigned(0, r_linebuf_ctr_ula'LENGTH);
+					r_linebuf_ctr_ula_max <= to_unsigned(C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 				else					
-					r_line_buffer_counter_ula <= to_unsigned(C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
-					r_line_buffer_counter_ula_max <= to_unsigned(2*C_BUFMAX, r_line_buffer_counter_ula'LENGTH);
+					r_linebuf_ctr_ula <= to_unsigned(C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
+					r_linebuf_ctr_ula_max <= to_unsigned(2*C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 				end if;
+				r_linebuf_ctr_ula_prev_max	<= r_linebuf_ctr_ula + 1;
+
+			elsif DISEN_CRTC_i = '1' and r_ula_read_wait = '1' then
+				r_ula_read_wait <= '0';
 				r_ula_pixel_ring <= (others => '1');
 			elsif i_line_buffer_wren = '1' then
-				r_ula_read_wait <= '0';
 				if TTX_i = '1' then
 					r_ula_pixel_ring <= "1000";
 				else
 					r_ula_pixel_ring <= "0100";
 				end if;
 
-				r_line_buffer_counter_ula <= r_line_buffer_counter_ula + 1;
+				r_linebuf_ctr_ula <= r_linebuf_ctr_ula + 1;
 			else
 				r_ula_pixel_ring <= "0" & r_ula_pixel_ring(3 downto 1);
 			end if;
@@ -224,21 +231,25 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_hsync_prev_crtc <= '0';
-			r_hsync_lead_crtc <= '0';
+			r_hsync_lead_crtc <= (others => '0');
 			r_vsync_prev_crtc <= '0';
-			r_vsync_lead_crtc <= '0';
+			r_vsync_lead_crtc <= (others => '0');
 		elsif rising_edge(CLK_48M_i) then
 
+			r_hsync_lead_crtc <= r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) & r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH downto 1);
+			r_vsync_lead_crtc <= r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH) & r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH downto 1);
+
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
-				r_hsync_lead_crtc <= not r_hsync_lead_crtc;
+				r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) <= not r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH);
 			end if;
 
 			if VSYNC_CRTC_i = '1' and r_vsync_prev_crtc = '0' then
-				r_vsync_lead_crtc <= not r_vsync_lead_crtc;
+				r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH) <= not r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH);
 			end if;
 
 			r_hsync_prev_crtc <= HSYNC_CRTC_i;
 			r_vsync_prev_crtc <= VSYNC_CRTC_i;
+
 
 		end if;
 
@@ -256,37 +267,36 @@ begin
 		elsif rising_edge(clk_pixel_dvi) then
 
 			r_hsync_lead_pulse <= '0';
-			if r_hsync_lead_crtc /= r_hsync_lead_ack then
-				r_hsync_lead_ack <= r_hsync_lead_crtc;
+			if r_hsync_lead_crtc(0) /= r_hsync_lead_ack then
+				r_hsync_lead_ack <= r_hsync_lead_crtc(0);
 				r_hsync_lead_pulse <= '1';
 			end if;
 
 			r_vsync_lead_pulse <= '0';
-			if r_vsync_lead_crtc /= r_vsync_lead_ack then
-				r_vsync_lead_ack <= r_vsync_lead_crtc;
+			if r_vsync_lead_crtc(0) /= r_vsync_lead_ack then
+				r_vsync_lead_ack <= r_vsync_lead_crtc(0);
 				r_vsync_lead_pulse <= '1';
 			end if;
 
 			if r_line_counter(0) = '0' or pixel_double_i = '0' then
 				if r_line_counter < C_LINE_MARGIN then
-					if r_hsync_lead_ack = '1' then
-						r_line_buffer_counter_dvi <= to_unsigned(0, r_line_buffer_counter_dvi'LENGTH);
-						r_line_buffer_counter_dvi_max <= to_unsigned(C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
+					r_linebuf_ctr_dvi_max <= r_linebuf_ctr_ula_prev_max;
+					if r_hsync_lead_ack = '0' then
+						r_linebuf_ctr_dvi <= to_unsigned(0, r_linebuf_ctr_dvi'LENGTH);
 					else					
-						r_line_buffer_counter_dvi <= to_unsigned(C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
-						r_line_buffer_counter_dvi_max <= to_unsigned(2*C_BUFMAX, r_line_buffer_counter_dvi'LENGTH);
+						r_linebuf_ctr_dvi <= to_unsigned(C_BUFMAX, r_linebuf_ctr_dvi'LENGTH);
 					end if;
 
 					R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 					G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 					B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 				else
-					if r_line_buffer_counter_dvi < r_line_buffer_counter_dvi_max then
+					if r_linebuf_ctr_dvi < r_linebuf_ctr_dvi_max then
 						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(11 downto 8)))),8));						
 						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(7 downto 4)))),8));
 						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(3 downto 0)))),8));
 
-						r_line_buffer_counter_dvi <= r_line_buffer_counter_dvi + 1;
+						r_linebuf_ctr_dvi <= r_linebuf_ctr_dvi + 1;
 					else
 						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
 						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
