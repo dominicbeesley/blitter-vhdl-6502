@@ -148,7 +148,7 @@ begin
 	end process;
 
 
-	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i)
+	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i)
 	begin
 		A_o <= A_i;
 		IORB_CS_o <= '0';

@@ -64,9 +64,8 @@ entity fb_syscon is
 		clk_lock_i								: in 		std_logic;							-- pll lock indication
 		sys_dll_lock_i							: in		std_logic;
 
-		fb_syscon_o								: out 	fb_syscon_t;						-- fishbone syscon record
+		fb_syscon_o								: out 	fb_syscon_t						-- fishbone syscon record
 
-		pre_run									: out		std_logic_vector(3 downto 0)
 
 	);
 end fb_syscon;

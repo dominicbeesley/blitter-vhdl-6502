@@ -185,7 +185,6 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 	i_samper_ctr_next <= ("0" & r_samper_ctr) - 1;
 
 	p_regs_wr : process(fb_syscon_i)
-	variable v_sam_next:boolean;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -207,7 +206,6 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 
 			r_snd_dat_change_clken <= '0';
 
-			v_sam_next := false;
 
 			if snd_clken_sndclk_i = '1' then												-- for each sound clock edge
 				if r_act = '0' then															-- act = 0 don't do anything
