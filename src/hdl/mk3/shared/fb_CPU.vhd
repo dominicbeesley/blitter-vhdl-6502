@@ -153,11 +153,56 @@ end fb_cpu;
 
 architecture rtl of fb_cpu is
 
+	function B2OZ(b:boolean) return natural is 
+	begin
+		if b then
+			return 1;
+		else
+			return 0;
+		end if;
+	end function;
+
+	constant C_IX_CPU_T65						: natural := 0;
+	constant C_IX_CPU_65C02						: natural := C_IX_CPU_T65 + B2OZ(G_INCL_CPU_T65);
+	constant C_IX_CPU_6800						: natural := C_IX_CPU_65C02 + B2OZ(G_INCL_CPU_65C02);
+	constant C_IX_CPU_65816						: natural := C_IX_CPU_6800 + B2OZ(G_INCL_CPU_6800);
+	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816);
+	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
+	constant C_IX_CPU_68k						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
+	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68k + B2OZ(G_INCL_CPU_68k);
+
+	type cpu_wrap_o is record
+		cyc							: std_logic_vector(G_BYTELANES-1 downto 0);
+		A_log							: std_logic_vector(23 downto 0);
+		we								: std_logic;
+		D_WR_stb						: std_logic;
+		D_WR							: std_logic_vector(7 downto 0);
+		ack							: std_logic;
+
+		exp_PORTB_o					: std_logic_vector(7 downto 0);
+		exp_PORTD_o					: std_logic_vector(11 downto 0);
+		exp_PORTD_o_en				: std_logic_vector(11 downto 0);
+		exp_PORTE_nOE				: std_logic;	
+		exp_PORTF_nOE				: std_logic;	
+
+		CPU_D_RnW					: std_logic;
+
+		noice_debug_5c				: std_logic;
+		noice_debug_cpu_clken	: std_logic;
+		noice_debug_A0_tgl		: std_logic;
+		noice_debug_opfetch		: std_logic;
+
+	end record;
+
+	type cpu_wrap_o_arr is array(natural range<>) of cpu_wrap_o;
+
+	signal i_cpu_wrap_o : cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);
+
 	-----------------------------------------------------------------------------
 	-- configuration registers read at boot time
 	-----------------------------------------------------------------------------
 	
-
+	signal r_cpu_run_ix			: natural range 0 to C_IX_CPU_COUNT-1;
 	signal r_cfg_hard_cpu_type	: cpu_type;
 	signal r_cfg_cpubits			: std_logic_vector(2 downto 0); 
 	signal r_cfg_do6502_debug_o: std_logic;
@@ -180,6 +225,7 @@ architecture rtl of fb_cpu is
 	signal	i_exp_PORTE_nOE							: std_logic;	-- enable that multiplexed buffer chip
 	signal	i_exp_PORTF_nOE							: std_logic;	-- enable that multiplexed buffer chip - 16 bit cpu high data byte
 
+	signal	i_CPU_D_RnW									: std_logic;
 
 -- number of 128MHz cycles until we will allow between two accesses to SYS VIA IORB
 	constant C_IORB_BODGE_MAX : natural := CLOCKSPEED * 10;
@@ -211,65 +257,6 @@ architecture rtl of fb_cpu is
 	signal r_D_rd				: std_logic_vector((G_BYTELANES*8)-1 downto 0);
 	signal r_acked 			: std_logic_vector(G_BYTELANES-1 downto 0);
 
-	-- per-wrapper control signals
-
-	signal i_t65_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_t65_wrap_A_log			: std_logic_vector(23 downto 0);
-	signal i_t65_wrap_we				: std_logic;
-	signal i_t65_wrap_D_WR_stb		: std_logic;
-	signal i_t65_wrap_D_WR			: std_logic_vector(7 downto 0);
-	signal i_t65_wrap_ack			: std_logic;
-
---	signal i_6502_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
---	signal i_6502_wrap_A_log		: std_logic_vector(23 downto 0);
---	signal i_6502_wrap_we			: std_logic;
---	signal i_6502_wrap_D_WR_stb	: std_logic;
---	signal i_6502_wrap_D_WR			: std_logic_vector(7 downto 0);
---	signal i_6502_wrap_ack_l		: std_logic;
---	signal i_6502_wrap_ack_h		: std_logic;
---
-	signal i_65c02_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_65c02_wrap_A_log		: std_logic_vector(23 downto 0);
-	signal i_65c02_wrap_we			: std_logic;
-	signal i_65c02_wrap_D_WR_stb	: std_logic;
-	signal i_65c02_wrap_D_WR		: std_logic_vector(7 downto 0);
-	signal i_65c02_wrap_ack			: std_logic;
-
-	signal i_6800_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_6800_wrap_A_log		: std_logic_vector(23 downto 0);
-	signal i_6800_wrap_we			: std_logic;
-	signal i_6800_wrap_D_WR_stb	: std_logic;
-	signal i_6800_wrap_D_WR			: std_logic_vector(7 downto 0);
-	signal i_6800_wrap_ack			: std_logic;
-
-
-	signal i_65816_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_65816_wrap_A_log		: std_logic_vector(23 downto 0);
-	signal i_65816_wrap_we			: std_logic;
-	signal i_65816_wrap_D_WR_stb	: std_logic;
-	signal i_65816_wrap_D_WR		: std_logic_vector(7 downto 0);
-	signal i_65816_wrap_ack			: std_logic;
-
-	signal i_6x09_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_6x09_wrap_A_log		: std_logic_vector(23 downto 0);
-	signal i_6x09_wrap_we			: std_logic;
-	signal i_6x09_wrap_D_WR_stb	: std_logic;
-	signal i_6x09_wrap_D_WR			: std_logic_vector(7 downto 0);
-	signal i_6x09_wrap_ack			: std_logic;
-
-	signal i_z80_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_z80_wrap_A_log			: std_logic_vector(23 downto 0);
-	signal i_z80_wrap_we				: std_logic;
-	signal i_z80_wrap_D_WR_stb		: std_logic;
-	signal i_z80_wrap_D_WR			: std_logic_vector(7 downto 0);
-	signal i_z80_wrap_ack			: std_logic;
-
-	signal i_68k_wrap_cyc			: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_68k_wrap_A_log			: std_logic_vector(23 downto 0);
-	signal i_68k_wrap_we				: std_logic;
-	signal i_68k_wrap_D_WR_stb		: std_logic;
-	signal i_68k_wrap_D_WR			: std_logic_vector(7 downto 0);
-	signal i_68k_wrap_ack			: std_logic;
 
 
 	-- multiplexed control signals
@@ -289,109 +276,7 @@ architecture rtl of fb_cpu is
 
 	signal i_wrap_D_rd				: std_logic_vector(15 downto 0);
 
-	-- cpu socket outputs multiplex
-
-	signal i_6x09_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_6x09_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_6x09_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_6x09_exp_PORTE_nOE				: std_logic;	
-	signal i_6x09_exp_PORTF_nOE				: std_logic;	
-
-
-	signal i_z80_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_z80_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_z80_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_z80_exp_PORTE_nOE					: std_logic;	
-	signal i_z80_exp_PORTF_nOE					: std_logic;	
-
-	signal i_68k_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_68k_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_68k_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_68k_exp_PORTE_nOE					: std_logic;	
-	signal i_68k_exp_PORTF_nOE					: std_logic;	
-
-
---	signal i_6502_exp_PORTB_o					: std_logic_vector(7 downto 0);
---	signal i_6502_exp_PORTD_o					:std_logic_vector(11 downto 0);
---	signal i_6502_exp_PORTD_o_en				:std_logic_vector(11 downto 0);
---	signal i_6502_exp_PORTE_nOE				: std_logic;	
---	signal i_6502_exp_PORTF_nOE				: std_logic;	
---	signal i_6502_exp_PORTF_DIR				: std_logic_vector(11 downto 0);	
---	signal i_6502_exp_PORTF_o					: std_logic_vector(11 downto 0);
-
---
-	signal i_65c02_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_65c02_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_65c02_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_65c02_exp_PORTE_nOE				: std_logic;	
-	signal i_65c02_exp_PORTF_nOE				: std_logic;	
-
-	signal i_6800_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_6800_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_6800_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_6800_exp_PORTE_nOE				: std_logic;	
-	signal i_6800_exp_PORTF_nOE				: std_logic;	
-
-	signal i_65816_exp_PORTB_o					: std_logic_vector(7 downto 0);
-	signal i_65816_exp_PORTD_o					: std_logic_vector(11 downto 0);
-	signal i_65816_exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-	signal i_65816_exp_PORTE_nOE				: std_logic;	
-	signal i_65816_exp_PORTF_nOE				: std_logic;	
-
-
-	-- buffer direction multiples
-	-- buffer direction for CPU_D_io '1' for read into cpu
-	signal i_t65_CPU_D_RnW						: std_logic;		
---	signal i_6502_CPU_D_RnW						: std_logic;		
-	signal i_65c02_CPU_D_RnW					: std_logic;			
-	signal i_6800_CPU_D_RnW						: std_logic;			
-	signal i_65816_CPU_D_RnW					: std_logic;	
-	signal i_6x09_CPU_D_RnW						: std_logic;
-	signal i_z80_CPU_D_RnW						: std_logic;
-	signal i_68k_CPU_D_RnW						: std_logic;
-	signal i_CPU_D_RnW							: std_logic;
-
-	signal i_t65_noice_debug_5c				:	std_logic;
-	signal i_t65_noice_debug_cpu_clken		:	std_logic;
-	signal i_t65_noice_debug_A0_tgl			:	std_logic;
-	signal i_t65_noice_debug_opfetch			:	std_logic;
-
---	signal i_6502_noice_debug_5c				:	std_logic;
---	signal i_6502_noice_debug_cpu_clken		:	std_logic;
---	signal i_6502_noice_debug_A0_tgl			:	std_logic;
---	signal i_6502_noice_debug_opfetch		:	std_logic;
---
-	signal i_65c02_noice_debug_5c				:	std_logic;
-	signal i_65c02_noice_debug_cpu_clken	:	std_logic;
-	signal i_65c02_noice_debug_A0_tgl		:	std_logic;
-	signal i_65c02_noice_debug_opfetch		:	std_logic;
-
-	signal i_6800_noice_debug_5c				:	std_logic;
-	signal i_6800_noice_debug_cpu_clken		:	std_logic;
-	signal i_6800_noice_debug_A0_tgl			:	std_logic;
-	signal i_6800_noice_debug_opfetch		:	std_logic;
-
-	signal i_65816_noice_debug_5c				:	std_logic;
-	signal i_65816_noice_debug_cpu_clken	:	std_logic;
-	signal i_65816_noice_debug_A0_tgl		:	std_logic;
-	signal i_65816_noice_debug_opfetch		:	std_logic;
-
-	signal i_6x09_noice_debug_5c				:	std_logic;
-	signal i_6x09_noice_debug_cpu_clken		:	std_logic;
-	signal i_6x09_noice_debug_A0_tgl			:	std_logic;
-	signal i_6x09_noice_debug_opfetch		:	std_logic;
-
-	signal i_z80_noice_debug_5c				:	std_logic;
-	signal i_z80_noice_debug_cpu_clken		:	std_logic;
-	signal i_z80_noice_debug_A0_tgl			:	std_logic;
-	signal i_z80_noice_debug_opfetch			:	std_logic;
-
-	signal i_68k_noice_debug_5c				:	std_logic;
-	signal i_68k_noice_debug_cpu_clken		:	std_logic;
-	signal i_68k_noice_debug_A0_tgl			:	std_logic;
-	signal i_68k_noice_debug_opfetch			:	std_logic;
-
-	signal r_hard_cpu_en							: 	std_logic;
+	signal r_hard_cpu_en				: 	std_logic;
 
 
 	signal r_nmi				: std_logic;
@@ -433,6 +318,8 @@ begin
 				r_cpu_en_6800 <= '0';
 				r_cpu_en_65816 <= '0';
 
+				r_cpu_run_ix <= C_IX_CPU_T65;
+
 
 				if r_cpu_en_t65 = '1' 
 					or r_cfg_hard_cpu_type = CPU_6502  
@@ -449,24 +336,40 @@ begin
 				if r_cfg_pins_cpu_type = "1100" then
 					r_cfg_hard_cpu_type <= CPU_65816;
 					r_cfg_cpubits <= "001";
-					r_cpu_en_65816 <= not(r_cpu_en_t65);
+					if not(r_cpu_en_t65) then
+						r_cpu_en_65816 <= '1';
+						r_cpu_run_ix <= C_IX_CPU_65816;
+					end if;
 				elsif r_cfg_pins_cpu_type = "0011" then
 					r_cfg_hard_cpu_type <= CPU_68008;
 					r_cfg_cpubits <= "000";
-					r_cpu_en_68k <= not(r_cpu_en_t65);
+					if not(r_cpu_en_t65) then
+						r_cpu_en_68k <= '1';
+						r_cpu_run_ix <= C_IX_CPU_68k;
+					end if;
 				elsif r_cfg_pins_cpu_type = "0111" then
 					if r_cfg_pins_cpu_speed = "000" then
 						r_cfg_hard_cpu_type <= CPU_6800;
 						r_cfg_cpubits <= "110";			
-						r_cpu_en_6800 <= not(r_cpu_en_t65);
+						if not(r_cpu_en_t65) then
+							r_cpu_en_6800 <= '1';
+							r_cpu_run_ix <= C_IX_CPU_6800;
+						end if;
 					else
 						r_cfg_hard_cpu_type <= CPU_6x09;
 						r_cfg_cpubits <= "110";			
-						r_cpu_en_6x09 <= not(r_cpu_en_t65);
+						if not(r_cpu_en_t65) then
+							r_cpu_en_6x09 <= '1';
+							r_cpu_run_ix <= C_IX_CPU_6x09;
+						end if;
 					end if;
 				else
 					r_cfg_hard_cpu_type <= CPU_65816;
 					r_cfg_cpubits <= "001";
+					if not(r_cpu_en_t65) then
+						r_cpu_en_65816 <= '1';
+						r_cpu_run_ix <= C_IX_CPU_65816;
+					end if;
 				end if;
 
 	--			if exp_PORTEFG_io(7 downto 4) = "1110" then
@@ -743,10 +646,10 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_t65_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_t65_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_t65_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_t65_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_opfetch,
 
 		-- cpu throttle
 		throttle_cpu_2MHz_i 					=> throttle_cpu_2MHz_i,
@@ -757,12 +660,12 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_t65_wrap_cyc,
-		wrap_A_log_o							=> i_t65_wrap_A_log,
-		wrap_A_we_o								=> i_t65_wrap_we,
-		wrap_D_WR_stb_o						=> i_t65_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_t65_wrap_D_WR,
-		wrap_ack_o								=> i_t65_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_T65).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_T65).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_T65).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_T65).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_T65).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_T65).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -772,6 +675,14 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		cpu_halt_i								=> cpu_halt_i
 
 	);
+
+	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTB_o <= (others => '1');
+	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTD_o <= (others => '1');
+	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTD_o_en <= (others => '0');
+	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTE_nOE <= '1';
+	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTF_nOE <= '1';
+	i_cpu_wrap_o(C_IX_CPU_T65).CPU_D_RnW <= '0';
+
 END GENERATE;
 
 
@@ -795,22 +706,22 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_6x09_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_6x09_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_6x09_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_6x09_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_opfetch,
 
 		-- direct CPU control signals from system
 		nmi_n_i									=> r_nmi,
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_6x09_wrap_cyc,
-		wrap_A_log_o							=> i_6x09_wrap_A_log,
-		wrap_A_we_o								=> i_6x09_wrap_we,
-		wrap_D_WR_stb_o						=> i_6x09_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_6x09_wrap_D_WR,
-		wrap_ack_o								=> i_6x09_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6x09).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6x09).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -818,19 +729,19 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_6x09_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_6x09_exp_PORTB_o,
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_6x09_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_6x09_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_6x09_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_6x09_exp_PORTF_nOE
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTF_nOE
 	);
 END GENERATE;
 
@@ -854,22 +765,22 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_6800_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_6800_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_6800_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_6800_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_opfetch,
 
 		-- direct CPU control signals from system
 		nmi_n_i									=> r_nmi,
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_6800_wrap_cyc,
-		wrap_A_log_o							=> i_6800_wrap_A_log,
-		wrap_A_we_o								=> i_6800_wrap_we,
-		wrap_D_WR_stb_o						=> i_6800_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_6800_wrap_D_WR,
-		wrap_ack_o								=> i_6800_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6800).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6800).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6800).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6800).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6800).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6800).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -877,19 +788,19 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_6800_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6800).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_6800_exp_PORTB_o,
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_6800_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_6800_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_6800_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_6800_exp_PORTF_nOE
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTF_nOE
 	);
 END GENERATE;
 
@@ -913,22 +824,22 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_z80_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_z80_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_z80_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_z80_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_opfetch,
 
 		-- direct CPU control signals from system
 		nmi_n_i									=> r_nmi,
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_z80_wrap_cyc,
-		wrap_A_log_o							=> i_z80_wrap_A_log,
-		wrap_A_we_o								=> i_z80_wrap_we,
-		wrap_D_WR_stb_o						=> i_z80_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_z80_wrap_D_WR,
-		wrap_ack_o								=> i_z80_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_Z80).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_Z80).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -936,20 +847,19 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_z80_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_z80_exp_PORTB_o,
-
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_z80_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_z80_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_z80_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_z80_exp_PORTF_nOE
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTF_nOE
 
 	);
 END GENERATE;
@@ -976,22 +886,22 @@ g68k:IF G_INCL_CPU_68k GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_68k_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_68k_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_68k_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_68k_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_opfetch,
 
 		-- direct CPU control signals from system
 		nmi_n_i									=> r_nmi,
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_68k_wrap_cyc,
-		wrap_A_log_o							=> i_68k_wrap_A_log,
-		wrap_A_we_o								=> i_68k_wrap_we,
-		wrap_D_WR_stb_o						=> i_68k_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_68k_wrap_D_WR,
-		wrap_ack_o								=> i_68k_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_68k).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_68k).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_68k).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_68k).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_68k).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_68k).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -999,20 +909,19 @@ g68k:IF G_INCL_CPU_68k GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_68k_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_68k).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_68k_exp_PORTB_o,
-
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_68k_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_68k_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_68k_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_68k_exp_PORTF_nOE,
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTF_nOE,
 
 		jim_en_i									=> jim_en_i
 
@@ -1041,22 +950,22 @@ END GENERATE;
 --		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 --																				-- spurious memory accesses
 --		-- noice debugger signals from cpu
---		noice_debug_5c_o						=> i_6502_noice_debug_5c,
---		noice_debug_cpu_clken_o				=> i_6502_noice_debug_cpu_clken,
---		noice_debug_A0_tgl_o					=> i_6502_noice_debug_A0_tgl,
---		noice_debug_opfetch_o				=> i_6502_noice_debug_opfetch,
+--		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_5c,
+--		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_cpu_clken,
+--		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_A0_tgl,
+--		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_opfetch,
 --
 --		-- direct CPU control signals from system
 --		nmi_n_i									=> nmi_n_i,
 --		irq_n_i									=> irq_n_i,
 --
 --		-- state machine signals
---		wrap_cyc_o								=> i_6502_wrap_cyc,
---		wrap_A_log_o							=> i_6502_wrap_A_log,
---		wrap_A_we_o								=> i_6502_wrap_we,
---		wrap_D_WR_stb_o						=> i_6502_wrap_D_WR_stb,
---		wrap_D_WR_o								=> i_6502_wrap_D_WR,
---		wrap_ack_o								=> i_6502_wrap_ack,
+--		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6502).cyc,
+--		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6502).A_log,
+--		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6502).we,
+--		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6502).D_WR_stb,
+--		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6502).D_WR,
+--		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6502).ack,
 --
 --		wrap_dtack_i							=> fb_p2c_i.dtack,
 --		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
@@ -1065,20 +974,19 @@ END GENERATE;
 --		-- chipset control signals
 --		cpu_halt_i								=> cpu_halt_i,
 --
---		CPU_D_RnW_o								=> i_6502_CPU_D_RnW,
+--		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6502).CPU_D_RnW,
 --
 --		-- cpu socket signals
 --		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 --
 --		CPUSKT_A_i								=> CPUSKT_A_i,
 --
---		exp_PORTB_o								=> i_6502_exp_PORTB_o,
---
+--		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTB_o,
 --		exp_PORTD_i								=> exp_PORTD_io,
---		exp_PORTD_o								=> i_6502_exp_PORTD_o,
---		exp_PORTD_o_en							=> i_6502_exp_PORTD_o_en,
---		exp_PORTE_nOE							=> i_6502_exp_PORTE_nOE,
---		exp_PORTF_nOE							=> i_6502_exp_PORTF_nOE
+--		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTD_o,
+--		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTD_o_en,
+--		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTE_nOE,
+--		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTF_nOE
 
 --
 --	);
@@ -1104,10 +1012,10 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_65c02_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_65c02_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_65c02_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_65c02_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_opfetch,
 
 		-- cpu throttle
 		throttle_cpu_2MHz_i 					=> throttle_cpu_2MHz_i,
@@ -1118,12 +1026,12 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_65c02_wrap_cyc,
-		wrap_A_log_o							=> i_65c02_wrap_A_log,
-		wrap_A_we_o								=> i_65c02_wrap_we,
-		wrap_D_WR_stb_o						=> i_65c02_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_65c02_wrap_D_WR,
-		wrap_ack_o								=> i_65c02_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_65c02).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_65c02).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -1131,20 +1039,19 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_65c02_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_65c02_exp_PORTB_o,
-
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_65c02_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_65c02_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_65c02_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_65c02_exp_PORTF_nOE
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTF_nOE
 
 	);
 END GENERATE;
@@ -1169,22 +1076,22 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
 																				-- spurious memory accesses
 		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_65816_noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_65816_noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_65816_noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_65816_noice_debug_opfetch,
+		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_5c,
+		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_A0_tgl,
+		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_opfetch,
 
 		-- direct CPU control signals from system
 		nmi_n_i									=> r_nmi,
 		irq_n_i									=> irq_n_i,
 
 		-- state machine signals
-		wrap_cyc_o								=> i_65816_wrap_cyc,
-		wrap_A_log_o							=> i_65816_wrap_A_log,
-		wrap_A_we_o								=> i_65816_wrap_we,
-		wrap_D_WR_stb_o						=> i_65816_wrap_D_WR_stb,
-		wrap_D_WR_o								=> i_65816_wrap_D_WR,
-		wrap_ack_o								=> i_65816_wrap_ack,
+		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_65816).cyc,
+		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_65816).A_log,
+		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_65816).we,
+		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_65816).D_WR_stb,
+		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_65816).D_WR,
+		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_65816).ack,
 
 		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
@@ -1192,20 +1099,19 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		-- chipset control signals
 		cpu_halt_i								=> cpu_halt_i,
 
-		CPU_D_RnW_o								=> i_65816_CPU_D_RnW,
+		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_65816).CPU_D_RnW,
 
 		-- cpu socket signals
 		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
 
 		CPUSKT_A_i								=> i_CPUSKT_A_i,
 
-		exp_PORTB_o								=> i_65816_exp_PORTB_o,
-
+		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTB_o,
 		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_65816_exp_PORTD_o,
-		exp_PORTD_o_en							=> i_65816_exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_65816_exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_65816_exp_PORTF_nOE,
+		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTD_o,
+		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTD_o_en,
+		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTE_nOE,
+		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTF_nOE,
 
 		boot_65816_i							=> boot_65816_i,
 
@@ -1215,163 +1121,29 @@ END GENERATE;
 
 	-- multiplex control signals
 
-	i_wrap_cyc				<= i_t65_wrap_cyc				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_cyc			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_cyc				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_cyc				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_cyc			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_cyc			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_6800_wrap_cyc			when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_cyc			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-									(others => '0');	
-
-	i_wrap_A_log			<= i_t65_wrap_A_log			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_A_log			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_A_log			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_A_log			when r_cfg_hard_cpu_type = CPU_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_A_log			when r_cfg_hard_cpu_type = CPU_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_A_log		when r_cfg_hard_cpu_type = CPU_65c02 and G_INCL_CPU_65C02 else
-									i_6800_wrap_A_log			when r_cfg_hard_cpu_type = CPU_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_A_log		when r_cfg_hard_cpu_type = CPU_65816 and G_INCL_CPU_65816 else
-									(others => '0');
-	i_wrap_we				<= i_t65_wrap_we				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_we				when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_we				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_we				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_we				when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_we			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_6800_wrap_we				when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_we			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-									'0';			
-	i_wrap_D_WR_stb		<= i_t65_wrap_D_WR_stb		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_6800_wrap_D_WR_stb		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_D_WR_stb	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-									'0';
-	i_wrap_D_WR				<= i_t65_wrap_D_WR			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_6800_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_D_WR			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-									(others => '0');		
-
-	i_wrap_ack				<= i_t65_wrap_ack				when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-									i_6x09_wrap_ack			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-									i_z80_wrap_ack				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-									i_68k_wrap_ack				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---									i_6502_wrap_ack			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-									i_65c02_wrap_ack			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-									i_6800_wrap_ack			when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-									i_65816_wrap_ack			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-									'0';			
-
-
+	i_wrap_cyc				<= i_cpu_wrap_o(r_cpu_run_ix).cyc;	
+	i_wrap_A_log			<= i_cpu_wrap_o(r_cpu_run_ix).A_log;
+	i_wrap_we				<= i_cpu_wrap_o(r_cpu_run_ix).we;			
+	i_wrap_D_WR_stb		<= i_cpu_wrap_o(r_cpu_run_ix).D_WR_stb;
+	i_wrap_D_WR				<= i_cpu_wrap_o(r_cpu_run_ix).D_WR;		
+	i_wrap_ack				<= i_cpu_wrap_o(r_cpu_run_ix).ack;			
 
 	-- multiplex CPUSKT output signalsG_INCL_CPU_T65 
 
-	i_exp_PORTB_o 					<= i_6x09_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTB_o			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_exp_PORTB_o		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											( others => '1');
+	i_exp_PORTB_o 			<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTB_o;
+	i_exp_PORTD_o 			<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTD_o;
+	i_exp_PORTD_o_en		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTD_o_en;
+	i_exp_PORTE_nOE		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTE_nOE;
+	i_exp_PORTF_nOE		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTF_nOE;
 
-	i_exp_PORTD_o 					<= i_6x09_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTD_o			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_exp_PORTD_o		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											( others => '1');
-
-	i_exp_PORTD_o_en				<= i_6x09_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTD_o_en		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTD_o_en		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_exp_PORTD_o_en	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											( others => '0');
-
-	i_exp_PORTE_nOE				<= i_6x09_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_exp_PORTE_nOE		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_exp_PORTE_nOE	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'1';
-
-	i_exp_PORTF_nOE				<= i_6x09_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
-											--i_6502_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_exp_PORTF_nOE		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_exp_PORTF_nOE	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'1';
-
-
-
-
-
-	i_CPU_D_RnW <= '0' 						when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-						i_6x09_CPU_D_RnW 		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-						i_z80_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-						i_68k_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---						i_6502_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-						i_65c02_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-						i_6800_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-						i_65816_CPU_D_RnW		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-						'0';
-
+	-- databus direction multiplex
+	i_CPU_D_RnW 		<= i_cpu_wrap_o(r_cpu_run_ix).CPU_D_RnW;
 
 	-- multiplex noice signals
 
-	noice_debug_5c_o				<= i_t65_noice_debug_5c 			when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_5c				when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_5c				when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_noice_debug_5c			when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'0';
-	noice_debug_cpu_clken_o		<= i_t65_noice_debug_cpu_clken 	when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_noice_debug_cpu_clken	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'0';
-	noice_debug_A0_tgl_o			<= i_t65_noice_debug_A0_tgl 		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_noice_debug_A0_tgl		when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'0';
-	noice_debug_opfetch_o		<= i_t65_noice_debug_opfetch 		when r_cpu_en_t65 = '1' and G_INCL_CPU_T65 else
-											i_6x09_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09 else
-											i_z80_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80 else
-											i_68k_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k else
---											i_6502_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502 else
-											i_65c02_noice_debug_opfetch	when r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02 else
-											i_6800_noice_debug_opfetch		when r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800 else
-											i_65816_noice_debug_opfetch	when r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816 else
-											'0';
+	noice_debug_5c_o				<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_5c;
+	noice_debug_cpu_clken_o		<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_cpu_clken;
+	noice_debug_A0_tgl_o			<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_A0_tgl;
+	noice_debug_opfetch_o		<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_opfetch;
 
 end rtl;
