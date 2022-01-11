@@ -125,7 +125,7 @@ set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_65816} ]
 set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_t65} ]
 set_false_path -from [get_registers {e_top|e_fb_cpu|r_cfg_cpubits*} ]
 set_false_path -from [get_registers {e_top|e_fb_cpu|r_cfg_hard_cpu_type.*} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_run_ix} ]
+set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_run_ix*} ]
 
 #**************************************************************
 # Set Multicycle Path

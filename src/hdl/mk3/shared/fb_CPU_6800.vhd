@@ -123,7 +123,8 @@ architecture rtl of fb_cpu_6800 is
 
    constant T_MAX_Ph			: natural := (128/4)-2;	-- 2Mhz
    constant T_MAX_DH			: natural := 2;			-- >10 ns
-   constant T_MAX_DS			: natural := 6;			-- >40 ns
+   --constant T_MAX_DS			: natural := 6;			-- >40 ns
+   constant T_MAX_DS			: natural := 6;
    constant T_MAX_DD			: natural := 22;			-- >160 ns
    constant T_MAX_AD			: natural := 17;			-- >135 ns
 
@@ -251,10 +252,7 @@ begin
 					end if;
 				when Phi2 =>
 					if r_PH_ring(T_MAX_Ph) = '1' then
-						if 
-							r_cpu_res = '1' 
-							or i_CPUSKT_VMA_i = '0' 
-							or r_DS_ring(T_MAX_DS) = '1' then
+						if r_cpu_res = '1' or i_CPUSKT_VMA_i = '0' or r_DS_ring(T_MAX_DS) = '1' then
 							r_state <= Phi1;
 							r_AD_ring <= (0 => '1', others => '0');
 							r_wrap_ack <= '1';
@@ -264,6 +262,8 @@ begin
 							if fb_syscon_i.rst = '0' then
 								r_cpu_res <= '0';
 							end if;
+						else
+							r_PH_ring <= r_PH_ring; -- keep the phase where it is
 						end if;
 					end if;
 				when others =>
