@@ -140,7 +140,6 @@ architecture rtl of fb_cpu_6800 is
 	signal r_a_stb				: std_logic;
 	signal r_cpu_phi1			: std_logic;
 	signal r_cpu_phi2			: std_logic;
-	signal r_DBE				: std_logic;
 	signal r_cpu_res			: std_logic;
 	signal r_wrap_ack			: std_logic;
 
@@ -248,7 +247,6 @@ begin
 						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_phi2 <= '1';
 						r_cpu_phi1 <= '0';
-						r_DBE <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when Phi2 =>
