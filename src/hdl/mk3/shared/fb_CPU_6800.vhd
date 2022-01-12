@@ -122,10 +122,11 @@ architecture rtl of fb_cpu_6800 is
    signal r_state 			: t_state;
 
    constant T_MAX_Ph			: natural := (128/4)-2;	-- 2Mhz
+   constant T_MAX_DBE		: natural := 10;			-- >75ns
    constant T_MAX_DH			: natural := 2;			-- >10 ns
    --constant T_MAX_DS			: natural := 6;			-- >40 ns
    constant T_MAX_DS			: natural := 6;
-   constant T_MAX_DD			: natural := 22;			-- >~171ns - causes weird shit with writes to memory in mode 2
+   constant T_MAX_DD			: natural := T_MAX_DBE+11;	-- ~160ns after DBE
    constant T_MAX_AD			: natural := 17;			-- >135 ns
 
    signal r_ph_ring			: std_logic_vector(T_MAX_Ph downto 0); -- max ring counter size for each phase
@@ -133,6 +134,7 @@ architecture rtl of fb_cpu_6800 is
    signal r_DD_ring			: std_logic_vector(T_MAX_DD downto 0); -- write data ready from DBE asserted
    signal r_DS_ring			: std_logic_vector(T_MAX_DS downto 0); -- data setup for reads
    signal r_DH_ring			: std_logic_vector(T_MAX_DH downto 0);	-- data hold for reads
+   signal r_DBE_ring			: std_logic_vector(T_MAX_DBE downto 0);
 
 	signal i_rdy				: std_logic;
 
@@ -226,6 +228,7 @@ begin
 			r_PH_ring <= r_PH_ring(r_PH_ring'high-1 downto 0) & "1";
 			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "0";
 			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
+			r_DBE_ring <= r_DBE_ring(r_DBE_ring'high-1 downto 0) & "1";
 
 			if wrap_rdy_ctdn_i = RDY_CTDN_MIN then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
@@ -257,6 +260,7 @@ begin
 							r_AD_ring <= (0 => '1', others => '0');
 							r_wrap_ack <= '1';
 							r_cpu_phi1 <= '1';
+							r_DBE_ring <= (others => '0');
 							r_cpu_phi2 <= '0';
 							r_ph_ring <= (others => '0');
 							if fb_syscon_i.rst = '0' then
@@ -272,6 +276,7 @@ begin
 					r_wrap_ack <= '1';
 					r_cpu_phi1 <= '1';
 					r_cpu_phi2 <= '0';
+					r_DBE_ring <= (others => '0');
 					r_ph_ring <= (others => '0');
 					if fb_syscon_i.rst = '0' then
 						r_cpu_res <= '0';
@@ -292,7 +297,7 @@ begin
 	
 	i_CPUSKT_nIRQ_o <=  irq_n_i;
   	
-  	i_CPUSKT_DBE_o <= r_cpu_Phi2;
+  	i_CPUSKT_DBE_o <= r_DBE_ring(T_MAX_DBE);
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
