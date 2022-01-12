@@ -125,7 +125,7 @@ architecture rtl of fb_cpu_6800 is
    constant T_MAX_DH			: natural := 2;			-- >10 ns
    --constant T_MAX_DS			: natural := 6;			-- >40 ns
    constant T_MAX_DS			: natural := 6;
-   constant T_MAX_DD			: natural := 22;			-- >160 ns -- artificially low else mode 2 goes grainy
+   constant T_MAX_DD			: natural := 22;			-- >~171ns - causes weird shit with writes to memory in mode 2
    constant T_MAX_AD			: natural := 17;			-- >135 ns
 
    signal r_ph_ring			: std_logic_vector(T_MAX_Ph downto 0); -- max ring counter size for each phase
