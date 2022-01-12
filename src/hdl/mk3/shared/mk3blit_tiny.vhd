@@ -414,6 +414,8 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_iorb_block		: std_logic;
 
+	signal	i_debug_write_cycle_repeat : std_logic;
+
 
 begin
 
@@ -833,7 +835,8 @@ END GENERATE;
 
 		cpu_2MHz_phi2_clken_o			=> i_cpu_2MHz_phi2_clken,
 
-		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr
+		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr,
+		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat
 
 
 	);
@@ -1017,19 +1020,20 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_iorb_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= i_swmos_shadow;
+LED_o(3) <= not i_debug_write_cycle_repeat;
 
 
 -- unused stuff
 --SYS_AUX_io(0)	<= 'Z';
 --SYS_AUX_io(1)	<= 'Z';
---SYS_AUX_io(2)	<= 'Z';
+--SYS_AUX_io(2)	<= 'Z';s
 --SYS_AUX_io(3)	<= 'Z';
 
 
 SYS_AUX_o			<= (others => '0');
 
 SYS_AUX_io(3) <= i_debug_wrap_cyc;
+SYS_AUX_io(2) <= i_debug_write_cycle_repeat;
 
 SYS_AUX_io <= (others => 'Z');
 
