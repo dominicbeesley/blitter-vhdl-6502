@@ -56,7 +56,7 @@ entity fb_sys is
 		CLOCKSPEED							: natural;
 		CYCLES_SETUP						: natural := 1;-- number of cycles we expect data to be ready before
 																	-- phi2, note this is pretty tight on a Model B so 0 might
-																	-- prove to be safest
+																	-- prove to be safest, 1 seems to work ok on test
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0);
 		-- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
 		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA" -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
