@@ -404,7 +404,9 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_mem_a_stb			: std_logic;
 
-	signal	i_debug_wrap_cyc			: std_logic;
+	signal	i_debug_wrap_cpu_cyc		: std_logic;
+	signal	i_debug_wrap_sys_cyc		: std_logic;
+	signal	i_debug_wrap_sys_st		: std_logic;
 
 	signal	i_aeris_dbg_state			: std_logic_vector(3 downto 0);
 
@@ -641,6 +643,8 @@ GNODMA:IF NOT G_INCL_CS_DMA GENERATE
 END GENERATE;
 
 
+	i_aeris_cpu_halt <= '0';
+
 GSND:IF G_INCL_CS_SND GENERATE
 	i_con_c2p_chipset(MAS_NO_CHIPSET_SND)			<= i_c2p_snd_con;
 	i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
@@ -698,7 +702,7 @@ GNOTSND:IF NOT G_INCL_CS_SND GENERATE
 END GENERATE;
 
 
-	i_cpu_halt <= '0';
+	i_cpu_halt <= i_dma_cpu_halt;
 
 END GENERATE;
 GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
@@ -836,8 +840,10 @@ END GENERATE;
 		cpu_2MHz_phi2_clken_o			=> i_cpu_2MHz_phi2_clken,
 
 		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr,
-		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat
+		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat,
 
+		debug_wrap_sys_cyc_o				=> i_debug_wrap_sys_cyc,
+		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st
 
 	);
 
@@ -919,7 +925,7 @@ END GENERATE;
 
 		boot_65816_i						=> i_boot_65816,
 
-		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
+		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
 		debug_65816_vma_o					=> i_debug_65816_vma,
 
@@ -1026,14 +1032,16 @@ LED_o(3) <= not i_debug_write_cycle_repeat;
 -- unused stuff
 --SYS_AUX_io(0)	<= 'Z';
 --SYS_AUX_io(1)	<= 'Z';
---SYS_AUX_io(2)	<= 'Z';s
+--SYS_AUX_io(2)	<= 'Z';
 --SYS_AUX_io(3)	<= 'Z';
 
 
 SYS_AUX_o			<= (others => '0');
 
-SYS_AUX_io(3) <= i_debug_wrap_cyc;
+SYS_AUX_io(0) <= i_debug_wrap_sys_st;
+SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
 SYS_AUX_io(2) <= i_debug_write_cycle_repeat;
+SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');
 

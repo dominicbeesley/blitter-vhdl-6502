@@ -104,7 +104,10 @@ entity fb_sys is
 		cpu_2MHz_phi2_clken_o				: out		std_logic;
 
 		debug_jim_hi_wr_o						: out		std_logic;
-		debug_write_cycle_repeat_o			: out		std_logic
+		debug_write_cycle_repeat_o			: out		std_logic;
+
+		debug_wrap_sys_cyc_o					: out		std_logic;
+		debug_wrap_sys_st_o					: out		std_logic
 
 	);
 end fb_sys;
@@ -182,7 +185,8 @@ architecture rtl of fb_sys is
 
 begin
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
-
+	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
+	debug_wrap_sys_st_o <= i_SYScyc_st_clken;
 
 	-- used to synchronise throttled cpu
 	cpu_2MHz_phi2_clken_o <= i_SYScyc_end_clken;
