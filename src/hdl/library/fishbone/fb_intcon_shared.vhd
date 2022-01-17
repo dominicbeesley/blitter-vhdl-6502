@@ -83,7 +83,7 @@ architecture rtl of fb_intcon_shared is
 	signal	i_comcyc				: std_logic;												-- '1' when any controller is active
 	signal	r_cyc_ack			: std_logic;												-- signal that cycle is being serviced
 
-	signal	i_m2s				: fb_con_o_per_i_t := fb_c2p_unsel;					-- the i_m2s that has been granted muxed
+	signal	i_c2px				: fb_con_o_per_i_t := fb_c2p_unsel;					-- the i_c2px that has been granted muxed
 
 	-- register the muxed signals for timing
 	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
@@ -92,10 +92,10 @@ architecture rtl of fb_intcon_shared is
 	signal	r_peripheral_sel		: unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- registered address decoded selected peripheral
 	signal	r_cyc_per		: std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);	-- registered cyc for peripherals - one hot
 
-	signal	i_s2m				: fb_con_i_per_o_t;										-- data returned from selected peripheral
+	signal	i_p2c				: fb_con_i_per_o_t;										-- data returned from selected peripheral
 
 	--r_state machine
-	type		state_t	is	(idle, sel_peripheral, act);
+	type		state_t	is	(idle, act);
 	signal	r_state				: state_t;
 
 begin
@@ -142,12 +142,12 @@ end generate;
 
 	i_comcyc <= or_reduce(i_cyc_req);
 
-	-- multiplex i_m2s inputs
+	-- multiplex i_c2px inputs
 	p_mux_m2s:process(r_cyc_grant_ix, fb_con_c2p_i, i_comcyc)
 	begin
-		i_m2s <= fb_c2p_unsel;
-		if i_comcyc = '1' then
-			i_m2s <= fb_con_c2p_i(to_integer(r_cyc_grant_ix));
+		i_c2px <= fb_c2p_unsel;
+		if r_state = act then
+			i_c2px <= fb_con_c2p_i(to_integer(r_cyc_grant_ix));
 		end if;
 	end process;
 
@@ -156,17 +156,17 @@ end generate;
 		fb_per_c2p_o(I).we 			<= r_c2p_we;
 		fb_per_c2p_o(I).A				<= r_c2p_A;
 		fb_per_c2p_o(I).A_stb		<= r_cyc_per(I);
-		fb_per_c2p_o(I).D_wr			<= i_m2s.D_wr;
-		fb_per_c2p_o(I).D_wr_stb	<= i_m2s.D_wr_stb;
+		fb_per_c2p_o(I).D_wr			<= i_c2px.D_wr;
+		fb_per_c2p_o(I).D_wr_stb	<= i_c2px.D_wr_stb;
 	end generate;
 
 	-- signals back from selected peripheral to controllers
 	p_p2c_shared:process(r_peripheral_sel, fb_per_p2c_i, r_state)
 	begin
 		if r_state = act then
-			i_s2m <= fb_per_p2c_i(to_integer(r_peripheral_sel));
+			i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
 		else
-			i_s2m <= fb_p2c_unsel;
+			i_p2c <= fb_p2c_unsel;
 		end if;
 	end process;
 
@@ -176,14 +176,14 @@ end generate;
 			if rising_edge(fb_syscon_i.clk) then
 				for I in G_CONTROLLER_COUNT-1 downto 0 loop
 					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 		<= i_s2m.D_rd;
+					fb_con_p2c_o(I).D_rd 		<= i_p2c.D_rd;
 					if r_cyc_act_oh(I) = '1' then
-						fb_con_p2c_o(I).rdy_ctdn 	<= i_s2m.rdy_ctdn;
+						fb_con_p2c_o(I).rdy_ctdn 	<= i_p2c.rdy_ctdn;
 					else
 						fb_con_p2c_o(I).rdy_ctdn 	<= RDY_CTDN_MAX;
 					end if;
-					fb_con_p2c_o(I).ack 			<= i_s2m.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).nul 			<= i_s2m.nul and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).ack 			<= i_p2c.ack and r_cyc_act_oh(I);				
+					fb_con_p2c_o(I).nul 			<= i_p2c.nul and r_cyc_act_oh(I);
 				end loop;
 			end if;
 		end process;
@@ -193,11 +193,11 @@ end generate;
 	G_REGISTER_CONTROLLER_P2C_OFF:IF NOT G_REGISTER_CONTROLLER_P2C GENERATE
 		g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 		<= i_s2m.D_rd;
-					fb_con_p2c_o(I).rdy_ctdn 	<= i_s2m.rdy_ctdn when r_cyc_act_oh(I) = '1' else
+					fb_con_p2c_o(I).D_rd 		<= i_p2c.D_rd;
+					fb_con_p2c_o(I).rdy_ctdn 	<= i_p2c.rdy_ctdn when r_cyc_act_oh(I) = '1' else
 														 	RDY_CTDN_MAX;
-					fb_con_p2c_o(I).ack 			<= i_s2m.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).nul 			<= i_s2m.nul and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).ack 			<= i_p2c.ack and r_cyc_act_oh(I);				
+					fb_con_p2c_o(I).nul 			<= i_p2c.nul and r_cyc_act_oh(I);
 		end generate;
 	END GENERATE;
 
@@ -218,18 +218,17 @@ end generate;
 			case r_state is
 				when idle =>
 					if i_comcyc = '1' then
-						r_state <= sel_peripheral;
+						r_state <= act;
 						r_cyc_grant_ix <= i_cyc_grant_ix;
 						r_cyc_ack <= '1';
+						r_cyc_per <= peripheral_sel_oh_i(to_integer(i_cyc_grant_ix));
+						r_peripheral_sel <= peripheral_sel_i(to_integer(i_cyc_grant_ix));
+						--register these as they shouldn't change during a cycle
+						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
+						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
+						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
+						r_state <= act;
 					end if;
-				when sel_peripheral =>
-					r_cyc_per <= peripheral_sel_oh_i(to_integer(r_cyc_grant_ix));
-					r_peripheral_sel <= peripheral_sel_i(to_integer(r_cyc_grant_ix));
-					--register these as they shouldn't change during a cycle
-					r_c2p_A <= i_m2s.A;					
-					r_c2p_we <= i_m2s.we;
-					r_cyc_act_oh(to_integer(r_cyc_grant_ix)) <= '1';
-					r_state <= act;
 				when others =>  
 					r_state <= r_state; -- do nowt
 			end case;
