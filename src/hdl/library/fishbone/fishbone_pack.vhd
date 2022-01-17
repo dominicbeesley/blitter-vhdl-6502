@@ -149,6 +149,9 @@ package fishbone is
 		);
 
 
+	type fb_arr_std_logic_vector is array (integer range <>) of std_logic_vector;
+	type fb_arr_unsigned is array (integer range <>) of unsigned;
+
 end package;
 
 package body fishbone is

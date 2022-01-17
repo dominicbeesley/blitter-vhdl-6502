@@ -76,19 +76,19 @@ derive_clock_uncertainty
 # Set Input Delay
 #**************************************************************
 
-set_input_delay -source_latency_included -clock [get_clocks {main_pll}]  5.500 [get_ports {MEM_D_io*}]
+set_input_delay -source_latency_included -clock [get_clocks {main_pll}]  5.000 [get_ports {MEM_D_io*}]
 
 
 #**************************************************************
 # Set Output Delay
 #**************************************************************
 
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_A_o*}]
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_D_io*}]
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_nOE_o}]
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_nWE_o}]
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_FL_nCE_o}]
-set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 3.500 [get_ports {MEM_RAM_nCE_o*}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_A_o*}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_D_io*}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_nOE_o}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_nWE_o}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_FL_nCE_o}]
+set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -max 2.000 [get_ports {MEM_RAM_nCE_o*}]
 set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.000 [get_ports {MEM_A_o*}]
 set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.000 [get_ports {MEM_D_io*}]
 set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.000 [get_ports {MEM_nOE_o}]
@@ -107,6 +107,8 @@ set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.
 #**************************************************************
 # Set False Path
 #**************************************************************
+
+set_false_path -from [get_clocks {snd_pll}] -to [get_clocks {main_pll}]
 
 #set_false_path -from [get_keepers {*flancter*rst_flop}] -to [get_keepers {*flancter*set_flop}]
 #set_false_path -from [get_keepers {*flancter*set_flop}] -to [get_keepers {*flancter*flag_out}]

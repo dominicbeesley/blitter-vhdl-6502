@@ -107,7 +107,9 @@ entity fb_sys is
 		debug_write_cycle_repeat_o			: out		std_logic;
 
 		debug_wrap_sys_cyc_o					: out		std_logic;
-		debug_wrap_sys_st_o					: out		std_logic
+		debug_wrap_sys_st_o					: out		std_logic;
+
+		debug_iorb_block_o					: out 	std_logic
 
 	);
 end fb_sys;
@@ -183,6 +185,10 @@ architecture rtl of fb_sys is
 																 -- shortened
 	signal	r_wr_setup_ctr		: unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
 
+	signal	i_SYS_VIA_block	: std_logic;
+
+	signal	r_con_cyc_start	: std_logic;
+
 begin
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
 	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
@@ -241,6 +247,7 @@ begin
 			if rising_edge(fb_syscon_i.clk) then
 
 				r_ack <= '0';
+				r_con_cyc_start <= '0';
 
 				case state is
 					when idle =>
@@ -257,10 +264,11 @@ begin
 
 
 
-							if i_con_cyc = '1' then
+							if i_con_cyc = '1' and i_SYS_VIA_block = '0' then
 
 								r_sys_A <= fb_c2p_i.A(15 downto 0);
 								r_con_cyc <= '1';
+								r_con_cyc_start <= '1';
 
 
 								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
@@ -496,10 +504,25 @@ begin
 		SLOW_o => i_sys_slow_cyc
 		);
 
+	e_sys_via_block:entity work.fb_sys_via_blocker
+	generic map (
+		SIM => SIM,
+		CLOCKSPEED => CLOCKSPEED		
+		)
+	port map (
+		fb_syscon_i => fb_syscon_i,
+		cfg_sys_type_i => cfg_sys_type_i,
+		clken => r_con_cyc_start,
+		A_i => fb_c2p_i.A(15 downto 0),
+		RnW_i => not fb_c2p_i.we,
+		SYS_VIA_block_o => i_SYS_VIA_block
+		);
+
 
 	SYS_SYNC_o <= '1';
 
 	debug_sys_rd_ack_o <= r_ack;
+	debug_iorb_block_o <= i_SYS_VIA_block;
 
 
 end rtl;

@@ -144,9 +144,7 @@ entity fb_cpu is
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
 
-		debug_65816_vma_o						: out std_logic;
-
-		debug_iorb_block_o					: out std_logic
+		debug_65816_vma_o						: out std_logic
 
 	);
 end fb_cpu;
@@ -227,14 +225,6 @@ architecture rtl of fb_cpu is
 
 	signal	i_CPU_D_RnW									: std_logic;
 
--- number of 128MHz cycles until we will allow between two accesses to SYS VIA IORB
-	constant C_IORB_BODGE_MAX : natural := CLOCKSPEED * 10;
-
-	signal r_iorb_block 			: std_logic;
-	signal r_iorb_block_ctdn 	: unsigned(NUMBITS(C_IORB_BODGE_MAX) downto 0);
-	signal i_iorb_cs				: std_logic;
-	signal r_iorb_cs				: std_logic;
-	signal r_iorb_resetctr		: std_logic;
 
 	-- wrapper enable signals
 	signal r_cpu_en_t65 : std_logic;
@@ -248,8 +238,7 @@ architecture rtl of fb_cpu is
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
-		, s_waitack						-- wait for ack from cpu
-		, iorb_blocked					-- pause on iorb
+		, s_waitack						
 		);
 
 	signal r_state				: state_t;
@@ -466,7 +455,6 @@ begin
 
 
 
-	debug_iorb_block_o <= '1' when r_state = iorb_blocked else '0'; 
 
 	-- nmi was unreliable when testing DFS/ADFS, try de-gltiching
 	p_nmi_meta:process(fb_syscon_i)
@@ -511,20 +499,15 @@ begin
 			r_wrap_D_WR_stb <= '0';
 			r_wrap_D_WR <= (others => '0');
 
-			r_iorb_block <= '0';
-			r_iorb_cs <= '0';
 
 			r_acked <= (others => '0');
-			r_iorb_resetctr <= '1';
 
 			r_D_rd <= (others => '0');
 
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 
-			r_iorb_resetctr <= '0';
-
-			if (or_reduce(i_wrap_cyc) = '1' or r_wrap_cyc = '1' or r_state = iorb_blocked) and i_wrap_D_WR_stb = '1' then
+			if (or_reduce(i_wrap_cyc) = '1' or r_wrap_cyc = '1') and i_wrap_D_WR_stb = '1' then
 				r_wrap_D_WR_stb <= '1';
 				r_wrap_D_WR <= i_wrap_D_WR;
 			end if;
@@ -533,23 +516,11 @@ begin
 				when s_idle =>
 					if or_reduce(i_wrap_cyc) = '1' then
 						r_wrap_phys_A <= i_wrap_phys_A;
-						if i_iorb_cs = '1' and r_iorb_block = '1' then
-							r_state <= iorb_blocked;
-						else
-							r_state <= s_waitack;
-							r_wrap_we <= i_wrap_we;
-							r_wrap_cyc <= '1';
-							r_iorb_cs <= i_iorb_cs;
-						end if;
-					end if;
-				   r_acked <= not(i_wrap_cyc);
-				when iorb_blocked =>
-					if r_iorb_block = '0' then
 						r_state <= s_waitack;
 						r_wrap_we <= i_wrap_we;
 						r_wrap_cyc <= '1';
-						r_iorb_cs <= '1';
 					end if;
+				   r_acked <= not(i_wrap_cyc);
 				when s_waitack =>
 					if i_wrap_ack = '1' then
 						r_state <= s_idle;
@@ -561,35 +532,15 @@ begin
 								r_acked(I) <= '1';
 							end if;
 						end loop;
-						if r_iorb_cs = '1' then
-							r_iorb_block <= '1';
-							r_iorb_resetctr <= '1';
-						end if;
 					end if;
 				when others =>
 					r_state <= s_idle;
 			end case;
 
-			if r_iorb_block = '1' and
-				r_iorb_block_ctdn(r_iorb_block_ctdn'high) = '1' and 
-				r_iorb_resetctr = '0' then -- counter wrapped
-					r_iorb_block <= '0';
-			end if;
 
 		end if;
 	end process;
 
-	piorbctdn:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			if r_iorb_resetctr = '1' then
-				r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
-			elsif r_iorb_block = '1' then
-				r_iorb_block_ctdn <= r_iorb_block_ctdn - 1;
-			end if;
-		end if;
-
-	end process;
 
 	e_log2phys: entity work.log2phys
 	generic map (
@@ -613,9 +564,7 @@ begin
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
 		A_i									=> i_wrap_A_log,
-		A_o									=> i_wrap_phys_A,
-
-		IORB_CS_o							=> i_iorb_cs
+		A_o									=> i_wrap_phys_A
 	);
 
 

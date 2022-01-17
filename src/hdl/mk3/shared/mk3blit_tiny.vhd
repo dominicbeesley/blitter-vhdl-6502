@@ -339,9 +339,9 @@ architecture rtl of mk3blit is
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
 
 	-- intcon to peripheral sel
-	signal i_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);
-	signal i_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
-	signal i_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
+	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
+	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
 	-- chipset c2p intcon to peripheral sel
 	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
@@ -456,20 +456,21 @@ begin
 
 	);	
 
+g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
+		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> GBUILD_INCL_HDMI
 	)
 	port map (
-		addr_i						=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_o					=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_o				=> i_intcon_peripheral_sel_oh
+		addr_i						=> i_intcon_peripheral_sel_addr(I),
+		peripheral_sel_o			=> i_intcon_peripheral_sel(I),
+		peripheral_sel_oh_o		=> i_intcon_peripheral_sel_oh(I)
 	);
-
+end generate;
 
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: entity work.fb_intcon_shared
@@ -480,7 +481,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		G_REGISTER_CONTROLLER_P2C => true
 		)
 	port map (
-		fb_syscon_i 		=> i_fb_syscon,
+		fb_syscon_i 						=> i_fb_syscon,
 
 		-- peripheral ports connect to controllers
 		fb_con_c2p_i						=> i_con_c2p_intcon,
@@ -490,9 +491,9 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		fb_per_c2p_o						=> i_per_c2p_intcon,
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
+		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_i					=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh
 	);
 
 
@@ -515,9 +516,9 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 		fb_per_c2p_o						=> i_per_c2p_intcon,
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
+		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
+		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
+		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
 	);
 
 
@@ -843,8 +844,9 @@ END GENERATE;
 		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat,
 
 		debug_wrap_sys_cyc_o				=> i_debug_wrap_sys_cyc,
-		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st
+		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st,
 
+		debug_iorb_block_o				=> i_debug_iorb_block
 	);
 
 
@@ -928,8 +930,6 @@ END GENERATE;
 		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
 		debug_65816_vma_o					=> i_debug_65816_vma,
-
-		debug_iorb_block_o				=> i_debug_iorb_block,
 
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page

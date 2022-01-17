@@ -53,14 +53,14 @@ use work.mk3blit_pack.all;
 entity address_decode is
 	generic (
 		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_PERIPHERAL_COUNT				: natural;
+		G_PERIPHERAL_COUNT		: natural;
 		G_INCL_CHIPSET				: boolean;
 		G_INCL_HDMI					: boolean
 	);
 	port(
 		addr_i						: in		std_logic_vector(23 downto 0);
-		peripheral_sel_o					: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
-		peripheral_sel_oh_o				: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
+		peripheral_sel_o			: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
+		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
 	);
 end address_decode;
 
@@ -71,7 +71,7 @@ begin
 	p_map:process(addr_i)
 	begin
 		peripheral_sel_oh_o <= (others => '0');
-		if (addr_i(23 downto 22) = "11") then														-- "11xx xxxx"
+		if (addr_i(23 downto 22) = "11") then								-- "11xx xxxx"
 			-- peripherals/sys
 			if addr_i(19 downto 17) = "101" then							-- "11xx 101x"		FA-FB
 					-- hdmi

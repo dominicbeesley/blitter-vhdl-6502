@@ -322,7 +322,7 @@ begin
 				if unsigned(r_pause_val) = 0 then
 					r_pause_ct_dn_finished <= '1';
 				end if;
-				r_pause_ct_dn <= unsigned(r_pause_val & "0000");
+				r_pause_ct_dn <= unsigned(std_logic_vector'(r_pause_val & "0000"));
 			end if;
 		end if;
 

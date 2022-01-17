@@ -67,9 +67,9 @@ entity fb_intcon_shared is
 		fb_per_p2c_i			: in 	fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 
 		-- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
-		peripheral_sel_addr_o		: out	std_logic_vector(23 downto 0);
-		peripheral_sel_i				: in unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
-		peripheral_sel_oh_i			: in std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
+		peripheral_sel_addr_o		: out	fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+		peripheral_sel_i				: in fb_arr_unsigned(G_CONTROLLER_COUNT-1 downto 0)(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
+		peripheral_sel_oh_i			: in fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
 	);
 end fb_intcon_shared;
@@ -100,11 +100,17 @@ architecture rtl of fb_intcon_shared is
 
 begin
 
-	peripheral_sel_addr_o <= i_m2s.A;
+g_addr_decode:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+	peripheral_sel_addr_o(I) <= fb_con_c2p_i(I).A;
+
+end generate;
+
 
 g_cyc:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 	i_cyc_req(I) <= fb_con_c2p_i(i).cyc and fb_con_c2p_i(i).a_stb;
 end generate;
+
+
 
 	g_arb:if G_ARB_ROUND_ROBIN generate
 		-- arbitrate between incoming controllers
@@ -217,8 +223,8 @@ end generate;
 						r_cyc_ack <= '1';
 					end if;
 				when sel_peripheral =>
-					r_cyc_per <= peripheral_sel_oh_i;
-					r_peripheral_sel <= peripheral_sel_i;
+					r_cyc_per <= peripheral_sel_oh_i(to_integer(r_cyc_grant_ix));
+					r_peripheral_sel <= peripheral_sel_i(to_integer(r_cyc_grant_ix));
 					--register these as they shouldn't change during a cycle
 					r_c2p_A <= i_m2s.A;					
 					r_c2p_we <= i_m2s.we;

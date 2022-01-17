@@ -262,7 +262,7 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 					when A_PERIOD =>
 						r_period_h_latch <= fb_per_c2p_i.D_wr;
 					when A_PERIOD + 1 =>
-						r_period <= UNSIGNED(r_period_h_latch & fb_per_c2p_i.D_wr);
+						r_period <= UNSIGNED(std_logic_vector'(r_period_h_latch & fb_per_c2p_i.D_wr));
 					when A_LEN =>
 						r_len(15 downto 8) <= UNSIGNED(fb_per_c2p_i.D_wr);
 					when A_LEN + 1 =>
@@ -319,11 +319,11 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 			when A_REPOFF + 1=> 
 				i_per_D_rd <= std_logic_vector(r_repoff(7 downto 0));
 			when A_STATUS => 
-				i_per_D_rd <= r_act & "000000" & r_repeat;
+				i_per_D_rd <= std_logic_vector'(r_act & "000000" & r_repeat);
 			when A_VOL => 
-				i_per_D_rd <= std_logic_vector(r_vol) & "00";
+				i_per_D_rd <= std_logic_vector'(std_logic_vector(r_vol) & "00");
 			when A_PEAK =>
-				i_per_D_rd <= "0" & std_logic_vector(r_peak);
+				i_per_D_rd <= std_logic_vector'("0" & std_logic_vector(r_peak));
 			when others =>
 				i_per_D_rd <= (others => '1');
 		end case;
@@ -333,7 +333,7 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 	variable v_res:signed(r_data'length+r_vol'length downto 0);
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			v_res := (r_data * signed("0" & r_vol));
+			v_res := (r_data * signed(unsigned'("0" & r_vol)));
 			r_snd_dat <= v_res(v_res'high) & v_res(v_res'high-2 downto v_res'high-8);
 			snd_dat_change_clken <= r_snd_dat_change_clken;
 		end if;
