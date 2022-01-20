@@ -1,3 +1,12 @@
+
+-- ###  #  ##   #          ###  #   ## ###      ## # # ##   #  # #          #       #  ##      ### ### ### ###
+--  #  # # # # # #  #      #   # # #    #      #   # # # # # # ###      ## ###     ##  # #     # # # # # # # #
+--  #  # # # # # #         ##  ###  #   #       #  ### ##  ### ###     # #  #       #  # #     # # # # # # # #
+--  #  # # # # # #  #      #   # #   #  #        # ### # # # # # #     ###  ##      #  # #     # # # # # # # #
+--  #   #  ##   #          #   # # ##   #      ##  # # # # # # # #                 ### ##      ### ### ### ###
+
+
+
 -- MIT License
 -- -----------------------------------------------------------------------------
 -- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
@@ -97,7 +106,10 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_pagrom_A <= x"FF" & "10";
 			if cfg_swram_enable_i = '1' then
-				if map0n1 then
+				if sys_ROMPG_i(3 downto 0) = x"E" then
+					--TODO: WARNING PLONKS THIS AT 1D0000 always!
+					r_pagrom_A <= "0001110100";
+				elsif map0n1 then
 					if (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
 						if sys_ROMPG_i(0) = '0' then
 							r_pagrom_A <= x"7" & "111" & sys_ROMPG_i(3 downto 1);

@@ -496,6 +496,11 @@ mos_handle_res:
 	php
 	plp
 
+	; quick ROM E test
+	lda	#$E
+	sta	$FE30
+	lda	$8000
+
 
 	lda	#$D1
 	sta	fred_JIM_DEVNO
