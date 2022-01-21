@@ -240,14 +240,15 @@ set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[2]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[1]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[0]
 
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[7]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[6]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[5]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[4]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[3]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[2]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[1]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[0]
+# inputs now not registered
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[7]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[6]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[5]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[4]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[3]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[2]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[1]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[0]
 
 
 set_location_assignment PIN_R7 -to MEM_A_o[20]
