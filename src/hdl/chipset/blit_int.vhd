@@ -842,7 +842,7 @@ begin
 			--TODO: 8MHz?
 			if r_blit_state = sLineCalc and i_next_addr_ready = '1' then --and fb_syscon_i.cpu_clks(FB_CPUCLKINDEX(G_SPEED)).cpu_clken = '1' then
 				-- count down major axis
-				v_major_ctr := unsigned(r_width & r_height) - 1;
+				v_major_ctr := unsigned(unsigned'(r_width & r_height)) - 1;
 				r_width <= v_major_ctr(15 downto 8);
 				r_height <= v_major_ctr(7 downto 0);
 
