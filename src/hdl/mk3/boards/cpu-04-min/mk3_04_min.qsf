@@ -123,6 +123,7 @@ set_global_assignment -name VHDL_FILE ../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_SYS_phigen.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_SYS_clock_dll.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_VERSION.vhd
+set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_t65.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6x09.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_65816.vhd

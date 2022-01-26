@@ -55,6 +55,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.mk3blit_pack.all;
+use work.fb_cpu_pack.all;
 
 entity fb_cpu is
 	generic (
@@ -67,9 +68,8 @@ entity fb_cpu is
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_68k						: boolean := false;
+		G_INCL_CPU_68k						: boolean := false
 
-		G_BYTELANES							: positive := 2									-- number of data byte lanes
 	);
 	port(
 
@@ -169,32 +169,9 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_68k						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
 	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68k + B2OZ(G_INCL_CPU_68k);
 
-	type cpu_wrap_o is record
-		cyc							: std_logic_vector(G_BYTELANES-1 downto 0);
-		A_log							: std_logic_vector(23 downto 0);
-		we								: std_logic;
-		D_WR_stb						: std_logic;
-		D_WR							: std_logic_vector(7 downto 0);
-		ack							: std_logic;
-
-		exp_PORTB_o					: std_logic_vector(7 downto 0);
-		exp_PORTD_o					: std_logic_vector(11 downto 0);
-		exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-		exp_PORTE_nOE				: std_logic;	
-		exp_PORTF_nOE				: std_logic;	
-
-		CPU_D_RnW					: std_logic;
-
-		noice_debug_5c				: std_logic;
-		noice_debug_cpu_clken	: std_logic;
-		noice_debug_A0_tgl		: std_logic;
-		noice_debug_opfetch		: std_logic;
-
-	end record;
-
-	type cpu_wrap_o_arr is array(natural range<>) of cpu_wrap_o;
-
-	signal i_cpu_wrap_o : cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);
+	signal i_wrap_o_all 			: t_cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);		-- all wrap_o signals
+	signal i_wrap_o_cur			: t_cpu_wrap_o;											-- selected wrap_o signal
+	signal i_wrap_i				: t_cpu_wrap_i;
 
 	-----------------------------------------------------------------------------
 	-- configuration registers read at boot time
@@ -243,18 +220,10 @@ architecture rtl of fb_cpu is
 
 	signal r_state				: state_t;
 
-	signal r_D_rd				: std_logic_vector((G_BYTELANES*8)-1 downto 0);
-	signal r_acked 			: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_D_rd				: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+	signal r_acked 			: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 
 
-
-	-- multiplexed control signals
-	signal i_wrap_cyc					: std_logic_vector(G_BYTELANES-1 downto 0);		-- each bit here indicates a byte lane high to low being read/written
-	signal i_wrap_A_log				: std_logic_vector(23 downto 0);
-	signal i_wrap_we					: std_logic;
-	signal i_wrap_D_WR_stb			: std_logic;
-	signal i_wrap_D_WR				: std_logic_vector(7 downto 0);
-	signal i_wrap_ack					: std_logic;
 
 	signal r_wrap_cyc					: std_logic;
 	signal i_wrap_phys_A				: std_logic_vector(23 downto 0);
@@ -477,7 +446,7 @@ begin
 	debug_wrap_cyc_o <= r_wrap_cyc;
 
 
-	G_BL_RD:FOR I in G_BYTELANES-1 downto 0 GENERATE
+	G_BL_RD:FOR I in C_CPU_BYTELANES-1 downto 0 GENERATE
 		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
 															r_D_rd(7+I*8 downto I*8);
 	END GENERATE;
@@ -485,7 +454,7 @@ begin
 	-- CAVEATS:
 	--   the process below has been trimmed with the following expectations:
 	--		1 when i_wrap cyc goes active it is a register in the wrapper
-	--	   2 the logical address passed in i_wrap_A_log is also registered in the wrapper
+	--	   2 the logical address passed in i_wrap_o_cur.A_log is also registered in the wrapper
 	--			the above two allow for the log->phys mapping in a single cycle
 
 
@@ -507,26 +476,26 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 
-			if (or_reduce(i_wrap_cyc) = '1' or r_wrap_cyc = '1') and i_wrap_D_WR_stb = '1' then
+			if (or_reduce(i_wrap_o_cur.cyc) = '1' or r_wrap_cyc = '1') and i_wrap_o_cur.D_WR_stb = '1' then
 				r_wrap_D_WR_stb <= '1';
-				r_wrap_D_WR <= i_wrap_D_WR;
+				r_wrap_D_WR <= i_wrap_o_cur.D_WR;
 			end if;
 
 			case r_state is
 				when s_idle =>
-					if or_reduce(i_wrap_cyc) = '1' then
+					if or_reduce(i_wrap_o_cur.cyc) = '1' then
 						r_wrap_phys_A <= i_wrap_phys_A;
 						r_state <= s_waitack;
-						r_wrap_we <= i_wrap_we;
+						r_wrap_we <= i_wrap_o_cur.we;
 						r_wrap_cyc <= '1';
 					end if;
-				   r_acked <= not(i_wrap_cyc);
+				   r_acked <= not(i_wrap_o_cur.cyc);
 				when s_waitack =>
-					if i_wrap_ack = '1' then
+					if i_wrap_o_cur.ack = '1' then
 						r_state <= s_idle;
 						r_wrap_cyc <= '0';
 						r_wrap_D_WR_stb <= '0';
-						for I in G_BYTELANES-1 downto 0 loop
+						for I in C_CPU_BYTELANES-1 downto 0 loop
 							if r_acked(I) = '0' then
 								r_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd;
 								r_acked(I) <= '1';
@@ -563,7 +532,7 @@ begin
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
-		A_i									=> i_wrap_A_log,
+		A_i									=> i_wrap_o_cur.A_log,
 		A_o									=> i_wrap_phys_A
 	);
 
@@ -580,8 +549,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 	e_t65:entity work.fb_cpu_t65
 	generic map (
 		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED,
-		G_BYTELANES							=> G_BYTELANES
+		CLOCKSPEED							=> CLOCKSPEED
 	)
 	port map (
 
@@ -589,48 +557,13 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		cpu_en_i									=> r_cpu_en_t65,
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_T65).noice_debug_opfetch,
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_T65),
+		wrap_i									=> i_wrap_i,
 
-		-- cpu throttle
-		throttle_cpu_2MHz_i 					=> throttle_cpu_2MHz_i,
-		cpu_2MHz_phi2_clken_i				=> cpu_2MHz_phi2_clken_i,
+		D_rd_i									=> i_wrap_D_rd(7 downto 0)
 
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_T65).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_T65).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_T65).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_T65).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_T65).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_T65).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-		wrap_D_rd_i								=> i_wrap_D_rd(7 downto 0),
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i
 
 	);
-
-	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTB_o <= (others => '1');
-	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTD_o <= (others => '1');
-	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTD_o_en <= (others => '0');
-	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTE_nOE <= '1';
-	i_cpu_wrap_o(C_IX_CPU_T65).exp_PORTF_nOE <= '1';
-	i_cpu_wrap_o(C_IX_CPU_T65).CPU_D_RnW <= '0';
 
 END GENERATE;
 
@@ -639,8 +572,7 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 	e_wrap_6x09:entity work.fb_cpu_6x09
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -649,48 +581,8 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		cpu_speed_i								=> r_cfg_pins_cpu_speed,
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6x09).noice_debug_opfetch,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6x09).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6x09).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6x09).exp_PORTF_nOE
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
+		wrap_i									=> i_wrap_i
 	);
 END GENERATE;
 
@@ -698,8 +590,7 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 	e_wrap_6800:entity work.fb_cpu_6800
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -708,48 +599,8 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 		cpu_speed_i								=> r_cfg_pins_cpu_speed,
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6800).noice_debug_opfetch,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6800).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6800).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6800).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6800).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6800).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6800).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6800).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6800).exp_PORTF_nOE
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_6800),
+		wrap_i									=> i_wrap_i
 	);
 END GENERATE;
 
@@ -758,8 +609,7 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 	e_wrap_z80:entity work.fb_cpu_z80
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -767,48 +617,8 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		cpu_en_i									=> r_cpu_en_z80,
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_Z80).noice_debug_opfetch,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_Z80).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_Z80).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_Z80).exp_PORTF_nOE
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
+		wrap_i									=> i_wrap_i
 
 	);
 END GENERATE;
@@ -818,8 +628,7 @@ g68k:IF G_INCL_CPU_68k GENERATE
 	e_wrap_68k:entity work.fb_cpu_68k
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,		
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -829,48 +638,8 @@ g68k:IF G_INCL_CPU_68k GENERATE
 		cfg_cpu_speed_i						=> r_cfg_pins_cpu_speed,		
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_68k).noice_debug_opfetch,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_68k).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_68k).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_68k).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_68k).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_68k).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_68k).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_68k).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_68k).exp_PORTF_nOE,
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_68k),
+		wrap_i									=> i_wrap_i,
 
 		jim_en_i									=> jim_en_i
 
@@ -884,8 +653,7 @@ END GENERATE;
 --	generic map (
 --		SIM										=> SIM,
 --		CLOCKSPEED								=> CLOCKSPEED,
---		G_JIM_DEVNO								=> G_JIM_DEVNO,
---		G_BYTELANES								=> G_BYTELANES
+--		G_JIM_DEVNO								=> G_JIM_DEVNO
 --	) 
 --	port map(
 --
@@ -893,50 +661,8 @@ END GENERATE;
 --		cpu_en_i									=> r_cpu_en_6502,
 --		fb_syscon_i								=> fb_syscon_i,
 --
---		-- noice debugger signals to cpu
---		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
---		noice_debug_shadow_i					=> noice_debug_shadow_i,
---		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
---																				-- spurious memory accesses
---		-- noice debugger signals from cpu
---		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_5c,
---		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_cpu_clken,
---		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_A0_tgl,
---		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_6502).noice_debug_opfetch,
---
---		-- direct CPU control signals from system
---		nmi_n_i									=> nmi_n_i,
---		irq_n_i									=> irq_n_i,
---
---		-- state machine signals
---		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_6502).cyc,
---		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_6502).A_log,
---		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_6502).we,
---		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_6502).D_WR_stb,
---		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_6502).D_WR,
---		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_6502).ack,
---
---		wrap_dtack_i							=> fb_p2c_i.dtack,
---		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
---		wrap_cyc_i								=> r_wrap_cyc,
---
---		-- chipset control signals
---		cpu_halt_i								=> cpu_halt_i,
---
---		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_6502).CPU_D_RnW,
---
---		-- cpu socket signals
---		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
---
---		CPUSKT_A_i								=> CPUSKT_A_i,
---
---		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTB_o,
---		exp_PORTD_i								=> exp_PORTD_io,
---		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTD_o,
---		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTD_o_en,
---		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTE_nOE,
---		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_6502).exp_PORTF_nOE
-
+--		wrap_o									=> i_wrap_o_all(C_IX_CPU_6502),
+--		wrap_i									=> i_wrap_i
 --
 --	);
 --END GENERATE;
@@ -945,8 +671,7 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 	e_wrap_65c02:entity work.fb_cpu_65c02
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -955,52 +680,8 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 		cpu_speed_i								=> r_cfg_pins_cpu_speed,	
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_65c02).noice_debug_opfetch,
-
-		-- cpu throttle
-		throttle_cpu_2MHz_i 					=> throttle_cpu_2MHz_i,
-		cpu_2MHz_phi2_clken_i				=> cpu_2MHz_phi2_clken_i,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_65c02).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_65c02).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_65c02).exp_PORTF_nOE
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
+		wrap_i									=> i_wrap_i
 
 	);
 END GENERATE;
@@ -1010,8 +691,7 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 	e_wrap_65816:entity work.fb_cpu_65816
 	generic map (
 		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED,
-		G_BYTELANES								=> G_BYTELANES
+		CLOCKSPEED								=> CLOCKSPEED
 	) 
 	port map(
 
@@ -1019,48 +699,8 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		cpu_en_i									=> r_cpu_en_65816,
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					=> noice_debug_nmi_n_i,
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-		noice_debug_inhibit_cpu_i			=> noice_debug_inhibit_cpu_i,
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_5c,
-		noice_debug_cpu_clken_o				=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_cpu_clken,
-		noice_debug_A0_tgl_o					=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_A0_tgl,
-		noice_debug_opfetch_o				=> i_cpu_wrap_o(C_IX_CPU_65816).noice_debug_opfetch,
-
-		-- direct CPU control signals from system
-		nmi_n_i									=> r_nmi,
-		irq_n_i									=> irq_n_i,
-
-		-- state machine signals
-		wrap_cyc_o								=> i_cpu_wrap_o(C_IX_CPU_65816).cyc,
-		wrap_A_log_o							=> i_cpu_wrap_o(C_IX_CPU_65816).A_log,
-		wrap_A_we_o								=> i_cpu_wrap_o(C_IX_CPU_65816).we,
-		wrap_D_WR_stb_o						=> i_cpu_wrap_o(C_IX_CPU_65816).D_WR_stb,
-		wrap_D_WR_o								=> i_cpu_wrap_o(C_IX_CPU_65816).D_WR,
-		wrap_ack_o								=> i_cpu_wrap_o(C_IX_CPU_65816).ack,
-
-		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
-		wrap_cyc_i								=> r_wrap_cyc,
-
-		-- chipset control signals
-		cpu_halt_i								=> cpu_halt_i,
-
-		CPU_D_RnW_o								=> i_cpu_wrap_o(C_IX_CPU_65816).CPU_D_RnW,
-
-		-- cpu socket signals
-		CPUSKT_D_i								=> exp_PORTEFG_io(11 downto 4) & exp_PORTA_io,
-
-		CPUSKT_A_i								=> i_CPUSKT_A_i,
-
-		exp_PORTB_o								=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTB_o,
-		exp_PORTD_i								=> exp_PORTD_io,
-		exp_PORTD_o								=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTD_o,
-		exp_PORTD_o_en							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTD_o_en,
-		exp_PORTE_nOE							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTE_nOE,
-		exp_PORTF_nOE							=> i_cpu_wrap_o(C_IX_CPU_65816).exp_PORTF_nOE,
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
+		wrap_i									=> i_wrap_i,
 
 		boot_65816_i							=> boot_65816_i,
 
@@ -1068,31 +708,40 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 	);
 END GENERATE;
 
-	-- multiplex control signals
+	i_wrap_i.rdy_ctdn						<= fb_p2c_i.rdy_ctdn;
+	i_wrap_i.cyc 							<= r_wrap_cyc;
 
-	i_wrap_cyc				<= i_cpu_wrap_o(r_cpu_run_ix).cyc;	
-	i_wrap_A_log			<= i_cpu_wrap_o(r_cpu_run_ix).A_log;
-	i_wrap_we				<= i_cpu_wrap_o(r_cpu_run_ix).we;			
-	i_wrap_D_WR_stb		<= i_cpu_wrap_o(r_cpu_run_ix).D_WR_stb;
-	i_wrap_D_WR				<= i_cpu_wrap_o(r_cpu_run_ix).D_WR;		
-	i_wrap_ack				<= i_cpu_wrap_o(r_cpu_run_ix).ack;			
+	i_wrap_i.cpu_halt 					<= cpu_halt_i;
+	i_wrap_i.CPUSKT_D 					<= exp_PORTEFG_io(11 downto 4) & exp_PORTA_io;
+	i_wrap_i.CPUSKT_A 					<= i_CPUSKT_A_i;
+	i_wrap_i.exp_PORTD 					<= exp_PORTD_io;
+	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
+	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
+	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i;
+	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
+	i_wrap_i.nmi_n 						<= r_nmi;
+	i_wrap_i.irq_n 						<= irq_n_i;
 
-	-- multiplex CPUSKT output signalsG_INCL_CPU_T65 
 
-	i_exp_PORTB_o 			<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTB_o;
-	i_exp_PORTD_o 			<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTD_o;
-	i_exp_PORTD_o_en		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTD_o_en;
-	i_exp_PORTE_nOE		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTE_nOE;
-	i_exp_PORTF_nOE		<= i_cpu_wrap_o(r_cpu_run_ix).exp_PORTF_nOE;
+	-- multiplex wrapper signals
 
-	-- databus direction multiplex
-	i_CPU_D_RnW 		<= i_cpu_wrap_o(r_cpu_run_ix).CPU_D_RnW;
+	i_wrap_o_cur					<= i_wrap_o_all(r_cpu_run_ix);	
 
-	-- multiplex noice signals
+	-- expansion header signals from current CPU
 
-	noice_debug_5c_o				<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_5c;
-	noice_debug_cpu_clken_o		<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_cpu_clken;
-	noice_debug_A0_tgl_o			<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_A0_tgl;
-	noice_debug_opfetch_o		<= i_cpu_wrap_o(r_cpu_run_ix).noice_debug_opfetch;
+	i_exp_PORTB_o 				<= i_wrap_o_cur.exp_PORTB;
+	i_exp_PORTD_o 				<= i_wrap_o_cur.exp_PORTD;
+	i_exp_PORTD_o_en			<= i_wrap_o_cur.exp_PORTD_o_en;
+	i_exp_PORTE_nOE			<= i_wrap_o_cur.exp_PORTE_nOE;
+	i_exp_PORTF_nOE			<= i_wrap_o_cur.exp_PORTF_nOE;
+	i_CPU_D_RnW 				<= i_wrap_o_cur.CPU_D_RnW;
+
+	-- noice signals from current CPU
+
+	noice_debug_5c_o			<= i_wrap_o_cur.noice_debug_5c;
+	noice_debug_cpu_clken_o	<= i_wrap_o_cur.noice_debug_cpu_clken;
+	noice_debug_A0_tgl_o		<= i_wrap_o_cur.noice_debug_A0_tgl;
+	noice_debug_opfetch_o	<= i_wrap_o_cur.noice_debug_opfetch;
 
 end rtl;
