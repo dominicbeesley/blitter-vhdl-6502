@@ -19,3 +19,10 @@ Copy the file cpu09l.vhd to a directory "JohnKent"
 Developed by [John E Kent](http://members.optushome.com.au/jekent/system68/index.htm)
 
 Copy the file cpu68.vhd to a directory "JohnKent"
+
+# CPU86 code
+
+Developed by http://www.ht-lab.com/cpu86.htm
+
+Copy the directory cpu86_rtl from https://github.com/nsauzede/cpu86
+

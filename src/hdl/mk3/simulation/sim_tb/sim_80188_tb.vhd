@@ -86,6 +86,9 @@ architecture Behavioral of sim_80188_tb is
 	signal	i_hsync									:  std_logic;
 	signal	i_vsync									:  std_logic;
 
+	signal	i_CPU_X1				: std_logic;
+	signal	i_CPU_CLKOUT		: std_logic;
+
 begin
 
 	e_SYS:entity work.sim_SYS_tb
@@ -254,7 +257,11 @@ begin
 	);
 
 
-	i_exp_PORTC_io <= (others => 'H');
+	--TODO: delays?
+	i_exp_PORTC_io <= (
+		6 => i_CPU_CLKOUT,
+		others => 'H'
+		);
 
 	i_exp_PORTD_io(0) <= 'H';
 	i_exp_PORTD_io(1) <= 'H';
@@ -266,6 +273,19 @@ begin
 	i_exp_PORTD_io(7) <= 'H';
 
 	i_exp_PORTE(7 downto 0) <= (others => 'H');		
+
+	i_CPU_X1 <= i_exp_PORTB_o_cpu(2);
+
+
+
+
+	e_cpu:entity work.real80188_tb
+	port map (
+		X1_i	=> i_CPU_X1,
+
+		CLKOUT_o => i_CPU_CLKOUT
+		);
+
 
 	-- single non BB ram
 	--TODO the timings are wrong!
