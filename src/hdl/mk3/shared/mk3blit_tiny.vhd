@@ -72,6 +72,7 @@ entity mk3blit is
 		G_INCL_CPU_T65						: boolean := false;
 		G_INCL_CPU_65C02					: boolean := false;
 		G_INCL_CPU_6800					: boolean := false;
+		G_INCL_CPU_80188					: boolean := false;
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
@@ -858,6 +859,7 @@ END GENERATE;
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
 		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
+		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,

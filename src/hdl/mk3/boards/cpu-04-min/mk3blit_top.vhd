@@ -147,6 +147,8 @@ e_top:entity work.mk3blit
 		G_INCL_CPU_6x09					=> true,
 		G_INCL_CPU_Z80						=> false,
 		G_INCL_CPU_68k						=> true,
+		G_INCL_CPU_6800					=> true,
+		G_INCL_CPU_80188					=> true,
 
 		G_MEM_SWRAM_SLOT					=> 1,
 		G_MEM_FAST_IS_10					=> true,

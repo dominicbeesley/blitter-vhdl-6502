@@ -49,6 +49,8 @@ use work.fishbone.all;
 
 package fb_CPU_pack is
 
+	type cpu_type is (CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_6800, CPU_80188);
+
 	constant	C_CPU_BYTELANES	: positive := 2;									-- number of data byte lanes
 
 
