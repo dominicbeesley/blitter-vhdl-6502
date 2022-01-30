@@ -76,7 +76,7 @@ architecture rtl of fb_cpu_80188 is
     	end if;
   	end;
 	
-   type t_state is (phi1, phi2);
+   type t_state is (idle, IntAck, ActRead, ActWrite, ActHalt);
 
    signal r_state 			: t_state;
 
@@ -89,6 +89,7 @@ architecture rtl of fb_cpu_80188 is
 	signal r_we					: std_logic;
 	signal r_a_stb				: std_logic;
 	signal r_wrap_ack			: std_logic;
+	signal r_d_wr_stb			: std_logic;
 
 	signal i_CPUSKT_nTEST_o	: std_logic;
 	signal i_CPUSKT_X1_o		: std_logic;
@@ -102,9 +103,7 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_HOLD_o	: std_logic;
 	signal i_CPUSKT_INT3_o	: std_logic;
 
-	signal i_CPUSKT_nS0_i	: std_logic;
-	signal i_CPUSKT_nS1_i	: std_logic;
-	signal i_CPUSKT_nS2_i	: std_logic;
+	signal i_CPUSKT_nS_i		: std_logic_vector(2 downto 0);
 	signal i_CPUSKT_nUCS_i	: std_logic;
 	signal i_CPUSKT_nLCS_i	: std_logic;
 	signal i_CPUSKT_RESET_i	: std_logic;
@@ -118,7 +117,12 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_HLDA_i	: std_logic;
 	signal i_CPUSKT_nLOCK_i	: std_logic;
 
+	signal r_CLK_meta			: std_logic_vector(1 downto 0);
+	signal r_SRDY				: std_logic;
+
 begin
+
+	
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
@@ -135,16 +139,18 @@ begin
 					r_X1 <= '0';
 				end if;
 			end if;
+
+			r_CLK_meta <= r_CLK_meta(r_CLK_meta'high-1 downto 0) & i_CPUSKT_CLKOUT_i;
 		end if;
 	end process;
 
 
 	i_CPUSKT_nTEST_o	<= i_CPUSKT_RESET_i;
 	i_CPUSKT_X1_o		<= r_X1;
-	i_CPUSKT_SRDY_o	<= '0';
+	i_CPUSKT_SRDY_o	<= r_SRDY;
 	i_CPUSKT_INT0_o	<= '0';
 	i_CPUSKT_nNMI_o	<= '0';
-	i_CPUSKT_nRES_o	<= '0';
+	i_CPUSKT_nRES_o	<= (not fb_syscon_i.rst) when cpu_en_i = '1' else '0';		-- TODO:does this need synchronising?
 	i_CPUSKT_INT1_o	<= '0';
 
 	i_CPUSKT_INT2_o	<= '0';
@@ -161,9 +167,9 @@ begin
 	wrap_o.exp_PORTB(7)	<= i_CPUSKT_INT1_o;
 
 	--TODO: sort out CPUSKT_A
-	i_CPUSKT_nS0_i			<= wrap_i.CPUSKT_A(0);
-	i_CPUSKT_nS1_i			<= wrap_i.CPUSKT_A(1);
-	i_CPUSKT_nS2_i			<= wrap_i.CPUSKT_A(2);
+	i_CPUSKT_nS_i(0)		<= wrap_i.CPUSKT_A(0);
+	i_CPUSKT_nS_i(1)		<= wrap_i.CPUSKT_A(1);
+	i_CPUSKT_nS_i(2)		<= wrap_i.CPUSKT_A(2);
 	i_CPUSKT_nUCS_i		<= wrap_i.CPUSKT_A(3);
 	i_CPUSKT_nLCS_i		<= wrap_i.CPUSKT_A(4);
 	i_CPUSKT_RESET_i		<= wrap_i.CPUSKT_A(5);
@@ -202,15 +208,92 @@ begin
 	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= r_we;
 	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
-	wrap_o.D_wr_stb		<= '0';
+	wrap_o.D_wr_stb		<= r_d_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
 
 
-	--state machine stuff
-	r_log_A <= (others => '0');
-	r_a_stb <= '0';
-	r_we <= '0';
-	r_wrap_ack <= '0';
+	p_state:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_log_A <= (others => '0');
+			r_a_stb <= '0';
+			r_d_wr_stb <= '0';
+			r_we <= '0';
+			r_wrap_ack <= '0';
+			r_state <= idle;
+			r_SRDY <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_a_stb <= '0';
+			r_d_wr_stb <= '0';
+			r_wrap_ack <= '0';
+			case r_state is
+				when idle =>
+					if r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' and i_CPUSKT_ALE_i = '1' then
+						-- check cycle type
+						case i_CPUSKT_nS_i is
+							when "000" => 
+								r_state <= IntAck;	
+							when "001" =>
+								r_state <= ActRead;
+								r_we <= '0';
+								r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
+								r_a_stb <= '1';
+								r_SRDY <= '0';
+							when "010" =>
+								r_state <= ActWrite;
+								r_we <= '1';
+								r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
+								r_a_stb <= '1';
+								r_SRDY <= '0';
+							when "011" =>
+								r_state <= ActHalt;
+								r_we <= '1';
+							when "100"|"101" =>
+								r_state <= ActRead;
+								r_we <= '0';
+								r_log_A <= wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19 downto 8) & 
+												wrap_i.CPUSKT_D(7 downto 0);
+								r_a_stb <= '1';
+								r_SRDY <= '0';
+							when "110" =>
+								r_state <= ActWrite;
+								r_we <= '1';
+								r_log_A <= wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19) & 
+												wrap_i.CPUSKT_A(19 downto 8) & 
+												wrap_i.CPUSKT_D(7 downto 0);
+								r_a_stb <= '1';
+								r_SRDY <= '0';
+							when others =>
+								r_state <= Idle; -- passive?
+						end case;
+
+					end if;
+				when ActRead =>
+					-- wait for data, place on bus then wait for data and then ack
+					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' then
+						r_SRDY <= '1';
+						r_wrap_ack <= '1';
+						r_state <= idle;
+					end if;
+				when others =>
+					r_log_A <= (others => '0');
+					r_a_stb <= '0';
+					r_we <= '0';
+					r_wrap_ack <= '0';
+					r_state <= idle;
+			end case;
+
+		end if;
+
+	end process;
+
 
 
   	wrap_o.noice_debug_cpu_clken <= r_wrap_ack;

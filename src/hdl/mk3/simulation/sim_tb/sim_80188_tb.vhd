@@ -87,7 +87,14 @@ architecture Behavioral of sim_80188_tb is
 	signal	i_vsync									:  std_logic;
 
 	signal	i_CPU_X1				: std_logic;
+	signal	i_CPU_SRDY			: std_logic;
+	signal	i_CPU_nRES			: std_logic;
+
 	signal	i_CPU_CLKOUT		: std_logic;
+	signal	i_CPU_A				: std_logic_vector(19 downto 8);
+	signal	i_CPU_ALE			: std_logic;
+	signal	i_CPU_nS				: std_logic_vector(2 downto 0);
+
 
 begin
 
@@ -259,7 +266,9 @@ begin
 
 	--TODO: delays?
 	i_exp_PORTC_io <= (
+		2 downto 0 => i_CPU_nS,
 		6 => i_CPU_CLKOUT,
+		11 downto 8 => i_CPU_A(19 downto 16),
 		others => 'H'
 		);
 
@@ -268,22 +277,30 @@ begin
 	i_exp_PORTD_io(2) <=	'H';
 	i_exp_PORTD_io(3) <= 'H';
 	i_exp_PORTD_io(4) <= 'H';
-	i_exp_PORTD_io(5) <= 'H';
+	i_exp_PORTD_io(5) <= i_CPU_ALE;
 	i_exp_PORTD_io(6) <= 'H';
 	i_exp_PORTD_io(7) <= 'H';
 
-	i_exp_PORTE(7 downto 0) <= (others => 'H');		
+	i_exp_PORTE(7 downto 0) <= i_CPU_A(15 downto 8);		
 
 	i_CPU_X1 <= i_exp_PORTB_o_cpu(2);
-
+	i_CPU_SRDY <= i_exp_PORTB_o_cpu(3);
+	i_CPU_nRES <= i_exp_PORTB_o_cpu(6);
 
 
 
 	e_cpu:entity work.real80188_tb
 	port map (
-		X1_i	=> i_CPU_X1,
+		X1_i		=> i_CPU_X1,
+		SRDY_i 	=> i_CPU_SRDY,
+		nRES_i	=> i_CPU_nRES,
 
-		CLKOUT_o => i_CPU_CLKOUT
+		AD_io		=> i_exp_PORTA_io_cpu,		
+		CLKOUT_o => i_CPU_CLKOUT,
+		A_o		=> i_CPU_A,
+		ALE_o		=> i_CPU_ALE,
+		nS_o		=> i_CPU_nS
+
 		);
 
 
