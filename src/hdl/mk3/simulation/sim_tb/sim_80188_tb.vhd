@@ -94,13 +94,14 @@ architecture Behavioral of sim_80188_tb is
 	signal	i_CPU_A				: std_logic_vector(19 downto 8);
 	signal	i_CPU_ALE			: std_logic;
 	signal	i_CPU_nS				: std_logic_vector(2 downto 0);
-
+	signal	i_CPU_nDEN			: std_logic;
+	signal	i_CPU_DTnR			: std_logic;
 
 begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asmx86/bootx86_testbench_mos.rom",
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
 	)
 	port map (
@@ -274,9 +275,9 @@ begin
 
 	i_exp_PORTD_io(0) <= 'H';
 	i_exp_PORTD_io(1) <= 'H';
-	i_exp_PORTD_io(2) <=	'H';
+	i_exp_PORTD_io(2) <=	i_CPU_nDEN;
 	i_exp_PORTD_io(3) <= 'H';
-	i_exp_PORTD_io(4) <= 'H';
+	i_exp_PORTD_io(4) <= i_CPU_DTnR;
 	i_exp_PORTD_io(5) <= i_CPU_ALE;
 	i_exp_PORTD_io(6) <= 'H';
 	i_exp_PORTD_io(7) <= 'H';
@@ -299,7 +300,9 @@ begin
 		CLKOUT_o => i_CPU_CLKOUT,
 		A_o		=> i_CPU_A,
 		ALE_o		=> i_CPU_ALE,
-		nS_o		=> i_CPU_nS
+		nS_o		=> i_CPU_nS,
+		nDEN_o	=> i_CPU_nDEN,
+		DTnR_o	=> i_CPU_DTnR	
 
 		);
 
@@ -334,7 +337,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
+		romfile => "../../../../simulation/sim_asm/test_asmx86/bootx86_testbench_mos.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)

@@ -44,6 +44,7 @@ library ieee;
 use IEEE.math_real.all;
 
 package mk3blit_pack is
+	type cpu_type is (CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_6800);
 	type sys_type is (SYS_BBC, SYS_ELK);
 
 	constant GBUILD_INCL_HDMI	: boolean := false;

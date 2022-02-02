@@ -76,7 +76,7 @@ architecture rtl of fb_cpu_80188 is
     	end if;
   	end;
 	
-   type t_state is (idle, IntAck, ActRead, ActWrite, ActHalt);
+   type t_state is (idle, IntAck, ActRead, ActWrite, ActHalt, ActRel);
 
    signal r_state 			: t_state;
 
@@ -279,6 +279,12 @@ begin
 					-- wait for data, place on bus then wait for data and then ack
 					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' then
 						r_SRDY <= '1';
+						r_state <= ActRel;
+					end if;
+
+				when ActRel =>
+					-- wait for clock to go low after setting SRDY
+					if i_CPUSKT_nDEN_i = '1' and r_CLK_meta(r_CLK_meta'high) = '1' and r_CLK_meta(r_CLK_meta'high - 1) = '0' then
 						r_wrap_ack <= '1';
 						r_state <= idle;
 					end if;

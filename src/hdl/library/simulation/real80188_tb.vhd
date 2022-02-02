@@ -53,7 +53,11 @@ entity real80188_tb is
 		Tchsv		:	time := 25 ns; -- T4 Ck rise to valid status
 		Tclav		:  time := 27 ns; -- address valid
 		Tclax		:	time := 3 ns; --TODO: this should really be 0 and a data setup time added
-		Tchlh		:  time := 20 ns -- ALE delay
+		Tchlh		:  time := 20 ns; -- ALE delay
+		Tcvctv	:  time := 25 ns;	-- DEN active delay
+		Tcvdex	:  time := 22 ns; -- DEN inactive delay
+		Tcvctx	:  time := 25 ns; -- DEN inactive delay (write)
+		Tchctv	:  time := 22 ns 	-- DTnR delay
 	);
 	port(
 
@@ -65,7 +69,9 @@ entity real80188_tb is
 		CLKOUT_o	: out 	std_logic;
 		A_o		: out 	std_logic_vector(19 downto 8);
 		ALE_o		: out		std_logic;
-		nS_o		: out 	std_logic_vector(2 downto 0)
+		nS_o		: out 	std_logic_vector(2 downto 0);
+		nDEN_o	: out		std_logic;
+		DTnR_o	: out		std_logic
 
 	);
 end real80188_tb;
@@ -94,7 +100,6 @@ architecture behavioral of real80188_tb is
 	signal	i_CLKOUT			: std_logic;
 
 	signal	i_rtl_clk		: std_logic;
-	signal	i_rtl_dbus_in	: std_logic_vector(7 downto 0);
 	signal	i_rtl_intr		: std_logic;
 	signal	i_rtl_nmi		: std_logic;
 	signal	i_rtl_por		: std_logic;
@@ -146,7 +151,41 @@ begin
 		wait for Tchlh;
 	end process;
 
+	p_DEN:process
+	begin
+		nDEN_o <= '1';
 
+		wait until rising_edge(i_CLKOUT) and r_state = T1;
+		wait for Tcvctv;
+		if r_cycle = IO_W or r_cycle = Mem_Write then
+			nDEN_o <= '0';
+		end if;
+		wait until rising_edge(i_CLKOUT) and r_state = T2;
+		wait for Tcvctv;
+		if r_cycle = IO_R or r_cycle = Mem_Read then
+			nDEN_o <= '0';
+		end if;
+		wait until falling_edge(i_CLKOUT) and r_state = T3;
+		wait for Tcvdex;
+		if r_cycle = IO_R or r_cycle = Mem_Read then
+			nDEN_o <= '1';
+		end if;
+
+		wait until rising_edge(i_CLKOUT) and r_state = T4;
+		wait for Tcvctx;
+		nDEN_o <= '1';
+	end process;
+
+	p_DTnR:process
+	begin
+		wait until rising_edge(i_CLKOUT) and r_state = T4;
+		wait for Tchctv;
+		if r_cycle = IO_W or r_cycle = Mem_Write then
+			DTnR_o <= '1';
+		else
+			DTnR_o <= '0';
+		end if;
+	end process;
 
 
 	p_state:process(i_CLKOUT)
@@ -230,7 +269,7 @@ begin
 	e_cpu86:entity work.cpu86
    port map( 
       clk      => i_rtl_clk,
-      dbus_in  => i_rtl_dbus_in,
+      dbus_in  => AD_io,
       intr     => i_rtl_intr,
       nmi      => i_rtl_nmi,
       por      => i_rtl_por,
