@@ -144,7 +144,9 @@ entity fb_cpu is
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
 
-		debug_65816_vma_o						: out std_logic
+		debug_65816_vma_o						: out std_logic;
+
+		debug_SYS_VIA_block_o				: out std_logic
 
 	);
 end fb_cpu;
@@ -204,17 +206,19 @@ architecture rtl of fb_cpu is
 
 
 	-- wrapper enable signals
-	signal r_cpu_en_t65 : std_logic;
-	signal r_cpu_en_6x09 : std_logic;
-	signal r_cpu_en_z80 : std_logic;
-	signal r_cpu_en_68k : std_logic;
---	signal r_cpu_en_6502 : std_logic;
-	signal r_cpu_en_65c02 : std_logic;
-	signal r_cpu_en_6800 : std_logic;
-	signal r_cpu_en_65816 : std_logic;
+	signal r_cpu_en_t65 			: std_logic;
+	signal r_cpu_en_6x09 		: std_logic;
+	signal r_cpu_en_z80 			: std_logic;
+	signal r_cpu_en_68k 			: std_logic;
+--	signal r_cpu_en_6502 		: std_logic;
+	signal r_cpu_en_65c02 		: std_logic;
+	signal r_cpu_en_6800 		: std_logic;
+	signal r_cpu_en_65816 		: std_logic;
+
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
+		, s_block						-- SYS via was accessed recently and we're trying to access it again
 		, s_waitack						
 		);
 
@@ -240,6 +244,10 @@ architecture rtl of fb_cpu is
 	signal r_nmi				: std_logic;
 
 	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
+
+	signal r_do_sys_via_block		: std_logic;
+	signal i_SYS_VIA_block			: std_logic;
+	signal r_sys_via_block_clken 	: std_logic;
 
 begin
 
@@ -276,6 +284,12 @@ begin
 				r_cpu_en_6800 <= '0';
 				r_cpu_en_65816 <= '0';
 
+				if r_cpu_en_t65 = '1' then
+					r_do_sys_via_block <= '1';	
+				else
+					r_do_sys_via_block <= '0';	
+				end if;
+
 				r_cpu_run_ix <= C_IX_CPU_T65;
 
 
@@ -297,6 +311,7 @@ begin
 					if not(r_cpu_en_t65) then
 						r_cpu_en_65816 <= '1';
 						r_cpu_run_ix <= C_IX_CPU_65816;
+						r_do_sys_via_block <= '1';	
 					end if;
 				elsif r_cfg_pins_cpu_type = "0011" then
 					r_cfg_hard_cpu_type <= CPU_68008;
@@ -319,6 +334,7 @@ begin
 						if not(r_cpu_en_t65) then
 							r_cpu_en_6x09 <= '1';
 							r_cpu_run_ix <= C_IX_CPU_6x09;
+							r_do_sys_via_block <= '1';	
 						end if;
 					end if;
 				else
@@ -327,6 +343,7 @@ begin
 					if not(r_cpu_en_t65) then
 						r_cpu_en_65816 <= '1';
 						r_cpu_run_ix <= C_IX_CPU_65816;
+						r_do_sys_via_block <= '1';	
 					end if;
 				end if;
 
@@ -475,6 +492,7 @@ begin
 
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
+			r_sys_via_block_clken <= '0';
 
 			if (or_reduce(i_wrap_o_cur.cyc) = '1' or r_wrap_cyc = '1') and i_wrap_o_cur.D_WR_stb = '1' then
 				r_wrap_D_WR_stb <= '1';
@@ -485,13 +503,24 @@ begin
 				when s_idle =>
 					if or_reduce(i_wrap_o_cur.cyc) = '1' then
 						r_wrap_phys_A <= i_wrap_phys_A;
-						r_state <= s_waitack;
 						r_wrap_we <= i_wrap_o_cur.we;
-						r_wrap_cyc <= '1';
+
+						if r_do_sys_via_block = '1' and i_SYS_VIA_block = '1' then
+							r_state <= s_block;
+						else
+							r_state <= s_waitack;						
+							r_wrap_cyc <= '1';
+						end if;
 					end if;
 				   r_acked <= not(i_wrap_o_cur.cyc);
+				when s_block =>
+					if i_SYS_VIA_block = '0' then
+						r_state <= s_waitack;						
+						r_wrap_cyc <= '1';
+					end if;
 				when s_waitack =>
 					if i_wrap_o_cur.ack = '1' then
+						r_sys_via_block_clken <= '1';
 						r_state <= s_idle;
 						r_wrap_cyc <= '0';
 						r_wrap_D_WR_stb <= '0';
@@ -707,6 +736,25 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		debug_vma_o								=> debug_65816_vma_o
 	);
 END GENERATE;
+
+
+
+	e_sys_via_block:entity work.fb_sys_via_blocker
+	generic map (
+		SIM => SIM,
+		CLOCKSPEED => CLOCKSPEED		
+		)
+	port map (
+		fb_syscon_i => fb_syscon_i,
+		cfg_sys_type_i => cfg_sys_type_i,
+		clken => r_sys_via_block_clken,
+		A_i => i_wrap_o_cur.A_log,
+		RnW_i => not i_wrap_o_cur.we,
+		SYS_VIA_block_o => i_SYS_VIA_block
+		);
+
+	debug_SYS_VIA_block_o <= i_SYS_VIA_block;
+
 
 	i_wrap_i.rdy_ctdn						<= fb_p2c_i.rdy_ctdn;
 	i_wrap_i.cyc 							<= r_wrap_cyc;

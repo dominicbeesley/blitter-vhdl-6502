@@ -79,7 +79,7 @@ architecture rtl of fb_cpu_68k is
 
 -- timings below in number of fast clocks
 	constant C_CLKD2_10		: natural 		:= 6;		-- clock half period - 10.666MHZ
-	constant C_CLKD2_20		: natural 		:= 3;		-- clock half period - 10.666MHZ
+	constant C_CLKD2_20		: natural 		:= 3;		-- clock half period - 21.333MHZ
 
 
 	signal r_clkctdn			: unsigned(NUMBITS(C_CLKD2_10)-1 downto 0) := to_unsigned(C_CLKD2_10-1, NUMBITS(C_CLKD2_10));
@@ -452,7 +452,7 @@ begin
 				r_ndtack <= '1';
 			elsif r_wrap_cyc_dly = '1' and wrap_i.cyc = '1' and r_lastcyc = '1' then
 				if (r_cfg_68008 = '1' and wrap_i.rdy_ctdn <= C_CLKD2_10 * 2) or
-					(r_cfg_68008 = '0' and wrap_i.rdy_ctdn <= C_CLKD2_20 * 2) then 
+					(r_cfg_68008 = '0' and wrap_i.rdy_ctdn <= ((C_CLKD2_20 * 2)+3)) then 
 					r_ndtack <= '0';
 				end if;
 			end if;
