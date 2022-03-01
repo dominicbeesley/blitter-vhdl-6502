@@ -145,7 +145,10 @@ entity fb_cpu is
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
 
-		debug_65816_vma_o						: out std_logic
+		debug_65816_vma_o						: out std_logic; 
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
 
 	);
 end fb_cpu;
@@ -631,7 +634,11 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_80188),
-		wrap_i									=> i_wrap_i
+		wrap_i									=> i_wrap_i,
+
+		debug_80188_state_o					=> debug_80188_state_o,
+		debug_80188_ale_o						=> debug_80188_ale_o
+
 	);
 END GENERATE;
 
@@ -773,5 +780,6 @@ END GENERATE;
 	noice_debug_cpu_clken_o	<= i_wrap_o_cur.noice_debug_cpu_clken;
 	noice_debug_A0_tgl_o		<= i_wrap_o_cur.noice_debug_A0_tgl;
 	noice_debug_opfetch_o	<= i_wrap_o_cur.noice_debug_opfetch;
+
 
 end rtl;

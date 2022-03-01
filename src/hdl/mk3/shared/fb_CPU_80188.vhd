@@ -63,7 +63,10 @@ entity fb_cpu_80188 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
 
 	);
 end fb_cpu_80188;
@@ -76,7 +79,7 @@ architecture rtl of fb_cpu_80188 is
     	end if;
   	end;
 	
-   type t_state is (idle, IntAck, ActRead, ActWrite, ActHalt, ActRel);
+   type t_state is (idle, IntAck, ActRead, ActWrite, ActWrite2, ActHalt, ActRel);
 
    signal r_state 			: t_state;
 
@@ -94,6 +97,7 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_nTEST_o	: std_logic;
 	signal i_CPUSKT_X1_o		: std_logic;
 	signal i_CPUSKT_SRDY_o	: std_logic;
+	signal i_CPUSKT_ARDY_o	: std_logic;
 	signal i_CPUSKT_INT0_o	: std_logic;
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
@@ -117,7 +121,10 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_HLDA_i	: std_logic;
 	signal i_CPUSKT_nLOCK_i	: std_logic;
 
-	signal r_CLK_meta			: std_logic_vector(1 downto 0);
+	signal r_CLK_meta			: std_logic_vector((T_MAX_X1 * 4 - 2) downto 0);
+	signal i_CPU_CLK_posedge: std_logic;
+	signal i_CPU_CLK_negedge: std_logic;
+
 	signal r_SRDY				: std_logic;
 
 begin
@@ -147,6 +154,8 @@ begin
 
 	i_CPUSKT_nTEST_o	<= i_CPUSKT_RESET_i;
 	i_CPUSKT_X1_o		<= r_X1;
+
+	i_CPUSKT_ARDY_o	<= '0';
 	i_CPUSKT_SRDY_o	<= r_SRDY;
 	i_CPUSKT_INT0_o	<= '0';
 	i_CPUSKT_nNMI_o	<= '0';
@@ -158,7 +167,7 @@ begin
 	i_CPUSKT_INT3_o	<= '0';
 
 	wrap_o.exp_PORTB(0)	<= i_CPUSKT_nTEST_o;
-	wrap_o.exp_PORTB(1)	<= '1';
+	wrap_o.exp_PORTB(1)	<= i_CPUSKT_ARDY_o;
 	wrap_o.exp_PORTB(2)	<= i_CPUSKT_X1_o;
 	wrap_o.exp_PORTB(3)	<= i_CPUSKT_SRDY_o;
 	wrap_o.exp_PORTB(4)	<= i_CPUSKT_INT0_o;
@@ -212,6 +221,12 @@ begin
 	wrap_o.ack				<= r_wrap_ack;
 
 
+	i_CPU_CLK_posedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' else
+								'0';
+
+	i_CPU_CLK_negedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '1' and r_CLK_meta(r_CLK_meta'high - 1) = '0' else
+								'0';
+
 	p_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
@@ -228,7 +243,7 @@ begin
 			r_wrap_ack <= '0';
 			case r_state is
 				when idle =>
-					if r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' and i_CPUSKT_ALE_i = '1' then
+					if i_CPU_CLK_posedge = '1' and i_CPUSKT_ALE_i = '1' then
 						-- check cycle type
 						case i_CPUSKT_nS_i is
 							when "000" => 
@@ -277,16 +292,31 @@ begin
 					end if;
 				when ActRead =>
 					-- wait for data, place on bus then wait for data and then ack
-					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' then
+					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and i_CPU_CLK_posedge = '1' then
 						r_SRDY <= '1';
 						r_state <= ActRel;
 					end if;
 
+				when ActWrite => 
+					-- wait for data from the cpu and feed on to the wrap
+					if i_CPU_CLK_posedge = '1' and i_CPUSKT_nWR_i = '0' then
+						r_d_wr_stb <= '1';
+						r_state <= ActWrite2;
+					end if;
+
+				when ActWrite2 =>
+					-- wait for data, place on bus then wait for data and then ack
+					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and i_CPU_CLK_posedge = '1' then
+						r_state <= ActRel;
+						r_SRDY <= '1';
+					end if;
+
 				when ActRel =>
 					-- wait for clock to go low after setting SRDY
-					if i_CPUSKT_nDEN_i = '1' and r_CLK_meta(r_CLK_meta'high) = '1' and r_CLK_meta(r_CLK_meta'high - 1) = '0' then
+					if i_CPUSKT_nDEN_i = '1' and i_CPU_CLK_negedge = '1' then
 						r_wrap_ack <= '1';
 						r_state <= idle;
+						r_SRDY <= '0';
 					end if;
 				when others =>
 					r_log_A <= (others => '0');
@@ -310,6 +340,16 @@ begin
 
 	wrap_o.noice_debug_A0_tgl  	<= '0'; -- TODO: check if needed
 
+
+	debug_80188_state_o <= 	"000" when r_state = idle else
+							   	"001" when r_state = IntAck else
+			 						"010" when r_state = ActRead else
+			 						"011" when r_state = ActWrite else
+			 						"100" when r_state = ActWrite2 else
+			 						"101" when r_state = ActHalt else
+			 						"110" when r_state = ActRel else
+			 						"111";
+	debug_80188_ale_o <= i_CPU_CLK_posedge;
 
 end rtl;
 
