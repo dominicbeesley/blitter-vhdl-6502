@@ -127,6 +127,9 @@ architecture rtl of fb_cpu_80188 is
 
 	signal r_SRDY				: std_logic;
 
+	signal i_mem_addr			: std_logic_vector(23 downto 0);
+	signal i_io_addr			: std_logic_vector(23 downto 0);
+
 begin
 
 	
@@ -227,6 +230,16 @@ begin
 	i_CPU_CLK_negedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '1' and r_CLK_meta(r_CLK_meta'high - 1) = '0' else
 								'0';
 
+
+
+	i_io_addr <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
+	i_mem_addr <= 	(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
+						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
+						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
+						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
+						wrap_i.CPUSKT_A(19 downto 8) & 
+						wrap_i.CPUSKT_D(7 downto 0);
+
 	p_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
@@ -251,13 +264,13 @@ begin
 							when "001" =>
 								r_state <= ActRead;
 								r_we <= '0';
-								r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
+								r_log_A <= i_io_addr;
 								r_a_stb <= '1';
 								r_SRDY <= '0';
 							when "010" =>
 								r_state <= ActWrite;
 								r_we <= '1';
-								r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
+								r_log_A <= i_io_addr;
 								r_a_stb <= '1';
 								r_SRDY <= '0';
 							when "011" =>
@@ -266,23 +279,13 @@ begin
 							when "100"|"101" =>
 								r_state <= ActRead;
 								r_we <= '0';
-								r_log_A <= wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19 downto 8) & 
-												wrap_i.CPUSKT_D(7 downto 0);
+								r_log_A <=  i_mem_addr;
 								r_a_stb <= '1';
 								r_SRDY <= '0';
 							when "110" =>
 								r_state <= ActWrite;
 								r_we <= '1';
-								r_log_A <= wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19) & 
-												wrap_i.CPUSKT_A(19 downto 8) & 
-												wrap_i.CPUSKT_D(7 downto 0);
+								r_log_A <= i_mem_addr;
 								r_a_stb <= '1';
 								r_SRDY <= '0';
 							when others =>
