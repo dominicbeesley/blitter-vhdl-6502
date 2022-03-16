@@ -102,6 +102,7 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
 	signal i_CPUSKT_INT1_o	: std_logic;
+	signal i_CPUSKT_DRQ0_o	: std_logic;
 
 	signal i_CPUSKT_INT2_o	: std_logic;
 	signal i_CPUSKT_HOLD_o	: std_logic;
@@ -160,14 +161,14 @@ begin
 
 	i_CPUSKT_ARDY_o	<= '0';
 	i_CPUSKT_SRDY_o	<= r_SRDY;
-	i_CPUSKT_INT0_o	<= '0';
+	i_CPUSKT_INT0_o	<= not wrap_i.irq_n;
 	i_CPUSKT_nNMI_o	<= '0';
 	i_CPUSKT_nRES_o	<= (not fb_syscon_i.rst) when cpu_en_i = '1' else '0';		-- TODO:does this need synchronising?
 	i_CPUSKT_INT1_o	<= '0';
-
 	i_CPUSKT_INT2_o	<= '0';
 	i_CPUSKT_HOLD_o	<= '0';
 	i_CPUSKT_INT3_o	<= '0';
+	i_CPUSKT_DRQ0_o   <= not wrap_i.nmi_n;
 
 	wrap_o.exp_PORTB(0)	<= i_CPUSKT_nTEST_o;
 	wrap_o.exp_PORTB(1)	<= i_CPUSKT_ARDY_o;
@@ -198,6 +199,7 @@ begin
 
 	wrap_o.exp_PORTD <= (
 		3						=> i_CPUSKT_INT2_o,
+		6						=> i_CPUSKT_DRQ0_o,
 		8						=> i_CPUSKT_HOLD_o,
 		10						=> i_CPUSKT_INT3_o,
 		others				=> '1'
@@ -205,6 +207,7 @@ begin
 
 	wrap_o.exp_PORTD_o_en <= (
 		3 => '1',
+		6 => '1',
 		8 => '1',
 		10 => '1',	
 		others => '0'
