@@ -144,6 +144,8 @@ e_top:entity work.mk3blit
 		
 		G_INCL_CPU_T65						=> true,
 		G_INCL_CPU_65C02					=> false,
+		G_INCL_CPU_6800					=> true,
+		G_INCL_CPU_80188					=> true,		
 		G_INCL_CPU_65816					=> true,
 		G_INCL_CPU_6x09					=> true,
 		G_INCL_CPU_Z80						=> false,

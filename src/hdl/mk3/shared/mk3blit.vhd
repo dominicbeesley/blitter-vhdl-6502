@@ -58,6 +58,8 @@ entity mk3blit is
 
 		G_INCL_CPU_T65						: boolean := false;
 		G_INCL_CPU_65C02					: boolean := false;
+		G_INCL_CPU_6800					: boolean := false;
+		G_INCL_CPU_80188					: boolean := false;
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
@@ -181,24 +183,20 @@ architecture rtl of mk3blit is
 	-- config signals
 	-----------------------------------------------------------------------------
 
-	signal r_cfg_swram_enable	: std_logic;
 	signal i_cfg_debug_button  : std_logic;
 
-	signal r_cfg_hard_cpu_type	: cpu_type;
-	signal r_cfg_hard_cpu_speed: std_logic;
+	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
-
-	signal r_cfg_softt65			: std_logic;
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
-	signal r_cfg_cpubits			: std_logic_vector(2 downto 0); 
 
 	signal i_cfg_do6502_debug	: std_logic;
+	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
+	signal i_cfg_softt65			: std_logic;
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
-	signal i_pre_run				: std_logic_vector(3 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- fishbone signals
@@ -329,9 +327,9 @@ architecture rtl of mk3blit is
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
 
 	-- intcon to peripheral sel
-	signal i_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);
-	signal i_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
-	signal i_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
+	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
+	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
 	-- chipset c2p intcon to peripheral sel
 	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
@@ -394,7 +392,9 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_mem_a_stb			: std_logic;
 
-	signal	i_debug_wrap_cyc			: std_logic;
+	signal	i_debug_wrap_cpu_cyc		: std_logic;
+	signal	i_debug_wrap_sys_cyc		: std_logic;
+	signal	i_debug_wrap_sys_st		: std_logic;
 
 	signal	i_aeris_dbg_state			: std_logic_vector(3 downto 0);
 
@@ -402,7 +402,9 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_jim_hi_wr			: std_logic;
 
-	signal	i_debug_iorb_block		: std_logic;
+	signal	i_debug_SYS_VIA_block		: std_logic;
+
+	signal	i_debug_write_cycle_repeat : std_logic;
 
 
 begin
@@ -438,12 +440,11 @@ begin
 
 		clk_fish_i							=> i_clk_fish_128M,
 		clk_lock_i							=> i_clk_lock,
-		sys_dll_lock_i						=> i_sys_dll_lock,
-
-		pre_run								=> i_pre_run
+		sys_dll_lock_i						=> i_sys_dll_lock
 
 	);	
 
+g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
 	generic map (
@@ -453,11 +454,11 @@ begin
 		G_INCL_HDMI					=> GBUILD_INCL_HDMI
 	)
 	port map (
-		addr_i						=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_o					=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_o				=> i_intcon_peripheral_sel_oh
+		addr_i						=> i_intcon_peripheral_sel_addr(I),
+		peripheral_sel_o			=> i_intcon_peripheral_sel(I),
+		peripheral_sel_oh_o		=> i_intcon_peripheral_sel_oh(I)
 	);
-
+end generate;
 
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: entity work.fb_intcon_shared
@@ -503,9 +504,9 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 		fb_per_c2p_o						=> i_per_c2p_intcon,
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
+		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
+		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
+		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
 	);
 
 
@@ -926,9 +927,11 @@ END GENERATE;
 
 		cpu_2MHz_phi2_clken_o			=> i_cpu_2MHz_phi2_clken,
 
-		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr
+		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr,
+		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat,
 
-
+		debug_wrap_sys_cyc_o				=> i_debug_wrap_sys_cyc,
+		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st
 	);
 
 
@@ -939,6 +942,8 @@ END GENERATE;
 
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
+		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
+		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
@@ -947,11 +952,14 @@ END GENERATE;
 	port map (
 
 		-- configuration
-		cfg_hard_cpu_type_i				=> r_cfg_hard_cpu_type,
-		cfg_hard_cpu_speed_i				=> r_cfg_hard_cpu_speed,
+
+		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
+		cfg_mk2_cpubits_o					=> i_cfg_mk2_cpubits,
+		cfg_softt65_o						=> i_cfg_softt65,
+
+
       cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_t65_i							=> r_cfg_softt65,
 		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
 
@@ -1005,14 +1013,14 @@ END GENERATE;
 
 		boot_65816_i						=> i_boot_65816,
 
-		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
+		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
 		debug_65816_vma_o					=> i_debug_65816_vma,
 
-		debug_iorb_block_o				=> i_debug_iorb_block,
-
 		JIM_en_i								=> i_JIM_en,
-		JIM_page_i							=> i_JIM_page
+		JIM_page_i							=> i_JIM_page,
+
+		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
 
 	);
 
@@ -1044,16 +1052,16 @@ END GENERATE;
 
 
 
-p_EFG_en:process(i_fb_syscon, i_pre_run, i_cpu_exp_PORTE_nOE, i_cpu_exp_PORTF_nOE, i_cpu_exp_PORTG_nOE)
+p_EFG_en:process(i_fb_syscon, i_cpu_exp_PORTE_nOE, i_cpu_exp_PORTF_nOE, i_cpu_exp_PORTG_nOE)
 begin
 	if i_fb_syscon.rst = '1' then
 		exp_PORTE_nOE <= '1';
 		exp_PORTF_nOE <= '1';
 		exp_PORTG_nOE <= '1';
-		if i_pre_run(0) = '1' then
+		if i_fb_syscon.prerun(0) = '1' then
 			exp_PORTF_nOE <= '0';
 		end if;
-		if i_pre_run(1) = '1' then
+		if i_fb_syscon.prerun(1) = '1' then
 			exp_PORTG_nOE <= '0';
 		end if;
 	else
@@ -1064,86 +1072,33 @@ begin
 
 end process;
 
-
+-- NOTE: CPU config moved to fb_CPU
 p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then
-		if i_pre_run(1) = '1' then
+		if i_fb_syscon.prerun(1) = '1' then
 			-- read port G at boot time
-			r_cfg_softt65 <= not exp_PORTEFG_io(3);
 			r_cfg_swromx <= not exp_PORTEFG_io(4);
 			r_cfg_mosram <= not exp_PORTEFG_io(5);
 			r_cfg_swram_enable <= exp_PORTEFG_io(6);
-			--TODO: this should be all three bits
-			r_cfg_hard_cpu_speed <= exp_PORTEFG_io(11);
-
-
          case exp_PORTEFG_io(2 downto 0) is
             when "110" => 
                r_cfg_sys_type <= SYS_ELK;
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
-
-		end if;
-
-		if i_pre_run(0) = '1' then
-
-			-- unbodge all this and work out a compatible (with mk.2) way
-			-- of encoding all this, or alter BLUTILS ROM
-
-			if exp_PORTEFG_io(3 downto 0) = "1100" then
-				r_cfg_hard_cpu_type <= CPU_65816;
-				r_cfg_cpubits <= "001";
-			elsif exp_PORTEFG_io(3 downto 0) = "0011" then
-				r_cfg_hard_cpu_type <= CPU_68008;
-				r_cfg_cpubits <= "000";
-			elsif  exp_PORTEFG_io(3 downto 0) = "0111" then
-				r_cfg_hard_cpu_type <= CPU_6x09;
-				r_cfg_cpubits <= "110";			
-			else
-				r_cfg_hard_cpu_type <= CPU_65816;
-				r_cfg_cpubits <= "001";
-			end if;
-
---			if exp_PORTEFG_io(7 downto 4) = "1110" then
---				r_cfg_hard_cpu_type <= CPU_65C02;
---				r_cfg_cpubits <= "011";
---			elsif exp_PORTEFG_io(7 downto 4) = "1100" then
---				r_cfg_hard_cpu_type <= CPU_65816;
---				r_cfg_cpubits <= "001";
---			elsif exp_PORTEFG_io(7 downto 4) = "0111" then
---				r_cfg_hard_cpu_type <= CPU_6x09;
---				r_cfg_cpubits <= "110";
---			elsif exp_PORTEFG_io(7 downto 4) = "0101" then
---				r_cfg_hard_cpu_type <= CPU_Z80;
---				r_cfg_cpubits <= "100";
---			elsif exp_PORTEFG_io(7 downto 4) = "0011" then
---				r_cfg_hard_cpu_type <= CPU_68008;
---				r_cfg_cpubits <= "000";
---			else
---				r_cfg_hard_cpu_type <= CPU_6502;
---				r_cfg_cpubits <= "111";
---			end if;
-
 		end if;
 	end if;
 end process;
 
-i_cfg_do6502_debug <= '1' when r_cfg_softt65 = '1' 
-											or r_cfg_hard_cpu_type = CPU_6502 
-											or r_cfg_hard_cpu_type = CPU_65c02
-											--or r_cfg_hard_cpu_type = CPU_65816 
-											else
-							 '0';
 
 i_memctl_configbits <= 
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
 	r_cfg_swromx &
-	r_cfg_cpubits &
-	not r_cfg_softt65;
+	i_cfg_mk2_cpubits &
+	not i_cfg_softt65;
 
 i_cfg_debug_button <= SYS_AUX_io(6);
 
@@ -1157,7 +1112,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
 				'1'			 when i_fb_syscon.rst_state = run else
 				i_flasher(1);
-LED_o(1) <= not i_debug_iorb_block;
+LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= i_swmos_shadow;
 
@@ -1179,6 +1134,7 @@ SYS_AUX_o			<= (
 SYS_AUX_io(0) <= i_vga_debug_hs;
 SYS_AUX_io(1) <= i_vga_debug_vs;
 SYS_AUX_io(2) <= i_vga_debug_blank;
+SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');
 

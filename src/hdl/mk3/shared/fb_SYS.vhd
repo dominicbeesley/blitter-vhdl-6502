@@ -54,9 +54,9 @@ entity fb_sys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;
-		CYCLES_SETUP						: natural := 1;-- number of cycles we expect data to be ready before
+		CYCLES_SETUP						: natural := 0;-- number of cycles we expect data to be ready before
 																	-- phi2, note this is pretty tight on a Model B so 0 might
-																	-- prove to be safest
+																	-- prove to be safest, 1 seems to work ok on test
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0);
 		-- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
 		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA" -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
@@ -103,7 +103,11 @@ entity fb_sys is
 
 		cpu_2MHz_phi2_clken_o				: out		std_logic;
 
-		debug_jim_hi_wr_o						: out		std_logic
+		debug_jim_hi_wr_o						: out		std_logic;
+		debug_write_cycle_repeat_o			: out		std_logic;
+
+		debug_wrap_sys_cyc_o					: out		std_logic;
+		debug_wrap_sys_st_o					: out		std_logic
 
 	);
 end fb_sys;
@@ -117,6 +121,12 @@ architecture rtl of fb_sys is
 		addrlatched_rd, 
 		-- write address latched
 		addrlatched_wr, 
+		-- we have latched the data wait for the end of sys cycle, or 
+		-- possibly repeat the cycle if the data arrive too late (check r_wr_setup_ctr)
+		wait_sys_end_wr, 
+		-- we need to repeat the write cycle, all the signals are already setup on the bus
+		-- just wait for start of next cycle and redo wait_sys_end_wr
+		wait_sys_repeat_wr,
 		-- controller has dropped cycle wait for end of sys cycle
 		wait_sys_end, 
 		-- sys cycle ended wait for controller to drop
@@ -164,7 +174,22 @@ architecture rtl of fb_sys is
 	signal	r_JIM_page			: std_logic_vector(15 downto 0);
 
 	
+	--write setup checks
+	constant C_WRITE_SETUP		: natural := 13;	 -- approx 100ns! If this is not enforced then mode 2
+																 -- has corrupt writes, none of the other modes seem 
+																 -- to be affected. I'm not sure if this is a NULA thing
+																 -- or a general beeb thing. It was shown up on the 6800
+																 -- cpu which has relatively slow writes before DBE was
+																 -- shortened
+	signal	r_wr_setup_ctr		: unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
+
+
+	signal	r_con_cyc_start	: std_logic;
+
 begin
+	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
+	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
+	debug_wrap_sys_st_o <= i_SYScyc_st_clken;
 
 	-- used to synchronise throttled cpu
 	cpu_2MHz_phi2_clken_o <= i_SYScyc_end_clken;
@@ -219,6 +244,7 @@ begin
 			if rising_edge(fb_syscon_i.clk) then
 
 				r_ack <= '0';
+				r_con_cyc_start <= '0';
 
 				case state is
 					when idle =>
@@ -239,6 +265,7 @@ begin
 
 								r_sys_A <= fb_c2p_i.A(15 downto 0);
 								r_con_cyc <= '1';
+								r_con_cyc_start <= '1';
 
 
 								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
@@ -258,6 +285,7 @@ begin
 									if fb_c2p_i.we = '1' then
 										r_sys_RnW <= '0';							
 										state <= addrlatched_wr;
+										r_wr_setup_ctr <= (others => '0');
 									else
 										r_sys_RnW <= '1';
 										state <= addrlatched_rd;
@@ -320,9 +348,27 @@ begin
 							r_sys_D <= fb_c2p_i.D_wr;
 							r_ack <= '1';
 							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
-							state <= wait_sys_end;
+							state <= wait_sys_end_wr;
 						end if;
 
+					when wait_sys_end_wr =>
+						if i_SYScyc_end_clken = '1' then
+							if r_wr_setup_ctr < C_WRITE_SETUP then
+								state <= wait_sys_repeat_wr;
+							else
+								state <= idle;
+							end if;
+						else
+							if r_wr_setup_ctr < C_WRITE_SETUP then
+								r_wr_setup_ctr <= r_wr_setup_ctr + 1;
+							end if;
+						end if;
+
+					when wait_sys_repeat_wr => 
+						if i_SYScyc_st_clken = '1' then
+							state <= wait_sys_end_wr;
+							r_wr_setup_ctr <= (others => '0');
+						end if;
 
 					when wait_sys_end =>
 						-- controller has released wait for end of this cycle

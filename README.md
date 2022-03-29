@@ -34,6 +34,8 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	        HamsterWorks				Stuff from Mike Field for HDMI
 	        MikeStirling				Stuff from Mike Stirling/Hoglet from the BeebFPGA project
 	        Missing					Where to place missing 3rd party libraries with incompatible licences
+	          JohnKent				6800, 6809 cores
+	          P65816				65816 core
 	        T6502					The T65 core
 	        TG68					The TG68 core
 	      fishbone					The Fishbone Bus basic components and definitions

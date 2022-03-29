@@ -50,7 +50,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.mk3blit_pack.all;
-
+use work.fb_cpu_pack.all;
 
 entity fb_cpu_z80 is
 	generic (
@@ -64,50 +64,9 @@ entity fb_cpu_z80 is
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
 		fb_syscon_i								: in	fb_syscon_t;
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					: in	std_logic;		-- debugger is forcing a cpu NMI
-		noice_debug_shadow_i					: in	std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
-		noice_debug_inhibit_cpu_i			: in	std_logic;		-- during a 5C op code, inhibit address / data to avoid
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						: out	std_logic;		-- A 5C instruction is being fetched (qualify with clken below)
-		noice_debug_cpu_clken_o				: out	std_logic;		-- clken and cpu rdy
-		noice_debug_A0_tgl_o					: out	std_logic;		-- 1 when current A0 is different to previous fetched
-		noice_debug_opfetch_o				: out	std_logic;		-- this cycle is an opcode fetch
-
-		-- direct CPU control signals from system
-		nmi_n_i									: in	std_logic;
-		irq_n_i									: in	std_logic;
-
 		-- state machine signals
-		wrap_cyc_o								: out std_logic_vector(G_BYTELANES-1 downto 0);
-		wrap_A_log_o							: out std_logic_vector(23 downto 0);	-- this will be passed on to fishbone after to log2phys mapping
-		wrap_A_we_o								: out std_logic;								-- we signal for this cycle
-		wrap_D_WR_stb_o						: out std_logic;								-- for write cycles indicates write data is ready
-		wrap_D_WR_o								: out std_logic_vector(7 downto 0);		-- write data
-		wrap_ack_o								: out std_logic;
-
-		wrap_rdy_ctdn_i						: in unsigned(RDY_CTDN_LEN-1 downto 0);
-		wrap_cyc_i								: in std_logic;
-
-		-- chipset control signals
-		cpu_halt_i								: in  std_logic;
-
-		CPU_D_RnW_o								: out		std_logic;								-- '1' cpu is reading, else writing
-
-		-- cpu socket signals
-		CPUSKT_D_i								: in		std_logic_vector((G_BYTELANES*8)-1 downto 0);
-
-		CPUSKT_A_i								: in		std_logic_vector(23 downto 0);
-
-		
-		exp_PORTB_o								: out		std_logic_vector(7 downto 0);
-
-		exp_PORTD_i								: in		std_logic_vector(11 downto 0);
-		exp_PORTD_o								: out		std_logic_vector(11 downto 0);
-		exp_PORTD_o_en							: out		std_logic_vector(11 downto 0);
-		exp_PORTE_nOE							: out		std_logic;	-- enable that multiplexed buffer chip
-		exp_PORTF_nOE							: out		std_logic	-- enable that multiplexed buffer chip
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i
 
 	);
 end fb_cpu_z80;
@@ -158,47 +117,47 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	exp_PORTB_o(0) <= '1';
-	exp_PORTB_o(1) <= '1';
-	exp_PORTB_o(2) <= i_CPUSKT_CLK_o;
-	exp_PORTB_o(3) <= i_CPUSKT_nWAIT_o;
-	exp_PORTB_o(4) <= i_CPUSKT_nIRQ_o;
-	exp_PORTB_o(5) <= i_CPUSKT_nNMI_o;
-	exp_PORTB_o(6) <= i_CPUSKT_nRES_o;
-	exp_PORTB_o(7) <= '1';
+	wrap_o.exp_PORTB(0) <= '1';
+	wrap_o.exp_PORTB(1) <= '1';
+	wrap_o.exp_PORTB(2) <= i_CPUSKT_CLK_o;
+	wrap_o.exp_PORTB(3) <= i_CPUSKT_nWAIT_o;
+	wrap_o.exp_PORTB(4) <= i_CPUSKT_nIRQ_o;
+	wrap_o.exp_PORTB(5) <= i_CPUSKT_nNMI_o;
+	wrap_o.exp_PORTB(6) <= i_CPUSKT_nRES_o;
+	wrap_o.exp_PORTB(7) <= '1';
 
-	i_CPUSKT_nRD_i		<= exp_PORTD_i(0);
-	i_CPUSKT_nWR_i		<= exp_PORTD_i(1);
-	i_CPUSKT_nMREQ_i	<= exp_PORTD_i(3);
-	i_CPUSKT_nM1_i		<= exp_PORTD_i(4);
-	i_CPUSKT_nRFSH_i	<= exp_PORTD_i(5);
-	i_CPUSKT_nIOREQ_i	<= exp_PORTD_i(6);
-	i_CPUSKT_nBUSACK_i<= exp_PORTD_i(7);
+	i_CPUSKT_nRD_i		<= wrap_i.exp_PORTD(0);
+	i_CPUSKT_nWR_i		<= wrap_i.exp_PORTD(1);
+	i_CPUSKT_nMREQ_i	<= wrap_i.exp_PORTD(3);
+	i_CPUSKT_nM1_i		<= wrap_i.exp_PORTD(4);
+	i_CPUSKT_nRFSH_i	<= wrap_i.exp_PORTD(5);
+	i_CPUSKT_nIOREQ_i	<= wrap_i.exp_PORTD(6);
+	i_CPUSKT_nBUSACK_i<= wrap_i.exp_PORTD(7);
 
-	exp_PORTE_nOE <= '0';
-	exp_PORTF_nOE <= '1';
+	wrap_o.exp_PORTE_nOE <= '0';
+	wrap_o.exp_PORTF_nOE <= '1';
 
-	CPU_D_RnW_o <= '0' when i_CPUSKT_nRD_i = '1' else
+	wrap_o.CPU_D_RnW <= '0' when i_CPUSKT_nRD_i = '1' else
 					 	'1';
 
 	--TODO: mark rdy earlier!
 	--TODO: register this signal (metastable vs z80?)
-	i_rdy <= '1' when wrap_rdy_ctdn_i = RDY_CTDN_MIN else 
+	i_rdy <= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN else 
 				'0';
 
 
-	wrap_cyc_o 				<= ( 0 => r_act, others => '0');
-	wrap_A_we_o  			<= r_WE;
-	wrap_D_wr_o				<=	CPUSKT_D_i(7 downto 0);	
-	wrap_D_wr_stb_o		<= r_WR_stb;
-	wrap_ack_o				<= not r_act;
-	wrap_A_log_o			<= r_A_log;
+	wrap_o.cyc 				<= ( 0 => r_act, others => '0');
+	wrap_o.we  			<= r_WE;
+	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr_stb		<= r_WR_stb;
+	wrap_o.ack				<= not r_act;
+	wrap_o.A_log			<= r_A_log;
   		
 
-  	i_A_log <=						x"FFFD" & CPUSKT_A_i(7 downto 0) when i_CPUSKT_nIOREQ_i = '0' else 
-  										x"FF" & CPUSKT_A_i(15 downto 0) when (CPUSKT_A_i(15 downto 8) = x"FC" or CPUSKT_A_i(15 downto 8) = x"FD" or CPUSKT_A_i(15 downto 8) = x"FE") else
-										x"FF" & '0' & CPUSKT_A_i(14 downto 0) when CPUSKT_A_i(15) = '1' else 	-- 8000-FFFF from SYS 0-7FFF (for screen)
-  										x"00" & CPUSKT_A_i(15 downto 0); 	-- low memory from chip ram
+  	i_A_log <=						x"FFFD" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nIOREQ_i = '0' else 
+  										x"FF" & wrap_i.CPUSKT_A(15 downto 0) when (wrap_i.CPUSKT_A(15 downto 8) = x"FC" or wrap_i.CPUSKT_A(15 downto 8) = x"FD" or wrap_i.CPUSKT_A(15 downto 8) = x"FE") else
+										x"FF" & '0' & wrap_i.CPUSKT_A(14 downto 0) when wrap_i.CPUSKT_A(15) = '1' else 	-- 8000-FFFF from SYS 0-7FFF (for screen)
+  										x"00" & wrap_i.CPUSKT_A(15 downto 0); 	-- low memory from chip ram
 
 	p_cpu_clk:process(fb_syscon_i)
 	begin
@@ -255,26 +214,26 @@ begin
 
 	i_CPUSKT_nRES_o <= (not fb_syscon_i.rst) when cpu_en_i = '1' else '0';
 
-	i_CPUSKT_nNMI_o <= nmi_n_i and noice_debug_nmi_n_i;
+	i_CPUSKT_nNMI_o <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
 
-	i_CPUSKT_nIRQ_o <=  irq_n_i;
+	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
 
   	i_CPUSKT_nWAIT_o <= 	'1' 			when fb_syscon_i.rst = '1' else
-  												'1' 			when noice_debug_inhibit_cpu_i = '1' else
-  												i_rdy		 	when wrap_cyc_i = '1' else
+  												'1' 			when wrap_i.noice_debug_inhibit_cpu = '1' else
+  												i_rdy		 	when wrap_i.cyc = '1' else
   												'1';						
 
 
   	--TODO: this doesn't look right
-  	noice_debug_cpu_clken_o <= '1' when r_cpu_clk_pe = '1' and wrap_cyc_i = '1' and i_rdy = '1' else
+  	wrap_o.noice_debug_cpu_clken <= '1' when r_cpu_clk_pe = '1' and wrap_i.cyc = '1' and i_rdy = '1' else
   										'0';
   	
-  	noice_debug_5c_o	 	 	<=	'0';
+  	wrap_o.noice_debug_5c	 	 	<=	'0';
 
-  	noice_debug_opfetch_o 	<= '1' when i_CPUSKT_nM1_i = '0' and i_CPUSKT_nMREQ_i = '0' else
+  	wrap_o.noice_debug_opfetch 	<= '1' when i_CPUSKT_nM1_i = '0' and i_CPUSKT_nMREQ_i = '0' else
   										'0';
 
-	noice_debug_A0_tgl_o  	<= '0'; -- TODO: check if needed
+	wrap_o.noice_debug_A0_tgl  	<= '0'; -- TODO: check if needed
 
 
 

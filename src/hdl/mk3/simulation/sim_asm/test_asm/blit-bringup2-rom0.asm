@@ -492,9 +492,20 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	; IORB block checker
+	sta	$FE4F
+	sta	$FE4F
+	sta	$FE4F
+
+
 	; test VPA/VDA/cycles on 816
 	php
 	plp
+
+	; quick ROM E test
+	lda	#$E
+	sta	$FE30
+	lda	$8000
 
 
 	lda	#$D1

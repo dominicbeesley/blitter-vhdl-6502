@@ -64,9 +64,8 @@ entity fb_syscon is
 		clk_lock_i								: in 		std_logic;							-- pll lock indication
 		sys_dll_lock_i							: in		std_logic;
 
-		fb_syscon_o								: out 	fb_syscon_t;						-- fishbone syscon record
+		fb_syscon_o								: out 	fb_syscon_t						-- fishbone syscon record
 
-		pre_run									: out		std_logic_vector(3 downto 0)
 
 	);
 end fb_syscon;
@@ -106,14 +105,12 @@ architecture rtl of fb_syscon is
 
 begin
 
-	pre_run <= r_prerun_shift;
-
-
 	fb_syscon_o <= i_fb_syscon;
 
 	i_fb_syscon.clk <= clk_fish_i;
 	i_fb_syscon.rst <= '0' when r_rst_state = run else '1';
 	i_fb_syscon.rst_state <= r_rst_state;
+	i_fb_syscon.prerun <= r_prerun_shift;
 
 
 	e_regsigs:entity work.clockreg

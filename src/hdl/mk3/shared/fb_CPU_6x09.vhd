@@ -46,7 +46,7 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.mk3blit_pack.all;
-
+use work.fb_cpu_pack.all;
 
 entity fb_cpu_6x09 is
 	generic (
@@ -57,54 +57,14 @@ entity fb_cpu_6x09 is
 	port(
 
 		-- configuration
-		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		cpu_speed_i								: in std_logic;				-- 1 for 3.5MHz, 0 for 2 Mhz
+		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
+		cpu_speed_i								: in std_logic_vector(2 downto 0);
 
 		fb_syscon_i								: in	fb_syscon_t;
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					: in	std_logic;		-- debugger is forcing a cpu NMI
-		noice_debug_shadow_i					: in	std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
-		noice_debug_inhibit_cpu_i			: in	std_logic;		-- during a 5C op code, inhibit address / data to avoid
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						: out	std_logic;		-- A 5C instruction is being fetched (qualify with clken below)
-		noice_debug_cpu_clken_o				: out	std_logic;		-- clken and cpu rdy
-		noice_debug_A0_tgl_o					: out	std_logic;		-- 1 when current A0 is different to previous fetched
-		noice_debug_opfetch_o				: out	std_logic;		-- this cycle is an opcode fetch
-
-		-- direct CPU control signals from system
-		nmi_n_i									: in	std_logic;
-		irq_n_i									: in	std_logic;
-
 		-- state machine signals
-		wrap_cyc_o								: out std_logic_vector(G_BYTELANES-1 downto 0);
-		wrap_A_log_o							: out std_logic_vector(23 downto 0);	-- this will be passed on to fishbone after to log2phys mapping
-		wrap_A_we_o								: out std_logic;								-- we signal for this cycle
-		wrap_D_WR_stb_o						: out std_logic;								-- for write cycles indicates write data is ready
-		wrap_D_WR_o								: out std_logic_vector(7 downto 0);		-- write data
-		wrap_ack_o								: out std_logic;
-
-		wrap_rdy_ctdn_i						: in unsigned(RDY_CTDN_LEN-1 downto 0);
-		wrap_cyc_i								: in std_logic;
-
-		-- chipset control signals
-		cpu_halt_i								: in  std_logic;
-
-		CPU_D_RnW_o								: out		std_logic;								-- '1' cpu is reading, else writing
-
-		-- cpu socket signals
-		CPUSKT_D_i								: in		std_logic_vector((G_BYTELANES*8)-1 downto 0);
-
-		CPUSKT_A_i								: in		std_logic_vector(23 downto 0);
-
-		exp_PORTB_o								: out		std_logic_vector(7 downto 0);
-
-		exp_PORTD_i								: in		std_logic_vector(11 downto 0);
-		exp_PORTD_o								: out		std_logic_vector(11 downto 0);
-		exp_PORTD_o_en							: out		std_logic_vector(11 downto 0);
-		exp_PORTE_nOE							: out		std_logic;	-- enable that multiplexed buffer chip
-		exp_PORTF_nOE							: out		std_logic	-- enable that multiplexed buffer chip
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i
 
 	);
 end fb_cpu_6x09;
@@ -227,52 +187,65 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_BA_i		: std_logic;
 	signal i_CPUSKT_AVMA_i	: std_logic;
 
+	signal r_cfg_not6309			: std_logic;
+
 begin
+
+	p_cfg:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.prerun(2) = '1' then
+				r_cfg_not6309 <= cpu_speed_i(2);
+			end if;
+		end if;
+
+	end process;
+
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
 
-	exp_PORTB_o(0) <= i_CPUSKT_TSC_o;
-	exp_PORTB_o(1) <= i_CPUSKT_CLK_Q_o;
-	exp_PORTB_o(2) <= i_CPUSKT_CLK_E_o;
-	exp_PORTB_o(3) <= i_CPUSKT_nHALT_o;
-	exp_PORTB_o(4) <= i_CPUSKT_nIRQ_o;
-	exp_PORTB_o(5) <= i_CPUSKT_nNMI_o;
-	exp_PORTB_o(6) <= i_CPUSKT_nRES_o;
-	exp_PORTB_o(7) <= i_CPUSKT_nFIRQ_o;
+	wrap_o.exp_PORTB(0) <= i_CPUSKT_TSC_o;
+	wrap_o.exp_PORTB(1) <= i_CPUSKT_CLK_Q_o;
+	wrap_o.exp_PORTB(2) <= i_CPUSKT_CLK_E_o;
+	wrap_o.exp_PORTB(3) <= i_CPUSKT_nHALT_o;
+	wrap_o.exp_PORTB(4) <= i_CPUSKT_nIRQ_o;
+	wrap_o.exp_PORTB(5) <= i_CPUSKT_nNMI_o;
+	wrap_o.exp_PORTB(6) <= i_CPUSKT_nRES_o;
+	wrap_o.exp_PORTB(7) <= i_CPUSKT_nFIRQ_o;
 
 
-	i_CPUSKT_RnW_i		<= exp_PORTD_i(1);
-	i_CPUSKT_BS_i		<= exp_PORTD_i(2);
-	i_CPUSKT_LIC_i		<= exp_PORTD_i(4);
-	i_CPUSKT_BA_i		<= exp_PORTD_i(5);
-	i_CPUSKT_AVMA_i	<= exp_PORTD_i(6);
+	i_CPUSKT_RnW_i		<= wrap_i.exp_PORTD(1);
+	i_CPUSKT_BS_i		<= wrap_i.exp_PORTD(2);
+	i_CPUSKT_LIC_i		<= wrap_i.exp_PORTD(4);
+	i_CPUSKT_BA_i		<= wrap_i.exp_PORTD(5);
+	i_CPUSKT_AVMA_i	<= wrap_i.exp_PORTD(6);
 
-	exp_PORTD_o <= (
+	wrap_o.exp_PORTD <= (
 		others => '1'
 		);
 
-	exp_PORTD_o_en <= (
+	wrap_o.exp_PORTD_o_en <= (
 		others => '0'
 		);
 
-	exp_PORTE_nOE <= '0';
-	exp_PORTF_nOE <= '1';
+	wrap_o.exp_PORTE_nOE <= '0';
+	wrap_o.exp_PORTF_nOE <= '1';
 
-	CPU_D_RnW_o <= 	'0'	when i_CPUSKT_BA_i = '1' else
+	wrap_o.CPU_D_RnW <= 	'0'	when i_CPUSKT_BA_i = '1' else
 							'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
 							'0';
 
-	wrap_A_log_o 			<= r_log_A;
+	wrap_o.A_log 			<= r_log_A;
 																		
 	-- note: don't start CYC until AS is settled
-	wrap_cyc_o 				<= (0 => r_a_stb, others => '0');
-	wrap_A_we_o  			<= r_we;
-	wrap_D_wr_o				<=	CPUSKT_D_i(7 downto 0);	
-	wrap_D_wr_stb_o		<= i_D_wr_stb;
-	wrap_ack_o				<= r_wrap_ack;
+	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
+	wrap_o.we	  			<= r_we;
+	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr_stb		<= i_D_wr_stb;
+	wrap_o.ack				<= r_wrap_ack;
 
-	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when cpu_speed_i = '1' else
+	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_not6309 = '1' else
 						r_DD_ring(T_tDD_2);
 
 
@@ -282,18 +255,18 @@ begin
 			r_a_stb <= '0';
 			if r_cpu_res = '0' and 
 				r_cpu_6x09_VMA = '1' and (
-				(cpu_speed_i = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
+				(r_cfg_not6309 = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
 				) then
 
-				if noice_debug_inhibit_cpu_i = '1' then
+				if wrap_i.noice_debug_inhibit_cpu = '1' then
 					r_a_stb <= '0';
 				else
 					r_a_stb <= '1';
 					if i_CPUSKT_BS_i = '1' and i_CPUSKT_BA_i = '0' then
 						-- toggle A(11) on vector pull to avoid MOS jump table
-						r_log_A <= x"FF" & CPUSKT_A_i(15 downto 12) & not(CPUSKT_A_i(11)) & CPUSKT_A_i(10 downto 0) ;
+						r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 12) & not(wrap_i.CPUSKT_A(11)) & wrap_i.CPUSKT_A(10 downto 0) ;
 					else 
-						r_log_A <= x"FF" & CPUSKT_A_i(15 downto 0);
+						r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
 					end if;
 					r_we <= not(i_CPUSKT_RnW_i);
 				end if;
@@ -315,7 +288,7 @@ begin
 			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "0";
 			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
 
-			if wrap_rdy_ctdn_i = RDY_CTDN_MIN then
+			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
 			else
 				r_DS_ring <= (others => '0');
@@ -331,31 +304,31 @@ begin
 
 			case r_state is
 				when phA => 
-					if (cpu_speed_i = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
 						r_state <= phB;
 						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_Q <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phB =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
 						r_state <= phC;
 						r_cpu_E <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phC =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
 						r_state <= phD;
 						r_cpu_Q <= '0';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phD =>
-					if (cpu_speed_i = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1' then
+					if (r_cfg_not6309 = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1' then
 						if 
 							r_cpu_res = '1' 
 							or r_cpu_6x09_VMA = '0' 
-							or (cpu_speed_i = '1' and r_DS_ring(T_tDS_3) = '1')
-							or noice_debug_inhibit_cpu_i = '1'
+							or (r_cfg_not6309 = '1' and r_DS_ring(T_tDS_3) = '1')
+							or wrap_i.noice_debug_inhibit_cpu = '1'
 							or r_DS_ring(T_tDS_2) = '1' then
 							r_state <= phA;
 							r_cpu_6x09_FIC <= i_CPUSKT_LIC_i;
@@ -403,11 +376,11 @@ begin
 	
 	i_CPUSKT_nRES_o <= (not r_cpu_res) when cpu_en_i = '1' else '0';
 	
-	i_CPUSKT_nNMI_o <= noice_debug_nmi_n_i;
+	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n;
 	
-	i_CPUSKT_nIRQ_o <=  irq_n_i;
+	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
   	
-  	i_CPUSKT_nFIRQ_o <=  nmi_n_i;
+  	i_CPUSKT_nFIRQ_o <=  wrap_i.nmi_n;
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
@@ -415,18 +388,18 @@ begin
   	i_CPUSKT_nHALT_o <= 	i_rdy;
 
   	i_rdy <=								'1' when fb_syscon_i.rst = '1' else
-  											'1' when noice_debug_inhibit_cpu_i = '1' else
-  											'0' when cpu_halt_i = '1' else
+  											'1' when wrap_i.noice_debug_inhibit_cpu = '1' else
+  											'0' when wrap_i.cpu_halt = '1' else
   											'1';						
 
 
-  	noice_debug_cpu_clken_o <= r_wrap_ack;
+  	wrap_o.noice_debug_cpu_clken <= r_wrap_ack;
   	
-  	noice_debug_5c_o	 	 	<=	'0';
+  	wrap_o.noice_debug_5c	 	 	<=	'0';
 
-  	noice_debug_opfetch_o 	<= r_cpu_6x09_FIC;
+  	wrap_o.noice_debug_opfetch 	<= r_cpu_6x09_FIC;
 
-	noice_debug_A0_tgl_o  	<= '0'; -- TODO: check if needed
+	wrap_o.noice_debug_A0_tgl  	<= '0'; -- TODO: check if needed
 
 
 end rtl;

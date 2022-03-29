@@ -198,9 +198,21 @@ set_location_assignment PIN_R9 -to I2C_SDA_io
 set_location_assignment PIN_R8 -to SUP_nRESET_i
 
 set_location_assignment PIN_F5 -to MEM_RAM_nCE_o[0]
-set_location_assignment PIN_C3 -to MEM_nOE_o
-set_location_assignment PIN_A2 -to MEM_A_o[10]
+set_location_assignment PIN_G6 -to MEM_RAM_nCE_o[1]
+set_location_assignment PIN_M6 -to MEM_RAM_nCE_o[2]
+set_location_assignment PIN_M8 -to MEM_RAM_nCE_o[3]
 set_location_assignment PIN_B2 -to MEM_FL_nCE_o
+set_location_assignment PIN_K6 -to MEM_nWE_o
+set_location_assignment PIN_C3 -to MEM_nOE_o
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_RAM_nCE_o[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_RAM_nCE_o[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_RAM_nCE_o[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_RAM_nCE_o[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_FL_nCE_o
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_nWE_o
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_nOE_o
+
 set_location_assignment PIN_B1 -to MEM_D_io[7]
 set_location_assignment PIN_C2 -to MEM_D_io[6]
 set_location_assignment PIN_C1 -to MEM_D_io[5]
@@ -209,33 +221,82 @@ set_location_assignment PIN_E3 -to MEM_D_io[3]
 set_location_assignment PIN_E1 -to MEM_D_io[2]
 set_location_assignment PIN_F2 -to MEM_D_io[1]
 set_location_assignment PIN_F1 -to MEM_D_io[0]
-set_location_assignment PIN_F4 -to MEM_A_o[0]
-set_location_assignment PIN_G2 -to MEM_A_o[1]
-set_location_assignment PIN_J2 -to MEM_A_o[2]
-set_location_assignment PIN_J1 -to MEM_A_o[3]
 
-set_location_assignment PIN_G6 -to MEM_RAM_nCE_o[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_D_io[0]
+
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[7]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[6]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[5]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[4]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[3]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[2]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[1]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to MEM_D_io[0]
+
+# inputs now not registered
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[7]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[6]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[5]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[4]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[3]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[2]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[1]
+#set_instance_assignment -name FAST_INPUT_REGISTER ON -to MEM_D_io[0]
+
+
+set_location_assignment PIN_R7 -to MEM_A_o[20]
+set_location_assignment PIN_T7 -to MEM_A_o[19]
+set_location_assignment PIN_K5 -to MEM_A_o[18]
+set_location_assignment PIN_J3 -to MEM_A_o[17]
+set_location_assignment PIN_K2 -to MEM_A_o[16]
+set_location_assignment PIN_L8 -to MEM_A_o[15]
+set_location_assignment PIN_J5 -to MEM_A_o[14]
+set_location_assignment PIN_J6 -to MEM_A_o[13]
+set_location_assignment PIN_L7 -to MEM_A_o[12]
 set_location_assignment PIN_G5 -to MEM_A_o[11]
+set_location_assignment PIN_A2 -to MEM_A_o[10]
 set_location_assignment PIN_H6 -to MEM_A_o[9]
 set_location_assignment PIN_H5 -to MEM_A_o[8]
-set_location_assignment PIN_J6 -to MEM_A_o[13]
-set_location_assignment PIN_J5 -to MEM_A_o[14]
-set_location_assignment PIN_J3 -to MEM_A_o[17]
-set_location_assignment PIN_K6 -to MEM_nWE_o
-set_location_assignment PIN_K5 -to MEM_A_o[18]
-set_location_assignment PIN_K2 -to MEM_A_o[16]
-
-set_location_assignment PIN_L8 -to MEM_A_o[15]
-set_location_assignment PIN_L7 -to MEM_A_o[12]
 set_location_assignment PIN_L6 -to MEM_A_o[7]
 set_location_assignment PIN_L1 -to MEM_A_o[6]
 set_location_assignment PIN_L2 -to MEM_A_o[5]
 set_location_assignment PIN_L3 -to MEM_A_o[4]
+set_location_assignment PIN_J1 -to MEM_A_o[3]
+set_location_assignment PIN_J2 -to MEM_A_o[2]
+set_location_assignment PIN_G2 -to MEM_A_o[1]
+set_location_assignment PIN_F4 -to MEM_A_o[0]
 
-set_location_assignment PIN_T7 -to MEM_A_o[19]
-set_location_assignment PIN_R7 -to MEM_A_o[20]
-set_location_assignment PIN_M6 -to MEM_RAM_nCE_o[2]
-set_location_assignment PIN_M8 -to MEM_RAM_nCE_o[3]
+
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[20]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[19]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[18]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[17]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[16]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[15]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[14]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[13]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[12]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[11]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[10]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[9]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[8]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to MEM_A_o[0]
+
+
 
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_CK_o
 set_instance_assignment -name IO_STANDARD LVDS -to HDMI_D0_o

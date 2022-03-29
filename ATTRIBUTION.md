@@ -12,9 +12,13 @@ Some parts of this project have been taken from source on the internet:
 
 These cores are used for simulations and are not present in the repository due to incompatible licences
 
+See the file [README.md] in the /src/hdl/library/3rdparty/missing folder for instructions on how
+to download the right files
+
 * TG68 core - Tobias Gubener [GitHub](https://github.com/TobiFlex/TG68K.C)
 * I2C_minion - Peter Samarin [GitHub](https://github.com/oetr/FPGA-I2C-Minion)
 * System09 6809 core - John E Kent [http://members.optushome.com.au/jekent/system09/index.html#download]
+* System68 6800 core - John E Kent [http://members.optushome.com.au/jekent/system68/index.htm]
 
 ## Many Thanks to
 * [Dave Banks/Hoglet](https://github.com/hoglet67) for inspiration and advice

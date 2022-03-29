@@ -1,0 +1,7 @@
+SECTIONS
+{
+	. = 0xC000;
+	.code : { *(code) }
+	. = 0xFFF8;
+	.romvectors : { *(romvectors) }
+};
