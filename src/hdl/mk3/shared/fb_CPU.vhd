@@ -147,7 +147,7 @@ entity fb_cpu is
 
 		debug_65816_vma_o						: out std_logic;
 
-		debug_SYS_VIA_block_o				: out std_logic
+		debug_SYS_VIA_block_o				: out std_logic;
 
 		debug_80188_state_o					: out std_logic_vector(2 downto 0);
 		debug_80188_ale_o						: out std_logic
