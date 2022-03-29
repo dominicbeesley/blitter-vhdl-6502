@@ -54,7 +54,7 @@ entity fb_sys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;
-		CYCLES_SETUP						: natural := 1;-- number of cycles we expect data to be ready before
+		CYCLES_SETUP						: natural := 0;-- number of cycles we expect data to be ready before
 																	-- phi2, note this is pretty tight on a Model B so 0 might
 																	-- prove to be safest, 1 seems to work ok on test
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0);
