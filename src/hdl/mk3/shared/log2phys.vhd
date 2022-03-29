@@ -55,7 +55,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-use work.mk3blit_pack.all;
+use work.fb_sys_pack.all;
 
 entity log2phys is
 	generic (

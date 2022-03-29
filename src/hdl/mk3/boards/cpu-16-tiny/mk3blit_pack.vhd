@@ -44,7 +44,6 @@ library ieee;
 use IEEE.math_real.all;
 
 package mk3blit_pack is
-	type sys_type is (SYS_BBC, SYS_ELK);
 
 	constant GBUILD_INCL_HDMI	: boolean := false;
 

@@ -44,7 +44,6 @@ library ieee;
 use IEEE.math_real.all;
 
 package mk3blit_pack is
-	type sys_type is (SYS_BBC, SYS_ELK);
 
 	constant GBUILD_INCL_HDMI	: boolean := false;
 
@@ -72,15 +71,12 @@ package mk3blit_pack is
 	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 3;
 	constant PERIPHERAL_NO_CHIPSET_EEPROM: natural := 4;
 
-
 	constant CONTROLLER_COUNT_CHIPSET	: natural := 5;
 	constant MAS_NO_CHIPSET_BLIT	: natural := 4;
 	constant MAS_NO_CHIPSET_DMA_1	: natural := 3; 
 	constant MAS_NO_CHIPSET_DMA_0	: natural := 2;
 	constant MAS_NO_CHIPSET_SND	: natural := 1; 
 	constant MAS_NO_CHIPSET_AERIS	: natural := 0; 
-
-
 
 
 end mk3blit_pack;

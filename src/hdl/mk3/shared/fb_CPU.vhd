@@ -56,6 +56,7 @@ use work.fishbone.all;
 use work.common.all;
 use work.mk3blit_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_SYS_pack.all;
 
 entity fb_cpu is
 	generic (

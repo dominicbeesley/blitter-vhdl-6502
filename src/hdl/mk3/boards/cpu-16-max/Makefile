@@ -22,8 +22,8 @@ all:: output_files/$(PROJECT).asm.rpt
 
 clean:
 	rm -rf *.rpt *.chg smart.log *.htm *.eqn *.pin *.pof db incremental_db
-	rm output_files/mk2blit.sof
-	rm output_files/mk2blit.pof
+	rm output_files/$(PROJECT).sof
+	rm output_files/$(PROJECT).pof
 
 
 map: $(PROJECT).map.rpt

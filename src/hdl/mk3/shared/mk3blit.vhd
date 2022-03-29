@@ -50,6 +50,7 @@ use work.common.all;
 use work.fishbone.all;
 use work.mk3blit_pack.all;
 use work.HDMI_pack.all;
+use work.fb_SYS_pack.all;
 
 entity mk3blit is
 	generic (
@@ -788,7 +789,6 @@ GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
 I2C_SDA_io <= 'Z';
 I2C_SCL_io <= 'Z';
 END GENERATE;
-
 
 	i_cpu_halt <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;-- or i_snd_cpu_halt;
 
