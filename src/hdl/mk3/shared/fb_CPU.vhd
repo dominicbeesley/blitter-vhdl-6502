@@ -65,6 +65,7 @@ entity fb_cpu is
 		G_INCL_CPU_T65						: boolean := false;
 		G_INCL_CPU_65C02					: boolean := false;
 		G_INCL_CPU_6800					: boolean := false;
+		G_INCL_CPU_80188					: boolean := false;
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
@@ -148,6 +149,9 @@ entity fb_cpu is
 
 		debug_SYS_VIA_block_o				: out std_logic
 
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
+
 	);
 end fb_cpu;
 
@@ -165,7 +169,8 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_T65						: natural := 0;
 	constant C_IX_CPU_65C02						: natural := C_IX_CPU_T65 + B2OZ(G_INCL_CPU_T65);
 	constant C_IX_CPU_6800						: natural := C_IX_CPU_65C02 + B2OZ(G_INCL_CPU_65C02);
-	constant C_IX_CPU_65816						: natural := C_IX_CPU_6800 + B2OZ(G_INCL_CPU_6800);
+	constant C_IX_CPU_80188						: natural := C_IX_CPU_6800 + B2OZ(G_INCL_CPU_6800);
+	constant C_IX_CPU_65816						: natural := C_IX_CPU_80188 + B2OZ(G_INCL_CPU_80188);
 	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816);
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
 	constant C_IX_CPU_68k						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
@@ -206,15 +211,16 @@ architecture rtl of fb_cpu is
 
 
 	-- wrapper enable signals
-	signal r_cpu_en_t65 			: std_logic;
-	signal r_cpu_en_6x09 		: std_logic;
-	signal r_cpu_en_z80 			: std_logic;
-	signal r_cpu_en_68k 			: std_logic;
---	signal r_cpu_en_6502 		: std_logic;
-	signal r_cpu_en_65c02 		: std_logic;
-	signal r_cpu_en_6800 		: std_logic;
-	signal r_cpu_en_65816 		: std_logic;
 
+	signal r_cpu_en_t65 : std_logic;
+	signal r_cpu_en_6x09 : std_logic;
+	signal r_cpu_en_z80 : std_logic;
+	signal r_cpu_en_68k : std_logic;
+--	signal r_cpu_en_6502 : std_logic;
+	signal r_cpu_en_65c02 : std_logic;
+	signal r_cpu_en_6800 : std_logic;
+	signal r_cpu_en_80188 : std_logic;
+	signal r_cpu_en_65816 : std_logic;
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
@@ -282,6 +288,7 @@ begin
 --				r_cpu_en_6502 <= '0';
 				r_cpu_en_65c02 <= '0';
 				r_cpu_en_6800 <= '0';
+				r_cpu_en_80188 <= '0';
 				r_cpu_en_65816 <= '0';
 
 				if r_cpu_en_t65 = '1' then
@@ -337,6 +344,14 @@ begin
 							r_do_sys_via_block <= '1';	
 						end if;
 					end if;
+				elsif r_cfg_pins_cpu_type = "0100" then
+					--TODO: assumes all x86 are 80188
+					r_cfg_cpubits <= "111";		--TODO: wrong!
+					r_cfg_hard_cpu_type <= CPU_80188;
+					if not(r_cpu_en_t65) then
+						r_cpu_en_80188 <= '1';
+						r_cpu_run_ix <= C_IX_CPU_80188;
+					end if;
 				else
 					r_cfg_hard_cpu_type <= CPU_65816;
 					r_cfg_cpubits <= "001";
@@ -374,6 +389,7 @@ begin
 					--(r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502) or
 					(r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02) or
 					(r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800) or
+					(r_cfg_hard_cpu_type = cpu_80188 and G_INCL_CPU_80188) or
 					(r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816) then
 					r_hard_cpu_en <= '1';
 				else
@@ -633,6 +649,27 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 	);
 END GENERATE;
 
+g80188:IF G_INCL_CPU_80188 GENERATE
+	e_wrap_80188:entity work.fb_cpu_80188
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_80188,
+		cpu_speed_i								=> r_cfg_pins_cpu_speed,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_80188),
+		wrap_i									=> i_wrap_i,
+
+		debug_80188_state_o					=> debug_80188_state_o,
+		debug_80188_ale_o						=> debug_80188_ale_o
+
+	);
+END GENERATE;
 
 gz80: IF G_INCL_CPU_Z80 GENERATE
 	e_wrap_z80:entity work.fb_cpu_z80
@@ -791,5 +828,6 @@ END GENERATE;
 	noice_debug_cpu_clken_o	<= i_wrap_o_cur.noice_debug_cpu_clken;
 	noice_debug_A0_tgl_o		<= i_wrap_o_cur.noice_debug_A0_tgl;
 	noice_debug_opfetch_o	<= i_wrap_o_cur.noice_debug_opfetch;
+
 
 end rtl;

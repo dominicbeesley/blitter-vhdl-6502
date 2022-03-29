@@ -216,10 +216,6 @@ begin
 						--fb_p2c_o.D_rd <= MEM_D_io;
 					when act =>
 						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
-						MEM_nOE_o <= '1';
-						MEM_nWE_o <= '1';
-						MEM_RAM_nCE_o <= (others => '1');
-						MEM_ROM_nCE_o <= '1';
 						fb_p2c_o.ack <= '0';
 					when others =>
 						fb_p2c_o.nul <= '1';
@@ -231,6 +227,10 @@ begin
 					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 					fb_p2c_o.ack <= '0';
 					fb_p2c_o.nul <= '0';
+					MEM_nOE_o <= '1';
+					MEM_nWE_o <= '1';
+					MEM_RAM_nCE_o <= (others => '1');
+					MEM_ROM_nCE_o <= '1';
 				end if;
 			end if;
 		end if;

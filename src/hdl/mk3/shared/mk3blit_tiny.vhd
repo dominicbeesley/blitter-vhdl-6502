@@ -72,6 +72,7 @@ entity mk3blit is
 		G_INCL_CPU_T65						: boolean := false;
 		G_INCL_CPU_65C02					: boolean := false;
 		G_INCL_CPU_6800					: boolean := false;
+		G_INCL_CPU_80188					: boolean := false;
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
@@ -418,6 +419,8 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_write_cycle_repeat : std_logic;
 
+	signal   i_debug_80188_state		: std_logic_vector(2 downto 0);
+	signal   i_debug_80188_ale			: std_logic;
 
 begin
 
@@ -856,6 +859,7 @@ END GENERATE;
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
 		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
+		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
@@ -933,6 +937,8 @@ END GENERATE;
 		JIM_page_i							=> i_JIM_page,
 
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
+    debug_80188_state_o				=> i_debug_80188_state,
+		debug_80188_ale_o					=> i_debug_80188_ale
 
 	);
 
@@ -1029,14 +1035,9 @@ LED_o(2) <= not i_JIM_en;
 LED_o(3) <= not i_debug_write_cycle_repeat;
 
 
--- unused stuff
---SYS_AUX_io(0)	<= 'Z';
---SYS_AUX_io(1)	<= 'Z';
---SYS_AUX_io(2)	<= 'Z';
---SYS_AUX_io(3)	<= 'Z';
+SYS_AUX_o(2 downto 0)	<= i_debug_80188_state;
 
-
-SYS_AUX_o			<= (others => '0');
+SYS_AUX_o(3)				<= i_debug_80188_ale;
 
 SYS_AUX_io(0) <= i_debug_wrap_sys_st;
 SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
