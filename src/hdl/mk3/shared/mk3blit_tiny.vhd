@@ -415,7 +415,7 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_jim_hi_wr			: std_logic;
 
-	signal	i_debug_iorb_block		: std_logic;
+	signal	i_debug_SYS_VIA_block		: std_logic;
 
 	signal	i_debug_write_cycle_repeat : std_logic;
 
@@ -847,9 +847,7 @@ END GENERATE;
 		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat,
 
 		debug_wrap_sys_cyc_o				=> i_debug_wrap_sys_cyc,
-		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st,
-
-		debug_iorb_block_o				=> i_debug_iorb_block
+		debug_wrap_sys_st_o				=> i_debug_wrap_sys_st
 	);
 
 
@@ -938,8 +936,8 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_80188_state_o				=> i_debug_80188_state,
-
+		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
+    debug_80188_state_o				=> i_debug_80188_state,
 		debug_80188_ale_o					=> i_debug_80188_ale
 
 	);
@@ -1032,7 +1030,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
 				'1'			 when i_fb_syscon.rst_state = run else
 				i_flasher(1);
-LED_o(1) <= not i_debug_iorb_block;
+LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= not i_debug_write_cycle_repeat;
 

@@ -52,8 +52,7 @@ use work.mk3blit_pack.all;
 entity fb_sys_via_blocker is
 	generic (
 		SIM									: boolean := false;									-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;
-		SYS_VIA_ADDR						: std_logic_vector(15 downto 4) := x"FE4" 	
+		CLOCKSPEED							: natural
 
 	);
 	port(
@@ -63,7 +62,7 @@ entity fb_sys_via_blocker is
       cfg_sys_type_i                : in     sys_type;
 
       clken									: in		std_logic;
-		A_i									: in		std_logic_vector(15 downto 0);
+		A_i									: in		std_logic_vector(23 downto 0);
 		RnW_i									: in		std_logic;
 
 		SYS_VIA_block_o					: out		std_logic
@@ -81,7 +80,7 @@ architecture rtl of fb_sys_via_blocker is
 
 begin
 
-	i_iorb_cs <= '1' when A_i = x"FE4F" and cfg_sys_type_i /= SYS_ELK else
+	i_iorb_cs <= '1' when A_i(23 downto 4) = x"FFFE4" and cfg_sys_type_i /= SYS_ELK else
 			'0';
 
 	SYS_VIA_block_o <= r_iorb_block and i_iorb_cs;
