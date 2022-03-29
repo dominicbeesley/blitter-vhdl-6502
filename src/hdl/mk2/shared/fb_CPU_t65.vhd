@@ -22,7 +22,7 @@ use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
-use work.mk2blit_pack.all;
+use work.board_config_pack.all;
 
 
 entity fb_cpu_t65 is

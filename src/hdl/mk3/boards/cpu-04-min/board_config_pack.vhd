@@ -27,7 +27,7 @@
 -- 
 -- Create Date:    		9/3/2018
 -- Design Name: 
--- Module Name:    		work.mk3blit_pack
+-- Module Name:    		work.board_config_pack
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -43,7 +43,7 @@
 library ieee;
 use IEEE.math_real.all;
 
-package mk3blit_pack is
+package board_config_pack is
 
 	constant GBUILD_INCL_HDMI	: boolean := false;
 
@@ -80,9 +80,9 @@ package mk3blit_pack is
 	constant MAS_NO_CHIPSET_AERIS		: natural := 0; -- unused
 
 
-end mk3blit_pack;
+end board_config_pack;
 
 
-package body mk3blit_pack is
+package body board_config_pack is
 
-end mk3blit_pack;
+end board_config_pack;

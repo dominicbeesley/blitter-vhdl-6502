@@ -54,7 +54,7 @@ use ieee.std_logic_misc.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
-use work.mk3blit_pack.all;
+use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
 use work.fb_SYS_pack.all;
 

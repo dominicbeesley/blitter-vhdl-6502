@@ -26,7 +26,7 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
-use work.mk2blit_pack.all;
+use work.board_config_pack.all;
 
 
 entity fb_cpu_z80 is

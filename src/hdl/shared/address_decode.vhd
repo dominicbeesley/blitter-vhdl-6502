@@ -48,7 +48,7 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 use work.fishbone.all;
-use work.mk3blit_pack.all;
+use work.board_config_pack.all;
 
 entity address_decode is
 	generic (

@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    		9/3/2018
 -- Design Name: 
--- Module Name:    		work.mk3blit_pack
+-- Module Name:    		work.board_config_pack
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 

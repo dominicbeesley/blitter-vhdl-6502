@@ -63,7 +63,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-use work.mk3blit_pack.all;
+use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
 
 entity fb_cpu_6800 is
