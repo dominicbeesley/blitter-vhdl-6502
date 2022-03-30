@@ -56,6 +56,7 @@ use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_SYS_pack.all;
 
 entity fb_cpu is
 	generic (
@@ -69,6 +70,7 @@ entity fb_cpu is
 
 		cfg_hard_cpu_type_i					: in cpu_type;
 		cfg_hard_cpu_speed_i					: in std_logic;
+		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
 		cfg_t65_i								: in std_logic;				-- when 0 enable t65 core
@@ -476,6 +478,7 @@ begin
 		SIM									=> SIM
 	)
 	port map (
+		fb_syscon_i 						=> fb_syscon_i,	
 		-- CPU address control signals from other components
 		JIM_page_i							=> JIM_page_i,
 		sys_ROMPG_i							=> sys_ROMPG_i,
@@ -483,6 +486,7 @@ begin
 		cfg_swromx_i						=> cfg_swromx_i,
 		cfg_mosram_i						=> cfg_mosram_i,
 		cfg_t65_i							=> cfg_t65_i,
+      cfg_sys_type_i                => cfg_sys_type_i,
 
 		jim_en_i								=> jim_en_i,
 		swmos_shadow_i						=> swmos_shadow_i,
