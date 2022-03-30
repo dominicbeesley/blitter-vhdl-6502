@@ -52,7 +52,7 @@ entity fb_mem is
 	generic (
 		SIM									: boolean := false;		-- skip some stuff, i.e. slow sdram start up
 		G_FLASH_IS_45						: boolean := false;		-- 45ns Flash chip fitted (else 55ns)
-		G_RAM_IS_45							: boolean := false		-- 45ns BB Ram chip fitted (else 55ns)
+		G_SLOW_IS_45						: boolean := false		-- 45ns BB Ram chip fitted (else 55ns)
 	);
 	port(
 

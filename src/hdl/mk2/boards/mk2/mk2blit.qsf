@@ -97,7 +97,6 @@ source ../../simulation/sim_tb/sim_6x09.qsf
 
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:tcl/get-version.tcl"
 
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name SDC_FILE mk2blit.sdc
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE mk2blit.vhd
@@ -148,3 +147,5 @@ set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
+
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
