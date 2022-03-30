@@ -28,7 +28,8 @@ entity sim_SYS_tb is
 generic (
 	G_MOSROMFILE 		: string := "";
 	G_RAMDUMPFILE		: string := "";
-	G_SIM_SYS_TYPE		: SIM_SYS_TYPE := SIM_SYS_BBC
+	G_SIM_SYS_TYPE		: SIM_SYS_TYPE := SIM_SYS_BBC;
+	G_MK3			: boolean				-- enable SYS buffer delay
 	);
 port (
 	SYS_phi0_o		: out 	std_logic;
@@ -96,14 +97,35 @@ begin
 	hsync_o <= r_hsync;
 	vsync_o <= r_vsync;
 
-	-- model the 74LVC4245 on the data lines
-	i_SYS_BUF_D_nOE_dly <= SYS_BUF_D_nOE_i after 8 ns;
-	i_SYS_BUF_D_DIR_dly <= SYS_BUF_D_DIR_i after 8 ns;
+	g_sys_buf:IF G_MK3 GENERATE
+		-- model the 74LVC4245 on the data lines
+		i_SYS_BUF_D_nOE_dly <= SYS_BUF_D_nOE_i after 8 ns;
+		i_SYS_BUF_D_DIR_dly <= SYS_BUF_D_DIR_i after 8 ns;
 
-	SYS_D_io 	<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '0' or i_SYS_BUF_D_nOE_dly = '1' else
+		SYS_D_io 	<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '0' or i_SYS_BUF_D_nOE_dly = '1' else
 						   i_SYS_D after 6 ns;
-	i_SYS_D 		<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '1' or i_SYS_BUF_D_nOE_dly = '1' else
+		i_SYS_D 		<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '1' or i_SYS_BUF_D_nOE_dly = '1' else
 					      SYS_D_io after 6 ns;
+	END GENERATE;
+
+
+	g_sys_nobuf:IF NOT G_MK3 GENERATE
+
+		--SYS_D_io 	<= 	i_SYS_D;
+		--i_SYS_D 		<= 	SYS_D_io;
+
+		-- try and do a bidirectional assign
+		GA:FOR I IN 7 downto 0 GENERATE
+			SYS_D_io(I) <= 'H' when i_SYS_D(I) = '1' or i_SYS_D(I) = 'H' else
+								'L' when i_SYS_D(I) = '0' or i_SYS_D(I) = 'L' else
+								'Z';
+			i_SYS_D(I)  <= 'H' when SYS_D_io(I) = '1' or SYS_D_io(I) = 'H' else
+								'L' when SYS_D_io(I) = '0' or SYS_D_io(I) = 'L' else
+								'Z';
+		END GENERATE GA;
+	END GENERATE;
+
+
 	-- model the 74LVC4245 on the address lines
 	i_SYS_A <= SYS_A_i after 8 ns;
 
