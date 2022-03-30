@@ -42,7 +42,7 @@ set_global_assignment -name DEVICE EP4CE10F17C8
 set_global_assignment -name TOP_LEVEL_ENTITY mk2blit
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "12:38:03  APRIL 04, 2019"
-set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "20.1.1 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
@@ -95,12 +95,9 @@ source ../../simulation/sim_tb/sim_68008.qsf
 
 source ../../simulation/sim_tb/sim_6x09.qsf
 
-
-
-
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:tcl/get-version.tcl"
 
-
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name SDC_FILE mk2blit.sdc
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE mk2blit.vhd
@@ -113,7 +110,6 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
 set_global_assignment -name VHDL_FILE ../../../library/common.vhd
-
 set_global_assignment -name VHDL_FILE ../../../library/clockreg.vhd
 set_global_assignment -name VHDL_FILE ../../../library/bbc/bbc_slow_cyc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_Pack.vhd
@@ -141,7 +137,6 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
-
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
@@ -152,7 +147,4 @@ set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
-
-
-
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
