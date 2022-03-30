@@ -27,8 +27,8 @@ architecture Behavioral of sim_t65_tb is
 
 	signal	sim_ENDSIM			: 	std_logic 		:= '0';
 	
-	signal	EXT_CLK_48M			: 	std_logic;
-	signal	EXT_CLK_50M			: 	std_logic;
+	signal	i_EXT_CLK_48M		: 	std_logic;
+	signal	i_EXT_CLK_50M		: 	std_logic;
 
 	signal	sim_dump_ram		:	std_logic;
 	signal	sim_reg_halt 		:  std_logic;
@@ -45,10 +45,6 @@ architecture Behavioral of sim_t65_tb is
 	signal	i_SYS_nNMI			: std_logic;
 	signal	i_SYS_nIRQ			: std_logic;
 	signal	i_SYS_SYNC			: std_logic;
-
-	signal	i_SYS_BUF_D_nOE	: std_logic;
-	signal	i_SYS_BUF_D_DIR	: std_logic;
-	signal	i_SYS_AUX_io		: std_logic_vector(6 downto 0);
 
 
 	signal	i_MEM_A					:	std_logic_vector(20 downto 0);
@@ -89,8 +85,9 @@ begin
 	
 e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => false
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,
@@ -104,8 +101,8 @@ e_SYS:entity work.sim_SYS_tb
 		SYS_nIRQ_o				=> i_SYS_nIRQ,
 		SYS_nRESET_i			=> i_SUP_nRESET,
 
-		SYS_BUF_D_nOE_i		=> i_SYS_BUF_D_nOE,
-		SYS_BUF_D_DIR_i		=> i_SYS_BUF_D_DIR,
+		SYS_BUF_D_nOE_i		=> '1',				-- disabled
+		SYS_BUF_D_DIR_i		=> '0',				-- disabled
 
 		hsync_o					=> i_hsync,
 		vsync_o					=> i_vsync,
@@ -201,7 +198,7 @@ e_SYS:entity work.sim_SYS_tb
 		LED_o									=> open,
 		-- CONFIG / TEST connector
 		--CFG									: INOUT	STD_LOGIC_VECTOR(10 DOWNTO 0)
-		CFG_io								=> CFG,
+		CFG_io								=> i_CFG,
 
 		I2C_SCL_io							=> open,
 		I2C_SDA_io							=> open
@@ -210,12 +207,6 @@ e_SYS:entity work.sim_SYS_tb
 
 	i_CPU_A <= (others => 'H');
 	i_CPU_D <= (others => 'H');
-
-
-
-	SYS_D <= SYS_D_bushold;
-
-
 
 
 	e_blit_ram_2048_0: entity work.ram_tb 
@@ -228,7 +219,7 @@ e_SYS:entity work.sim_SYS_tb
 	port map (
 		A				=> i_MEM_A(20 downto 0),
 		D				=> i_MEM_D,
-		nCS			=> i_MEM_RAM_nCE,
+		nCS			=> i_MEM_RAM0_nCE,
 		nOE			=> i_MEM_nOE,
 		nWE			=> i_MEM_RAM_nWE,
 		
@@ -241,14 +232,14 @@ e_SYS:entity work.sim_SYS_tb
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
+		romfile => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)
 	port map (
 A				=> i_MEM_A(13 downto 0),
 		D				=> i_MEM_D,
-		nCS			=> i_MEM_FL_nCE,
+		nCS			=> i_MEM_ROM_nCE,
 		nOE			=> i_MEM_nOE,
 		nWE			=> i_MEM_ROM_nWE,		
 		tst_dump		=> sim_dump_ram
@@ -256,39 +247,14 @@ A				=> i_MEM_A(13 downto 0),
 	);
 
 
-
-
-	p_reg_halt: process(SUP_nRESET, i_SYS_TB_nPGFE, SYS_A, SYS_D, SYS_phi2)
-	begin
-		if (SUP_nRESET = '0') then
-			sim_reg_halt <= '0';
-		elsif falling_edge(SYS_phi2) and SYS_RnW = '0' and i_SYS_TB_nPGFE = '0' and unsigned(SYS_A(7 downto 0)) = 16#FF# then
-			sim_reg_halt <= SYS_D(7);
-		end if;
-	end process;
-	
-	p_clk_16:process -- deliberately 1/4 ns fast!
-	begin
-		CLK_16 <= '1';
-		wait for 31.2 ns;
-		CLK_16 <= '0';
-		wait for 31.25 ns;
-	end process;
-
-
-	
-
-
-
-
 	i_EXT_CLK_48M <= 'H';
 
 	main_clkc50: process
 	begin
 		if sim_ENDSIM='0' then
-			EXT_CLK_50M <= '0';
+			i_EXT_CLK_50M <= '0';
 			wait for 10 ns;
-			EXT_CLK_50M <= '1';
+			i_EXT_CLK_50M <= '1';
 			wait for 10 ns;
 		else
 			wait;
