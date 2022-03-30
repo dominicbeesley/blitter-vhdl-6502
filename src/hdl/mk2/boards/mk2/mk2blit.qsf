@@ -254,101 +254,12 @@ set_location_assignment PIN_B7 -to LED_o[3]
 set_location_assignment PIN_N8 -to SUP_nRESET_i
 
 source ../../simulation/sim_tb/sim_t65.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_tb -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/I2C_minion/debounce.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/I2C_minion/I2C_minion.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_t65_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_t65_tb.vhd -section_id sim_t65_tb
 
 source ../../simulation/sim_tb/sim_65816.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_65816_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_65816_tb -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/P65816_pkg.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/AddrGen.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/BCDAdder.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/AddSubBCD.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/ALU.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/MCode.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/P65C816/P65C816.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/real65816_tb.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_65816_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_65816_tb.vhd -section_id sim_65816_tb
-
-source ../../simulation/sim_tb/sim_t65_elk.qsf
 
 source ../../simulation/sim_tb/sim_68008.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_68008_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68008_tb -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68_fast.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68008.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_68008_tb.vhd -section_id sim_68008_tb
 
 source ../../simulation/sim_tb/sim_6x09.qsf
-set_global_assignment -name EDA_TEST_BENCH_NAME sim_6x09_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_6x09_tb -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/Missing/JohnKent/cpu09l.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/real6809_tb.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_6x09_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_6x09_tb.vhd -section_id sim_6x09_tb
 
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:tcl/get-version.tcl"
 
