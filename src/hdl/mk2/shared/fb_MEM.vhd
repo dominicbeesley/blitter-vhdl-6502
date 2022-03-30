@@ -50,8 +50,9 @@ use work.fishbone.all;
 
 entity fb_mem is
 	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_FLASH_IS_45						: boolean := false
+		SIM									: boolean := false;		-- skip some stuff, i.e. slow sdram start up
+		G_FLASH_IS_45						: boolean := false;		-- 45ns Flash chip fitted (else 55ns)
+		G_RAM_IS_45							: boolean := false		-- 45ns BB Ram chip fitted (else 55ns)
 	);
 	port(
 
@@ -145,10 +146,14 @@ begin
 									end if;
 								else -- BBRAM
 									MEM_RAM0_nCE_o <= '0';
-									v_st_first := wait4;
-									v_rdy_first := 5;
+									if G_SLOW_IS_45 then
+										v_st_first := wait4;
+										v_rdy_first := 5;
+									else
+										v_st_first := wait2;
+										v_rdy_first := 7;
+									end if;
 								end if;
-
 
 								fb_p2c_o.rdy_ctdn <= to_unsigned(v_rdy_first, RDY_CTDN_LEN);			
 								state <= v_st_first;
