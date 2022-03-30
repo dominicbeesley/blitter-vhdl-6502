@@ -33,8 +33,9 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to CFG_io[15]
 
 
 set_location_assignment PIN_F11 -to I2C_SCL_io
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to I2C_SCL_io
 set_location_assignment PIN_K10 -to I2C_SDA_io
-set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to EEPROM_I2C_io
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to I2C_SDA_io
 
 
 set_location_assignment PIN_A8 -to MEM_A_o[0]

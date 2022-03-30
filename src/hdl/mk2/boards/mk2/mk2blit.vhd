@@ -59,12 +59,12 @@ entity mk2blit is
 		G_INCL_CHIPSET						: boolean := true;
 		G_INCL_CS_DMA						: boolean := true;
 		G_DMA_CHANNELS						: natural := 2;
-		G_INCL_CS_BLIT						: boolean := false;
-		G_INCL_CS_SND						: boolean := false;
+		G_INCL_CS_BLIT						: boolean := true;
+		G_INCL_CS_SND						: boolean := true;
 		G_SND_CHANNELS						: natural := 4;
-		G_INCL_CS_AERIS					: boolean := false;
+		G_INCL_CS_AERIS					: boolean := true;
 
-		G_INCL_CS_EEPROM					: boolean := false;
+		G_INCL_CS_EEPROM					: boolean := true;
 
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
 	);
@@ -174,6 +174,7 @@ architecture rtl of mk2blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 	signal r_cfg_cpubits			: std_logic_vector(2 downto 0); 
+	signal r_cfg_sys_type		: sys_type;
 
 	signal i_cfg_do6502_debug	: std_logic;
 
@@ -996,7 +997,9 @@ END GENERATE;
 CFG_io <= (others => 'Z');
 
 
-
+-- TODOMK2:choose config switch
+-- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
+r_cfg_sys_type <= SYS_BBC;
 
 p_cpu_type_ref:process(i_fb_syscon)
 begin
@@ -1065,7 +1068,7 @@ i_cfg_debug_button <= CFG_io(7);
 CFG_io(10) <= i_fb_syscon.rst;
 CFG_io(11) <= i_debug_wrap_cyc;
 CFG_io(12) <= i_debug_sys_rd_ack;
-CFG_io(13) <= i_m2s_aeris_mas.cyc;
+CFG_io(13) <= i_c2p_aeris_con.cyc;
 
 i_hsync <= CFG_io(15);
 i_vsync <= CFG_io(14);

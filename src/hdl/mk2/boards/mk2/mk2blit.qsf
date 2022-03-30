@@ -137,10 +137,10 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_68K.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
 set_global_assignment -name VHDL_FILE ../../shared/log2phys.vhd
-set_global_assignment -name VHDL_FILE ../../shared/fb_i2c.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
-set_global_assignment -name VHDL_FILE ../../shared/fb_memctl.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd

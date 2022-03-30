@@ -1,3 +1,26 @@
+-- MIT License
+-- -----------------------------------------------------------------------------
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+-- ----------------------------------------------------------------------
+
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
@@ -32,6 +55,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
+use work.fb_CPU_pack.all;
 
 entity fb_cpu is
 	generic (
@@ -102,8 +126,8 @@ entity fb_cpu is
 
 		-- fishbone signals
 		fb_syscon_i								: in	fb_syscon_t;
-		fb_m2s_o									: out fb_mas_o_sla_i_t;
-		fb_s2m_i									: in	fb_mas_i_sla_o_t;
+		fb_c2p_o									: out fb_con_o_per_i_t;
+		fb_p2c_i									: in	fb_con_i_per_o_t;
 
 		-- chipset control signals
 		cpu_halt_i								: in  std_logic;
@@ -363,7 +387,7 @@ begin
 						i_wrap_D_rd;
 
 	i_wrap_D_rd <= 		r_D_rd when r_acked = '1' else
-						fb_s2m_i.D_rd;
+						fb_p2c_i.D_rd;
 	
 	-- CAVEATS:
 	--   the process below has been trimmed with the following expectations:
@@ -425,7 +449,7 @@ begin
 						r_wrap_cyc <= '0';
 						r_wrap_D_WR_stb <= '0';
 						r_acked <= '1';
-						r_D_rd <= fb_s2m_i.D_rd;
+						r_D_rd <= fb_p2c_i.D_rd;
 
 						if r_iorb_cs = '1' then
 							r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
@@ -470,12 +494,12 @@ begin
 	);
 
 
-  	fb_m2s_o.cyc <= r_wrap_cyc;
-  	fb_m2s_o.we <= r_wrap_we;
-  	fb_m2s_o.A <= r_wrap_phys_A;
-  	fb_m2s_o.A_stb <= r_wrap_cyc;
-  	fb_m2s_o.D_wr <=  r_wrap_D_wr;
-  	fb_m2s_o.D_wr_stb <= r_wrap_D_wr_stb;
+  	fb_c2p_o.cyc <= r_wrap_cyc;
+  	fb_c2p_o.we <= r_wrap_we;
+  	fb_c2p_o.A <= r_wrap_phys_A;
+  	fb_c2p_o.A_stb <= r_wrap_cyc;
+  	fb_c2p_o.D_wr <=  r_wrap_D_wr;
+  	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
 
 
 
@@ -526,7 +550,7 @@ begin
 		wrap_D_WR_o								=> i_t65_wrap_D_WR,
 		wrap_ack_o								=> i_t65_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 		wrap_D_rd_i								=> i_wrap_D_rd,
 
@@ -570,7 +594,7 @@ begin
 		wrap_D_WR_o								=> i_6x09_wrap_D_WR,
 		wrap_ack_o								=> i_6x09_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -635,7 +659,7 @@ begin
 		wrap_D_WR_o								=> i_z80_wrap_D_WR,
 		wrap_ack_o								=> i_z80_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -702,7 +726,7 @@ begin
 		wrap_D_WR_o								=> i_68k_wrap_D_WR,
 		wrap_ack_o								=> i_68k_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -773,8 +797,8 @@ begin
 --		wrap_D_WR_o								=> i_6502_wrap_D_WR,
 --		wrap_ack_o								=> i_6502_wrap_ack,
 --
---		wrap_dtack_i							=> fb_s2m_i.dtack,
---		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+--		wrap_dtack_i							=> fb_p2c_i.dtack,
+--		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 --		wrap_cyc_i								=> r_wrap_cyc,
 --
 --		-- chipset control signals
@@ -846,7 +870,7 @@ begin
 		wrap_D_WR_o								=> i_65c02_wrap_D_WR,
 		wrap_ack_o								=> i_65c02_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
@@ -911,7 +935,7 @@ begin
 		wrap_D_WR_o								=> i_65816_wrap_D_WR,
 		wrap_ack_o								=> i_65816_wrap_ack,
 
-		wrap_rdy_ctdn_i						=> fb_s2m_i.rdy_ctdn,
+		wrap_rdy_ctdn_i						=> fb_p2c_i.rdy_ctdn,
 		wrap_cyc_i								=> r_wrap_cyc,
 
 		-- chipset control signals
