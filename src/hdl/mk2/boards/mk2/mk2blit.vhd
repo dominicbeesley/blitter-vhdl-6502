@@ -56,9 +56,16 @@ entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
+		G_INCL_CHIPSET						: boolean := true;
+		G_INCL_CS_DMA						: boolean := true;
 		G_DMA_CHANNELS						: natural := 2;
+		G_INCL_CS_BLIT						: boolean := false;
+		G_INCL_CS_SND						: boolean := false;
 		G_SND_CHANNELS						: natural := 4;
-		G_MASTER_COUNT						: natural := 6;
+		G_INCL_CS_AERIS					: boolean := false;
+
+		G_INCL_CS_EEPROM					: boolean := false;
+
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
 	);
 	port(
@@ -145,7 +152,7 @@ entity mk2blit is
 		CFG_io									: inout	std_logic_vector(15 downto 0);
 
 		-- i2c EEPROM
-		I2C_SCL_o								: inout		std_logic;
+		I2C_SCL_io								: inout		std_logic;
 		I2C_SDA_io							: inout	std_logic
 
 	);
@@ -685,8 +692,10 @@ GSND:IF G_INCL_CS_SND GENERATE
 
 	i_dac_sample <= i_snd_dat_o;
 
-	SND_R_o <= i_dac_snd_pwm;
-	SND_L_o <= i_dac_snd_pwm;
+	SND_BITS_L_o		<= i_dac_snd_pwm;
+	SND_BITS_L_AUX_o	<= i_dac_snd_pwm;
+	SND_BITS_R_o		<= i_dac_snd_pwm;
+	SND_BITS_R_AUX_o	<= i_dac_snd_pwm;
 
 	e_dac_snd: entity work.dac_1bit 
 	generic map (
