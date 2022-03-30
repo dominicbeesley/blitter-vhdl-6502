@@ -1,3 +1,6 @@
+	.IFNDEF __HARDWARE_INC__
+__HARDWARE_INC__:
+
 
 sheila_MEM_CTL			:= $FE31
 BITS_MEM_CTL_SWMOS		:= $01
@@ -7,6 +10,9 @@ BITS_MEM_CTL_FLEX		:= $10
 BITS_MEM_CTL_SWMOS_DEBUG_5C	:= $40
 BITS_MEM_CTL_SWMOS_DEBUG_ACT	:= $80
 sheila_MEM_DEBUG_SAVE		:= $FE32
+
+sheila_MEM_TURBO2		:= $FE36
+BITS_MEM_TURBO2_THROTTLE	:= $80
 
 sheila_MEM_LOMEMTURBO		:= $FE37
 
@@ -51,6 +57,7 @@ BLITCON_ACT_MODE_4BBP		:=	$20		; 4 bit per pixel mapping 16 colours
 BLITCON_ACT_MODE_8BBP		:=	$30		; 8 bit per pixel mapping 256 colours
 BLITCON_ACT_LINE		:=	$08		; draw a line
 BLITCON_ACT_COLLISION		:=	$04		; gets reset for any non-zero D data (even in EXEC_D is clear)
+BLITCON_ACT_WRAP		:=	$02		; wrap C/D addresses to fit between min/max
 
 BLITCON_LINE_MAJOR_UPnRIGHT	:=	$10		; line draw major axis is up
 BLITCON_LINE_MINOR_CCW		:=	$20		; minor axis is CCW to MAJOR i.e.:
@@ -62,6 +69,8 @@ BLITCON_EXEC_B			:=	$02
 BLITCON_EXEC_C			:=	$04
 BLITCON_EXEC_D			:=	$08
 BLITCON_EXEC_E			:=	$10
+
+AERIS_CTL_ACT			:=	$80
 
 ; DMA controller control flags
 DMACTL_ACT			:=	$80		; always set to initiate a transfer
@@ -108,6 +117,12 @@ DMAC_STRIDE_B_offs		:=	$1A
 DMAC_STRIDE_C_offs		:=	$1C
 DMAC_STRIDE_D_offs		:=	$1E
 
+DMAC_BLIT_EXT_offs		:=	$40
+DMAC_ADDR_D_MIN_offs		:=	DMAC_BLIT_EXT_offs
+DMAC_ADDR_D_MAX_offs		:=	DMAC_BLIT_EXT_offs+3
+
+
+
 DMAC_SND_DATA_offs		:=	$20
 DMAC_SND_ADDR_offs		:=	$21
 DMAC_SND_PERIOD_offs		:=	$24
@@ -133,7 +148,12 @@ DMAC_AERIS_CTL_offs		:=	$50
 DMAC_AERIS_PROGBASE_offs	:=	$51
 
 
+DMAC_I2C_offs		:=	$70
+
 jim_page_DMAC			:=	$FEFC
+
+jim_page_DEBUG			:=	$FC00
+
 jim_DMAC			:=	$FD60
 jim_DMAC_BLITCON		:=	jim_DMAC + DMAC_BLITCON_offs
 jim_DMAC_FUNCGEN		:=	jim_DMAC + DMAC_FUNCGEN_offs
@@ -153,6 +173,11 @@ jim_DMAC_STRIDE_A		:=	jim_DMAC + DMAC_STRIDE_A_offs
 jim_DMAC_STRIDE_B		:=	jim_DMAC + DMAC_STRIDE_B_offs
 jim_DMAC_STRIDE_C		:=	jim_DMAC + DMAC_STRIDE_C_offs
 jim_DMAC_STRIDE_D		:=	jim_DMAC + DMAC_STRIDE_D_offs
+jim_DMAC_ADDR_D_MIN		:=	jim_DMAC + DMAC_ADDR_D_MIN_offs
+jim_DMAC_ADDR_D_MAX		:=	jim_DMAC + DMAC_ADDR_D_MAX_offs
+
+
+
 
 jim_DMAC_SND_DATA		:= 	jim_DMAC + DMAC_SND_DATA_offs
 jim_DMAC_SND_ADDR		:= 	jim_DMAC + DMAC_SND_ADDR_offs
@@ -179,9 +204,20 @@ jim_DMAC_AERIS_CTL		:=	jim_DMAC + DMAC_AERIS_CTL_offs
 jim_DMAC_AERIS_PROGBASE		:=	jim_DMAC + DMAC_AERIS_PROGBASE_offs
 
 
+jim_I2C_BASE			:= 	jim_DMAC + DMAC_I2C_offs
+jim_I2C_STAT			:= 	jim_I2C_BASE
+jim_I2C_DATA			:= 	jim_I2C_BASE + 1
+
+I2C_BUSY	:= $80
+I2C_NACK	:= $40
+I2C_STOP	:= $04
+I2C_START	:= $02
+I2C_RNW		:= $01
+
 sheila_sim_control		:=	$FEFF
 sheila_reg_debug		:=	$FEFF
 
+fred_JIM_PAGE_HI2		:=	$FCFC		; note ignored Blitter/Paula
 fred_JIM_PAGE_HI		:=	$FCFD
 fred_JIM_PAGE_LO		:=	$FCFE
 fred_JIM_DEVNO			:=	$FCFF
@@ -191,6 +227,9 @@ JIM				:=	jim_base
 
 SHEILA_ROMCTL_SWR	:=	$FE30
 SHEILA_ROMCTL_MOS	:=	$FE31
+
+SHEILA_ROMCTL_SWR_ELK	:=	$FE05
+
 
 ROMCTL_BITS_FLEX	:=	$10
 
@@ -288,6 +327,9 @@ VIA_ACR_SHIFTMODE_5			:= $14
 VIA_ACR_SHIFTMODE_6			:= $18
 VIA_ACR_SHIFTMODE_7			:= $1C
 
+VIA_ACR_T1_MASK				:= $C0
+VIA_ACR_T1_CONT				:= $40
+
 
 ;***********************************************************************
 ;* BBC B/B+ WD177x                                                     *
@@ -314,3 +356,5 @@ W1770_DRVSEL_BIT_nMR			:= $20
 
 JIM_DEVNO_HOG1MPAULA			:= $D0
 JIM_DEVNO_BLITTER			:= $D1
+
+	.ENDIF
