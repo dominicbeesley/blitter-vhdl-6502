@@ -76,7 +76,6 @@ entity fb_cpu_6800 is
 
 		-- configuration
 		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
-		cpu_speed_i								: in std_logic_vector(2 downto 0);
 
 		fb_syscon_i								: in	fb_syscon_t;
 

@@ -51,6 +51,7 @@ use work.fishbone.all;
 use work.board_config_pack.all;
 use work.HDMI_pack.all;
 use work.fb_SYS_pack.all;
+use work.fb_CPU_pack.all;
 
 entity mk3blit is
 	generic (
@@ -191,9 +192,11 @@ architecture rtl of mk3blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
-	signal i_cfg_do6502_debug	: std_logic;
-	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
-	signal i_cfg_softt65			: std_logic;
+	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -407,6 +410,8 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_write_cycle_repeat : std_logic;
 
+	signal   i_debug_80188_state		: std_logic_vector(2 downto 0);
+	signal   i_debug_80188_ale			: std_logic;
 
 begin
 
@@ -818,7 +823,7 @@ END GENERATE;
 	port map (
 
 		-- configuration
-		do6502_debug_i						=> i_cfg_do6502_debug,
+		do6502_debug_i						=> r_cfg_do6502_debug,
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
@@ -953,12 +958,10 @@ END GENERATE;
 
 		-- configuration
 
-		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
-		cfg_mk2_cpubits_o					=> i_cfg_mk2_cpubits,
-		cfg_softt65_o						=> i_cfg_softt65,
-
-
-      cfg_sys_type_i                => r_cfg_sys_type,      
+		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+     	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
@@ -1020,7 +1023,9 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
+		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
+		debug_80188_state_o				=> i_debug_80188_state,
+		debug_80188_ale_o					=> i_debug_80188_ale
 
 	);
 
@@ -1050,8 +1055,12 @@ END GENERATE;
 	end process;
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 
+-- enable port F/G for reading configuration
 p_EFG_en:process(i_fb_syscon, i_cpu_exp_PORTE_nOE, i_cpu_exp_PORTF_nOE, i_cpu_exp_PORTG_nOE)
 begin
 	if i_fb_syscon.rst = '1' then
@@ -1072,12 +1081,18 @@ begin
 
 end process;
 
--- NOTE: CPU config moved to fb_CPU
+-- configure hard/soft cpu
 p_config:process(i_fb_syscon)
+variable v_cfg_pins_cpu_type_and_speed : std_logic_vector(6 downto 0);
 begin
 	if rising_edge(i_fb_syscon.clk) then
-		if i_fb_syscon.prerun(1) = '1' then
+
+		if i_fb_syscon.prerun(0) = '1' then
+			v_cfg_pins_cpu_type_and_speed(6 downto 3) := exp_PORTEFG_io(3 downto 0);
+		elsif i_fb_syscon.prerun(1) = '1' then
 			-- read port G at boot time
+			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3);
+			v_cfg_pins_cpu_type_and_speed(2 downto 0) := exp_PORTEFG_io(11 downto 9);
 			r_cfg_swromx <= not exp_PORTEFG_io(4);
 			r_cfg_mosram <= not exp_PORTEFG_io(5);
 			r_cfg_swram_enable <= exp_PORTEFG_io(6);
@@ -1087,18 +1102,55 @@ begin
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
+		elsif i_fb_syscon.prerun(2) = '1' then
+
+			r_cfg_do6502_debug <= '0';
+
+			if r_cfg_cpu_use_t65 = '1' then
+				r_cfg_do6502_debug <= '1';
+			end if;
+
+			r_cfg_cpu_type <= NONE;
+			r_cfg_cpu_speed_opt <= NONE;
+			r_cfg_mk2_cpubits <= "111";
+
+			-- select cpu configuration	
+			case v_cfg_pins_cpu_type_and_speed is
+				when "1100010" =>
+					r_cfg_cpu_type <= CPU_65816;
+					r_cfg_mk2_cpubits <= "001";
+					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "0111111" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_mk2_cpubits <= "110";
+				when "0111010" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
+					r_cfg_mk2_cpubits <= "010";
+				when "0111000" =>
+					r_cfg_cpu_type <= CPU_6800;
+				when "0011110" =>
+					r_cfg_cpu_type <= CPU_68K;
+					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
+					r_cfg_mk2_cpubits <= "000";
+				when "0011000" =>
+					r_cfg_cpu_type <= CPU_68K;
+				when "0100000" =>
+					r_cfg_cpu_type <= CPU_80188;
+			end case;
 		end if;
 	end if;
 end process;
 
 
+--TODO: MK2/MK3 harmonize
 i_memctl_configbits <= 
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
 	r_cfg_swromx &
-	i_cfg_mk2_cpubits &
-	not i_cfg_softt65;
+	r_cfg_mk2_cpubits &
+	not r_cfg_cpu_use_t65;
 
 i_cfg_debug_button <= SYS_AUX_io(6);
 
@@ -1114,26 +1166,16 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= i_swmos_shadow;
+LED_o(3) <= not i_debug_write_cycle_repeat;
 
 
--- unused stuff
---SYS_AUX_io(0)	<= 'Z';
---SYS_AUX_io(1)	<= 'Z';
---SYS_AUX_io(2)	<= 'Z';
---SYS_AUX_io(3)	<= 'Z';
+SYS_AUX_o(2 downto 0)	<= i_debug_80188_state;
 
+SYS_AUX_o(3)				<= i_debug_80188_ale;
 
-SYS_AUX_o			<= (
-	0 => i_vga_debug_r,
-	1 => i_vga_debug_g,
-	2 => i_vga_debug_b,
-	3 => not (i_vga_debug_hs or i_vga_debug_vs)
-);
-
-SYS_AUX_io(0) <= i_vga_debug_hs;
-SYS_AUX_io(1) <= i_vga_debug_vs;
-SYS_AUX_io(2) <= i_vga_debug_blank;
+SYS_AUX_io(0) <= i_debug_wrap_sys_st;
+SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
+SYS_AUX_io(2) <= i_debug_write_cycle_repeat;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');

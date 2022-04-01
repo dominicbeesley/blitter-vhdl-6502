@@ -58,6 +58,12 @@ entity mk2blit is
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
 		G_INCL_CHIPSET						: boolean := true;
 		G_INCL_CS_DMA						: boolean := true;
+		G_INCL_CPU_T65						: boolean := false;
+		G_INCL_CPU_65C02					: boolean := false;
+		G_INCL_CPU_65816					: boolean := false;
+		G_INCL_CPU_6x09					: boolean := false;
+		G_INCL_CPU_Z80						: boolean := false;
+		G_INCL_CPU_68k						: boolean := false;
 		G_DMA_CHANNELS						: natural := 2;
 		G_INCL_CS_BLIT						: boolean := true;
 		G_INCL_CS_SND						: boolean := true;
@@ -164,19 +170,16 @@ architecture rtl of mk2blit is
 	-- config signals
 	-----------------------------------------------------------------------------
 
-	signal r_cfg_swram_enable	: std_logic;
 	signal i_cfg_debug_button  : std_logic;
 
-
-	signal r_cfg_hard_cpu_type	: cpu_type;
-	signal r_cfg_hard_cpu_speed: std_logic;
-	signal r_cfg_softt65			: std_logic;
+	signal r_cfg_swram_enable	: std_logic;
+   signal r_cfg_sys_type      : sys_type;
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
-	signal r_cfg_cpubits			: std_logic_vector(2 downto 0); 
-	signal r_cfg_sys_type		: sys_type;
 
 	signal i_cfg_do6502_debug	: std_logic;
+	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
+	signal i_cfg_softt65			: std_logic;
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -884,15 +887,25 @@ END GENERATE;
 	e_fb_cpu: entity work.fb_cpu
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
+		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
+		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
+		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
+		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
+		G_INCL_CPU_68k						=> G_INCL_CPU_68k
 	)
 	port map (
 
 		-- configuration
-		cfg_hard_cpu_type_i				=> r_cfg_hard_cpu_type,
-		cfg_hard_cpu_speed_i				=> r_cfg_hard_cpu_speed,
+
+		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
+		cfg_mk2_cpubits_i					=> CFG_io,
+		cfg_softt65_o						=> i_cfg_softt65,
+
+
+		cfg_sys_type_i						=> r_cfg_sys_type,
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_t65_i							=> r_cfg_softt65,
 		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
 
@@ -997,62 +1010,28 @@ END GENERATE;
 CFG_io <= (others => 'Z');
 
 
--- TODOMK2:choose config switch
--- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
-r_cfg_sys_type <= SYS_BBC;
 
-p_cpu_type_ref:process(i_fb_syscon)
+-- NOTE: CPU config moved to fb_CPU
+p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then
-		if i_fb_syscon.rst = '1' then
-			-- cpu selection
-			if CFG_io(0) = '0' then
-				r_cfg_softt65 <= '1';
-			else
-				r_cfg_softt65 <= '0';
-			end if;
+		if i_fb_syscon.prerun(1) = '1' then
 
-			r_cfg_hard_cpu_speed <= '0';
-
-			case to_integer(unsigned(not(std_logic_vector'(CFG_io(1) & CFG_io(2) & CFG_io(3))))) is
-				when 1 =>
-					r_cfg_hard_cpu_type <= CPU_65C02;
-				when 2 =>
-					r_cfg_hard_cpu_type <= CPU_65C02;
-					r_cfg_hard_cpu_speed <= '1';
-				when 3 =>
-					r_cfg_hard_cpu_type <= CPU_65816;
-				when 4 =>
-					r_cfg_hard_cpu_type <= CPU_6x09;
-				when 5 =>
-					r_cfg_hard_cpu_type <= CPU_6x09;
-					r_cfg_hard_cpu_speed <= '1';
-				when 6 =>
-					r_cfg_hard_cpu_type <= CPU_Z80;
-				when 7 =>
-					r_cfg_hard_cpu_type <= CPU_68008;
-				when others =>
-					r_cfg_hard_cpu_type <= CPU_6502;
-
-			end case;
-
-			r_cfg_cpubits <= CFG_io(3 downto 1);
 			r_cfg_swromx <= not CFG_io(4);
 			r_cfg_mosram <= not CFG_io(5);
 			r_cfg_swram_enable <= CFG_io(8);
 
+			-- TODOMK2:choose config switch
+			-- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
+			r_cfg_SYS_type <= SYS_BBC;
+		
+			r_cfg_cpubits <= CFG_io(3 downto 1);
 
 		end if;
 	end if;
 end process;
 
-i_cfg_do6502_debug <= '1' when r_cfg_softt65 = '1' 
-											or r_cfg_hard_cpu_type = CPU_6502 
-											or r_cfg_hard_cpu_type = CPU_65c02
-											--or r_cfg_hard_cpu_type = CPU_65816 
-											else
-							 '0';
-
+--TODO: MK2/MK3 harmonize
 i_memctl_configbits <= 
 	CFG_io(15 downto 9) &
 	r_cfg_swram_enable &

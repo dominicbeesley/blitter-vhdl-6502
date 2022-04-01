@@ -31,7 +31,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 			fb_CPU type defs
+-- Description: 			fb_CPU type defs for mk3 board
 -- Dependencies: 
 --
 -- Revision: 
@@ -49,10 +49,16 @@ use work.fishbone.all;
 
 package fb_CPU_pack is
 
-	type cpu_type is (CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_6800, CPU_80188);
+	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68K, CPU_6800, CPU_80188);
+	type cpu_speed_opt is 
+	(
+		NONE,
+		CPUSPEED_6309_3_5,
+		CPUSPEED_68008_10,
+		CPUSPEED_65C02_8
+	);
 
 	constant	C_CPU_BYTELANES	: positive := 2;									-- number of data byte lanes
-
 
 	type t_cpu_wrap_o is record
 		cyc							: std_logic_vector(C_CPU_BYTELANES-1 downto 0);

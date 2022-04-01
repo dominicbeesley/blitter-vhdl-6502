@@ -184,9 +184,6 @@ architecture rtl of fb_sys is
 																 -- shortened
 	signal	r_wr_setup_ctr		: unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
 
-
-	signal	r_con_cyc_start	: std_logic;
-
 begin
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
 	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
@@ -245,7 +242,6 @@ begin
 			if rising_edge(fb_syscon_i.clk) then
 
 				r_ack <= '0';
-				r_con_cyc_start <= '0';
 
 				case state is
 					when idle =>
@@ -266,7 +262,6 @@ begin
 
 								r_sys_A <= fb_c2p_i.A(15 downto 0);
 								r_con_cyc <= '1';
-								r_con_cyc_start <= '1';
 
 
 								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then

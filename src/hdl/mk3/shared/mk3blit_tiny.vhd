@@ -64,6 +64,7 @@ use work.common.all;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_SYS_pack.all;
+use work.fb_CPU_pack.all;
 
 entity mk3blit is
 	generic (
@@ -204,9 +205,11 @@ architecture rtl of mk3blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
-	signal i_cfg_do6502_debug	: std_logic;
-	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
-	signal i_cfg_softt65			: std_logic;
+	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -735,7 +738,7 @@ END GENERATE;
 	port map (
 
 		-- configuration
-		do6502_debug_i						=> i_cfg_do6502_debug,
+		do6502_debug_i						=> r_cfg_do6502_debug,
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
@@ -870,11 +873,9 @@ END GENERATE;
 
 		-- configuration
 
-		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
-		cfg_mk2_cpubits_o					=> i_cfg_mk2_cpubits,
-		cfg_softt65_o						=> i_cfg_softt65,
-
-
+		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
       cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_swromx_i						=> r_cfg_swromx,
@@ -937,8 +938,8 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
-    debug_80188_state_o				=> i_debug_80188_state,
+		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
+		debug_80188_state_o				=> i_debug_80188_state,
 		debug_80188_ale_o					=> i_debug_80188_ale
 
 	);
@@ -969,8 +970,12 @@ END GENERATE;
 	end process;
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 
+-- enable port F/G for reading configuration
 p_EFG_en:process(i_fb_syscon, i_cpu_exp_PORTE_nOE, i_cpu_exp_PORTF_nOE, i_cpu_exp_PORTG_nOE)
 begin
 	if i_fb_syscon.rst = '1' then
@@ -991,12 +996,18 @@ begin
 
 end process;
 
--- NOTE: CPU config moved to fb_CPU
+-- configure hard/soft cpu
 p_config:process(i_fb_syscon)
+variable v_cfg_pins_cpu_type_and_speed : std_logic_vector(6 downto 0);
 begin
 	if rising_edge(i_fb_syscon.clk) then
-		if i_fb_syscon.prerun(1) = '1' then
+
+		if i_fb_syscon.prerun(0) = '1' then
+			v_cfg_pins_cpu_type_and_speed(6 downto 3) := exp_PORTEFG_io(3 downto 0);
+		elsif i_fb_syscon.prerun(1) = '1' then
 			-- read port G at boot time
+			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3);
+			v_cfg_pins_cpu_type_and_speed(2 downto 0) := exp_PORTEFG_io(11 downto 9);
 			r_cfg_swromx <= not exp_PORTEFG_io(4);
 			r_cfg_mosram <= not exp_PORTEFG_io(5);
 			r_cfg_swram_enable <= exp_PORTEFG_io(6);
@@ -1006,18 +1017,57 @@ begin
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
+		elsif i_fb_syscon.prerun(2) = '1' then
+
+			r_cfg_do6502_debug <= '0';
+
+			if r_cfg_cpu_use_t65 = '1' then
+				r_cfg_do6502_debug <= '1';
+			end if;
+
+			r_cfg_cpu_type <= NONE;
+			r_cfg_cpu_speed_opt <= NONE;
+			r_cfg_mk2_cpubits <= "111";
+
+			-- select cpu configuration	
+			case v_cfg_pins_cpu_type_and_speed is
+				when "1100010" =>
+					r_cfg_cpu_type <= CPU_65816;
+					r_cfg_mk2_cpubits <= "001";
+					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "0111111" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_mk2_cpubits <= "110";
+				when "0111010" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
+					r_cfg_mk2_cpubits <= "010";
+				when "0111000" =>
+					r_cfg_cpu_type <= CPU_6800;
+				when "0011110" =>
+					r_cfg_cpu_type <= CPU_68K;
+					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
+					r_cfg_mk2_cpubits <= "000";
+				when "0011000" =>
+					r_cfg_cpu_type <= CPU_68K;
+				when "0100000" =>
+					r_cfg_cpu_type <= CPU_80188;
+				when others =>
+					null;
+			end case;
 		end if;
 	end if;
 end process;
 
 
+--TODO: MK2/MK3 harmonize
 i_memctl_configbits <= 
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
 	r_cfg_swromx &
-	i_cfg_mk2_cpubits &
-	not i_cfg_softt65;
+	r_cfg_mk2_cpubits &
+	not r_cfg_cpu_use_t65;
 
 i_cfg_debug_button <= SYS_AUX_io(6);
 
@@ -1052,49 +1102,5 @@ SYS_AUX_io <= (others => 'Z');
 SD_CS_o <= '1';
 SD_CLK_o <= '1';
 SD_MOSI_o <= '1';
-
-
-
-
-----====================================================
----- H D M I
-----====================================================
---
---
---	i_per_p2c_intcon(PERIPHERAL_NO_HDMI)		<= i_p2c_hdmi_per;
---	i_c2p_hdmi_per			<= i_per_c2p_intcon(PERIPHERAL_NO_HDMI);
---
---
---	e_fb_HDMI:fb_HDMI
---	generic map (
---		SIM => SIM,
---		CLOCKSPEED => CLOCKSPEED
---	)
---	port map (
---		CLK_48M_i			=> CLK_48M_i,
---
---		fb_syscon_i			=> i_fb_syscon,
---		fb_c2p_i				=> i_c2p_hdmi_per,
---		fb_p2c_o				=> i_p2c_hdmi_per,
---
---		HDMI_SCL_io			=> HDMI_SCL_io,
---		HDMI_SDA_io			=> HDMI_SDA_io,
---		HDMI_HPD_i			=> HDMI_HPD_i,
---		HDMI_CK_o			=> HDMI_CK_o,
---		HDMI_B_o				=> HDMI_D0_o,
---		HDMI_G_o				=> HDMI_D1_o,
---		HDMI_R_o				=> HDMI_D2_o,
---
---		-- debug video	
---
---		VGA_R_o				=> i_vga_debug_r,
---		VGA_G_o				=> i_vga_debug_g,
---		VGA_B_o				=> i_vga_debug_b,
---		VGA_HS_o				=> i_vga_debug_hs,
---		VGA_VS_o				=> i_vga_debug_vs,
---		VGA_BLANK_o			=> i_vga_debug_blank
---	);
-
-
 
 end rtl;

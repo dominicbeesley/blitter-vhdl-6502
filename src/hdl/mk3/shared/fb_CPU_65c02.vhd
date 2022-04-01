@@ -61,7 +61,7 @@ entity fb_cpu_65c02 is
 
 		-- configuration
 		cpu_en_i									: in std_logic;									-- 1 when this cpu is the current one
-		cpu_speed_i								: in std_logic_vector(2 downto 0);			
+		cfg_cpu_speed_i						: in cpu_speed_opt;			
 		fb_syscon_i								: in fb_syscon_t;
 
 		-- state machine signals
@@ -143,8 +143,10 @@ begin
 	p_cfg:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if fb_syscon_i.prerun(2) = '1' then
-				r_cfg_8MHz <= cpu_speed_i(2);
+			if cfg_cpu_speed_i = CPUSPEED_65C02_8 then
+				r_cfg_8MHz <= '1';
+			else
+				r_cfg_8MHz <= '0';
 			end if;
 		end if;
 

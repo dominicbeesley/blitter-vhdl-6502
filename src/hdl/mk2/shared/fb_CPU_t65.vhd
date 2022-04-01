@@ -128,12 +128,24 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
+	p_reg_A:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if r_clken_dly(0) = '1' then
+				r_t65_SYNC <= i_t65_SYNC;
+				r_t65_A <= i_t65_A;
+				r_t65_RnW <= i_t65_RnW;
+				r_t65_D_out <= i_t65_D_out;
+			end if;
+		end if;
+
+	end process;
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	wrap_A_log_o 		<= x"FF" & i_t65_A(15 downto 0);
-	wrap_cyc_o 			<= '1' when noice_debug_inhibit_cpu_i = '0' and r_cpu_halt = '0' and r_clken_dly(0) = '1' else
+	wrap_cyc_o 			<= '1' when noice_debug_inhibit_cpu_i = '0' and r_cpu_halt = '0' and r_clken_dly(1) = '1' else
 								'0';
+	wrap_A_log_o 		<= x"FF" & i_t65_A(15 downto 0);
 	wrap_A_we_o 		<= not i_t65_RnW;
 	wrap_D_WR_o 		<= i_t65_D_out;
 	wrap_D_WR_stb_o 	<= r_clken_dly(2);

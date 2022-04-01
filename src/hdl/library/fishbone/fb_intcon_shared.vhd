@@ -143,7 +143,7 @@ end generate;
 	i_comcyc <= or_reduce(i_cyc_req);
 
 	-- multiplex i_c2px inputs
-	p_mux_m2s:process(r_cyc_grant_ix, fb_con_c2p_i, i_comcyc)
+	p_mux_m2s:process(r_state, r_cyc_grant_ix, fb_con_c2p_i, i_comcyc)
 	begin
 		i_c2px <= fb_c2p_unsel;
 		if r_state = act then

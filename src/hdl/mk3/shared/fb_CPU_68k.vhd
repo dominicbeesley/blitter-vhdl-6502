@@ -60,7 +60,7 @@ entity fb_cpu_68k is
 		-- configuration
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
 		cfg_mosram_i							: in std_logic;				-- 1 means map boot rom at 7D xxxx else 8D xxxx
-		cfg_cpu_speed_i						: in std_logic_vector(2 downto 0);
+		cfg_cpu_speed_i						: in cpu_speed_opt;
 		fb_syscon_i								: in	fb_syscon_t;
 
 		-- state machine signals
@@ -161,7 +161,11 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			if fb_syscon_i.prerun(2) = '1' then
-				r_cfg_68008 <= cfg_cpu_speed_i(2);
+				if cfg_cpu_speed_i = CPUSPEED_68008_10 then
+					r_cfg_68008 <= '1';
+				else
+					r_cfg_68008 <= '0';
+				end if;
 			end if;
 		end if;
 
