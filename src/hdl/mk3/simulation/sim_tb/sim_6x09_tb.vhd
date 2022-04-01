@@ -142,7 +142,7 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "111" -- hard cpu speed (6809)
+	, 11 downto 9 => "010" -- hard cpu speed (6309@3.5)
 		);
 
 	i_exp_PORTF <= (
