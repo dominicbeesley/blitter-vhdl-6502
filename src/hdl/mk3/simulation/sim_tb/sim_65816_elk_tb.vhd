@@ -22,6 +22,7 @@ use IEEE.NUMERIC_STD.ALL;
 library work;
 use work.SIM_SYS_pack.all;
 
+
 entity sim_65816_elk_tb is
 end sim_65816_elk_tb;
 
@@ -89,7 +90,6 @@ architecture Behavioral of sim_65816_elk_tb is
 
 
 	signal	i_CPU_A					: std_logic_vector(15 downto 0);
-	signal	i_CPU_D					: std_logic_vector(7 downto 0);
 	signal	i_CPU_nRES				: std_logic;
 	signal	i_CPU_RDY				: std_logic;
 	signal	i_CPU_nIRQ				: std_logic;
@@ -145,7 +145,7 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "111" -- hard cpu speed
+	, 11 downto 9 => "101" -- hard cpu speed 8MHz
 		);
 
 	i_exp_PORTF <= (
