@@ -276,28 +276,28 @@ begin
 				if cfg_cpu_use_t65_i = '1' then
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
+				else
+					case cfg_cpu_type_i is
+						when CPU_65816 =>
+							r_cpu_run_ix <= C_IX_CPU_65816;
+							r_do_sys_via_block <= '1';	
+							r_cpu_en_65816 <= '1';
+						when CPU_68K =>
+							r_cpu_run_ix <= C_IX_CPU_68k;
+							r_cpu_en_68k <= '1';
+						when CPU_6800 =>
+							r_cpu_run_ix <= C_IX_CPU_6800;
+							r_cpu_en_6800 <= '1';
+						when CPU_6x09 =>
+							r_cpu_run_ix <= C_IX_CPU_6x09;
+							r_cpu_en_6x09 <= '1';
+						when CPU_80188 =>
+							r_cpu_run_ix <= C_IX_CPU_80188;
+							r_cpu_en_80188 <= '1';
+						when others => 
+							null;
+					end case;
 				end if;
-
-				case cfg_cpu_type_i is
-					when CPU_65816 =>
-						r_cpu_run_ix <= C_IX_CPU_65816;
-						r_do_sys_via_block <= '1';	
-						r_cpu_en_65816 <= not cfg_cpu_use_t65_i;
-					when CPU_68K =>
-						r_cpu_run_ix <= C_IX_CPU_68k;
-						r_cpu_en_68k <= not cfg_cpu_use_t65_i;
-					when CPU_6800 =>
-						r_cpu_run_ix <= C_IX_CPU_6800;
-						r_cpu_en_6800 <= not cfg_cpu_use_t65_i;
-					when CPU_6x09 =>
-						r_cpu_run_ix <= C_IX_CPU_6x09;
-						r_cpu_en_6x09 <= not cfg_cpu_use_t65_i;
-					when CPU_80188 =>
-						r_cpu_run_ix <= C_IX_CPU_80188;
-						r_cpu_en_80188 <= not cfg_cpu_use_t65_i;
-					when others => 
-						null;
-				end case;
 
 				if	(cfg_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09) or
 					(cfg_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80) or
