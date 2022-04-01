@@ -1031,7 +1031,7 @@ begin
 
 			-- select cpu configuration	
 			case v_cfg_pins_cpu_type_and_speed is
-				when "1100010" =>
+				when "1100101" =>
 					r_cfg_cpu_type <= CPU_65816;
 					r_cfg_mk2_cpubits <= "001";
 					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
