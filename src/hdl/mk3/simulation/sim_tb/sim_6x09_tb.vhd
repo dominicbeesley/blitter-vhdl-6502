@@ -107,8 +107,9 @@ begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm09/test_rom0.bin",
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm09/build/test_rom0.bin",
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,

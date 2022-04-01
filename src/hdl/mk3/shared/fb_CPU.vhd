@@ -260,6 +260,7 @@ begin
 
 			if fb_syscon_i.prerun(2) = '1' then
 
+				r_cpu_en_t65 <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
 				r_cpu_en_68k <= '0';

@@ -21,7 +21,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_68000_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm68k/boot68008_testbench_mos.bin"
+	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm68k/build/boot68008_testbench_mos.bin"
 	);
 end sim_68000_tb;
 
@@ -107,7 +107,8 @@ begin
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
 		G_MOSROMFILE => G_MOSROMFILE,
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,
