@@ -272,6 +272,9 @@ begin
 
 
 	e_cpu:entity work.real_6800_tb
+	generic map (
+				dly_addr  => 80 ns -- faster than spec!
+	)
 	port map (
 		A					=> i_cpu_A(15 downto 0),
 		D					=> i_exp_PORTA_io_cpu,
