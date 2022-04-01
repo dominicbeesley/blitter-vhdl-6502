@@ -274,6 +274,7 @@ begin
 
 				if cfg_cpu_use_t65_i = '1' then
 					r_do_sys_via_block <= '1';	
+					r_cpu_en_t65 <= '1';
 				end if;
 
 				case cfg_cpu_type_i is
