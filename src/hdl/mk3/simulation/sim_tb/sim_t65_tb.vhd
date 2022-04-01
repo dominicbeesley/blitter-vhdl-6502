@@ -84,8 +84,9 @@ begin
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,
@@ -342,7 +343,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
+		romfile => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
 		tco => 55 ns,
 		taa => 55 ns
 	)
