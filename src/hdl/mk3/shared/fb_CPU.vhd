@@ -282,7 +282,7 @@ begin
 				r_cpu_run_ix_act <= C_IX_CPU_T65;
 				r_cpu_run_ix_hard <= C_IX_CPU_T65; -- dummy value
 
-
+				-- multiplex/enable active cpu wrapper
 				if cfg_cpu_use_t65_i = '1' then
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
@@ -309,21 +309,22 @@ begin
 					end case;
 				end if;
 
+				-- multiplex/enable current hard cpu expansion out
 				case cfg_cpu_type_i is
 					when CPU_65816 =>
-						r_cpu_run_ix_act <= C_IX_CPU_65816;
+						r_cpu_run_ix_hard <= C_IX_CPU_65816;
 						r_hard_cpu_en <= '1';
 					when CPU_68K =>
-						r_cpu_run_ix_act <= C_IX_CPU_68k;
+						r_cpu_run_ix_hard <= C_IX_CPU_68k;
 						r_hard_cpu_en <= '1';
 					when CPU_6800 =>
-						r_cpu_run_ix_act <= C_IX_CPU_6800;
+						r_cpu_run_ix_hard <= C_IX_CPU_6800;
 						r_hard_cpu_en <= '1';
 					when CPU_6x09 =>
-						r_cpu_run_ix_act <= C_IX_CPU_6x09;
+						r_cpu_run_ix_hard <= C_IX_CPU_6x09;
 						r_hard_cpu_en <= '1';
 					when CPU_80188 =>
-						r_cpu_run_ix_act <= C_IX_CPU_80188;
+						r_cpu_run_ix_hard <= C_IX_CPU_80188;
 						r_hard_cpu_en <= '1';
 					when others => 
 						null;
