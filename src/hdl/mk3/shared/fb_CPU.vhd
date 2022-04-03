@@ -176,15 +176,21 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_68k						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
 	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68k + B2OZ(G_INCL_CPU_68k);
 
+	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
+	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
+	-- signal directions and levels to hold the hard cpu in low-power or reset state
+
 	signal i_wrap_o_all 			: t_cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);		-- all wrap_o signals
-	signal i_wrap_o_cur			: t_cpu_wrap_o;											-- selected wrap_o signal
+	signal i_wrap_o_cur_act		: t_cpu_wrap_o;											-- selected wrap_o signal hard OR soft
+	signal i_wrap_o_cur_hard	: t_cpu_wrap_o;											-- selected wrap_o signal hard only
 	signal i_wrap_i				: t_cpu_wrap_i;
 
 	-----------------------------------------------------------------------------
 	-- configuration registers setup at boot time
 	-----------------------------------------------------------------------------
 	
-	signal r_cpu_run_ix			: natural range 0 to C_IX_CPU_COUNT-1;
+	signal r_cpu_run_ix_hard	: natural range 0 to C_IX_CPU_COUNT-1;				-- index of currently selected hard cpu
+	signal r_cpu_run_ix_act		: natural range 0 to C_IX_CPU_COUNT-1;				-- index of currently selected hard OR soft cpu
 
 
 	-----------------------------------------------------------------------------
@@ -245,7 +251,6 @@ architecture rtl of fb_cpu is
 	signal r_do_sys_via_block		: std_logic;
 	signal i_SYS_VIA_block			: std_logic;
 	signal r_sys_via_block_clken 	: std_logic;
-
 begin
 
 	-- ================================================================================================ --
@@ -260,6 +265,8 @@ begin
 
 			if fb_syscon_i.prerun(2) = '1' then
 
+				r_hard_cpu_en <= '0';
+
 				r_cpu_en_t65 <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
@@ -270,8 +277,11 @@ begin
 				r_cpu_en_80188 <= '0';
 				r_cpu_en_65816 <= '0';
 
-				r_cpu_run_ix <= C_IX_CPU_T65;
 				r_do_sys_via_block <= '0';	
+
+				r_cpu_run_ix_act <= C_IX_CPU_T65;
+				r_cpu_run_ix_hard <= C_IX_CPU_T65; -- dummy value
+
 
 				if cfg_cpu_use_t65_i = '1' then
 					r_do_sys_via_block <= '1';	
@@ -279,43 +289,46 @@ begin
 				else
 					case cfg_cpu_type_i is
 						when CPU_65816 =>
-							r_cpu_run_ix <= C_IX_CPU_65816;
+							r_cpu_run_ix_act <= C_IX_CPU_65816;
 							r_do_sys_via_block <= '1';	
 							r_cpu_en_65816 <= '1';
 						when CPU_68K =>
-							r_cpu_run_ix <= C_IX_CPU_68k;
+							r_cpu_run_ix_act <= C_IX_CPU_68k;
 							r_cpu_en_68k <= '1';
 						when CPU_6800 =>
-							r_cpu_run_ix <= C_IX_CPU_6800;
+							r_cpu_run_ix_act <= C_IX_CPU_6800;
 							r_cpu_en_6800 <= '1';
 						when CPU_6x09 =>
-							r_cpu_run_ix <= C_IX_CPU_6x09;
+							r_cpu_run_ix_act <= C_IX_CPU_6x09;
 							r_cpu_en_6x09 <= '1';
 						when CPU_80188 =>
-							r_cpu_run_ix <= C_IX_CPU_80188;
+							r_cpu_run_ix_act <= C_IX_CPU_80188;
 							r_cpu_en_80188 <= '1';
 						when others => 
 							null;
 					end case;
 				end if;
 
-				if	(cfg_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09) or
-					(cfg_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80) or
-					(cfg_cpu_type_i = cpu_68K and G_INCL_CPU_68k) or
-					--(cfg_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502) or
-					(cfg_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02) or
-					(cfg_cpu_type_i = cpu_6800 and G_INCL_CPU_6800) or
-					(cfg_cpu_type_i = cpu_80188 and G_INCL_CPU_80188) or
-					(cfg_cpu_type_i = cpu_65816 and G_INCL_CPU_65816) then
-					r_hard_cpu_en <= '1';
-				else
-					r_hard_cpu_en <= '0';
-				end if;
-
-
+				case cfg_cpu_type_i is
+					when CPU_65816 =>
+						r_cpu_run_ix_act <= C_IX_CPU_65816;
+						r_hard_cpu_en <= '1';
+					when CPU_68K =>
+						r_cpu_run_ix_act <= C_IX_CPU_68k;
+						r_hard_cpu_en <= '1';
+					when CPU_6800 =>
+						r_cpu_run_ix_act <= C_IX_CPU_6800;
+						r_hard_cpu_en <= '1';
+					when CPU_6x09 =>
+						r_cpu_run_ix_act <= C_IX_CPU_6x09;
+						r_hard_cpu_en <= '1';
+					when CPU_80188 =>
+						r_cpu_run_ix_act <= C_IX_CPU_80188;
+						r_hard_cpu_en <= '1';
+					when others => 
+						null;
+				end case;
 		  	end if;
-
-
 		end if;
 	end process;
 
@@ -373,6 +386,9 @@ begin
 
 
 
+	-- ================================================================================================ --
+	-- NMI registration 
+	-- ================================================================================================ --
 
 	-- nmi was unreliable when testing DFS/ADFS, try de-gltiching
 	p_nmi_meta:process(fb_syscon_i)
@@ -434,16 +450,16 @@ begin
 			r_state <= r_state;
 			r_sys_via_block_clken <= '0';
 
-			if (or_reduce(i_wrap_o_cur.cyc) = '1' or r_wrap_cyc = '1') and i_wrap_o_cur.D_WR_stb = '1' then
+			if (or_reduce(i_wrap_o_cur_act.cyc) = '1' or r_wrap_cyc = '1') and i_wrap_o_cur_act.D_WR_stb = '1' then
 				r_wrap_D_WR_stb <= '1';
-				r_wrap_D_WR <= i_wrap_o_cur.D_WR;
+				r_wrap_D_WR <= i_wrap_o_cur_act.D_WR;
 			end if;
 
 			case r_state is
 				when s_idle =>
-					if or_reduce(i_wrap_o_cur.cyc) = '1' then
+					if or_reduce(i_wrap_o_cur_act.cyc) = '1' then
 						r_wrap_phys_A <= i_wrap_phys_A;
-						r_wrap_we <= i_wrap_o_cur.we;
+						r_wrap_we <= i_wrap_o_cur_act.we;
 
 						if r_do_sys_via_block = '1' and i_SYS_VIA_block = '1' then
 							r_state <= s_block;
@@ -452,14 +468,14 @@ begin
 							r_wrap_cyc <= '1';
 						end if;
 					end if;
-				   r_acked <= not(i_wrap_o_cur.cyc);
+				   r_acked <= not(i_wrap_o_cur_act.cyc);
 				when s_block =>
 					if i_SYS_VIA_block = '0' then
 						r_state <= s_waitack;						
 						r_wrap_cyc <= '1';
 					end if;
 				when s_waitack =>
-					if i_wrap_o_cur.ack = '1' then
+					if i_wrap_o_cur_act.ack = '1' then
 						r_sys_via_block_clken <= '1';
 						r_state <= s_idle;
 						r_wrap_cyc <= '0';
@@ -504,7 +520,7 @@ begin
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
-		A_i									=> i_wrap_o_cur.A_log,
+		A_i									=> i_wrap_o_cur_act.A_log,
 		A_o									=> i_wrap_phys_A
 	);
 
@@ -708,8 +724,8 @@ END GENERATE;
 		fb_syscon_i => fb_syscon_i,
 		cfg_sys_type_i => cfg_sys_type_i,
 		clken => r_sys_via_block_clken,
-		A_i => i_wrap_o_cur.A_log,
-		RnW_i => not i_wrap_o_cur.we,
+		A_i => i_wrap_o_cur_act.A_log,
+		RnW_i => not i_wrap_o_cur_act.we,
 		SYS_VIA_block_o => i_SYS_VIA_block
 		);
 
@@ -719,7 +735,8 @@ END GENERATE;
 	-- multiplex wrapper signals
 	-- ================================================================================================ --
 
-	i_wrap_o_cur					<= i_wrap_o_all(r_cpu_run_ix);	
+	i_wrap_o_cur_act	<= i_wrap_o_all(r_cpu_run_ix_act);	
+	i_wrap_o_cur_hard	<= i_wrap_o_all(r_cpu_run_ix_hard);	
 
 
 	-- ================================================================================================ --
@@ -755,19 +772,19 @@ END GENERATE;
 	-- expansion header signals from current CPU
 	-- ================================================================================================ --
 
-	i_exp_PORTB_o 				<= i_wrap_o_cur.exp_PORTB;
-	i_exp_PORTD_o 				<= i_wrap_o_cur.exp_PORTD;
-	i_exp_PORTD_o_en			<= i_wrap_o_cur.exp_PORTD_o_en;
-	i_exp_PORTE_nOE			<= i_wrap_o_cur.exp_PORTE_nOE;
-	i_exp_PORTF_nOE			<= i_wrap_o_cur.exp_PORTF_nOE;
-	i_CPU_D_RnW 				<= i_wrap_o_cur.CPU_D_RnW;
+	i_exp_PORTB_o 				<= i_wrap_o_cur_hard.exp_PORTB;
+	i_exp_PORTD_o 				<= i_wrap_o_cur_hard.exp_PORTD;
+	i_exp_PORTD_o_en			<= i_wrap_o_cur_hard.exp_PORTD_o_en;
+	i_exp_PORTE_nOE			<= i_wrap_o_cur_hard.exp_PORTE_nOE;
+	i_exp_PORTF_nOE			<= i_wrap_o_cur_hard.exp_PORTF_nOE;
+	i_CPU_D_RnW 				<= i_wrap_o_cur_hard.CPU_D_RnW;
 
 	-- noice signals from current CPU
 
-	noice_debug_5c_o			<= i_wrap_o_cur.noice_debug_5c;
-	noice_debug_cpu_clken_o	<= i_wrap_o_cur.noice_debug_cpu_clken;
-	noice_debug_A0_tgl_o		<= i_wrap_o_cur.noice_debug_A0_tgl;
-	noice_debug_opfetch_o	<= i_wrap_o_cur.noice_debug_opfetch;
+	noice_debug_5c_o			<= i_wrap_o_cur_act.noice_debug_5c;
+	noice_debug_cpu_clken_o	<= i_wrap_o_cur_act.noice_debug_cpu_clken;
+	noice_debug_A0_tgl_o		<= i_wrap_o_cur_act.noice_debug_A0_tgl;
+	noice_debug_opfetch_o	<= i_wrap_o_cur_act.noice_debug_opfetch;
 
 
 end rtl;
