@@ -77,10 +77,9 @@ entity fb_cpu is
 
 		-- configuration
 
-		cfg_do6502_debug_o					: out std_logic;
-		cfg_mk2_cpubits_o						: out std_logic_vector(2 downto 0);		-- mk.2 compatible cpu type TODO: get rid?
-		cfg_softt65_o							: out std_logic;
-
+		cfg_cpu_type_i							: in cpu_type;
+		cfg_cpu_use_t65_i						: in std_logic;
+		cfg_cpu_speed_opt_i					: in cpu_speed_opt;
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
@@ -151,7 +150,12 @@ entity fb_cpu is
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
 
-		debug_65816_vma_o						: out std_logic
+		debug_65816_vma_o						: out std_logic;
+
+		debug_SYS_VIA_block_o				: out std_logic;
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
 
 	);
 end fb_cpu;
@@ -180,6 +184,13 @@ architecture rtl of fb_cpu is
 	signal i_wrap_o_all 			: t_cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);		-- all wrap_o signals
 	signal i_wrap_o_cur			: t_cpu_wrap_o;											-- selected wrap_o signal
 	signal i_wrap_i				: t_cpu_wrap_i;
+
+	-----------------------------------------------------------------------------
+	-- configuration registers setup at boot time
+	-----------------------------------------------------------------------------
+	
+	signal r_cpu_run_ix			: natural range 0 to C_IX_CPU_COUNT-1;
+
 
 	-----------------------------------------------------------------------------
 	-- cpu mapping signals
@@ -235,27 +246,15 @@ begin
 	-- BOOT TIME CONFIGURATION
 	-- ================================================================================================ --
 
-	cfg_mk2_cpubits_o <= r_cfg_cpubits;
-	cfg_softt65_o <= r_cpu_en_t65;
-	cfg_do6502_debug_o <= r_cfg_do6502_debug_o;
 
 	-- PORTEFG nOE's selected in top level p_EFG_en process
 	p_config:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 
-			if fb_syscon_i.prerun(0) = '1' then
-				r_cfg_pins_cpu_type <= cfg_hard_cpu_type_i;
-
-			end if;
-			if fb_syscon_i.prerun(1) = '1' then
-				-- read port G at boot time
-				r_cpu_en_t65 <= cfg_t65_i
-				--TODO: this should be all three bits
-				r_cfg_pins_cpu_speed <= cfg_cpu_speed_i;
-			end if;
 			if fb_syscon_i.prerun(2) = '1' then
 
+				r_cpu_en_t65 <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
 				r_cpu_en_68k <= '0';
@@ -265,103 +264,43 @@ begin
 				r_cpu_en_80188 <= '0';
 				r_cpu_en_65816 <= '0';
 
-				if r_cpu_en_t65 = '1' then
-					r_do_sys_via_block <= '1';	
-				else
-					r_do_sys_via_block <= '0';	
-				end if;
-
 				r_cpu_run_ix <= C_IX_CPU_T65;
+					r_do_sys_via_block <= '0';	
 
-
-				if r_cpu_en_t65 = '1' 
-					or r_cfg_hard_cpu_type = CPU_6502  
-					or r_cfg_hard_cpu_type = CPU_65c02 
-					then
-					r_cfg_do6502_debug_o <= '1';
+				if cfg_cpu_use_t65_i = '1' then
+					r_do_sys_via_block <= '1';	
+					r_cpu_en_t65 <= '1';
 				else
-					r_cfg_do6502_debug_o <= '0';
-				end if;
-
-
-				if r_cfg_hard_cpu_type = CPU_65816 then
-					r_cfg_cpubits <= "001";
-					if not(r_cpu_en_t65) then
-						r_cpu_en_65816 <= '1';
-						r_cpu_run_ix <= C_IX_CPU_65816;
-						r_do_sys_via_block <= '1';	
-					end if;
-				elsif r_cfg_pins_cpu_type = "0011" then
-					r_cfg_hard_cpu_type <= CPU_68008;
-					r_cfg_cpubits <= "000";
-					if not(r_cpu_en_t65) then
-						r_cpu_en_68k <= '1';
-						r_cpu_run_ix <= C_IX_CPU_68k;
-					end if;
-				elsif r_cfg_pins_cpu_type = "0111" then
-					if r_cfg_pins_cpu_speed = "000" then
-						r_cfg_hard_cpu_type <= CPU_6800;
-						r_cfg_cpubits <= "110";			
-						if not(r_cpu_en_t65) then
-							r_cpu_en_6800 <= '1';
-							r_cpu_run_ix <= C_IX_CPU_6800;
-						end if;
-					else
-						r_cfg_hard_cpu_type <= CPU_6x09;
-						r_cfg_cpubits <= "110";			
-						if not(r_cpu_en_t65) then
-							r_cpu_en_6x09 <= '1';
-							r_cpu_run_ix <= C_IX_CPU_6x09;
+					case cfg_cpu_type_i is
+						when CPU_65816 =>
+							r_cpu_run_ix <= C_IX_CPU_65816;
 							r_do_sys_via_block <= '1';	
-						end if;
-					end if;
-				elsif r_cfg_pins_cpu_type = "0100" then
-					--TODO: assumes all x86 are 80188
-					r_cfg_cpubits <= "111";		--TODO: wrong!
-					r_cfg_hard_cpu_type <= CPU_80188;
-					if not(r_cpu_en_t65) then
-						r_cpu_en_80188 <= '1';
-						r_cpu_run_ix <= C_IX_CPU_80188;
-					end if;
-				else
-					r_cfg_hard_cpu_type <= CPU_65816;
-					r_cfg_cpubits <= "001";
-					if not(r_cpu_en_t65) then
-						r_cpu_en_65816 <= '1';
-						r_cpu_run_ix <= C_IX_CPU_65816;
-						r_do_sys_via_block <= '1';	
-					end if;
+							r_cpu_en_65816 <= '1';
+						when CPU_68K =>
+							r_cpu_run_ix <= C_IX_CPU_68k;
+							r_cpu_en_68k <= '1';
+						when CPU_6800 =>
+							r_cpu_run_ix <= C_IX_CPU_6800;
+							r_cpu_en_6800 <= '1';
+						when CPU_6x09 =>
+							r_cpu_run_ix <= C_IX_CPU_6x09;
+							r_cpu_en_6x09 <= '1';
+						when CPU_80188 =>
+							r_cpu_run_ix <= C_IX_CPU_80188;
+							r_cpu_en_80188 <= '1';
+						when others => 
+							null;
+					end case;
 				end if;
 
-	--			if exp_PORTEFG_io(7 downto 4) = "1110" then
-	--				r_cfg_hard_cpu_type <= CPU_65C02;
-	--				r_cfg_cpubits <= "011";
-	--			elsif exp_PORTEFG_io(7 downto 4) = "1100" then
-	--				r_cfg_hard_cpu_type <= CPU_65816;
-	--				r_cfg_cpubits <= "001";
-	--			elsif exp_PORTEFG_io(7 downto 4) = "0111" then
-	--				r_cfg_hard_cpu_type <= CPU_6x09;
-	--				r_cfg_cpubits <= "110";
-	--			elsif exp_PORTEFG_io(7 downto 4) = "0101" then
-	--				r_cfg_hard_cpu_type <= CPU_Z80;
-	--				r_cfg_cpubits <= "100";
-	--			elsif exp_PORTEFG_io(7 downto 4) = "0011" then
-	--				r_cfg_hard_cpu_type <= CPU_68008;
-	--				r_cfg_cpubits <= "000";
-	--			else
-	--				r_cfg_hard_cpu_type <= CPU_6502;
-	--				r_cfg_cpubits <= "111";
-	--			end if;
-
-
-				if	(r_cfg_hard_cpu_type = cpu_6x09 and G_INCL_CPU_6x09) or
-					(r_cfg_hard_cpu_type = cpu_z80 and G_INCL_CPU_Z80) or
-					(r_cfg_hard_cpu_type = cpu_68008 and G_INCL_CPU_68k) or
-					--(r_cfg_hard_cpu_type = cpu_6502 and G_OPT_INCLUDE_6502) or
-					(r_cfg_hard_cpu_type = cpu_65c02 and G_INCL_CPU_65C02) or
-					(r_cfg_hard_cpu_type = cpu_6800 and G_INCL_CPU_6800) or
-					(r_cfg_hard_cpu_type = cpu_80188 and G_INCL_CPU_80188) or
-					(r_cfg_hard_cpu_type = cpu_65816 and G_INCL_CPU_65816) then
+				if	(cfg_cpu_type_i = cpu_6x09 and G_INCL_CPU_6x09) or
+					(cfg_cpu_type_i = cpu_z80 and G_INCL_CPU_Z80) or
+					(cfg_cpu_type_i = cpu_68K and G_INCL_CPU_68k) or
+					--(cfg_cpu_type_i = cpu_6502 and G_OPT_INCLUDE_6502) or
+					(cfg_cpu_type_i = cpu_65c02 and G_INCL_CPU_65C02) or
+					(cfg_cpu_type_i = cpu_6800 and G_INCL_CPU_6800) or
+					(cfg_cpu_type_i = cpu_80188 and G_INCL_CPU_80188) or
+					(cfg_cpu_type_i = cpu_65816 and G_INCL_CPU_65816) then
 					r_hard_cpu_en <= '1';
 				else
 					r_hard_cpu_en <= '0';
@@ -549,7 +488,7 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 
 		-- configuration
 		cpu_en_i									=> r_cpu_en_6x09,
-		cpu_speed_i								=> r_cfg_pins_cpu_speed,
+		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
@@ -576,7 +515,6 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 END GENERATE;
 
 
-
 g68k:IF G_INCL_CPU_68k GENERATE
 	e_wrap_68k:entity work.fb_cpu_68k
 	generic map (
@@ -588,7 +526,7 @@ g68k:IF G_INCL_CPU_68k GENERATE
 		-- configuration
 		cpu_en_i									=> r_cpu_en_68k,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_cpu_speed_i						=> r_cfg_pins_cpu_speed,		
+		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,		
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_68k),
@@ -598,9 +536,6 @@ g68k:IF G_INCL_CPU_68k GENERATE
 
 	);
 END GENERATE;
-
-
-
 
 
 --g6502:IF G_OPT_INCLUDE_6502 GENERATE
@@ -633,7 +568,7 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 
 		-- configuration
 		cpu_en_i									=> r_cpu_en_65c02,
-		cpu_speed_i								=> r_cfg_pins_cpu_speed,	
+		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,	
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
@@ -752,8 +687,6 @@ END GENERATE;
 
 	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_o_cur.CPU_D_RnW = '0' else
 									i_wrap_D_rd(7 downto 0);
-
-
 
 	-- noice signals from current CPU
 

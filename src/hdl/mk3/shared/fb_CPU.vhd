@@ -394,6 +394,10 @@ begin
 
 	debug_wrap_cyc_o <= r_wrap_cyc;
 
+	-- ================================================================================================ --
+	-- BYTE lanes 
+	-- ================================================================================================ --
+
 
 	G_BL_RD:FOR I in C_CPU_BYTELANES-1 downto 0 GENERATE
 		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
@@ -405,6 +409,10 @@ begin
 	--		1 when i_wrap cyc goes active it is a register in the wrapper
 	--	   2 the logical address passed in i_wrap_o_cur.A_log is also registered in the wrapper
 	--			the above two allow for the log->phys mapping in a single cycle
+
+	-- ================================================================================================ --
+	-- State Machine 
+	-- ================================================================================================ --
 
 
 	p_wrap_state:process(fb_syscon_i)
@@ -471,6 +479,11 @@ begin
 		end if;
 	end process;
 
+	-- ================================================================================================ --
+	-- Logical to physical address mapping 
+	-- ================================================================================================ --
+
+
 	e_log2phys: entity work.log2phys
 	generic map (
 		SIM									=> SIM
@@ -495,13 +508,9 @@ begin
 		A_o									=> i_wrap_phys_A
 	);
 
-
-  	fb_c2p_o.cyc <= r_wrap_cyc;
-  	fb_c2p_o.we <= r_wrap_we;
-  	fb_c2p_o.A <= r_wrap_phys_A;
-  	fb_c2p_o.A_stb <= r_wrap_cyc;
-  	fb_c2p_o.D_wr <=  r_wrap_D_wr;
-  	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
+	-- ================================================================================================ --
+	-- Instantiate CPU wrappers 
+	-- ================================================================================================ --
 
 
 gt65: IF G_INCL_CPU_T65 GENERATE
@@ -716,6 +725,14 @@ END GENERATE;
 	-- ================================================================================================ --
 	-- Wrapper to/from CPU handlers
 	-- ================================================================================================ --
+
+  	fb_c2p_o.cyc <= r_wrap_cyc;
+  	fb_c2p_o.we <= r_wrap_we;
+  	fb_c2p_o.A <= r_wrap_phys_A;
+  	fb_c2p_o.A_stb <= r_wrap_cyc;
+  	fb_c2p_o.D_wr <=  r_wrap_D_wr;
+  	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
+
 
 
 	i_wrap_i.rdy_ctdn						<= fb_p2c_i.rdy_ctdn;
