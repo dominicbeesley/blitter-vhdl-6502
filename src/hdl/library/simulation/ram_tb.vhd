@@ -108,7 +108,7 @@ begin
 
 	i_A_nCS_DLY <= nCS after tco;
 	i_A_DLY <= A after taa;
-	i_D_in_dly <= D after tco;			-- huge bodge!
+	i_D_in_dly <= transport D after tco;			-- huge bodge!
 
 	p_add2d: process(i_A_DLY, i_A_nCS_DLY)
 	begin
