@@ -393,6 +393,11 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	lda	#100
+	sta	$200
+	inc	$200
+
+
 	; test throttle
 
 	lda	#$80

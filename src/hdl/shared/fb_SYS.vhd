@@ -424,15 +424,15 @@ begin
 
 				end case;
 
-				if cfg_sys_type_i = SYS_BBC and r_con_cyc = '1' and i_SYScyc_st_clken = '1' then
-					-- a cycle has overrun, release the bus
-					r_sys_RnW <= '1';
-					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
-					r_ack <= '1';
-					state <= idle;
-					r_sys_A <= DEFAULT_SYS_ADDR;
-					r_sys_RnW <= '1';
-				end if;
+--				if cfg_sys_type_i = SYS_BBC and r_con_cyc = '1' and i_SYScyc_st_clken = '1' then
+--					-- a cycle has overrun, release the bus
+--					r_sys_RnW <= '1';
+--					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+--					r_ack <= '1';
+--					state <= idle;
+--					r_sys_A <= DEFAULT_SYS_ADDR;
+--					r_sys_RnW <= '1';
+--				end if;
 
 				if i_con_cyc = '0' then
 					-- controller has dropped the cycle
