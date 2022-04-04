@@ -116,12 +116,24 @@ begin
 
 		-- try and do a bidirectional assign
 		GA:FOR I IN 7 downto 0 GENERATE
-			SYS_D_io(I) <= 'H' when i_SYS_D(I) = '1' or i_SYS_D(I) = 'H' else
-								'L' when i_SYS_D(I) = '0' or i_SYS_D(I) = 'L' else
-								'Z';
-			i_SYS_D(I)  <= 'H' when SYS_D_io(I) = '1' or SYS_D_io(I) = 'H' else
-								'L' when SYS_D_io(I) = '0' or SYS_D_io(I) = 'L' else
-								'Z';
+
+			p:process
+			variable v_t:time;
+			variable presv:boolean;
+			begin
+				wait on i_SYS_D(I)'transaction, SYS_D_io(I)'transaction until v_t /= now;
+
+				v_t := now;
+
+
+				SYS_D_io(I) <= 'Z';
+				i_SYS_D(I)  <= 'Z';
+				wait for 0 ns;
+
+				SYS_D_io(I) <= i_SYS_D(I);
+				i_SYS_D(I)  <= SYS_D_io(I);
+				wait for 0 ns;
+			end process;
 		END GENERATE GA;
 	END GENERATE;
 
