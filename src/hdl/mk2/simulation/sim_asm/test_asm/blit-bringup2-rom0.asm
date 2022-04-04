@@ -384,6 +384,16 @@ zp_shift 	:= $80
 zp_maskf	:= $81
 blitcolres	:= $100
 
+
+
+I2C_TEST_ADDR	:= $A2
+
+
+i2cwait:
+	bit	jim_I2C_STAT
+	bmi	i2cwait
+	rts
+
 mos_handle_res:
 
 	; tricky test rom prolg
@@ -393,6 +403,7 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	; quick memory read/write test
 	lda	#100
 	sta	$200
 	inc	$200
@@ -409,14 +420,31 @@ mos_handle_res:
 	lda	fred_JIM_DEVNO
 	lda	#0
 	sta	fred_JIM_DEVNO
-;	lda	#0
-;	sta	$FE36
+
+
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	; test RAM0 access
+	lda	#$01
+	sta	fred_JIM_PAGE_HI
+	sta	fred_JIM_PAGE_LO
+	sta	JIM
+	lda	JIM
+
+
+
 
 
 	; test BBC slow bus bodge
 	sta	sheila_SYSVIA_orb
 	lda	sheila_SYSVIA_ora
-	sta	sheila_SYSVIA_ora
+	sta	sheila_SYSVIA_orb
+	sta	sheila_SYSVIA_orb
+
+	; turn off throttle
+	lda	#0
+	sta	$FE36
+
 
 
 	; enable jim

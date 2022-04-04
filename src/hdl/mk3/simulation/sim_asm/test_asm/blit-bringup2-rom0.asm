@@ -492,11 +492,47 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
-	; IORB block checker
-	sta	$FE4F
-	sta	$FE4F
-	sta	$FE4F
+	; quick memory read/write test
+	lda	#100
+	sta	$200
+	inc	$200
 
+
+	; test throttle
+
+	lda	#$80
+	sta	$FE36
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	nop
+	nop
+	lda	fred_JIM_DEVNO
+	lda	#0
+	sta	fred_JIM_DEVNO
+
+
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	; test RAM0 access
+	lda	#$01
+	sta	fred_JIM_PAGE_HI
+	sta	fred_JIM_PAGE_LO
+	sta	JIM
+	lda	JIM
+
+
+
+
+
+	; test BBC slow bus bodge
+	sta	sheila_SYSVIA_orb
+	lda	sheila_SYSVIA_ora
+	sta	sheila_SYSVIA_orb
+	sta	sheila_SYSVIA_orb
+
+	; turn off throttle
+	lda	#0
+	sta	$FE36
 
 	; test VPA/VDA/cycles on 816
 	php
@@ -644,40 +680,7 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 	lda	$FD00
 	lda	$FD00
 
-	; test throttle
-
-	lda	#$80
-	sta	$FE36
-	lda	#$D1
-	sta	fred_JIM_DEVNO
-	nop
-	nop
-	lda	fred_JIM_DEVNO
-	lda	#0
-	sta	fred_JIM_DEVNO
-	lda	#0
-	sta	$FE36
-
-
-	lda	#$D1
-	sta	fred_JIM_DEVNO
-	; test RAM0 access
-	lda	#$01
-	sta	fred_JIM_PAGE_HI
-	sta	fred_JIM_PAGE_LO
-	sta	JIM
-	lda	JIM
-
-
-
-
-
-	; test BBC slow bus bodge
-	sta	sheila_SYSVIA_orb
-	lda	sheila_SYSVIA_ora
-	sta	sheila_SYSVIA_orb
-	sta	sheila_SYSVIA_orb
-
+	
 
 	; enable jim
 	lda	#JIM_DEVNO_BLITTER
