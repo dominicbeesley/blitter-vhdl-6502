@@ -67,15 +67,15 @@ package fb_CPU_pack is
 		D_WR							: std_logic_vector(7 downto 0);
 		ack							: std_logic;
 
-		CPUSKT_6BE9TSCKnVPA_o					:		std_logic;
-		CPUSKT_9Q_o									:		std_logic;
-		CPUSKT_KnBRZnBUSREQ_o					:		std_logic;
-		CPUSKT_PHI09EKZCLK_o						:		std_logic;
-		CPUSKT_RDY9KnHALTZnWAIT_o				:		std_logic;
-		CPUSKT_nIRQKnIPL1_o						:		std_logic;
-		CPUSKT_nNMIKnIPL02_o						:		std_logic;
-		CPUSKT_nRES_o								:		std_logic;
-		CPUSKT_9nFIRQLnDTACK_o					:		std_logic;
+		CPUSKT_6BE9TSCKnVPA					:		std_logic;
+		CPUSKT_9Q									:		std_logic;
+		CPUSKT_KnBRZnBUSREQ					:		std_logic;
+		CPUSKT_PHI09EKZCLK						:		std_logic;
+		CPUSKT_RDY9KnHALTZnWAIT				:		std_logic;
+		CPUSKT_nIRQKnIPL1						:		std_logic;
+		CPUSKT_nNMIKnIPL02						:		std_logic;
+		CPUSKT_nRES								:		std_logic;
+		CPUSKT_9nFIRQLnDTACK					:		std_logic;
 
 		CPU_D_RnW					: std_logic;
 
@@ -115,14 +115,14 @@ package fb_CPU_pack is
 		CPUSKT_D						: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
 		CPUSKT_A						: std_logic_vector(23 downto 0);
 
-		CPUSKT_6EKEZnRD_i							:	std_logic;		
-		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i		:	std_logic;
-		CPUSKT_RnWZnWR_i							:	std_logic;
-		CPUSKT_PHI16ABRT9BSKnDS_i				:	std_logic;		-- 6ABRT is actually an output but pulled up on the board
-		CPUSKT_PHI26VDAKFC0ZnMREQ_i			:	std_logic;
-		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i			:	std_logic;
-		CPUSKT_VSS6VPA9BAKnAS_i					:	std_logic;
-		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i		:	std_logic;		-- nSO is actually an output but pulled up on the board
+		CPUSKT_6EKEZnRD							:	std_logic;		
+		CPUSKT_C6nML9BUSYKnBGZnBUSACK		:	std_logic;
+		CPUSKT_RnWZnWR							:	std_logic;
+		CPUSKT_PHI16ABRT9BSKnDS				:	std_logic;		-- 6ABRT is actually an output but pulled up on the board
+		CPUSKT_PHI26VDAKFC0ZnMREQ			:	std_logic;
+		CPUSKT_SYNC6VPA9LICKFC2ZnM1			:	std_logic;
+		CPUSKT_VSS6VPA9BAKnAS					:	std_logic;
+		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ		:	std_logic;		-- nSO is actually an output but pulled up on the board
 
 
 	end record;

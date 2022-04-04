@@ -56,14 +56,18 @@ entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
+
+		G_INCL_CPU_T65						: boolean := true;
+		G_INCL_CPU_65C02					: boolean := true;
+		G_INCL_CPU_6800					: boolean := false;
+		G_INCL_CPU_80188					: boolean := false;
+		G_INCL_CPU_65816					: boolean := true;
+		G_INCL_CPU_6x09					: boolean := true;
+		G_INCL_CPU_Z80						: boolean := true;
+		G_INCL_CPU_68k						: boolean := true;
+
 		G_INCL_CHIPSET						: boolean := true;
 		G_INCL_CS_DMA						: boolean := true;
-		G_INCL_CPU_T65						: boolean := false;
-		G_INCL_CPU_65C02					: boolean := false;
-		G_INCL_CPU_65816					: boolean := false;
-		G_INCL_CPU_6x09					: boolean := false;
-		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_68k						: boolean := false;
 		G_DMA_CHANNELS						: natural := 2;
 		G_INCL_CS_BLIT						: boolean := true;
 		G_INCL_CS_SND						: boolean := true;
@@ -177,9 +181,11 @@ architecture rtl of mk2blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
-	signal i_cfg_do6502_debug	: std_logic;
-	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
-	signal i_cfg_softt65			: std_logic;
+	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -777,7 +783,7 @@ END GENERATE;
 	port map (
 
 		-- configuration
-		do6502_debug_i						=> i_cfg_do6502_debug,
+		do6502_debug_i						=> r_cfg_do6502_debug,
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
@@ -899,11 +905,9 @@ END GENERATE;
 
 		-- configuration
 
-		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
-		cfg_mk2_cpubits_i					=> CFG_io,
-		cfg_softt65_o						=> i_cfg_softt65,
-
-
+		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
 		cfg_sys_type_i						=> r_cfg_sys_type,
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_swromx_i						=> r_cfg_swromx,
@@ -1004,6 +1008,9 @@ END GENERATE;
 	end process;
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 
 
@@ -1017,16 +1024,46 @@ begin
 	if rising_edge(i_fb_syscon.clk) then
 		if i_fb_syscon.prerun(1) = '1' then
 
+			r_cfg_cpu_use_t65 <= not CFG_io(0);
 			r_cfg_swromx <= not CFG_io(4);
 			r_cfg_mosram <= not CFG_io(5);
 			r_cfg_swram_enable <= CFG_io(8);
 
+
 			-- TODOMK2:choose config switch
 			-- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
-			r_cfg_SYS_type <= SYS_BBC;
-		
-			r_cfg_cpubits <= CFG_io(3 downto 1);
+			r_cfg_SYS_type <= SYS_BBC;		
+			r_cfg_mk2_cpubits <= CFG_io(3 downto 1);
 
+			r_cfg_do6502_debug <= '0';
+
+			if r_cfg_cpu_use_t65 = '1' then
+				r_cfg_do6502_debug <= '1';
+			end if;
+
+			r_cfg_cpu_type <= NONE;
+			r_cfg_cpu_speed_opt <= NONE;
+
+			-- select cpu configuration	
+			case CFG_io(3 downto 1) is
+				when "001" =>
+					r_cfg_cpu_type <= CPU_65816;
+					r_cfg_mk2_cpubits <= "001";
+					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "110" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_mk2_cpubits <= "110";
+				when "010" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
+					r_cfg_mk2_cpubits <= "010";
+				when "000" =>
+					r_cfg_cpu_type <= CPU_68K;
+					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
+					r_cfg_mk2_cpubits <= "000";
+				when others =>
+					null;
+			end case;
 		end if;
 	end if;
 end process;
@@ -1037,10 +1074,8 @@ i_memctl_configbits <=
 	r_cfg_swram_enable &
 	CFG_io(7 downto 5) &
 	r_cfg_swromx &
-	r_cfg_cpubits &
-	not r_cfg_softt65;
-
-CFG_io(9) <= i_debug_reg(7);
+	r_cfg_mk2_cpubits &
+	not r_cfg_cpu_use_t65;
 
 i_cfg_debug_button <= CFG_io(7);
 

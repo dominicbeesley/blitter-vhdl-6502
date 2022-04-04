@@ -498,64 +498,64 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 
 END GENERATE;
 
-g6x09:IF G_INCL_CPU_6x09 GENERATE
-	e_wrap_6x09:entity work.fb_cpu_6x09
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_6x09,
-		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
-		wrap_i									=> i_wrap_i
-	);
-END GENERATE;
-
-gz80: IF G_INCL_CPU_Z80 GENERATE
-	e_wrap_z80:entity work.fb_cpu_z80
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_z80,
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
-		wrap_i									=> i_wrap_i
-
-	);
-END GENERATE;
-
-
-g68k:IF G_INCL_CPU_68k GENERATE
-	e_wrap_68k:entity work.fb_cpu_68k
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_68k,
-		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,		
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_68k),
-		wrap_i									=> i_wrap_i,
-
-		jim_en_i									=> jim_en_i
-
-	);
-END GENERATE;
+-- -- g6x09:IF G_INCL_CPU_6x09 GENERATE
+-- -- 	e_wrap_6x09:entity work.fb_cpu_6x09
+-- -- 	generic map (
+-- -- 		SIM										=> SIM,
+-- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- 	) 
+-- -- 	port map(
+-- -- 
+-- -- 		-- configuration
+-- -- 		cpu_en_i									=> r_cpu_en_6x09,
+-- -- 		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+-- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- 
+-- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
+-- -- 		wrap_i									=> i_wrap_i
+-- -- 	);
+-- -- END GENERATE;
+-- -- 
+-- -- gz80: IF G_INCL_CPU_Z80 GENERATE
+-- -- 	e_wrap_z80:entity work.fb_cpu_z80
+-- -- 	generic map (
+-- -- 		SIM										=> SIM,
+-- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- 	) 
+-- -- 	port map(
+-- -- 
+-- -- 		-- configuration
+-- -- 		cpu_en_i									=> r_cpu_en_z80,
+-- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- 
+-- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
+-- -- 		wrap_i									=> i_wrap_i
+-- -- 
+-- -- 	);
+-- -- END GENERATE;
+-- -- 
+-- -- 
+-- -- g68k:IF G_INCL_CPU_68k GENERATE
+-- -- 	e_wrap_68k:entity work.fb_cpu_68k
+-- -- 	generic map (
+-- -- 		SIM										=> SIM,
+-- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- 	) 
+-- -- 	port map(
+-- -- 
+-- -- 		-- configuration
+-- -- 		cpu_en_i									=> r_cpu_en_68k,
+-- -- 		cfg_mosram_i							=> cfg_mosram_i,
+-- -- 		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,		
+-- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- 
+-- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_68k),
+-- -- 		wrap_i									=> i_wrap_i,
+-- -- 
+-- -- 		jim_en_i									=> jim_en_i
+-- -- 
+-- -- 	);
+-- -- END GENERATE;
 
 
 --g6502:IF G_OPT_INCLUDE_6502 GENERATE
@@ -578,46 +578,46 @@ END GENERATE;
 --	);
 --END GENERATE;
 
-g65c02:IF G_INCL_CPU_65C02 GENERATE
-	e_wrap_65c02:entity work.fb_cpu_65c02
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_65c02,
-		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,	
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
-		wrap_i									=> i_wrap_i
-
-	);
-END GENERATE;
-
-
-g65816:IF G_INCL_CPU_65816 GENERATE
-	e_wrap_65816:entity work.fb_cpu_65816
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_65816,
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
-		wrap_i									=> i_wrap_i,
-
-		boot_65816_i							=> boot_65816_i,
-
-		debug_vma_o								=> debug_65816_vma_o
-	);
-END GENERATE;
+-- -- g65c02:IF G_INCL_CPU_65C02 GENERATE
+-- -- 	e_wrap_65c02:entity work.fb_cpu_65c02
+-- -- 	generic map (
+-- -- 		SIM										=> SIM,
+-- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- 	) 
+-- -- 	port map(
+-- -- 
+-- -- 		-- configuration
+-- -- 		cpu_en_i									=> r_cpu_en_65c02,
+-- -- 		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,	
+-- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- 
+-- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
+-- -- 		wrap_i									=> i_wrap_i
+-- -- 
+-- -- 	);
+-- -- END GENERATE;
+-- -- 
+-- -- 
+-- -- g65816:IF G_INCL_CPU_65816 GENERATE
+-- -- 	e_wrap_65816:entity work.fb_cpu_65816
+-- -- 	generic map (
+-- -- 		SIM										=> SIM,
+-- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- 	) 
+-- -- 	port map(
+-- -- 
+-- -- 		-- configuration
+-- -- 		cpu_en_i									=> r_cpu_en_65816,
+-- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- 
+-- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
+-- -- 		wrap_i									=> i_wrap_i,
+-- -- 
+-- -- 		boot_65816_i							=> boot_65816_i,
+-- -- 
+-- -- 		debug_vma_o								=> debug_65816_vma_o
+-- -- 	);
+-- -- END GENERATE;
 
 	-- ================================================================================================ --
 	-- SYS VIA blocker
@@ -665,7 +665,7 @@ END GENERATE;
 
 	i_wrap_i.cpu_halt 					<= cpu_halt_i;
 	i_wrap_i.CPUSKT_D 					<= CPUSKT_D_io;
-	i_wrap_i.CPUSKT_A 					<= CPUSKT_A_i;
+	i_wrap_i.CPUSKT_A 					<= "0000" & CPUSKT_A_i;
 
 	i_wrap_i.CPUSKT_6EKEZnRD					<= CPUSKT_6EKEZnRD_i;
 	i_wrap_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
