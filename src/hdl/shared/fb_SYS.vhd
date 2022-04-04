@@ -313,6 +313,11 @@ begin
 
 						if i_con_cyc = '0' or r_con_cyc = '0' then
 							state <= idle;
+						elsif i_SYScyc_st_clken = '1' then
+							-- catch over-run read cycle
+							-- default idle cycle, drop busses
+							r_sys_A <= DEFAULT_SYS_ADDR;
+							r_sys_RnW <= '1';
 						end if;					
 
 					when addrlatched_wr =>

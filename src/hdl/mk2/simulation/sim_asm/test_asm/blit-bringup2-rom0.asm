@@ -416,6 +416,7 @@ mos_handle_res:
 	; test BBC slow bus bodge
 	sta	sheila_SYSVIA_orb
 	lda	sheila_SYSVIA_ora
+	sta	sheila_SYSVIA_ora
 
 
 	; enable jim

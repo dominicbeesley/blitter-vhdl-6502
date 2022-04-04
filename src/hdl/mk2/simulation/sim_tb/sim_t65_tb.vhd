@@ -116,7 +116,7 @@ e_SYS:entity work.sim_SYS_tb
 	i_CFG <= (
 		0			=> '0',			-- t65 cpu
 		3 downto 1 	=> "010", 	--hard == 6309
-		4			=> '0',			-- swromx - use bank 1
+		4			=> '1',			-- swromx - use bank 0
 		7			=> '1',			-- debug button
 		8			=> '1',			-- onboard swrom/ram enable
 		14			=> i_vsync,
