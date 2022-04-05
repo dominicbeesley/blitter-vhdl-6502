@@ -23,7 +23,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_z80a_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_rom.bin"
+	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_rom.bin";
 	G_RAMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_chipram.bin"
 	);
 end sim_z80a_tb;
@@ -32,8 +32,8 @@ architecture Behavioral of sim_z80a_tb is
 
 	signal	sim_ENDSIM			: 	std_logic 		:= '0';
 	
-	signal	EXT_CLK_48M			: 	std_logic;
-	signal	EXT_CLK_50M			: 	std_logic;
+	signal	i_EXT_CLK_48M		: 	std_logic;
+	signal	i_EXT_CLK_50M		: 	std_logic;
 
 	signal	sim_dump_ram		:	std_logic;
 	signal	sim_reg_halt 		:  std_logic;
@@ -75,7 +75,6 @@ architecture Behavioral of sim_z80a_tb is
 
 	signal	i_CPU_A									:	std_logic_vector(19 downto 0);
 	signal	i_CPU_D									:  std_logic_vector(7 downto 0);
-
 	signal	i_CPU_6EKEZnRD							:	std_logic;		
 	signal	i_CPU_C6nML9BUSYKnBGZnBUSACK		:	std_logic;
 	signal	i_CPU_RnWZnWR							:	std_logic;
@@ -167,7 +166,7 @@ begin
 		SYS_PHI1_o 							=> i_SYS_PHI1,
 		SYS_PHI2_o 							=> i_SYS_PHI2,
 
-		-- SYS signals are connected direct to the BBC cpu socket
+		SYS_RnW_o 							=> i_SYS_RnW,
 		SYS_RDY_i							=> '1',
 		SYS_nNMI_i 							=> i_SYS_nNMI,
 		SYS_nIRQ_i 							=> i_SYS_nIRQ,
@@ -215,6 +214,9 @@ begin
 
 
 	e_cpu: entity work.T80a
+	generic map (
+			mode => 1
+	)
 	port map (
 		  RESET_n     => i_CPU_nRES,
         CLK_n       => i_CPU_PHI09EKZCLK,
@@ -290,9 +292,9 @@ begin
 	main_clkc50: process
 	begin
 		if sim_ENDSIM='0' then
-			EXT_CLK_50M <= '0';
+			i_EXT_CLK_50M <= '0';
 			wait for 10 ns;
-			EXT_CLK_50M <= '1';
+			i_EXT_CLK_50M <= '1';
 			wait for 10 ns;
 		else
 			wait;

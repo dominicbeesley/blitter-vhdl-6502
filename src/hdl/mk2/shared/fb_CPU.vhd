@@ -298,6 +298,9 @@ begin
 						when CPU_80188 =>
 							r_cpu_run_ix_act <= C_IX_CPU_80188;
 							r_cpu_en_80188 <= '1';
+						when CPU_Z80 =>
+							r_cpu_run_ix_act <= C_IX_CPU_Z80;
+							r_cpu_en_z80 <= '1';						
 						when others => 
 							null;
 					end case;
@@ -307,7 +310,7 @@ begin
 				case cfg_cpu_type_i is
 					when CPU_65816 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_65816;
-					r_hard_cpu_en <= '1';
+						r_hard_cpu_en <= '1';
 					when CPU_68K =>
 						r_cpu_run_ix_hard <= C_IX_CPU_68k;
 						r_hard_cpu_en <= '1';
@@ -319,6 +322,9 @@ begin
 						r_hard_cpu_en <= '1';
 					when CPU_80188 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_80188;
+						r_hard_cpu_en <= '1';
+					when CPU_Z80 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_Z80;
 						r_hard_cpu_en <= '1';
 					when others => 
 						null;

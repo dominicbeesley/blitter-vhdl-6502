@@ -1061,6 +1061,9 @@ begin
 					r_cfg_cpu_type <= CPU_68K;
 					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
 					r_cfg_mk2_cpubits <= "000";
+				when "100" =>
+					r_cfg_cpu_type <= CPU_Z80;
+					r_cfg_mk2_cpubits <= "100";
 				when others =>
 					null;
 			end case;
