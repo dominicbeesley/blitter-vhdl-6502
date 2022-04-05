@@ -98,11 +98,12 @@ architecture rtl of fb_cpu_z80 is
 	signal r_WR_stb			: std_logic;
 
 
-	signal i_CPUSKT_CLK_o	: std_logic;
-	signal i_CPUSKT_nWAIT_o	: std_logic;
-	signal i_CPUSKT_nIRQ_o	: std_logic;
-	signal i_CPUSKT_nNMI_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
+	signal i_CPUSKT_CLK_o		: std_logic;
+	signal i_CPUSKT_nWAIT_o		: std_logic;
+	signal i_CPUSKT_nIRQ_o		: std_logic;
+	signal i_CPUSKT_nNMI_o		: std_logic;
+	signal i_CPUSKT_nRES_o		: std_logic;
+	signal i_CPUSKT_nBUSREQ_o 	: std_logic;
 
 	signal i_CPUSKT_nRD_i		: std_logic;
 	signal i_CPUSKT_nWR_i		: std_logic;
@@ -116,14 +117,15 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	wrap_o.CPUSKT_6BE9TSCKnVPA <= '1';
-	wrap_o.CPUSKT_9Q <= '1';
-	wrap_o.CPUSKT_PHI09EKZCLK <= i_CPUSKT_CLK_o;
-	wrap_o.CPUSKT_RDY9KnHALTZnWAIT <= i_CPUSKT_nWAIT_o;
-	wrap_o.CPUSKT_nIRQKnIPL1 <= i_CPUSKT_nIRQ_o;
-	wrap_o.CPUSKT_nNMIKnIPL02 <= i_CPUSKT_nNMI_o;
-	wrap_o.CPUSKT_nRES <= i_CPUSKT_nRES_o;
-	wrap_o.CPUSKT_9nFIRQLnDTACK <= '1';
+	wrap_o.CPUSKT_6BE9TSCKnVPA 		<= '1';
+	wrap_o.CPUSKT_9Q 						<= '1';
+	wrap_o.CPUSKT_KnBRZnBUSREQ 		<= i_CPUSKT_nBUSREQ_o;
+	wrap_o.CPUSKT_PHI09EKZCLK 			<= i_CPUSKT_CLK_o;
+	wrap_o.CPUSKT_RDY9KnHALTZnWAIT	<= i_CPUSKT_nWAIT_o;
+	wrap_o.CPUSKT_nIRQKnIPL1			<= i_CPUSKT_nIRQ_o;
+	wrap_o.CPUSKT_nNMIKnIPL02			<= i_CPUSKT_nNMI_o;
+	wrap_o.CPUSKT_nRES					<= i_CPUSKT_nRES_o;
+	wrap_o.CPUSKT_9nFIRQLnDTACK		<= '1';
 
 	i_CPUSKT_nRD_i		<= wrap_i.CPUSKT_6EKEZnRD;
 	i_CPUSKT_nWR_i		<= wrap_i.CPUSKT_RnWZnWR;
@@ -133,8 +135,6 @@ begin
 	i_CPUSKT_nIOREQ_i	<= wrap_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
 	i_CPUSKT_nBUSACK_i<= wrap_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
 
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
 
 	wrap_o.CPU_D_RnW <= '0' when i_CPUSKT_nRD_i = '1' else
 					 	'1';
@@ -146,7 +146,7 @@ begin
 
 
 	wrap_o.cyc 				<= ( 0 => r_act, others => '0');
-	wrap_o.we  			<= r_WE;
+	wrap_o.we  				<= r_WE;
 	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_WR_stb;
 	wrap_o.ack				<= not r_act;
@@ -195,6 +195,7 @@ begin
 				r_WR_stb <= not(i_CPUSKT_nWR_i);
 
 				if r_act = '0' and (i_CPUSKT_nMREQ_i = '0' or i_CPUSKT_nIOREQ_i = '0')
+									and (i_CPUSKT_nRD_i = '0' or i_CPUSKT_nWR_i = '0')
 												and i_CPUSKT_nRFSH_i = '1' then
 					r_act <= '1';
 
