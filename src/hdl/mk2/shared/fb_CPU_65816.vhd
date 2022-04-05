@@ -1,3 +1,26 @@
+-- MIT License
+-- -----------------------------------------------------------------------------
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+-- -----------------------------------------------------------------------------
+
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
@@ -22,12 +45,12 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
-
+use work.fb_cpu_pack.all;
 
 entity fb_cpu_65816 is
 		generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural
+		CLOCKSPEED							: positive
 	);
 	port(
 
@@ -35,59 +58,9 @@ entity fb_cpu_65816 is
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
 		fb_syscon_i								: in	fb_syscon_t;
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_i					: in	std_logic;		-- debugger is forcing a cpu NMI
-		noice_debug_shadow_i					: in	std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
-		noice_debug_inhibit_cpu_i			: in	std_logic;		-- during a 5C op code, inhibit address / data to avoid
-																				-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_o						: out	std_logic;		-- A 5C instruction is being fetched (qualify with clken below)
-		noice_debug_cpu_clken_o				: out	std_logic;		-- clken and cpu rdy
-		noice_debug_A0_tgl_o					: out	std_logic;		-- 1 when current A0 is different to previous fetched
-		noice_debug_opfetch_o				: out	std_logic;		-- this cycle is an opcode fetch
-
-		-- direct CPU control signals from system
-		nmi_n_i									: in	std_logic;
-		irq_n_i									: in	std_logic;
-
 		-- state machine signals
-		wrap_cyc_o								: out std_logic;								-- signal to state machine that we want access at some point soon
-		wrap_A_log_o							: out std_logic_vector(23 downto 0);	-- this will be passed on to fishbone after to log2phys mapping
-		wrap_A_we_o								: out std_logic;								-- we signal for this cycle
-		wrap_D_WR_stb_o						: out std_logic;								-- for write cycles indicates write data is ready
-		wrap_D_WR_o								: out std_logic_vector(7 downto 0);		-- write data
-		wrap_ack_o								: out std_logic;
-
-		wrap_rdy_ctdn_i						: in unsigned(RDY_CTDN_LEN-1 downto 0);
-		wrap_cyc_i								: in std_logic;
-
-		-- chipset control signals
-		cpu_halt_i								: in  std_logic;
-
-		CPU_D_RnW_o								: out		std_logic;								-- '1' cpu is reading, else writing
-
-		-- cpu socket signals
-		CPUSKT_D_i								: in		std_logic_vector(7 downto 0);
-
-		CPUSKT_A_i								: in		std_logic_vector(19 downto 0);
-
-		CPUSKT_6EKEZnRD_i						: in		std_logic;		
-		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i	: in		std_logic;
-		CPUSKT_RnWZnWR_i						: in		std_logic;
-		CPUSKT_PHI16ABRT9BSKnDS_i			: in		std_logic;		-- 6ABRT is actually an output but pulled up on the board
-		CPUSKT_PHI26VDAKFC0ZnMREQ_i		: in		std_logic;
-		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i		: in		std_logic;
-		CPUSKT_VSS6VPA9BAKnAS_i				: in		std_logic;
-		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i	: in		std_logic;		-- nSO is actually an output but pulled up on the board
-		CPUSKT_6BE9TSCKnVPA_o				: out		std_logic;
-		CPUSKT_9Q_o								: out		std_logic;
-		CPUSKT_KnBRZnBUSREQ_o				: out		std_logic;
-		CPUSKT_PHI09EKZCLK_o					: out		std_logic;
-		CPUSKT_RDY9KnHALTZnWAIT_o			: out		std_logic;
-		CPUSKT_nIRQKnIPL1_o					: out		std_logic;
-		CPUSKT_nNMIKnIPL02_o					: out		std_logic;
-		CPUSKT_nRES_o							: out		std_logic;
-		CPUSKT_9nFIRQLnDTACK_o				: out		std_logic;
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
 
 		-- 65816 specific signals
 
@@ -121,19 +94,50 @@ architecture rtl of fb_cpu_65816 is
 															-- this should be before A/CYC
 
 	signal i_vma				: std_logic;		-- '1' if VPA or VDA
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a master cycle
+	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 
+	signal i_CPUSKT_BE_o		: std_logic;
+	signal i_CPUSKT_PHI0_o	: std_logic;
+	signal i_CPUSKT_RDY_o	: std_logic;
+	signal i_CPUSKT_nIRQ_o	: std_logic;
+	signal i_CPUSKT_nNMI_o	: std_logic;
+	signal i_CPUSKT_nRES_o	: std_logic;
+
+	signal i_CPUSKT_6E_i		: std_logic;
+	signal i_CPUSKT_RnW_i	: std_logic;
+	signal i_CPUSKT_VDA_i	: std_logic;
+	signal i_CPUSKT_VPA_i	: std_logic;
+	signal i_CPUSKT_VPB_i	: std_logic;
+
 begin
+
+	wrap_o.CPUSKT_6BE9TSCKnVPA			<= i_CPUSKT_BE_o;
+	wrap_o.CPUSKT_9Q						<= '1';
+	wrap_o.CPUSKT_KnBRZnBUSREQ			<= '1';
+	wrap_o.CPUSKT_PHI09EKZCLK			<= i_CPUSKT_PHI0_o;
+	wrap_o.CPUSKT_RDY9KnHALTZnWAIT	<= i_CPUSKT_RDY_o;
+	wrap_o.CPUSKT_nIRQKnIPL1			<= i_CPUSKT_nIRQ_o;
+	wrap_o.CPUSKT_nNMIKnIPL02			<= i_CPUSKT_nNMI_o;
+	wrap_o.CPUSKT_nRES					<= i_CPUSKT_nRES_o;
+	wrap_o.CPUSKT_9nFIRQLnDTACK		<= '1';
+
+	i_CPUSKT_6E_i		<= wrap_i.CPUSKT_6EKEZnRD;
+	i_CPUSKT_RnW_i		<= wrap_i.CPUSKT_RnWZnWR;
+	i_CPUSKT_VDA_i		<= wrap_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
+	i_CPUSKT_VPA_i		<= wrap_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
+	i_CPUSKT_VPB_i		<= wrap_i.CPUSKT_VSS6VPA9BAKnAS;
+
+
 
 	debug_vma_o <= i_vma;
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
 
-	CPU_D_RnW_o <= 	'1' 	when CPUSKT_RnWZnWR_i = '1' 					-- we need to make sure that
+	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
 										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
 										else												-- bank address so hold is short
@@ -142,12 +146,12 @@ begin
 							'0';
 
 
-	wrap_A_log_o 			<= r_log_A;
-	wrap_cyc_o	 			<= r_a_stb;
-	wrap_A_we_o  			<= not(CPUSKT_RnWZnWR_i);
-	wrap_D_wr_o				<=	CPUSKT_D_i;	
-	wrap_D_wr_stb_o		<= '1' when r_state = phi2_5 else '0';
-	wrap_ack_o				<= '1' when r_state = phi2_7 else '0';
+	wrap_o.A_log 			<= r_log_A;
+	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
+	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
+	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr_stb		<= '1' when r_state = phi2_5 else '0';
+	wrap_o.ack				<= '1' when r_state = phi2_7 else '0';
 
 
 	p_phi0_dly:process(fb_syscon_i)
@@ -179,32 +183,31 @@ begin
 				when phi1_5 =>
 					r_state <= phi1_6;
 				when phi1_6 =>
-					-- this needs to be here for VMA which seems to be slower than the spec!
 
 					if r_cpu_hlt = '0' then
 						if i_boot = '1' then
-							if CPUSKT_D_i = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
-								if CPUSKT_VSS6VPA9BAKnAS_i = '0' and CPUSKT_6EKEZnRD_i = '0' then
+							if wrap_i.CPUSKT_D(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
+								if i_CPUSKT_VPB_i = '0' and i_CPUSKT_6E_i = '0' then
 									-- vector pull in Native mode - get from 008Fxx
-									r_log_A <= x"008F" & CPUSKT_A_i(7 downto 0);
+									r_log_A <= x"008F" & wrap_i.CPUSKT_A(7 downto 0);
 								else
 									-- bank 0 maps to FF in boot mode
-									r_log_A <= x"FF" & CPUSKT_A_i(15 downto 0);
+									r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
 								end if;
 							else
 								-- not bank 0 map direct
-								r_log_A <= CPUSKT_D_i & CPUSKT_A_i(15 downto 0);	
+								r_log_A <= wrap_i.CPUSKT_D(7 downto 0) & wrap_i.CPUSKT_A(15 downto 0);	
 							end if;
 						else
 								-- not boot mode map direct
-							r_log_A <= CPUSKT_D_i & CPUSKT_A_i(15 downto 0);
+							r_log_A <= wrap_i.CPUSKT_D(7 downto 0) & wrap_i.CPUSKT_A(15 downto 0);
 						end if;
 					end if;
 
 
-					if  noice_debug_inhibit_cpu_i = '0' and
+					if  wrap_i.noice_debug_inhibit_cpu = '0' and
 						 fb_syscon_i.rst = '0' and
-						 cpu_halt_i = '0' and
+						 wrap_i.cpu_halt = '0' and
 						 i_vma = '1' then
 						r_a_stb <= '1';
 						r_inihib <= '0';
@@ -216,10 +219,11 @@ begin
 						r_cpu_hlt <= '0';
 						r_cpu_res <= '1';
 					else
-						r_cpu_hlt <= cpu_halt_i;
+						r_cpu_hlt <= wrap_i.cpu_halt;
 						r_cpu_res <= '0';					
 					end if;
 
+								
 					r_state <= phi1_7;
 				when phi1_7 =>
 					r_PHI0 <= '1';
@@ -238,7 +242,7 @@ begin
 				when phi2_5 =>
 					if 	r_inihib = '1' or
 							fb_syscon_i.rst = '1' or
-							wrap_rdy_ctdn_i = RDY_CTDN_MIN then
+						wrap_i.rdy_ctdn = RDY_CTDN_MIN then
 						r_state <= phi2_6;
 					end if;
 				when phi2_6 =>
@@ -253,25 +257,19 @@ begin
 		end if;
 	end process;
 
-	i_vma <= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i or CPUSKT_PHI26VDAKFC0ZnMREQ_i;
+	i_vma <= i_CPUSKT_VPA_i or i_CPUSKT_VDA_i;
 
-	CPUSKT_6BE9TSCKnVPA_o <= cpu_en_i;
+	i_CPUSKT_BE_o <= cpu_en_i;
 	
-	CPUSKT_KnBRZnBUSREQ_o <= '1';	
+	i_CPUSKT_PHI0_o <= r_PHI0;
 	
-	CPUSKT_PHI09EKZCLK_o <= r_PHI0;
-
-	CPUSKT_9Q_o <= '1';
+	i_CPUSKT_nRES_o <= not r_cpu_res;
 	
-	CPUSKT_nRES_o <= not r_cpu_res;
-	
-	CPUSKT_nNMIKnIPL02_o <= noice_debug_nmi_n_i and nmi_n_i;
-	
-	CPUSKT_nIRQKnIPL1_o <=  irq_n_i;
+	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
   	
-  	CPUSKT_9nFIRQLnDTACK_o <=  '1';
+	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
 
-  	CPUSKT_RDY9KnHALTZnWAIT_o <= 	'0' when r_cpu_hlt = '1' else
+  	i_CPUSKT_RDY_o <= 	'0' when r_cpu_hlt = '1' else
   											'1';
 
 --=======================================================================================
@@ -287,7 +285,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_boot_65816_dly <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_state = phi2_7 and CPUSKT_VSS6VPA9BAKnAS_i = '1' and CPUSKT_PHI26VDAKFC0ZnMREQ_i = '1' then
+			if r_state = phi2_7 and i_CPUSKT_VPA_i = '1' and i_CPUSKT_VDA_i = '1' then
 				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i;
 			end if;
 		end if;
@@ -295,7 +293,7 @@ begin
 	end process;
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
-	i_boot <= r_boot_65816_dly(1) when CPUSKT_VSS6VPA9BAKnAS_i = '1' and CPUSKT_PHI26VDAKFC0ZnMREQ_i = '1' else
+	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_i = '1' and i_CPUSKT_VDA_i = '1' else
 				 r_boot_65816_dly(2);
 
 
@@ -309,19 +307,19 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if r_state = phi2_7 then
-  				r_prev_A0 <= CPUSKT_A_i(0);
+  				r_prev_A0 <= wrap_i.CPUSKT_A(0);
   			end if;
   		end if;
   	end process;
 
 
-	noice_debug_A0_tgl_o <= r_prev_A0 xor CPUSKT_A_i(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor wrap_i.CPUSKT_A(0);
 
-  	noice_debug_cpu_clken_o <= '1' when r_state = phi2_7 else '0';
+  	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2_7 else '0';
   	
-  	noice_debug_5c_o	 <= '0';
+  	wrap_o.noice_debug_5c	 <= '0';
 
-  	noice_debug_opfetch_o <= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i and CPUSKT_PHI26VDAKFC0ZnMREQ_i and not r_cpu_hlt;
+  	wrap_o.noice_debug_opfetch <= i_CPUSKT_VPA_i and i_CPUSKT_VDA_i and not r_cpu_hlt;
 
 
 

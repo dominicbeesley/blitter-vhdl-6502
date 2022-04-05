@@ -598,26 +598,26 @@ END GENERATE;
 -- -- END GENERATE;
 -- -- 
 -- -- 
--- -- g65816:IF G_INCL_CPU_65816 GENERATE
--- -- 	e_wrap_65816:entity work.fb_cpu_65816
--- -- 	generic map (
--- -- 		SIM										=> SIM,
--- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- 	) 
--- -- 	port map(
--- -- 
--- -- 		-- configuration
--- -- 		cpu_en_i									=> r_cpu_en_65816,
--- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- 
--- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
--- -- 		wrap_i									=> i_wrap_i,
--- -- 
--- -- 		boot_65816_i							=> boot_65816_i,
--- -- 
--- -- 		debug_vma_o								=> debug_65816_vma_o
--- -- 	);
--- -- END GENERATE;
+g65816:IF G_INCL_CPU_65816 GENERATE
+	e_wrap_65816:entity work.fb_cpu_65816
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_65816,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
+		wrap_i									=> i_wrap_i,
+
+		boot_65816_i							=> boot_65816_i,
+
+		debug_vma_o								=> debug_65816_vma_o
+	);
+END GENERATE;
 
 	-- ================================================================================================ --
 	-- SYS VIA blocker
