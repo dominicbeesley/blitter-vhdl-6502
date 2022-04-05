@@ -38,9 +38,8 @@
 --
 ----------------------------------------------------------------------------------
 
--- NOTE: this requires a board mod on the mk.2 board - the z80's RFSH pin needs to 
--- be connected to i_CPUSKT_nRFSH_i
-
+-- NOTE: this has not been tested on MK3 - an expansion board has not yet
+-- been made, mk.2 has been tested
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -55,8 +54,7 @@ use work.fb_cpu_pack.all;
 entity fb_cpu_z80 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;
-		G_BYTELANES							: positive	:= 1
+		CLOCKSPEED							: natural
 	);
 	port(
 
