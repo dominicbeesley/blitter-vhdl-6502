@@ -152,11 +152,7 @@ entity fb_cpu is
 
 		debug_65816_vma_o						: out std_logic;
 
-		debug_SYS_VIA_block_o				: out std_logic;
-
-		debug_80188_state_o					: out std_logic_vector(2 downto 0);
-		debug_80188_ale_o						: out std_logic
-
+		debug_SYS_VIA_block_o				: out std_logic
 	);
 end fb_cpu;
 
@@ -498,24 +494,24 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 
 END GENERATE;
 
--- -- g6x09:IF G_INCL_CPU_6x09 GENERATE
--- -- 	e_wrap_6x09:entity work.fb_cpu_6x09
--- -- 	generic map (
--- -- 		SIM										=> SIM,
--- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- 	) 
--- -- 	port map(
--- -- 
--- -- 		-- configuration
--- -- 		cpu_en_i									=> r_cpu_en_6x09,
--- -- 		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
--- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- 
--- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
--- -- 		wrap_i									=> i_wrap_i
--- -- 	);
--- -- END GENERATE;
--- -- 
+g6x09:IF G_INCL_CPU_6x09 GENERATE
+	e_wrap_6x09:entity work.fb_cpu_6x09
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_6x09,
+		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
+		wrap_i									=> i_wrap_i
+	);
+END GENERATE;
+
 -- -- gz80: IF G_INCL_CPU_Z80 GENERATE
 -- -- 	e_wrap_z80:entity work.fb_cpu_z80
 -- -- 	generic map (
