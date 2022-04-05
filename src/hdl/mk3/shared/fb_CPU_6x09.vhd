@@ -51,8 +51,7 @@ use work.fb_cpu_pack.all;
 entity fb_cpu_6x09 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;
-		G_BYTELANES							: positive	:= 1
+		CLOCKSPEED							: natural
 	);
 	port(
 
@@ -123,17 +122,17 @@ architecture rtl of fb_cpu_6x09 is
    constant T_phB_2 : natural := 12;
    constant T_phC_2 : natural := 12;
    constant T_phD_2 : natural := 12;
-   constant T_tAD_2 : natural := 11;		-- really should be 13
+   constant T_tAD_2 : natural := 10;		-- really should be 13
    constant T_tDD_2 : natural := 15;
    constant T_tDS_2 : natural := 2;
    constant T_tDH_2 : natural := 2;
 
--- 2MHz timings
+-- 3MHz timings
    constant T_phA_3 : natural := 8;
    constant T_phB_3 : natural := 8;
    constant T_phC_3 : natural := 8;
    constant T_phD_3 : natural := 8;			-- 4*9/128 =~ 3.55MHz!
-   constant T_tAD_3 : natural := 11;		-- really should be 13
+   constant T_tAD_3 : natural := 10;		-- really should be 13
    constant T_tDD_3 : natural := 8;
    constant T_tDS_3 : natural := 0;
    constant T_tDH_3 : natural := 2;
