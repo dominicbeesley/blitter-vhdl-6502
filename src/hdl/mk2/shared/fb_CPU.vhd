@@ -515,25 +515,25 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 	);
 END GENERATE;
 
--- -- gz80: IF G_INCL_CPU_Z80 GENERATE
--- -- 	e_wrap_z80:entity work.fb_cpu_z80
--- -- 	generic map (
--- -- 		SIM										=> SIM,
--- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- 	) 
--- -- 	port map(
--- -- 
--- -- 		-- configuration
--- -- 		cpu_en_i									=> r_cpu_en_z80,
--- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- 
--- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
--- -- 		wrap_i									=> i_wrap_i
--- -- 
--- -- 	);
--- -- END GENERATE;
--- -- 
--- -- 
+gz80: IF G_INCL_CPU_Z80 GENERATE
+	e_wrap_z80:entity work.fb_cpu_z80
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_z80,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
+		wrap_i									=> i_wrap_i
+
+	);
+END GENERATE;
+
+
 -- -- g68k:IF G_INCL_CPU_68k GENERATE
 -- -- 	e_wrap_68k:entity work.fb_cpu_68k
 -- -- 	generic map (
