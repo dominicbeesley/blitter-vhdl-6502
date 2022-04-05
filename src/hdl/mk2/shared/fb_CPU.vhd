@@ -291,6 +291,9 @@ begin
 							r_cpu_en_6800 <= '1';
 						when CPU_6x09 =>
 							r_cpu_run_ix_act <= C_IX_CPU_6x09;
+							if cfg_cpu_speed_opt_i = CPUSPEED_6309_3_5 then
+								r_do_sys_via_block <= '1';	
+							end if;
 							r_cpu_en_6x09 <= '1';
 						when CPU_80188 =>
 							r_cpu_run_ix_act <= C_IX_CPU_80188;
@@ -393,7 +396,7 @@ begin
 			r_state <= r_state;
 			r_sys_via_block_clken <= '0';
 
-			if (or_reduce(i_wrap_o_cur_act.cyc) = '1' or r_wrap_cyc = '1') and i_wrap_o_cur_act.D_WR_stb = '1' then
+			if (or_reduce(i_wrap_o_cur_act.cyc) = '1' or r_wrap_cyc = '1' or r_state = s_block) and i_wrap_o_cur_act.D_WR_stb = '1' then
 				r_wrap_D_WR_stb <= '1';
 				r_wrap_D_WR <= i_wrap_o_cur_act.D_WR;
 			end if;

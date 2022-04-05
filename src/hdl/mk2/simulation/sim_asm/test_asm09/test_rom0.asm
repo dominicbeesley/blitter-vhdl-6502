@@ -105,6 +105,14 @@ mos_handle_res
 		ldx	#jim_page_DMAC
 		stx	fred_JIM_PAGE_HI
 
+		; test BBC slow bus bodge
+		sta	sheila_SYSVIA_orb
+		lda	sheila_SYSVIA_ora
+		sta	sheila_SYSVIA_orb
+		sta	sheila_SYSVIA_orb
+
+
+
 
 		; DMAC step normal test
 		clr	jim_DMAC_DMA_SEL
