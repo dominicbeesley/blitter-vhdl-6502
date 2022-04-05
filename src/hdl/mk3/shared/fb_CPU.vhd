@@ -307,6 +307,9 @@ begin
 						when CPU_80188 =>
 							r_cpu_run_ix_act <= C_IX_CPU_80188;
 							r_cpu_en_80188 <= '1';
+						when CPU_Z80 =>
+							r_cpu_run_ix_act <= C_IX_CPU_Z80;
+							r_cpu_en_z80 <= '1';						
 						when others => 
 							null;
 					end case;
@@ -328,6 +331,9 @@ begin
 						r_hard_cpu_en <= '1';
 					when CPU_80188 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_80188;
+						r_hard_cpu_en <= '1';
+					when CPU_Z80 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_Z80;
 						r_hard_cpu_en <= '1';
 					when others => 
 						null;
@@ -625,7 +631,9 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
-		wrap_i									=> i_wrap_i
+		wrap_i									=> i_wrap_i,
+
+ 		jim_en_i									=> jim_en_i
 
 	);
 END GENERATE;

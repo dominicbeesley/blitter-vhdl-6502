@@ -1,4 +1,4 @@
-			.area CODE(ABS, CON)
+			.area CODE2(ABS, CON)
 
 font_data::
 	.db 0H0

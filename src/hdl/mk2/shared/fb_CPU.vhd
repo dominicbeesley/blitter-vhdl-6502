@@ -534,7 +534,9 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
-		wrap_i									=> i_wrap_i
+		wrap_i									=> i_wrap_i,
+
+ 		jim_en_i									=> jim_en_i
 
 	);
 END GENERATE;

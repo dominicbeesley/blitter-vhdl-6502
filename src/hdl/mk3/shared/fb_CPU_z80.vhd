@@ -64,7 +64,10 @@ entity fb_cpu_z80 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- special m68k signals
+		jim_en_i									: in		std_logic
 
 	);
 end fb_cpu_z80;
@@ -86,6 +89,7 @@ architecture rtl of fb_cpu_z80 is
 	signal r_cpu_clk_ne		: std_logic;
 	signal r_cpu_clk_pe		: std_logic;
 
+	signal r_z80_boot			: std_logic;								-- map MOS ROM FFFF00 at CPU addr 0000-00FF during boot
 
 	signal r_act				: std_logic;
 
@@ -102,6 +106,7 @@ architecture rtl of fb_cpu_z80 is
 	signal i_CPUSKT_nIRQ_o	: std_logic;
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
+	signal i_CPUSKT_nBUSREQ_o 	: std_logic;
 
 	signal i_CPUSKT_nRD_i		: std_logic;
 	signal i_CPUSKT_nWR_i		: std_logic;
@@ -152,9 +157,10 @@ begin
 	wrap_o.A_log			<= r_A_log;
   		
 
-  	i_A_log <=						x"FFFD" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nIOREQ_i = '0' else 
-  										x"FF" & wrap_i.CPUSKT_A(15 downto 0) when (wrap_i.CPUSKT_A(15 downto 8) = x"FC" or wrap_i.CPUSKT_A(15 downto 8) = x"FD" or wrap_i.CPUSKT_A(15 downto 8) = x"FE") else
-										x"FF" & '0' & wrap_i.CPUSKT_A(14 downto 0) when wrap_i.CPUSKT_A(15) = '1' else 	-- 8000-FFFF from SYS 0-7FFF (for screen)
+  	i_A_log <=						x"FFFF" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nRD_i = '0' and r_z80_boot = '1' else
+  										x"FFFD" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nIOREQ_i = '0' else 
+										x"FF" & "00" & wrap_i.CPUSKT_A(13 downto 0) when wrap_i.CPUSKT_A(15 downto 14) = "10" else 	-- 8000-BFFF from SYS 0-7FFF (for screen)
+										x"FF" & "11" & wrap_i.CPUSKT_A(13 downto 0) when wrap_i.CPUSKT_A(15 downto 14) = "11" else 	-- C000-FFFF from SYS C000-FFFF (for screen and regs)
   										x"00" & wrap_i.CPUSKT_A(15 downto 0); 	-- low memory from chip ram
 
 	p_cpu_clk:process(fb_syscon_i)
@@ -194,7 +200,8 @@ begin
 				r_WR_stb <= not(i_CPUSKT_nWR_i);
 
 				if r_act = '0' and (i_CPUSKT_nMREQ_i = '0' or i_CPUSKT_nIOREQ_i = '0')
-												and i_CPUSKT_nRFSH_i = '1' then
+									and (i_CPUSKT_nRD_i = '0' or i_CPUSKT_nWR_i = '0')			-- had to add this as belt and braces
+												and i_CPUSKT_nRFSH_i = '1' then						-- not sure we need this now? Might do for speed or might only need to qualify RD/WR on IORQ?
 					r_act <= '1';
 
 					r_A_log <=	i_A_log;
@@ -208,6 +215,8 @@ begin
 	end process;
 
 
+	i_CPUSKT_nBUSREQ_o <= cpu_en_i;
+
 	i_CPUSKT_CLK_o <= r_cpu_clk;
 
 	i_CPUSKT_nRES_o <= (not fb_syscon_i.rst) when cpu_en_i = '1' else '0';
@@ -220,6 +229,18 @@ begin
   												'1' 			when wrap_i.noice_debug_inhibit_cpu = '1' else
   												i_rdy		 	when wrap_i.cyc = '1' else
   												'1';						
+
+	p_z80_boot:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_z80_boot <= '1';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if JIM_en_i = '1' then
+				r_z80_boot <= '0';
+			end if;
+		end if;
+	end process;
+
 
 
   	--TODO: this doesn't look right

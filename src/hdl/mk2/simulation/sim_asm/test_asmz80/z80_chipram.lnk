@@ -1,7 +1,0 @@
--i build/z80_chipram.ihx
--b CODE=0x0000
--m
--j
-build/z80_chipram.rel
-build/font_data.rel
--e

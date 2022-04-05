@@ -23,8 +23,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_z80a_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_rom.bin";
-	G_RAMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_chipram.bin"
+	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asmz80/build/z80_rom.bin"
 	);
 end sim_z80a_tb;
 
@@ -250,7 +249,6 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
-		romfile		=> G_RAMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)
