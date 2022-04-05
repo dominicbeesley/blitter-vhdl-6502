@@ -1,7 +1,7 @@
--i z80_rom.ihx
+-i build/z80_rom.ihx
 -b CODE2=0xC000
 -b CODE_VEC=0xFF00
 -m
 -j
-z80_rom.rel
+build/z80_rom.rel
 -e
