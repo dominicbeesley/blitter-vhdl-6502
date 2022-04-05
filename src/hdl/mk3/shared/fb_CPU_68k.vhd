@@ -273,6 +273,7 @@ begin
 	end process;
 
 	i_A_log 	<= 
+					-- TODO: simplify these down to FFFF to boot from MOS rom in SYS map?
 					x"7D3F" & r_cpuskt_A_m(7 downto 0) 	-- boot from SWRAM at 7D xxxx
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' and cfg_mosram_i = '1' else
 					x"8D3F" & r_cpuskt_A_m(7 downto 0) 	-- boot from Flash at 8D xxxx
