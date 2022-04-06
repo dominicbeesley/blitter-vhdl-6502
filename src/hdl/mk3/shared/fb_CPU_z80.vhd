@@ -157,11 +157,71 @@ begin
 	wrap_o.A_log			<= r_A_log;
   		
 
-  	i_A_log <=						x"FFFF" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nRD_i = '0' and r_z80_boot = '1' else
-  										x"FFFD" & wrap_i.CPUSKT_A(7 downto 0) when i_CPUSKT_nIOREQ_i = '0' else 
-										x"FF" & "00" & wrap_i.CPUSKT_A(13 downto 0) when wrap_i.CPUSKT_A(15 downto 14) = "10" else 	-- 8000-BFFF from SYS 0-7FFF (for screen)
-										x"FF" & "11" & wrap_i.CPUSKT_A(13 downto 0) when wrap_i.CPUSKT_A(15 downto 14) = "11" else 	-- C000-FFFF from SYS C000-FFFF (for screen and regs)
-  										x"00" & wrap_i.CPUSKT_A(15 downto 0); 	-- low memory from chip ram
+	-- Z80 memory map notes: TODO: move this to wiki/doc folder
+	--
+	-- BOOT TIME
+	-- =========
+	-- After reset a boot flag causes all reads to be made from the boot sector of the MOS rom at FF FFXX
+	-- the Z80 starts executing at 0000 which would normally be mapped to 00 0000 which is ChipRAM. At boot
+	-- time the MOS/MONITOR should set up the zero page (writes are still mapped as normal) and jump to an
+	-- entry point in the MOS boot ears FF FFxx (boot mapping is still in force) then
+	-- write the JIM_ENABLE value to the DEVICE_SELECT register i.e. ($FCFF)=$D1 all before enabling any
+	-- interrupts.
+	-- TODO: what happens if there is an NMI at boot time?! Need a handler at FF FF33?
+	--
+	-- NORMAL MEMORY MAP
+	-- =================
+	-- 
+	-- CPU					Logical				Physical
+	-- +------------+
+	-- | 0000..9FFF |		00 0000..00 9FFF 	00 0000..00 9FFF - RAM at full speed 10ns/55ns
+	-- | user mem   |
+	-- | 40K			 |
+	-- +------------+
+	-- | A000..EFFF |		FF 3000..FF 7FFF	FF 3000..FF 7FFF - SYS/screen can be used as RAM but will run at 2MHz
+	-- | screen mem |
+	-- | 20K        |
+	-- +------------+
+	-- | F000..FBFF |		FF F000..FF FBFF  FF F000..FF FBFF - if running with ROM set 0
+	-- | monitor rom|								7D 3000..7D 3BFF - if running in rom bank 1 with mosram
+	-- | 3K         |    						9D 3000..9D 3BFF - if running in rom bank 1 normally
+	-- +------------+
+	-- | FC00..FEFF |		FF FC00..FF FEFF 	FF FC00..FF FEFF - hardware registers
+	-- | hardware   |
+	-- | 0.75K      |
+	-- +------------+
+	-- | FF00..FFFF |		FF FF00..FF FFFF	FF FF00..FF FFFF - if running in rom bank 0
+	-- | boot rom   |								7D 3F00..7D 3FFF - if running in rom bank 1 with mosram
+	-- | 0.25K      |    						9D 3F00..9D 3FFF - if running in rom bank 1 normally
+	-- +------------+
+	--
+	-- IO Mapping
+	-- ==========
+	-- IO ports always access lofical and physical FF FDxx
+
+
+	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_i, i_CPUSKT_nIOREQ_i)
+	variable v_A_top : unsigned(3 downto 0);
+	begin
+		v_A_top := unsigned(wrap_i.CPUSKT_A(15 downto 12));
+		if i_CPUSKT_nIOREQ_i = '0' then
+			-- IO ports all map to JIM page
+			i_A_log <= x"FFFD" & wrap_i.CPUSKT_A(7 downto 0);
+		elsif i_CPUSKT_nRD_i = '0' and r_z80_boot = '1' then
+			-- boot rom reads
+			i_A_log <= x"FFFF" & wrap_i.CPUSKT_A(7 downto 0);
+		elsif v_A_top >= x"A" and v_A_top <= x"E" then
+			-- screen memory
+			i_A_log <= x"FF" & std_logic_vector(v_A_top - 7) & wrap_i.CPUSKT_A(11 downto 0);
+		elsif v_A_top = x"F" then
+			-- mos rom / boot rom / hardware regs
+			i_A_log <= x"FFF" & wrap_i.CPUSKT_A(11 downto 0);
+		else
+			-- chip ram low memory
+			i_A_log <= x"00" & wrap_i.CPUSKT_A(15 downto 0); 	-- low memory from chip ram
+		end if;
+	end process;
+
 
 	p_cpu_clk:process(fb_syscon_i)
 	begin

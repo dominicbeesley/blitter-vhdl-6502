@@ -1,5 +1,5 @@
 -i build/z80_rom.ihx
--b CODE2=0xC000
+-b CODE=0xF000
 -b CODE_VEC=0xFF00
 -m
 -j

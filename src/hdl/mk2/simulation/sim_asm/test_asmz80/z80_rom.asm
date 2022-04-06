@@ -1,6 +1,9 @@
-		.area   CODE2 (CON, ABS)
+		.area   CODE (CON, ABS)
 
 		.globl	font_data
+
+SCREEN_BASE	= 0xA000
+SCREEN_LEN	= 0x4000
 
 handle_res3:	di
 		ld	sp, 0x3000
@@ -20,14 +23,14 @@ handle_res3:	di
 		in	a, (0x8F)
 
 		; cls
-		ld	hl, 0xB000
-		ld	de, 0xB001
+		ld	hl, SCREEN_BASE
+		ld	de, SCREEN_BASE+1
 		ld	a, 0
 		ld	(hl),a
-		ld	bc, 0x4000-1
+		ld	bc, SCREEN_LEN-1
 		ldir
 
-		ld	hl, 0xC000
+		ld	hl, SCREEN_BASE + 640 * 5
 		ld	(scr_ptr), hl
 		ld	hl, message
 
