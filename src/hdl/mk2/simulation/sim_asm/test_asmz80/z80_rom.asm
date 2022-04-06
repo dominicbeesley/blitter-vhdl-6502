@@ -1,3 +1,10 @@
+		.area   DATA (CON, ABS)
+
+		.globl  scr_ptr
+
+scr_ptr:	.rmb 2
+
+
 		.area   CODE (CON, ABS)
 
 		.globl	font_data
@@ -69,7 +76,6 @@ scr_char:	push	af
 
 
 message:	.asciz	"Hello Stardot Z80!"
-scr_ptr:	.rmb 2
 
 
 		.area   CODE_VEC (CON, ABS)
