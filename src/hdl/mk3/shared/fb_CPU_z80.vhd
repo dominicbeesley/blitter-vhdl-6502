@@ -259,9 +259,11 @@ begin
 
 				r_WR_stb <= not(i_CPUSKT_nWR_i);
 
-				if r_act = '0' and (i_CPUSKT_nMREQ_i = '0' or i_CPUSKT_nIOREQ_i = '0')
-									and (i_CPUSKT_nRD_i = '0' or i_CPUSKT_nWR_i = '0')			-- had to add this as belt and braces
-												and i_CPUSKT_nRFSH_i = '1' then						-- not sure we need this now? Might do for speed or might only need to qualify RD/WR on IORQ?
+				if r_act = '0' and 
+					(
+						(i_CPUSKT_nMREQ_i = '0' and i_CPUSKT_nRFSH_i = '1' ) or
+						(i_CPUSKT_nIOREQ_i = '0' and (i_CPUSKT_nRD_i = '0' or i_CPUSKT_nWR_i = '0')) 
+					) then
 					r_act <= '1';
 
 					r_A_log <=	i_A_log;
@@ -288,7 +290,7 @@ begin
   	i_CPUSKT_nWAIT_o <= 	'1' 			when fb_syscon_i.rst = '1' else
   												'1' 			when wrap_i.noice_debug_inhibit_cpu = '1' else
   												i_rdy		 	when wrap_i.cyc = '1' else
-  												'1';						
+  												'0';						
 
 	p_z80_boot:process(fb_syscon_i)
 	begin
