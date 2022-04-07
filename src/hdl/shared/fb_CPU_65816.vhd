@@ -46,6 +46,7 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_65816 is
 		generic (
@@ -61,6 +62,10 @@ entity fb_cpu_65816 is
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
 		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- 65816 specific signals
 
@@ -114,27 +119,35 @@ architecture rtl of fb_cpu_65816 is
 
 begin
 
-	wrap_o.CPUSKT_6BE9TSCKnVPA			<= i_CPUSKT_BE_o;
-	wrap_o.CPUSKT_9Q						<= '1';
-	wrap_o.CPUSKT_KnBRZnBUSREQ			<= '1';
-	wrap_o.CPUSKT_PHI09EKZCLK			<= i_CPUSKT_PHI0_o;
-	wrap_o.CPUSKT_RDY9KnHALTZnWAIT	<= i_CPUSKT_RDY_o;
-	wrap_o.CPUSKT_nIRQKnIPL1			<= i_CPUSKT_nIRQ_o;
-	wrap_o.CPUSKT_nNMIKnIPL02			<= i_CPUSKT_nNMI_o;
-	wrap_o.CPUSKT_nRES					<= i_CPUSKT_nRES_o;
-	wrap_o.CPUSKT_9nFIRQLnDTACK		<= '1';
+	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	i_CPUSKT_6E_i		<= wrap_i.CPUSKT_6EKEZnRD;
-	i_CPUSKT_RnW_i		<= wrap_i.CPUSKT_RnWZnWR;
-	i_CPUSKT_VDA_i		<= wrap_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
-	i_CPUSKT_VPA_i		<= wrap_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	i_CPUSKT_VPB_i		<= wrap_i.CPUSKT_VSS6VPA9BAKnAS;
+	e_pinmap:entity work.fb_cpu_65816_exp_pins
+	port map(
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
+
+		-- local z80 wrapper signals
+
+		CPUSKT_BE_i			=> i_CPUSKT_BE_o,
+		CPUSKT_PHI0_i		=> i_CPUSKT_PHI0_o,
+		CPUSKT_RDY_i		=> i_CPUSKT_RDY_o,
+		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
+		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
+		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+
+		CPUSKT_6E_o			=>	i_CPUSKT_6E_i,
+		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
+		CPUSKT_VDA_o		=> i_CPUSKT_VDA_i,
+		CPUSKT_VPA_o		=> i_CPUSKT_VPA_i,
+		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i
+
+	);
 
 
 
 	debug_vma_o <= i_vma;
 
-	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
 
 	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that

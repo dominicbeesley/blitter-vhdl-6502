@@ -56,6 +56,7 @@ use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_CPU_exp_pack.all;
 use work.fb_SYS_pack.all;
 
 entity fb_cpu is
@@ -181,10 +182,12 @@ architecture rtl of fb_cpu is
 	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
 	-- signal directions and levels to hold the hard cpu in low-power or reset state
 
-	signal i_wrap_o_all 			: t_cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);		-- all wrap_o signals
-	signal i_wrap_o_cur_act		: t_cpu_wrap_o;											-- selected wrap_o signal hard OR soft
-	signal i_wrap_o_cur_hard	: t_cpu_wrap_o;											-- selected wrap_o signal hard only
-	signal i_wrap_i				: t_cpu_wrap_i;
+	signal i_wrap_o_all 				: t_cpu_wrap_o_arr(0 to C_IX_CPU_COUNT-1);		-- all wrap_o signals
+	signal i_wrap_exp_o_all 		: t_cpu_wrap_exp_o_arr(0 to C_IX_CPU_COUNT-1);	-- all wrap_exp_o signals
+	signal i_wrap_o_cur_act			: t_cpu_wrap_o;											-- selected wrap_o signal hard OR soft
+	signal i_wrap_exp_o_cur_hard	: t_cpu_wrap_exp_o;										-- selected wrap_exp_o signal hard only
+	signal i_wrap_i					: t_cpu_wrap_i;
+	signal i_wrap_exp_i				: t_cpu_wrap_exp_i;
 
 	-----------------------------------------------------------------------------
 	-- configuration registers setup at boot time
@@ -503,23 +506,23 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 
 END GENERATE;
 
-g6x09:IF G_INCL_CPU_6x09 GENERATE
-	e_wrap_6x09:entity work.fb_cpu_6x09
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_6x09,
-		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
-		wrap_i									=> i_wrap_i
-	);
-END GENERATE;
+-- -- -- g6x09:IF G_INCL_CPU_6x09 GENERATE
+-- -- -- 	e_wrap_6x09:entity work.fb_cpu_6x09
+-- -- -- 	generic map (
+-- -- -- 		SIM										=> SIM,
+-- -- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- -- 	) 
+-- -- -- 	port map(
+-- -- -- 
+-- -- -- 		-- configuration
+-- -- -- 		cpu_en_i									=> r_cpu_en_6x09,
+-- -- -- 		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+-- -- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- -- 
+-- -- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
+-- -- -- 		wrap_i									=> i_wrap_i
+-- -- -- 	);
+-- -- -- END GENERATE;
 
 gz80: IF G_INCL_CPU_Z80 GENERATE
 	e_wrap_z80:entity work.fb_cpu_z80
@@ -535,6 +538,9 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z80),
 		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_Z80),
+		wrap_exp_i								=> i_wrap_exp_i,
 
  		jim_en_i									=> jim_en_i
 
@@ -605,26 +611,26 @@ END GENERATE;
 -- -- END GENERATE;
 -- -- 
 -- -- 
-g65816:IF G_INCL_CPU_65816 GENERATE
-	e_wrap_65816:entity work.fb_cpu_65816
-	generic map (
-		SIM										=> SIM,
-		CLOCKSPEED								=> CLOCKSPEED
-	) 
-	port map(
-
-		-- configuration
-		cpu_en_i									=> r_cpu_en_65816,
-		fb_syscon_i								=> fb_syscon_i,
-
-		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
-		wrap_i									=> i_wrap_i,
-
-		boot_65816_i							=> boot_65816_i,
-
-		debug_vma_o								=> debug_65816_vma_o
-	);
-END GENERATE;
+-- -- -- g65816:IF G_INCL_CPU_65816 GENERATE
+-- -- -- 	e_wrap_65816:entity work.fb_cpu_65816
+-- -- -- 	generic map (
+-- -- -- 		SIM										=> SIM,
+-- -- -- 		CLOCKSPEED								=> CLOCKSPEED
+-- -- -- 	) 
+-- -- -- 	port map(
+-- -- -- 
+-- -- -- 		-- configuration
+-- -- -- 		cpu_en_i									=> r_cpu_en_65816,
+-- -- -- 		fb_syscon_i								=> fb_syscon_i,
+-- -- -- 
+-- -- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
+-- -- -- 		wrap_i									=> i_wrap_i,
+-- -- -- 
+-- -- -- 		boot_65816_i							=> boot_65816_i,
+-- -- -- 
+-- -- -- 		debug_vma_o								=> debug_65816_vma_o
+-- -- -- 	);
+-- -- -- END GENERATE;
 
 	-- ================================================================================================ --
 	-- SYS VIA blocker
@@ -650,8 +656,8 @@ END GENERATE;
 	-- multiplex wrapper signals
 	-- ================================================================================================ --
 
-	i_wrap_o_cur_act	<= i_wrap_o_all(r_cpu_run_ix_act);	
-	i_wrap_o_cur_hard	<= i_wrap_o_all(r_cpu_run_ix_hard);	
+	i_wrap_o_cur_act			<= i_wrap_o_all(r_cpu_run_ix_act);	
+	i_wrap_exp_o_cur_hard	<= i_wrap_exp_o_all(r_cpu_run_ix_hard);	
 
 
 	-- ================================================================================================ --
@@ -674,15 +680,6 @@ END GENERATE;
 	i_wrap_i.CPUSKT_D 					<= CPUSKT_D_io;
 	i_wrap_i.CPUSKT_A 					<= "0000" & CPUSKT_A_i;
 
-	i_wrap_i.CPUSKT_6EKEZnRD					<= CPUSKT_6EKEZnRD_i;
-	i_wrap_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
-	i_wrap_i.CPUSKT_RnWZnWR						<= CPUSKT_RnWZnWR_i;
-	i_wrap_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
-	i_wrap_i.CPUSKT_PHI26VDAKFC0ZnMREQ		<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
-	i_wrap_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1	<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
-	i_wrap_i.CPUSKT_VSS6VPA9BAKnAS			<= CPUSKT_VSS6VPA9BAKnAS_i;
-	i_wrap_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
-
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
@@ -693,21 +690,30 @@ END GENERATE;
 
 
 	-- ================================================================================================ --
-	-- expansion header signals from current CPU
+	-- expansion header signals to/from current CPU
 	-- ================================================================================================ --
 
-	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_o_cur_hard.CPUSKT_6BE9TSCKnVPA;
-	CPUSKT_9Q_o						<= i_wrap_o_cur_hard.CPUSKT_9Q;
-	CPUSKT_KnBRZnBUSREQ_o		<= i_wrap_o_cur_hard.CPUSKT_KnBRZnBUSREQ;
-	CPUSKT_PHI09EKZCLK_o			<= i_wrap_o_cur_hard.CPUSKT_PHI09EKZCLK;
-	CPUSKT_RDY9KnHALTZnWAIT_o	<= i_wrap_o_cur_hard.CPUSKT_RDY9KnHALTZnWAIT;
-	CPUSKT_nIRQKnIPL1_o			<= i_wrap_o_cur_hard.CPUSKT_nIRQKnIPL1;
-	CPUSKT_nNMIKnIPL02_o			<= i_wrap_o_cur_hard.CPUSKT_nNMIKnIPL02;
-	CPUSKT_nRES_o					<= i_wrap_o_cur_hard.CPUSKT_nRES;
-	CPUSKT_9nFIRQLnDTACK_o		<= i_wrap_o_cur_hard.CPUSKT_9nFIRQLnDTACK;
+	i_wrap_exp_i.CPUSKT_6EKEZnRD						<= CPUSKT_6EKEZnRD_i;
+	i_wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
+	i_wrap_exp_i.CPUSKT_RnWZnWR						<= CPUSKT_RnWZnWR_i;
+	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
+	i_wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ			<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
+	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
+	i_wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS				<= CPUSKT_VSS6VPA9BAKnAS_i;
+	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
+
+	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_exp_o_cur_hard.CPUSKT_6BE9TSCKnVPA;
+	CPUSKT_9Q_o						<= i_wrap_exp_o_cur_hard.CPUSKT_9Q;
+	CPUSKT_KnBRZnBUSREQ_o		<= i_wrap_exp_o_cur_hard.CPUSKT_KnBRZnBUSREQ;
+	CPUSKT_PHI09EKZCLK_o			<= i_wrap_exp_o_cur_hard.CPUSKT_PHI09EKZCLK;
+	CPUSKT_RDY9KnHALTZnWAIT_o	<= i_wrap_exp_o_cur_hard.CPUSKT_RDY9KnHALTZnWAIT;
+	CPUSKT_nIRQKnIPL1_o			<= i_wrap_exp_o_cur_hard.CPUSKT_nIRQKnIPL1;
+	CPUSKT_nNMIKnIPL02_o			<= i_wrap_exp_o_cur_hard.CPUSKT_nNMIKnIPL02;
+	CPUSKT_nRES_o					<= i_wrap_exp_o_cur_hard.CPUSKT_nRES;
+	CPUSKT_9nFIRQLnDTACK_o		<= i_wrap_exp_o_cur_hard.CPUSKT_9nFIRQLnDTACK;
 
 
-	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_o_cur_hard.CPU_D_RnW = '0' else
+	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_exp_o_cur_hard.CPU_D_RnW = '0' else
 									i_wrap_D_rd(7 downto 0);
 
 	-- noice signals from current CPU

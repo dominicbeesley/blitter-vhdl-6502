@@ -47,6 +47,7 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_6x09 is
 	generic (
@@ -63,7 +64,12 @@ entity fb_cpu_6x09 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i
+
 
 	);
 end fb_cpu_6x09;
@@ -207,22 +213,31 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	wrap_o.CPUSKT_6BE9TSCKnVPA 		<= i_CPUSKT_TSC_o;
-	wrap_o.CPUSKT_9Q 						<= i_CPUSKT_CLK_Q_o;
-	wrap_o.CPUSKT_PHI09EKZCLK 			<= i_CPUSKT_CLK_E_o;
-	wrap_o.CPUSKT_RDY9KnHALTZnWAIT	<= i_CPUSKT_nHALT_o;
-	wrap_o.CPUSKT_nIRQKnIPL1			<= i_CPUSKT_nIRQ_o;
-	wrap_o.CPUSKT_nNMIKnIPL02			<= i_CPUSKT_nNMI_o;
-	wrap_o.CPUSKT_nRES					<= i_CPUSKT_nRES_o;
-	wrap_o.CPUSKT_9nFIRQLnDTACK		<= i_CPUSKT_nFIRQ_o;
-	wrap_o.CPUSKT_KnBRZnBUSREQ			<= '1';
+	e_pinmap:entity work.fb_cpu_6x09_exp_pins
+	port map(
 
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
 
-	i_CPUSKT_RnW_i		<= wrap_i.CPUSKT_RnWZnWR;
-	i_CPUSKT_BS_i		<= wrap_i.CPUSKT_PHI16ABRT9BSKnDS;
-	i_CPUSKT_LIC_i		<= wrap_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	i_CPUSKT_BA_i		<= wrap_i.CPUSKT_VSS6VPA9BAKnAS;
-	i_CPUSKT_AVMA_i	<= wrap_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
+		-- local z80 wrapper signals to/from CPU expansion port 
+
+		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
+		CPUSKT_CLK_Q_i		=> i_CPUSKT_CLK_Q_o,
+		CPUSKT_CLK_E_i		=> i_CPUSKT_CLK_E_o,
+		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
+		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
+		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
+		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_nFIRQ_i		=> i_CPUSKT_nFIRQ_o,
+
+		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
+		CPUSKT_BS_o			=> i_CPUSKT_BS_i,
+		CPUSKT_LIC_o		=> i_CPUSKT_LIC_i,
+		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
+		CPUSKT_AVMA_o		=> i_CPUSKT_AVMA_i
+
+	);
 
 
 	wrap_o.CPU_D_RnW <= 	'0'	when i_CPUSKT_BA_i = '1' else

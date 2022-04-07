@@ -67,18 +67,6 @@ package fb_CPU_pack is
 		D_WR							: std_logic_vector(7 downto 0);
 		ack							: std_logic;
 
-		CPUSKT_6BE9TSCKnVPA					:		std_logic;
-		CPUSKT_9Q								:		std_logic;
-		CPUSKT_KnBRZnBUSREQ					:		std_logic;
-		CPUSKT_PHI09EKZCLK					:		std_logic;
-		CPUSKT_RDY9KnHALTZnWAIT				:		std_logic;
-		CPUSKT_nIRQKnIPL1						:		std_logic;
-		CPUSKT_nNMIKnIPL02					:		std_logic;
-		CPUSKT_nRES								:		std_logic;
-		CPUSKT_9nFIRQLnDTACK					:		std_logic;
-
-		CPU_D_RnW					: std_logic;
-
 		noice_debug_5c				: std_logic;						-- A 5C instruction is being fetched (qualify with clken below)
 		noice_debug_cpu_clken	: std_logic;						-- clken and cpu rdy
 		noice_debug_A0_tgl		: std_logic;						-- 1 when current A0 is different to previous fetched
@@ -110,19 +98,6 @@ package fb_CPU_pack is
 
 		throttle_cpu_2MHz			: std_logic;		-- cpu throttle
 		cpu_2MHz_phi2_clken		: std_logic;		-- sys phi2 signal for throttle
-
-		-- cpu socket signals
-		CPUSKT_D						: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A						: std_logic_vector(23 downto 0);
-
-		CPUSKT_6EKEZnRD							:	std_logic;		
-		CPUSKT_C6nML9BUSYKnBGZnBUSACK			:	std_logic;
-		CPUSKT_RnWZnWR								:	std_logic;
-		CPUSKT_PHI16ABRT9BSKnDS					:	std_logic;		-- 6ABRT is actually an output but pulled up on the board
-		CPUSKT_PHI26VDAKFC0ZnMREQ				:	std_logic;
-		CPUSKT_SYNC6VPA9LICKFC2ZnM1			:	std_logic;
-		CPUSKT_VSS6VPA9BAKnAS					:	std_logic;
-		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ			:	std_logic;		-- nSO is actually an output but pulled up on the board
 
 
 	end record;

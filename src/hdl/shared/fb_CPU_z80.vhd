@@ -51,6 +51,7 @@ use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_z80 is
 	generic (
@@ -66,6 +67,10 @@ entity fb_cpu_z80 is
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
 		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- special m68k signals
 		jim_en_i									: in		std_logic
@@ -121,24 +126,32 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	wrap_o.CPUSKT_6BE9TSCKnVPA 		<= '1';
-	wrap_o.CPUSKT_9Q 						<= '1';
-	wrap_o.CPUSKT_KnBRZnBUSREQ 		<= i_CPUSKT_nBUSREQ_o;
-	wrap_o.CPUSKT_PHI09EKZCLK 			<= i_CPUSKT_CLK_o;
-	wrap_o.CPUSKT_RDY9KnHALTZnWAIT	<= i_CPUSKT_nWAIT_o;
-	wrap_o.CPUSKT_nIRQKnIPL1			<= i_CPUSKT_nIRQ_o;
-	wrap_o.CPUSKT_nNMIKnIPL02			<= i_CPUSKT_nNMI_o;
-	wrap_o.CPUSKT_nRES					<= i_CPUSKT_nRES_o;
-	wrap_o.CPUSKT_9nFIRQLnDTACK		<= '1';
+	e_pinmap:entity work.fb_cpu_z80_exp_pins
+	port map(
 
-	i_CPUSKT_nRD_i		<= wrap_i.CPUSKT_6EKEZnRD;
-	i_CPUSKT_nWR_i		<= wrap_i.CPUSKT_RnWZnWR;
-	i_CPUSKT_nMREQ_i	<= wrap_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
-	i_CPUSKT_nM1_i		<= wrap_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	i_CPUSKT_nRFSH_i	<= wrap_i.CPUSKT_VSS6VPA9BAKnAS;
-	i_CPUSKT_nIOREQ_i	<= wrap_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
-	i_CPUSKT_nBUSACK_i<= wrap_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
 
+		-- local z80 wrapper signals
+
+		CPUSKT_nBUSREQ_i						=> i_CPUSKT_nBUSREQ_o,
+		CPUSKT_CLK_i							=> i_CPUSKT_CLK_o,
+		CPUSKT_nWAIT_i							=> i_CPUSKT_nWAIT_o,
+		CPUSKT_nIRQ_i							=> i_CPUSKT_nIRQ_o,
+		CPUSKT_nNMI_i							=> i_CPUSKT_nNMI_o,
+		CPUSKT_nRES_i							=> i_CPUSKT_nRES_o,
+
+		CPUSKT_nRD_o							=> i_CPUSKT_nRD_i,
+		CPUSKT_nWR_o							=> i_CPUSKT_nWR_i,
+		CPUSKT_nMREQ_o							=> i_CPUSKT_nMREQ_i,
+		CPUSKT_nM1_o							=> i_CPUSKT_nM1_i,
+		CPUSKT_nRFSH_o							=> i_CPUSKT_nRFSH_i,
+		CPUSKT_nIOREQ_o						=> i_CPUSKT_nIOREQ_i,
+		CPUSKT_nBUSACK_o						=> i_CPUSKT_nBUSACK_i
+
+
+	);
 
 	wrap_o.CPU_D_RnW <= '0' when i_CPUSKT_nRD_i = '1' else
 					 	'1';
