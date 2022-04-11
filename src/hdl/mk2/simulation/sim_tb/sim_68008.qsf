@@ -18,6 +18,6 @@ set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_68008_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_68008_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_68008_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_68008_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_pack.vhd -section_id sim_68008_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_tb.vhd -section_id sim_68008_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_68008_tb.vhd -section_id sim_68008_tb

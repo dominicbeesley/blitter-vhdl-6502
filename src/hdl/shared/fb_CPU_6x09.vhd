@@ -185,6 +185,7 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
 	signal i_CPUSKT_nFIRQ_o	: std_logic;
+	
 	signal i_CPU_D_RnW_o		: std_logic;
 
 	signal i_CPUSKT_RnW_i	: std_logic;

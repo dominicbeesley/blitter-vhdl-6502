@@ -48,26 +48,29 @@ use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_68k is
 	generic (
 		CLOCKSPEED							: positive := 128;
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_BYTELANES							: positive := 2
+		SIM									: boolean := false
 	);
 	port(
 
 		-- configuration
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		cfg_mosram_i							: in std_logic;				-- 1 means map boot rom at 7D xxxx else 8D xxxx
-		cfg_cpu_speed_i						: in cpu_speed_opt;
 		fb_syscon_i								: in	fb_syscon_t;
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
 		wrap_i									: in t_cpu_wrap_i;
 
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
 		-- special m68k signals
+
 		jim_en_i									: in		std_logic
 
 	);
@@ -157,11 +160,12 @@ architecture rtl of fb_cpu_68k is
 	signal r_cfg_68008		: std_logic;
 
 begin
+
 	p_cfg:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if fb_syscon_i.prerun(2) = '1' then
-				if cfg_cpu_speed_i = CPUSPEED_68008_10 then
+			if fb_syscon_i.rst = '1' then
+				if cpu_speed_opt_i = CPUSPEED_68008_10 then
 					r_cfg_68008 <= '1';
 				else
 					r_cfg_68008 <= '0';
@@ -170,7 +174,6 @@ begin
 		end if;
 
 	end process;
-
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
 	assert G_BYTELANES >= 2 report "G_BYTELANES must be 2 or greater" severity failure;

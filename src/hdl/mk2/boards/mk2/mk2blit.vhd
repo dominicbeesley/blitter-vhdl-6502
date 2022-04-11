@@ -64,7 +64,7 @@ entity mk2blit is
 		G_INCL_CPU_65816					: boolean := true;
 		G_INCL_CPU_6x09					: boolean := true;
 		G_INCL_CPU_Z80						: boolean := true;
-		G_INCL_CPU_68k						: boolean := true;
+		G_INCL_CPU_68008					: boolean := true;
 
 		G_INCL_CHIPSET						: boolean := true;
 		G_INCL_CS_DMA						: boolean := true;
@@ -899,7 +899,7 @@ END GENERATE;
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_68k						=> G_INCL_CPU_68k
+		G_INCL_CPU_68008					=> G_INCL_CPU_68008
 	)
 	port map (
 
@@ -1058,8 +1058,7 @@ begin
 					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
 					r_cfg_mk2_cpubits <= "010";
 				when "000" =>
-					r_cfg_cpu_type <= CPU_68K;
-					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
+					r_cfg_cpu_type <= CPU_68008;
 					r_cfg_mk2_cpubits <= "000";
 				when "100" =>
 					r_cfg_cpu_type <= CPU_Z80;

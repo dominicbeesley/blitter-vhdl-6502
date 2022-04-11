@@ -48,12 +48,11 @@ use work.fishbone.all;
 
 package fb_CPU_pack is
 
-	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68K, CPU_6800, CPU_80188);
+	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_680x0, CPU_6800, CPU_80188);
 	type cpu_speed_opt is 
 	(
 		NONE,
 		CPUSPEED_6309_3_5,
-		CPUSPEED_68008_10,
 		CPUSPEED_65C02_8
 	);
 

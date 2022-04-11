@@ -71,7 +71,8 @@ entity fb_cpu is
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_68k						: boolean := false
+		G_INCL_CPU_680x0					: boolean := false;
+		G_INCL_CPU_68008					: boolean := false
 
 	);
 	port(
@@ -175,8 +176,9 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_65816						: natural := C_IX_CPU_80188 + B2OZ(G_INCL_CPU_80188);
 	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816);
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
-	constant C_IX_CPU_68k						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
-	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68k + B2OZ(G_INCL_CPU_68k);
+	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
+	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
+	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68008 + B2OZ(G_INCL_CPU_68008);
 
 	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
 	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
@@ -208,7 +210,8 @@ architecture rtl of fb_cpu is
 	signal r_cpu_en_t65 : std_logic;
 	signal r_cpu_en_6x09 : std_logic;
 	signal r_cpu_en_z80 : std_logic;
-	signal r_cpu_en_68k : std_logic;
+	signal r_cpu_en_680x0 : std_logic;
+	signal r_cpu_en_68008 : std_logic;
 --	signal r_cpu_en_6502 : std_logic;
 	signal r_cpu_en_65c02 : std_logic;
 	signal r_cpu_en_6800 : std_logic;
@@ -264,7 +267,8 @@ begin
 				r_cpu_en_t65 <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
-				r_cpu_en_68k <= '0';
+				r_cpu_en_680x0 <= '0';
+				r_cpu_en_68008 <= '0';
 --				r_cpu_en_6502 <= '0';
 				r_cpu_en_65c02 <= '0';
 				r_cpu_en_6800 <= '0';
@@ -286,9 +290,12 @@ begin
 							r_cpu_run_ix_act <= C_IX_CPU_65816;
 							r_do_sys_via_block <= '1';	
 							r_cpu_en_65816 <= '1';
-						when CPU_68K =>
-							r_cpu_run_ix_act <= C_IX_CPU_68k;
-							r_cpu_en_68k <= '1';
+						when CPU_680x0 =>
+							r_cpu_run_ix_act <= C_IX_CPU_680x0;
+							r_cpu_en_680x0 <= '1';
+						when CPU_68008 =>
+							r_cpu_run_ix_act <= C_IX_CPU_68008;
+							r_cpu_en_68008 <= '1';
 						when CPU_6800 =>
 							r_cpu_run_ix_act <= C_IX_CPU_6800;
 							r_cpu_en_6800 <= '1';
@@ -314,8 +321,11 @@ begin
 					when CPU_65816 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_65816;
 						r_hard_cpu_en <= '1';
-					when CPU_68K =>
-						r_cpu_run_ix_hard <= C_IX_CPU_68k;
+					when CPU_680x0 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_680x0;
+						r_hard_cpu_en <= '1';
+					when CPU_68008 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_68008;
 						r_hard_cpu_en <= '1';
 					when CPU_6800 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_6800;
@@ -551,28 +561,55 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 END GENERATE;
 
 
--- -- g68k:IF G_INCL_CPU_68k GENERATE
--- -- 	e_wrap_68k:entity work.fb_cpu_68k
--- -- 	generic map (
--- -- 		SIM										=> SIM,
--- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- 	) 
--- -- 	port map(
--- -- 
--- -- 		-- configuration
--- -- 		cpu_en_i									=> r_cpu_en_68k,
--- -- 		cfg_mosram_i							=> cfg_mosram_i,
--- -- 		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,		
--- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- 
--- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_68k),
--- -- 		wrap_i									=> i_wrap_i,
--- -- 
--- -- 		jim_en_i									=> jim_en_i
--- -- 
--- -- 	);
--- -- END GENERATE;
+g680x0:IF G_INCL_CPU_680x0 GENERATE
+	e_wrap_680x0:entity work.fb_cpu_680x0
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
 
+		-- configuration
+		cpu_en_i									=> r_cpu_en_680x0,
+		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+		fb_syscon_i								=> fb_syscon_i,
+		cfg_mosram_i							=> cfg_mosram_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_680x0),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_680x0),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+ 		jim_en_i									=> jim_en_i
+
+	);
+END GENERATE;
+
+g68008:IF G_INCL_CPU_680x0 GENERATE
+	e_wrap_68008:entity work.fb_cpu_68008
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_680x0,
+		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+		fb_syscon_i								=> fb_syscon_i,
+		cfg_mosram_i							=> cfg_mosram_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_68008),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_68008),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+ 		jim_en_i									=> jim_en_i
+
+	);
+END GENERATE;
 
 --g6502:IF G_OPT_INCLUDE_6502 GENERATE
 --
