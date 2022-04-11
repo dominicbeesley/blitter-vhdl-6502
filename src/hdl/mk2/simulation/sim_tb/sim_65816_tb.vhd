@@ -25,58 +25,49 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_65816_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+	);
 end sim_65816_tb;
 
 architecture Behavioral of sim_65816_tb is
 
 	signal	sim_ENDSIM			: 	std_logic 		:= '0';
 	
-	signal	EXT_CLK_48M			: 	std_logic;
-	signal	EXT_CLK_50M			: 	std_logic;
+	signal	i_EXT_CLK_48M		: 	std_logic;
+	signal	i_EXT_CLK_50M		: 	std_logic;
 
 	signal	sim_dump_ram		:	std_logic;
 	signal	sim_reg_halt 		:  std_logic;
 	
-	signal	SYS_phi0				:  std_logic;
-	signal	SYS_phi1				:  std_logic;
-	signal	SYS_phi2				:  std_logic;
-	signal	SUP_nRESET			:	std_logic;
-	signal	EXT_nRESET			:	std_logic;
+	signal	i_SUP_nRESET		:	std_logic;
+	signal	i_EXT_nRESET		:	std_logic;
 
-	signal	SYS_A					:	std_logic_vector(15 downto 0);
-	signal	SYS_D					:	std_logic_vector(7 downto 0);
-
-	signal	SYS_D_bushold		:	std_logic_vector(7 downto 0) := (others => 'W');
-
-	signal	MEM_A					:	std_logic_vector(20 downto 0);
-	signal	MEM_D					:	std_logic_vector(7 downto 0);
-	signal	MEM_nOE				:	std_logic;
-	signal	MEM_ROM_nWE			:	std_logic;
-	signal	MEM_RAM_nWE			:	std_logic;
-	signal	MEM_ROM_nCE			:	std_logic;
-	signal	MEM_RAM0_nCE		:	std_logic;
-
-	signal	i_SYS_TB_nPGFC		: std_logic;
-	signal	i_SYS_TB_nPGFD		: std_logic;
-	signal	i_SYS_TB_nPGFE		: std_logic;
-	signal	i_SYS_TB_RAM_nCS	: std_logic;
-	signal	i_SYS_TB_RAM_RnW	: std_logic;
-	signal	i_SYS_TB_MOSROM_nCS	: std_logic;
-
-	signal	SYS_RnW				: std_logic;
+	signal	i_SYS_phi0			:  std_logic;
+	signal	i_SYS_phi1			:  std_logic;
+	signal	i_SYS_phi2			:  std_logic;
+	signal	i_SYS_A				:	std_logic_vector(15 downto 0);
+	signal	i_SYS_D				:	std_logic_vector(7 downto 0);
+	signal	i_SYS_RnW			: std_logic;
+	signal	i_SYS_nNMI			: std_logic;
+	signal	i_SYS_nIRQ			: std_logic;
+	signal	i_SYS_SYNC			: std_logic;
 
 
-	signal	SYS_nNMI				: std_logic;
-	signal	SYS_nIRQ				: std_logic;
+	signal	i_MEM_A					:	std_logic_vector(20 downto 0);
+	signal	i_MEM_D					:	std_logic_vector(7 downto 0);
+	signal	i_MEM_nOE				:	std_logic;
+	signal	i_MEM_ROM_nWE			:	std_logic;
+	signal	i_MEM_RAM_nWE			:	std_logic;
+	signal	i_MEM_ROM_nCE			:	std_logic;
+	signal	i_MEM_RAM0_nCE		:	std_logic;
 
-	signal	CFG					: std_logic_vector(15 downto 0);
 
-	signal	CLK_16				: std_logic;
 
-	signal	bbc_1MHzE			: std_logic;
-	signal	bbc_slow				: std_logic;
+	signal	i_CFG					: std_logic_vector(15 downto 0);
+	signal	i_hsync									:  std_logic;
+	signal	i_vsync									:  std_logic;
 
-	signal	bbc_slow_dl			: std_logic;
 
 	signal	i_CPU_A									:	std_logic_vector(19 downto 0);
 	signal	i_CPU_D									:  std_logic_vector(7 downto 0);
@@ -98,51 +89,18 @@ architecture Behavioral of sim_65816_tb is
 	signal	i_CPU_nRES								:	std_logic;
 	signal	i_CPU_9nFIRQLnDTACK					:	std_logic;
 
-	signal	i_hsync									:  std_logic;
-	signal	i_vsync									:  std_logic;
-
-
 begin
 	
-	i_SYS_TB_nPGFE <= 	'0' when SYS_A(15 downto 8) = x"FE" else
-								'1';
 
-	i_SYS_TB_nPGFD <= 	'0' when SYS_A(15 downto 8) = x"FD" else
-								'1';
-
-	i_SYS_TB_nPGFC <= 	'0' when SYS_A(15 downto 8) = x"FC" else
-								'1';
-
-	i_SYS_TB_RAM_nCS <= 	'0' when SYS_A(15) = '0' and SYS_phi2 = '1' else
-								'1' after 30 ns;
-								
-	i_SYS_TB_RAM_RnW <= 	'0' when SYS_RnW = '0' and SYS_phi2 = '1' else
-								'1';
-
-	i_SYS_TB_MOSROM_nCS <= 	'0' when SYS_A(15 downto 14) = "11" and i_SYS_TB_nPGFE = '1' and i_SYS_TB_nPGFD = '1' and i_SYS_TB_nPGFC = '1' else
-								'1' after 30 ns;
-
-
-	e_slow_cyc_dec:entity work.bbc_slow_cyc
-	port map (
-		SYS_A_i => SYS_A,
-		SLOW_o => bbc_slow
-		);
-	
-	bbc_slow_dl <= bbc_slow after 40 ns;
-
-	CFG(0) <= '1';	-- t65 cpu
-	CFG(1) <= '1';
-	CFG(2) <= '0';
-	CFG(3) <= '0'; -- hard == 65c816
-	CFG(4) <= '1'; -- swromx
-	CFG(7) <= '1'; -- debug button
-	CFG(8) <= '1'; -- onboard swrom/ram enable
-
-	CFG(14) <= i_vsync;
-	CFG(15) <= i_hsync;
-
-	CFG <= (others => 'H');
+	i_CFG <= (
+	0				=>	'1',	-- don't use t65 core
+	3 downto 1 	=> "001", -- 65816 @ 8MHz
+	4 				=> '1', -- swromx off
+	7				=> '1', -- debug button
+	8				=> '1', -- onboard swrom/ram enable
+	14				=> i_vsync,
+	15				=> i_hsync,
+	others		=> 'H');
 
 	i_CPU_nSO6MX9AVMAKFC1ZnIOREQ <= 'H';
 
@@ -151,17 +109,17 @@ begin
 		SIM => true
 	)
 	port map (
-		CLK_48M_i							=> EXT_CLK_48M,
-		CLK_50M_i							=> EXT_CLK_50M,
+		CLK_48M_i							=> i_EXT_CLK_48M,
+		CLK_50M_i							=> i_EXT_CLK_50M,
 
 				-- 1M RAM/512K ROM bus
-		MEM_A_o								=> MEM_A,
-		MEM_D_io								=> MEM_D,
-		MEM_nOE_o							=> MEM_nOE,
-		MEM_ROM_nWE_o						=> MEM_ROM_nWE,
-		MEM_RAM_nWE_o						=> MEM_RAM_nWE,
-		MEM_ROM_nCE_o						=> MEM_ROM_nCE,
-		MEM_RAM0_nCE_o						=> MEM_RAM0_nCE,
+		MEM_A_o								=> i_MEM_A,
+		MEM_D_io								=> i_MEM_D,
+		MEM_nOE_o							=> i_MEM_nOE,
+		MEM_ROM_nWE_o						=> i_MEM_ROM_nWE,
+		MEM_RAM_nWE_o						=> i_MEM_RAM_nWE,
+		MEM_ROM_nCE_o						=> i_MEM_ROM_nCE,
+		MEM_RAM0_nCE_o						=> i_MEM_RAM0_nCE,
 		
 		-- 1 bit DAC sound out
 		SND_BITS_L_o						=> open,
@@ -169,24 +127,23 @@ begin
 		SND_BITS_L_AUX_o					=> open,
 		SND_BITS_R_AUX_o					=> open,
 
-		SUP_nRESET_i						=> SUP_nRESET,
-		EXT_nRESET_i						=> EXT_nRESET,
+		SUP_nRESET_i						=> i_SUP_nRESET,
+		EXT_nRESET_i						=> i_EXT_nRESET,
 		
-		-- CPU/SYS bus connects to CPU sockets, SYStem CPU socket, normally the A lines are 
-		-- 	read, however during DMA we may disconnect CPU address, data etc lines from 
-		--		SYS and take over
-		SYS_A_o								=> SYS_A,
-		SYS_D_io								=> SYS_D,
+		SYS_A_o								=> i_SYS_A,
+		SYS_D_io								=> i_SYS_D,
+		
+		SYS_SYNC_o 							=> i_SYS_SYNC,
+		SYS_PHI1_o 							=> i_SYS_PHI1,
+		SYS_PHI2_o 							=> i_SYS_PHI2,
 
-		-- SYS signals are connected direct to the BBC cpu socket
+		SYS_RnW_o 							=> i_SYS_RnW,
 		SYS_RDY_i							=> '1',
-		SYS_nNMI_i							=> SYS_nNMI,
-		SYS_nIRQ_i							=> SYS_nIRQ,
-		SYS_SYNC_o							=> open,
-		SYS_PHI0_i							=> SYS_PHI0,
-		SYS_PHI1_o							=> SYS_PHI1,
-		SYS_PHI2_o							=> SYS_PHI2,
-		SYS_RnW_o							=> SYS_RnW,
+		SYS_nNMI_i 							=> i_SYS_nNMI,
+		SYS_nIRQ_i 							=> i_SYS_nIRQ,
+		SYS_PHI0_i 							=> i_SYS_PHI0,
+		I2C_SCL_io 							=> open,
+		I2C_SDA_io 							=> open,
 
 		-- CPU sockets, shared lines for 6502/65102/65816/6809,Z80,68008
 		-- shared names are of the form CPUSKT_aaa[C[bbb][6ccc][9ddd][Keee][Zfff]
@@ -222,39 +179,11 @@ begin
 		-- LEDs 
 		LED_o									=> open,
 		-- CONFIG / TEST connector
-		--CFG									: INOUT	STD_LOGIC_VECTOR(10 DOWNTO 0)
-		CFG_io								=> CFG,
-
-		EEPROM_SCL_o						=> open,
-		EEPROM_SDA_io						=> open
+		CFG_io								=> i_CFG
 		
 	);
 
-	i_CPU_A <= (others => 'H');
-	i_CPU_D <= (others => 'H');
 
-	p_hold:process(SYS_D(0))
-	variable prev: std_logic_vector(7 downto 0) := (others => 'U');
-	begin
-		if SYS_D'event then
-			FOR I in 0 to 7 LOOP
-				if prev(I) = '0' then
-					if SYS_D(I) = 'Z' or SYS_D(I) = 'W' or SYS_D(I) = 'H' then
-						SYS_D_bushold(I) <= 'L';
-					end if;
-				elsif prev(I) = '1' then
-					if SYS_D(I) = 'Z' or SYS_D(I) = 'W' or SYS_D(I) = 'L' then
-						SYS_D_bushold(I) <= 'H';
-					end if;
-				else
-					SYS_D_bushold(I) <= 'H';
-				end if;
-			END LOOP;
-			prev := SYS_D;
-		end if;
-	end process;
-
-	SYS_D <= SYS_D_bushold;
 
 	e_cpu: entity work.real_65816_tb 
 	--NMOS
@@ -286,8 +215,10 @@ begin
 		PHI2 		=> i_CPU_PHI09EKZCLK
 		);
 
+	i_CPU_A(19 downto 16) <= (others => 'H');
 
-	e_blit_ram_2048: entity work.ram_tb 
+
+	e_blit_ram_2048_0: entity work.ram_tb 
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
@@ -295,11 +226,11 @@ begin
 		taa => 55 ns
 	)
 	port map (
-		A				=> MEM_A(20 downto 0),
-		D				=> MEM_D,
-		nCS			=> MEM_RAM0_nCE,
-		nOE			=> MEM_nOE,
-		nWE			=> MEM_RAM_nWE,
+		A				=> i_MEM_A(20 downto 0),
+		D				=> i_MEM_D,
+		nCS			=> i_MEM_RAM0_nCE,
+		nOE			=> i_MEM_nOE,
+		nWE			=> i_MEM_RAM_nWE,
 		
 		tst_dump		=> sim_dump_ram
 
@@ -310,108 +241,31 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../test_asm/blit-bringup2-rom0.rom",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)
 	port map (
-		A				=> MEM_A(13 downto 0),
-		D				=> MEM_D,
-		nCS			=> MEM_ROM_nCE,
-		nOE			=> MEM_nOE,
-		nWE			=> MEM_RAM_nWE,
-		
+A				=> i_MEM_A(13 downto 0),
+		D				=> i_MEM_D,
+		nCS			=> i_MEM_ROM_nCE,
+		nOE			=> i_MEM_nOE,
+		nWE			=> i_MEM_ROM_nWE,		
 		tst_dump		=> sim_dump_ram
 
 	);
 
 
 
-	e_sys_ram_32: entity work.ram_tb 
-	generic map (
-		size 			=> 32*1024,
-		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
-		tco => 150 ns,
-		taa => 150 ns
-	)
-	port map (
-		A				=> SYS_A(14 downto 0),
-		D				=> SYS_D,
-		nCS			=> i_SYS_TB_RAM_nCS,
-		nOE			=> '0',
-		nWE			=> i_SYS_TB_RAM_RnW,
-		
-		tst_dump		=> sim_dump_ram
-
-	);
-
-	
-	w_sys_rom_16: entity work.rom_tb
-	generic map (
-		romfile 		=> "../../test_asm/blit-bringup2-rom0.rom",
-		size 			=> 16*1024
-	)
-	port map (
-		A 				=> SYS_A(13 downto 0),
-		D 				=> SYS_D,
-		nCS 			=> i_SYS_TB_MOSROM_nCS,
-		nOE 			=> '0'
-	);
-
-	p_reg_halt: process(SUP_nRESET, i_SYS_TB_nPGFE, SYS_A, SYS_D, SYS_phi2)
-	begin
-		if (SUP_nRESET = '0') then
-			sim_reg_halt <= '0';
-		elsif falling_edge(SYS_phi2) and SYS_RnW = '0' and i_SYS_TB_nPGFE = '0' and unsigned(SYS_A(7 downto 0)) = 16#FF# then
-			sim_reg_halt <= SYS_D(7);
-		end if;
-	end process;
-	
-	p_clk_16:process -- deliberately 1/4 ns fast!
-	begin
-		CLK_16 <= '1';
-		wait for 31.2 ns;
-		CLK_16 <= '0';
-		wait for 31.25 ns;
-	end process;
-
-
-	e_bbc_clk_gen:entity work.bbc_clk_gen 
-	port map (
-		clk_16_i        => CLK_16,
-		clk_8_o         => open,
-		clk_4_o         => open,
-		clk_2_o         => open,
-		clk_1_o         => open,
-		
-		bbc_SLOW_i      => bbc_slow_dl,
-		bbc_phi1_i      => SYS_phi1,
-		bbc_1MHzE_o     => bbc_1MHzE,
-		bbc_ROMSEL_clk_o=> open,
-		bbc_phi0_o      => SYS_PHI0
-	);
-
---	main_clkc: process
---	begin
---		if sim_ENDSIM='0' then
---			SYS_phi0 <= '0';
---			wait for 254 ns;
---			SYS_phi0 <= '1';
---			wait for 247 ns;
---		else
---			wait;
---		end if;
---	end process;
-
-
-	EXT_CLK_48M <= 'H';
+	i_EXT_CLK_48M <= 'H';
+	i_EXT_nRESET <= 'H';
 
 	main_clkc50: process
 	begin
 		if sim_ENDSIM='0' then
-			EXT_CLK_50M <= '0';
+			i_EXT_CLK_50M <= '0';
 			wait for 10 ns;
-			EXT_CLK_50M <= '1';
+			i_EXT_CLK_50M <= '1';
 			wait for 10 ns;
 		else
 			wait;
@@ -419,51 +273,21 @@ begin
 	end process;
 
 	
-	p6845_h: process
-	begin
-		if sim_ENDSIM = '0' then
-			i_hsync <= '1';
-			wait for 4 us;
-			i_hsync <= '0';
-			wait for 60 us;
-		else
-			wait;
-		end if;
-	end process;		
-
-	p6845_v: process
-	begin
-		if sim_ENDSIM = '0' then
-			i_vsync <= '0';
-			wait for 15 us;
-			i_vsync <= '1';
-			wait for 128 us;
-			i_vsync <= '0';
-			wait for 753 us;
-		else
-			wait;
-		end if;
-	end process;
-
 	stim: process
 	variable usct : integer := 0;
 	
 	begin
 			
 			sim_dump_ram <= '0';
-			SUP_nRESET <= '1';
+			i_SUP_nRESET <= '1';
 			
 			wait for 1034 ns;
 
-			SUP_nRESET <= '0';
-
-
-			SYS_nIRQ <= '1';
-			SYS_nNMI <= '1';
+			i_SUP_nRESET <= '0';
 			
 			wait for 1 ns;						
 			wait for 20 us;
-			SUP_nRESET <= '1';
+			i_SUP_nRESET <= '1';
 
 			while usct < 200000 and sim_reg_halt /= '1' loop
 				wait for 10 us;

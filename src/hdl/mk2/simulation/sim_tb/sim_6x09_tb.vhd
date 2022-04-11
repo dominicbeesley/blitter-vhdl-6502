@@ -51,7 +51,6 @@ architecture Behavioral of sim_6x09_tb is
 	signal	i_SYS_SYNC			: std_logic;
 
 	
-
 	signal	i_MEM_A					:	std_logic_vector(20 downto 0);
 	signal	i_MEM_D					:	std_logic_vector(7 downto 0);
 	signal	i_MEM_nOE				:	std_logic;
