@@ -506,23 +506,26 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 
 END GENERATE;
 
--- -- -- g6x09:IF G_INCL_CPU_6x09 GENERATE
--- -- -- 	e_wrap_6x09:entity work.fb_cpu_6x09
--- -- -- 	generic map (
--- -- -- 		SIM										=> SIM,
--- -- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- -- 	) 
--- -- -- 	port map(
--- -- -- 
--- -- -- 		-- configuration
--- -- -- 		cpu_en_i									=> r_cpu_en_6x09,
--- -- -- 		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
--- -- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- -- 
--- -- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
--- -- -- 		wrap_i									=> i_wrap_i
--- -- -- 	);
--- -- -- END GENERATE;
+g6x09:IF G_INCL_CPU_6x09 GENERATE
+	e_wrap_6x09:entity work.fb_cpu_6x09
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_6x09,
+		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_6x09),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_6x09),
+		wrap_exp_i								=> i_wrap_exp_i
+	);
+END GENERATE;
 
 gz80: IF G_INCL_CPU_Z80 GENERATE
 	e_wrap_z80:entity work.fb_cpu_z80
@@ -611,26 +614,30 @@ END GENERATE;
 -- -- END GENERATE;
 -- -- 
 -- -- 
--- -- -- g65816:IF G_INCL_CPU_65816 GENERATE
--- -- -- 	e_wrap_65816:entity work.fb_cpu_65816
--- -- -- 	generic map (
--- -- -- 		SIM										=> SIM,
--- -- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- -- 	) 
--- -- -- 	port map(
--- -- -- 
--- -- -- 		-- configuration
--- -- -- 		cpu_en_i									=> r_cpu_en_65816,
--- -- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- -- 
--- -- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
--- -- -- 		wrap_i									=> i_wrap_i,
--- -- -- 
--- -- -- 		boot_65816_i							=> boot_65816_i,
--- -- -- 
--- -- -- 		debug_vma_o								=> debug_65816_vma_o
--- -- -- 	);
--- -- -- END GENERATE;
+g65816:IF G_INCL_CPU_65816 GENERATE
+	e_wrap_65816:entity work.fb_cpu_65816
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_65816,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_65816),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_65816),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+
+		boot_65816_i							=> boot_65816_i,
+
+		debug_vma_o								=> debug_65816_vma_o
+	);
+END GENERATE;
 
 	-- ================================================================================================ --
 	-- SYS VIA blocker
