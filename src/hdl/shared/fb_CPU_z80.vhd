@@ -92,7 +92,6 @@ architecture rtl of fb_cpu_z80 is
 	signal r_clkctdn			: unsigned(NUMBITS(T_cpu_clk_half)-1 downto 0) := to_unsigned(T_cpu_clk_half-1, NUMBITS(T_cpu_clk_half));
 
 	signal r_cpu_clk			: std_logic;
-	signal r_cpu_clk_ne		: std_logic;
 	signal r_cpu_clk_pe		: std_logic;
 
 	signal r_z80_boot			: std_logic;								-- map MOS ROM FFFF00 at CPU addr 0000-00FF during boot
@@ -113,6 +112,7 @@ architecture rtl of fb_cpu_z80 is
 	signal i_CPUSKT_nNMI_o		: std_logic;
 	signal i_CPUSKT_nRES_o		: std_logic;
 	signal i_CPUSKT_nBUSREQ_o 	: std_logic;
+	signal i_CPU_D_RnW_o		: std_logic;
 
 	signal i_CPUSKT_nRD_i		: std_logic;
 	signal i_CPUSKT_nWR_i		: std_logic;
@@ -121,6 +121,9 @@ architecture rtl of fb_cpu_z80 is
 	signal i_CPUSKT_nRFSH_i		: std_logic;
 	signal i_CPUSKT_nIOREQ_i	: std_logic;
 	signal i_CPUSKT_nBUSACK_i	: std_logic;
+
+	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
 
 begin
 
@@ -148,12 +151,18 @@ begin
 		CPUSKT_nM1_o							=> i_CPUSKT_nM1_i,
 		CPUSKT_nRFSH_o							=> i_CPUSKT_nRFSH_i,
 		CPUSKT_nIOREQ_o						=> i_CPUSKT_nIOREQ_i,
-		CPUSKT_nBUSACK_o						=> i_CPUSKT_nBUSACK_i
+		CPUSKT_nBUSACK_o						=> i_CPUSKT_nBUSACK_i,
+
+		-- shared per CPU signals
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+
+		CPUSKT_A_o			=> i_CPUSKT_A_i,
+		CPUSKT_D_o			=> i_CPUSKT_D_i
 
 
 	);
 
-	wrap_o.CPU_D_RnW <= '0' when i_CPUSKT_nRD_i = '1' else
+	i_CPU_D_RnW_o <= '0' when i_CPUSKT_nRD_i = '1' else
 					 	'1';
 
 	--TODO: mark rdy earlier!
@@ -164,8 +173,8 @@ begin
 
 	wrap_o.cyc 				<= ( 0 => r_act, others => '0');
 	wrap_o.we  				<= r_WE;
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
-	wrap_o.D_wr_stb		<= r_WR_stb;
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
+	wrap_o.D_wr_stb			<= r_WR_stb;
 	wrap_o.ack				<= not r_act;
 	wrap_o.A_log			<= r_A_log;
   		
@@ -213,25 +222,25 @@ begin
 	-- IO ports always access lofical and physical FF FDxx
 
 
-	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_i, i_CPUSKT_nIOREQ_i)
+	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_i, i_CPUSKT_nIOREQ_i, i_CPUSKT_A_i)
 	variable v_A_top : unsigned(3 downto 0);
 	begin
-		v_A_top := unsigned(wrap_i.CPUSKT_A(15 downto 12));
+		v_A_top := unsigned(i_CPUSKT_A_i(15 downto 12));
 		if i_CPUSKT_nIOREQ_i = '0' then
 			-- IO ports all map to JIM page
-			i_A_log <= x"FFFD" & wrap_i.CPUSKT_A(7 downto 0);
+			i_A_log <= x"FFFD" & i_CPUSKT_A_i(7 downto 0);
 		elsif i_CPUSKT_nRD_i = '0' and r_z80_boot = '1' then
 			-- boot rom reads
-			i_A_log <= x"FFFF" & wrap_i.CPUSKT_A(7 downto 0);
+			i_A_log <= x"FFFF" & i_CPUSKT_A_i(7 downto 0);
 		elsif v_A_top >= x"A" and v_A_top <= x"E" then
 			-- screen memory
-			i_A_log <= x"FF" & std_logic_vector(v_A_top - 7) & wrap_i.CPUSKT_A(11 downto 0);
+			i_A_log <= x"FF" & std_logic_vector(v_A_top - 7) & i_CPUSKT_A_i(11 downto 0);
 		elsif v_A_top = x"F" then
 			-- mos rom / boot rom / hardware regs
-			i_A_log <= x"FFF" & wrap_i.CPUSKT_A(11 downto 0);
+			i_A_log <= x"FFF" & i_CPUSKT_A_i(11 downto 0);
 		else
 			-- chip ram low memory
-			i_A_log <= x"00" & wrap_i.CPUSKT_A(15 downto 0); 	-- low memory from chip ram
+			i_A_log <= x"00" & i_CPUSKT_A_i(15 downto 0); 	-- low memory from chip ram
 		end if;
 	end process;
 
@@ -242,11 +251,9 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 
 			r_cpu_clk_pe <= '0';
-			r_cpu_clk_ne <= '0';
 
 			if r_clkctdn = 0 then
 				if r_cpu_clk = '1' then
-					r_cpu_clk_ne <= '1';
 					r_cpu_clk <= '0';
 				else
 					r_cpu_clk_pe <= '1';

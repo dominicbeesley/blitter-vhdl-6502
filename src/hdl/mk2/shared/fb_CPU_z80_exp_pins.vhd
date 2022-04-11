@@ -51,6 +51,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
+use work.fb_cpu_pack.all;
 use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_z80_exp_pins is
@@ -69,14 +70,19 @@ entity fb_cpu_z80_exp_pins is
 		CPUSKT_nNMI_i							: in std_logic;
 		CPUSKT_nRES_i							: in std_logic;
 
+		CPU_D_RnW_i							: in std_logic;
+
+
 		CPUSKT_nRD_o							: out std_logic;
 		CPUSKT_nWR_o							: out std_logic;
 		CPUSKT_nMREQ_o							: out std_logic;
 		CPUSKT_nM1_o							: out std_logic;
 		CPUSKT_nRFSH_o							: out std_logic;
-		CPUSKT_nIOREQ_o						: out std_logic;
-		CPUSKT_nBUSACK_o						: out std_logic
+		CPUSKT_nIOREQ_o							: out std_logic;
+		CPUSKT_nBUSACK_o						: out std_logic;
 
+		CPUSKT_D_o							: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+		CPUSKT_A_o							: out std_logic_vector(23 downto 0)
 
 	);
 end fb_cpu_z80_exp_pins;
@@ -101,6 +107,10 @@ begin
 	CPUSKT_nRFSH_o		<= wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS;
 	CPUSKT_nIOREQ_o	<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
 	CPUSKT_nBUSACK_o	<= wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
+
+	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
+	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
 
 end rtl;
 

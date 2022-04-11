@@ -677,8 +677,6 @@ END GENERATE;
 	i_wrap_i.cyc 							<= r_wrap_cyc;
 
 	i_wrap_i.cpu_halt 					<= cpu_halt_i;
-	i_wrap_i.CPUSKT_D 					<= CPUSKT_D_io;
-	i_wrap_i.CPUSKT_A 					<= "0000" & CPUSKT_A_i;
 
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
@@ -701,6 +699,8 @@ END GENERATE;
 	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
 	i_wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS				<= CPUSKT_VSS6VPA9BAKnAS_i;
 	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
+	i_wrap_exp_i.CPUSKT_D 								<= CPUSKT_D_io;
+	i_wrap_exp_i.CPUSKT_A 								<= "0000" & CPUSKT_A_i;
 
 	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_exp_o_cur_hard.CPUSKT_6BE9TSCKnVPA;
 	CPUSKT_9Q_o						<= i_wrap_exp_o_cur_hard.CPUSKT_9Q;

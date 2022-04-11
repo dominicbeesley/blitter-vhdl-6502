@@ -185,12 +185,16 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
 	signal i_CPUSKT_nFIRQ_o	: std_logic;
+	signal i_CPU_D_RnW_o		: std_logic;
 
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_BS_i		: std_logic;
 	signal i_CPUSKT_LIC_i	: std_logic;
 	signal i_CPUSKT_BA_i		: std_logic;
 	signal i_CPUSKT_AVMA_i	: std_logic;
+
+	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
 
 	signal r_cfg_not6309			: std_logic;
 
@@ -220,7 +224,7 @@ begin
 		wrap_exp_o => wrap_exp_o,
 		wrap_exp_i => wrap_exp_i,
 
-		-- local z80 wrapper signals to/from CPU expansion port 
+		-- local 6x09 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
 		CPUSKT_CLK_Q_i		=> i_CPUSKT_CLK_Q_o,
@@ -235,12 +239,18 @@ begin
 		CPUSKT_BS_o			=> i_CPUSKT_BS_i,
 		CPUSKT_LIC_o		=> i_CPUSKT_LIC_i,
 		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
-		CPUSKT_AVMA_o		=> i_CPUSKT_AVMA_i
+		CPUSKT_AVMA_o		=> i_CPUSKT_AVMA_i,
+
+		-- shared per CPU signals
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+
+		CPUSKT_A_o			=> i_CPUSKT_A_i,
+		CPUSKT_D_o			=> i_CPUSKT_D_i
 
 	);
 
 
-	wrap_o.CPU_D_RnW <= 	'0'	when i_CPUSKT_BA_i = '1' else
+	i_CPU_D_RnW_o <= 	'0'	when i_CPUSKT_BA_i = '1' else
 							'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
 							'0';
 
@@ -249,7 +259,7 @@ begin
 	-- note: don't start CYC until AS is settled
 	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= i_D_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
 
@@ -272,9 +282,9 @@ begin
 					r_a_stb <= '1';
 					if i_CPUSKT_BS_i = '1' and i_CPUSKT_BA_i = '0' then
 						-- toggle A(11) on vector pull to avoid MOS jump table
-						r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 12) & not(wrap_i.CPUSKT_A(11)) & wrap_i.CPUSKT_A(10 downto 0) ;
+						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 12) & not(i_CPUSKT_A_i(11)) & i_CPUSKT_A_i(10 downto 0) ;
 					else 
-						r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
+						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
 					end if;
 					r_we <= not(i_CPUSKT_RnW_i);
 				end if;

@@ -110,12 +110,18 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_nIRQ_o	: std_logic;
 	signal i_CPUSKT_nNMI_o	: std_logic;
 	signal i_CPUSKT_nRES_o	: std_logic;
+	signal i_CPU_D_RnW_o		: std_logic;
 
 	signal i_CPUSKT_6E_i		: std_logic;
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_VDA_i	: std_logic;
 	signal i_CPUSKT_VPA_i	: std_logic;
 	signal i_CPUSKT_VPB_i	: std_logic;
+
+	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+
+
 
 begin
 
@@ -127,7 +133,7 @@ begin
 		wrap_exp_o => wrap_exp_o,
 		wrap_exp_i => wrap_exp_i,
 
-		-- local z80 wrapper signals
+		-- local 65816 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_BE_i			=> i_CPUSKT_BE_o,
 		CPUSKT_PHI0_i		=> i_CPUSKT_PHI0_o,
@@ -140,7 +146,13 @@ begin
 		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
 		CPUSKT_VDA_o		=> i_CPUSKT_VDA_i,
 		CPUSKT_VPA_o		=> i_CPUSKT_VPA_i,
-		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i
+		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i,
+
+		-- shared per CPU signals
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+
+		CPUSKT_A_o			=> i_CPUSKT_A_i,
+		CPUSKT_D_o			=> i_CPUSKT_D_i
 
 	);
 
@@ -150,7 +162,7 @@ begin
 
 
 
-	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
+	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
 										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
 										else												-- bank address so hold is short
@@ -162,7 +174,7 @@ begin
 	wrap_o.A_log 			<= r_log_A;
 	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= '1' when r_state = phi2_5 else '0';
 	wrap_o.ack				<= '1' when r_state = phi2_7 else '0';
 
@@ -199,21 +211,21 @@ begin
 
 					if r_cpu_hlt = '0' then
 						if i_boot = '1' then
-							if wrap_i.CPUSKT_D(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
+							if i_CPUSKT_D_i(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
 								if i_CPUSKT_VPB_i = '0' and i_CPUSKT_6E_i = '0' then
 									-- vector pull in Native mode - get from 008Fxx
-									r_log_A <= x"008F" & wrap_i.CPUSKT_A(7 downto 0);
+									r_log_A <= x"008F" & i_CPUSKT_A_i(7 downto 0);
 								else
 									-- bank 0 maps to FF in boot mode
-									r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
+									r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
 								end if;
 							else
 								-- not bank 0 map direct
-								r_log_A <= wrap_i.CPUSKT_D(7 downto 0) & wrap_i.CPUSKT_A(15 downto 0);	
+								r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i(15 downto 0);	
 							end if;
 						else
 								-- not boot mode map direct
-							r_log_A <= wrap_i.CPUSKT_D(7 downto 0) & wrap_i.CPUSKT_A(15 downto 0);
+							r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i(15 downto 0);
 						end if;
 					end if;
 
@@ -320,13 +332,13 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if r_state = phi2_7 then
-  				r_prev_A0 <= wrap_i.CPUSKT_A(0);
+  				r_prev_A0 <= i_CPUSKT_A_i(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor wrap_i.CPUSKT_A(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_i(0);
 
   	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2_7 else '0';
   	
