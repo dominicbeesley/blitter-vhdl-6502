@@ -313,6 +313,29 @@ architecture rtl of fb_cpu is
 	);
 	end component;
 
+	component fb_cpu_65c02 is
+		generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		cfg_cpu_speed_i						: in cpu_speed_opt;			
+		fb_syscon_i								: in fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i
+
+);
+end component;
+
 
 	function B2OZ(b:boolean) return natural is 
 	begin
@@ -459,6 +482,12 @@ begin
 								r_do_sys_via_block <= '1';	
 							end if;
 							r_cpu_en_6x09 <= '1';
+						when CPU_65C02 =>
+							r_cpu_run_ix_act <= C_IX_CPU_65C02;
+							if cfg_cpu_speed_opt_i = CPUSPEED_65C02_8 then
+								r_do_sys_via_block <= '1';	
+							end if;
+							r_cpu_en_65c02 <= '1';
 						when CPU_80188 =>
 							r_cpu_run_ix_act <= C_IX_CPU_80188;
 							r_cpu_en_80188 <= '1';
@@ -486,6 +515,9 @@ begin
 						r_hard_cpu_en <= '1';
 					when CPU_6x09 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_6x09;
+						r_hard_cpu_en <= '1';
+					when CPU_65C02 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_65C02;
 						r_hard_cpu_en <= '1';
 					when CPU_80188 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_80188;
@@ -783,26 +815,29 @@ END GENERATE;
 --	);
 --END GENERATE;
 
--- -- g65c02:IF G_INCL_CPU_65C02 GENERATE
--- -- 	e_wrap_65c02:entity work.fb_cpu_65c02
--- -- 	generic map (
--- -- 		SIM										=> SIM,
--- -- 		CLOCKSPEED								=> CLOCKSPEED
--- -- 	) 
--- -- 	port map(
--- -- 
--- -- 		-- configuration
--- -- 		cpu_en_i									=> r_cpu_en_65c02,
--- -- 		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,	
--- -- 		fb_syscon_i								=> fb_syscon_i,
--- -- 
--- -- 		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
--- -- 		wrap_i									=> i_wrap_i
--- -- 
--- -- 	);
--- -- END GENERATE;
--- -- 
--- -- 
+g65c02:IF G_INCL_CPU_65C02 GENERATE
+	e_wrap_65c02:entity work.fb_cpu_65c02
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_65c02,
+		cfg_cpu_speed_i						=> cfg_cpu_speed_opt_i,	
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_65C02),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_65C02),
+		wrap_exp_i								=> i_wrap_exp_i
+
+	);
+END GENERATE;
+
+
 g65816:IF G_INCL_CPU_65816 GENERATE
 	e_wrap_65816:fb_cpu_65816
 	generic map (

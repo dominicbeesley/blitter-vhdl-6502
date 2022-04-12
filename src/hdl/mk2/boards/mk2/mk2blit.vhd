@@ -1063,6 +1063,13 @@ begin
 				when "100" =>
 					r_cfg_cpu_type <= CPU_Z80;
 					r_cfg_mk2_cpubits <= "100";
+				when "011" =>
+					r_cfg_cpu_type <= CPU_65C02;
+					r_cfg_mk2_cpubits <= "011";
+				when "101" =>
+					r_cfg_cpu_type <= CPU_65C02;
+					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
+					r_cfg_mk2_cpubits <= "101";
 				when others =>
 					null;
 			end case;

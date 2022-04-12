@@ -66,7 +66,7 @@ entity fb_cpu_65c02 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
 
 		-- CPU expansion signals
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
@@ -169,74 +169,40 @@ begin
 		wrap_exp_o => wrap_exp_o,
 		wrap_exp_i => wrap_exp_i,
 
-		-- local 6x09 wrapper signals to/from CPU expansion port 
-
-		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
-		CPUSKT_CLK_Q_i		=> i_CPUSKT_CLK_Q_o,
-		CPUSKT_CLK_E_i		=> i_CPUSKT_CLK_E_o,
-		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
+		-- local 65c02 wrapper signals to/from CPU expansion port 
+		CPUSKT_BE_i			=> i_CPUSKT_BE_o,
+		CPUSKT_PHI0_i		=> i_CPUSKT_PHI0_o,
+		CPUSKT_RDY_i		=> i_CPUSKT_RDY_o,
 		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
 		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
 		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
-		CPUSKT_nFIRQ_i		=> i_CPUSKT_nFIRQ_o,
 
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_BS_o			=> i_CPUSKT_BS_i,
-		CPUSKT_LIC_o		=> i_CPUSKT_LIC_i,
-		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
-		CPUSKT_AVMA_o		=> i_CPUSKT_AVMA_i,
-
-		-- shared per CPU signals
 		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
 
-		CPUSKT_A_o			=> i_CPUSKT_A_i,
-		CPUSKT_D_o			=> i_CPUSKT_D_i
+		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
+		CPUSKT_SYNC_o		=> i_CPUSKT_SYNC_i,
+
+		CPUSKT_D_o			=> i_CPUSKT_D_i,
+		CPUSKT_A_o			=> i_CPUSKT_A_i
+
 
 	);
 
 
-	wrap_o.exp_PORTB(0) <= i_CPUSKT_BE_o;
-	wrap_o.exp_PORTB(1) <= '1';
-	wrap_o.exp_PORTB(2) <= i_CPUSKT_PHI0_o;
-	wrap_o.exp_PORTB(3) <= i_CPUSKT_RDY_o;
-	wrap_o.exp_PORTB(4) <= i_CPUSKT_nIRQ_o;
-	wrap_o.exp_PORTB(5) <= i_CPUSKT_nNMI_o;
-	wrap_o.exp_PORTB(6) <= i_CPUSKT_nRES_o;
-	wrap_o.exp_PORTB(7) <= '1';
 
 
-	i_CPUSKT_RnW_i			<= wrap_i.exp_PORTD(1);
-	i_CPUSKT_SYNC_i		<= wrap_i.exp_PORTD(4);
-
-
-	wrap_o.exp_PORTD <= (
-		others => '1'
-		);
-
-	wrap_o.exp_PORTD_o_en <= (
-		others => '0'
-		);
-
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-
-	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
-
-
-	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					
+	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					
 										and (r_PHI0_dly(r_PHI0_dly'high) = '1' 	
 										or r_PHI0_dly(0) = '1')
 										else												
 							'0';
 
-
 	wrap_o.A_log 			<= r_log_A;
 	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
-	wrap_o.D_wr_stb		<= r_D_WR_stb;
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
+	wrap_o.D_wr_stb			<= r_D_WR_stb;
 	wrap_o.ack				<= i_ack;
-
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -269,7 +235,7 @@ begin
 	
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
-							r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
+							r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
 						end if;
 
 
@@ -388,19 +354,19 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if r_state = phi2 and r_substate = 0 then
-  				r_prev_A0 <= wrap_i.CPUSKT_A(0);
+  				r_prev_A0 <= i_CPUSKT_A_i(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor wrap_i.CPUSKT_A(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_i(0);
 
   	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2 and r_substate = 0 else '0';
 
   	wrap_o.noice_debug_5c	 <= '1' when 
   										i_CPUSKT_SYNC_i = '1' 
-  										and wrap_i.CPUSKT_D(7 downto 0) = x"5C" else
+  										and i_CPUSKT_D_i(7 downto 0) = x"5C" else
   								'0';
 
   	wrap_o.noice_debug_opfetch <= i_CPUSKT_SYNC_i and not r_cpu_hlt;
