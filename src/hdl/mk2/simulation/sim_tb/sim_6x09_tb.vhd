@@ -259,7 +259,7 @@ begin
 		taa => 55 ns
 	)
 	port map (
-A				=> i_MEM_A(13 downto 0),
+		A				=> i_MEM_A(13 downto 0),
 		D				=> i_MEM_D,
 		nCS			=> i_MEM_ROM_nCE,
 		nOE			=> i_MEM_nOE,
