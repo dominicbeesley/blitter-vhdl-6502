@@ -191,7 +191,7 @@ begin
 	end process;
 
 	-- i2c state machine
-	p_state_i2c:process(fb_syscon_i)
+	p_state_i2c:process(fb_syscon_i, r_4ph_clken)
 	begin
 
 		if fb_syscon_i.rst = '1' then
