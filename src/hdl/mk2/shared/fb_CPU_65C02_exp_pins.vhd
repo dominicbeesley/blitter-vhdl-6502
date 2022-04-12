@@ -61,7 +61,7 @@ entity fb_cpu_65C02_exp_pins is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;	
 
-		-- local z80 wrapper signals to/from CPU expansion port 
+		-- local 65c02 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_BE_i								: in std_logic;
 		CPUSKT_PHI0_i							: in std_logic;
@@ -70,16 +70,13 @@ entity fb_cpu_65C02_exp_pins is
 		CPUSKT_nNMI_i							: in std_logic;
 		CPUSKT_nRES_i							: in std_logic;
 
-		CPU_D_RnW_i							: in std_logic;
+		CPU_D_RnW_i								: in std_logic;
 
-		CPUSKT_6E_o								: out std_logic;
 		CPUSKT_RnW_o							: out std_logic;
-		CPUSKT_VDA_o							: out std_logic;
-		CPUSKT_VPA_o							: out std_logic;
-		CPUSKT_VPB_o							: out std_logic;
+		CPUSKT_SYNC_o							: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(23 downto 0)
+		CPUSKT_D_o								: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+		CPUSKT_A_o								: out std_logic_vector(23 downto 0)
 
 	);
 end fb_cpu_65C02_exp_pins;
@@ -97,15 +94,12 @@ begin
 	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_i;
 	wrap_exp_o.CPUSKT_9nFIRQLnDTACK		<= '1';
 
-	CPUSKT_6E_o			<= wrap_exp_i.CPUSKT_6EKEZnRD;
-	CPUSKT_RnW_o		<= wrap_exp_i.CPUSKT_RnWZnWR;
-	CPUSKT_VDA_o		<= wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
-	CPUSKT_VPA_o		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	CPUSKT_VPB_o		<= wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS;
+	CPUSKT_RnW_o				<= wrap_exp_i.CPUSKT_RnWZnWR;
+	CPUSKT_SYNC_o				<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_A_o 					<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_D_o 					<= wrap_exp_i.CPUSKT_D;
 
 end rtl;
 

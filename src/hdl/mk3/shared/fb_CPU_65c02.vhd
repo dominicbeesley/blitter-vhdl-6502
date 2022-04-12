@@ -54,8 +54,7 @@ use work.fb_cpu_pack.all;
 entity fb_cpu_65c02 is
 		generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;
-		G_BYTELANES							: positive	:= 1
+		CLOCKSPEED							: natural
 	);
 	port(
 
