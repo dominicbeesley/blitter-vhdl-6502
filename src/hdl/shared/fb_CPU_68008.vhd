@@ -50,7 +50,7 @@ use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
 use work.fb_cpu_exp_pack.all;
 
-entity fb_cpu_68k is
+entity fb_cpu_68008 is
 	generic (
 		CLOCKSPEED							: positive := 128;
 		SIM									: boolean := false
@@ -59,7 +59,6 @@ entity fb_cpu_68k is
 
 		-- configuration
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		cpu_speed_opt_i						: in cpu_speed_opt;
 		fb_syscon_i								: in	fb_syscon_t;
 		cfg_mosram_i							: in std_logic;
 
@@ -76,9 +75,9 @@ entity fb_cpu_68k is
 		jim_en_i									: in		std_logic
 
 	);
-end fb_cpu_68k;
+end fb_cpu_68008;
 
-architecture rtl of fb_cpu_68k is
+architecture rtl of fb_cpu_68008 is
 
 --TODO: only uses address lines 19 downto 0!
 
