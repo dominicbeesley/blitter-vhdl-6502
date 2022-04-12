@@ -160,6 +160,160 @@ end fb_cpu;
 
 architecture rtl of fb_cpu is
 
+
+	component fb_cpu_t65 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
+		CLKEN_DLY_MAX						: natural 	:= 2								-- used to time latching of address etc signals			
+	);
+	port(
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- special 
+		D_Rd_i						: in std_logic_vector(7 downto 0)
+	);
+	end component;
+
+	component fb_cpu_6x09 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		cpu_speed_opt_i						: in cpu_speed_opt;
+
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i
+
+
+	);
+	end component;
+
+	component fb_cpu_z80 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- special m68k signals
+		jim_en_i									: in		std_logic
+
+	);
+	end component;
+
+	component fb_cpu_68008 is
+	generic (
+		CLOCKSPEED							: positive := 128;
+		SIM									: boolean := false
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+		cfg_mosram_i							: in std_logic;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- special m68k signals
+
+		jim_en_i									: in		std_logic
+
+	);
+	end component;
+
+	component fb_cpu_680x0 is
+	generic (
+		CLOCKSPEED							: positive := 128;
+		SIM									: boolean := false
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+		cfg_mosram_i							: in std_logic;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- special m68k signals
+
+		jim_en_i									: in		std_logic
+
+	);
+	end component;
+
+	component fb_cpu_65816 is
+		generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: positive
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- 65816 specific signals
+
+		boot_65816_i							: in		std_logic;
+
+		debug_vma_o								: out		std_logic
+
+	);
+	end component;
+
+
 	function B2OZ(b:boolean) return natural is 
 	begin
 		if b then
@@ -495,7 +649,7 @@ begin
 
 
 gt65: IF G_INCL_CPU_T65 GENERATE
-	e_t65:entity work.fb_cpu_t65
+	e_t65:fb_cpu_t65
 	generic map (
 		SIM									=> SIM,
 		CLOCKSPEED							=> CLOCKSPEED
@@ -517,7 +671,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 END GENERATE;
 
 g6x09:IF G_INCL_CPU_6x09 GENERATE
-	e_wrap_6x09:entity work.fb_cpu_6x09
+	e_wrap_6x09:fb_cpu_6x09
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
@@ -538,7 +692,7 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 END GENERATE;
 
 gz80: IF G_INCL_CPU_Z80 GENERATE
-	e_wrap_z80:entity work.fb_cpu_z80
+	e_wrap_z80:fb_cpu_z80
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
@@ -562,7 +716,7 @@ END GENERATE;
 
 
 g680x0:IF G_INCL_CPU_680x0 GENERATE
-	e_wrap_680x0:entity work.fb_cpu_680x0
+	e_wrap_680x0:fb_cpu_680x0
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
@@ -571,7 +725,6 @@ g680x0:IF G_INCL_CPU_680x0 GENERATE
 
 		-- configuration
 		cpu_en_i									=> r_cpu_en_680x0,
-		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
 		fb_syscon_i								=> fb_syscon_i,
 		cfg_mosram_i							=> cfg_mosram_i,
 
@@ -586,8 +739,8 @@ g680x0:IF G_INCL_CPU_680x0 GENERATE
 	);
 END GENERATE;
 
-g68008:IF G_INCL_CPU_680x0 GENERATE
-	e_wrap_68008:entity work.fb_cpu_68008
+g68008:IF G_INCL_CPU_68008 GENERATE
+	e_wrap_68008:fb_cpu_68008
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
@@ -595,8 +748,7 @@ g68008:IF G_INCL_CPU_680x0 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> r_cpu_en_680x0,
-		cpu_speed_opt_i						=> cfg_cpu_speed_opt_i,
+		cpu_en_i									=> r_cpu_en_68008,
 		fb_syscon_i								=> fb_syscon_i,
 		cfg_mosram_i							=> cfg_mosram_i,
 
@@ -652,7 +804,7 @@ END GENERATE;
 -- -- 
 -- -- 
 g65816:IF G_INCL_CPU_65816 GENERATE
-	e_wrap_65816:entity work.fb_cpu_65816
+	e_wrap_65816:fb_cpu_65816
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
