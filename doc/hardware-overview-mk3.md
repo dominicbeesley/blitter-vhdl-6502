@@ -466,7 +466,9 @@ fpga RESET input.
     +--------------------------+-----------------------+
     | $00 0000 - $1F FFFF      | SRAM                  | (2Mb onboard SRAM on mk.2)
     +--------------------------+-----------------------+
-    | $20 0000 - $7F FFFF      | SRAM repeats          | (may contain ram in future)
+    | $20 0000 - $5F FFFF      | SRAM repeats          | (may contain ram in future)
+    +--------------------------+-----------------------+
+    | $60 0000 - $7F FFFF      | BB SRAM repeats       | (if disabled then SRAM will appear here)
     +--------------------------+-----------------------+
     | $80 0000 - $BF FFFF      | EEPROM repeats        | (256/512Kb onboard Flash on mk.2)**
     +--------------------------+-----------------------+ 
