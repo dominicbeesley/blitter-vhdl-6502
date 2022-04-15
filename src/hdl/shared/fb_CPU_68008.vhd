@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    	9/8/2020
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component - 68008/680x0
+-- Module Name:    	fishbone bus - CPU wrapper component - 68008
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
