@@ -134,41 +134,52 @@ architecture rtl of fb_cpu_6800 is
 	signal i_CPUSKT_nRES_o	: std_logic;
 	signal i_CPUSKT_DBE_o	: std_logic;
 
+	signal i_CPU_D_RnW_o		: std_logic;
+
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_BA_i		: std_logic;
 	signal i_CPUSKT_VMA_i	: std_logic;
+
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
+	e_pinmap:entity work.fb_cpu_6x09_exp_pins
+	port map(
 
-	wrap_o.exp_PORTB(0) <= i_CPUSKT_TSC_o;
-	wrap_o.exp_PORTB(1) <= i_CPUSKT_Phi1_o;
-	wrap_o.exp_PORTB(2) <= i_CPUSKT_Phi2_o;
-	wrap_o.exp_PORTB(3) <= i_CPUSKT_nHALT_o;
-	wrap_o.exp_PORTB(4) <= i_CPUSKT_nIRQ_o;
-	wrap_o.exp_PORTB(5) <= i_CPUSKT_nNMI_o;
-	wrap_o.exp_PORTB(6) <= i_CPUSKT_nRES_o;
-	wrap_o.exp_PORTB(7) <= i_CPUSKT_DBE_o;
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
+
+		-- local 6800 wrapper signals to/from CPU expansion port 
+		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
+		CPUSKT_Phi1_i		=> i_CPUSKT_Phi1_o,
+		CPUSKT_Phi2_i		=> i_CPUSKT_Phi2_o,
+		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
+		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
+		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
+		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_DBE_i		=> i_CPUSKT_DBE_o,
+
+		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
+		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
+		CPUSKT_VMA_o		=> i_CPUSKT_VMA_i,
+
+		-- shared per CPU signals
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+
+		CPUSKT_A_o			=> i_CPUSKT_A_i,
+		CPUSKT_D_o			=> i_CPUSKT_D_i
+
+	);
 
 
-	i_CPUSKT_RnW_i		<= wrap_i.exp_PORTD(1);
-	i_CPUSKT_BA_i		<= wrap_i.exp_PORTD(5);
-	i_CPUSKT_VMA_i		<= wrap_i.exp_PORTD(6);
+	
 
-	wrap_o.exp_PORTD <= (
-		others => '1'
-		);
-
-	wrap_o.exp_PORTD_o_en <= (
-		others => '0'
-		);
-
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-
-	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
+	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
 							'0';
 
 	wrap_o.A_log 			<= r_log_A;
@@ -176,7 +187,7 @@ begin
 	-- note: don't start CYC until AS is settled
 	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_DD_ring(T_MAX_DD);
 	wrap_o.ack				<= r_wrap_ack;
 
@@ -189,7 +200,7 @@ begin
 			if r_cpu_res = '0' and i_CPUSKT_VMA_i = '1' and r_AD_ring(T_MAX_AD) = '1'  then
 				--TODO: noice inhibit?
 				r_a_stb <= '1';
-				r_log_A <= x"FF" & wrap_i.CPUSKT_A(15 downto 0);
+				r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
 				r_we <= not(i_CPUSKT_RnW_i);
 			end if;
 		end if;

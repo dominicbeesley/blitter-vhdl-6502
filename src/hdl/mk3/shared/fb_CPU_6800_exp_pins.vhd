@@ -62,24 +62,22 @@ entity fb_cpu_6800_exp_pins is
 		-- local z80 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_TSC_i							: in std_logic;
-		CPUSKT_CLK_Q_i							: in std_logic;
-		CPUSKT_CLK_E_i							: in std_logic;
+		CPUSKT_Phi1_i							: in std_logic;
+		CPUSKT_Phi2_i							: in std_logic;
 		CPUSKT_nHALT_i							: in std_logic;
 		CPUSKT_nIRQ_i							: in std_logic;
 		CPUSKT_nNMI_i							: in std_logic;
 		CPUSKT_nRES_i							: in std_logic;
-		CPUSKT_nFIRQ_i							: in std_logic;
+		CPUSKT_DBE_i							: in std_logic;
 
-		CPU_D_RnW_i							: in std_logic;
+		CPU_D_RnW_i								: in std_logic;
 
 		CPUSKT_RnW_o							: out std_logic;
-		CPUSKT_BS_o								: out std_logic;
-		CPUSKT_LIC_o							: out std_logic;
 		CPUSKT_BA_o								: out std_logic;
-		CPUSKT_AVMA_o							: out std_logic;
+		CPUSKT_VMA_o							: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector(7 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(15 downto 0)
+		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
+		CPUSKT_A_o								: out std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_6800_exp_pins;
@@ -109,12 +107,30 @@ begin
 	wrap_o.exp_PORTF_nOE <= '1';
 
 
-	CPUSKT_RnW_o		<= wrap_i.exp_PORTD(1);
-	CPUSKT_BS_o			<= wrap_i.exp_PORTD(2);
-	CPUSKT_LIC_o		<= wrap_i.exp_PORTD(4);
-	CPUSKT_BA_o			<= wrap_i.exp_PORTD(5);
-	CPUSKT_AVMA_o		<= wrap_i.exp_PORTD(6);
+	wrap_o.exp_PORTB(0) <= CPUSKT_TSC_i;
+	wrap_o.exp_PORTB(1) <= CPUSKT_Phi1_i;
+	wrap_o.exp_PORTB(2) <= CPUSKT_Phi2_i;
+	wrap_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
+	wrap_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
+	wrap_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
+	wrap_o.exp_PORTB(6) <= CPUSKT_nRES_i;
+	wrap_o.exp_PORTB(7) <= CPUSKT_DBE_i;
 
+
+	CPUSKT_RnW_o		<= wrap_i.exp_PORTD(1);
+	CPUSKT_BA_o			<= wrap_i.exp_PORTD(5);
+	CPUSKT_VMA_o		<= wrap_i.exp_PORTD(6);
+
+	wrap_o.exp_PORTD <= (
+		others => '1'
+		);
+
+	wrap_o.exp_PORTD_o_en <= (
+		others => '0'
+		);
+
+	wrap_o.exp_PORTE_nOE <= '0';
+	wrap_o.exp_PORTF_nOE <= '1';
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
 	
 	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
