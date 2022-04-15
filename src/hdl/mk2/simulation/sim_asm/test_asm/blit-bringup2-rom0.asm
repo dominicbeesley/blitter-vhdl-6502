@@ -403,7 +403,7 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
-	; quick memory read/write test
+	; quick MB memory read/write test
 	lda	#100
 	sta	$200
 	inc	$200
@@ -431,7 +431,19 @@ mos_handle_res:
 	sta	JIM
 	lda	JIM
 
+	lda	#0
+	sta	$FE36			; throttle back off before test ChipRAM Write/Readback
 
+
+	ldx	#3
+@lp0:	txa
+	sta	JIM,X
+	dex
+	bne	@lp0
+	ldx	#3
+@lp00:	lda	JIM,X
+	dex
+	bne	@lp00
 
 
 
