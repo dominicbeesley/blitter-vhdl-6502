@@ -25,49 +25,32 @@
 -- Company: 				Dossytronics
 -- Engineer: 				Dominic Beesley
 -- 
--- Create Date:    		26/1/2022
+-- Create Date:    		30/3/2022
 -- Design Name: 
--- Module Name:    		work.fb_CPU_pack
+-- Module Name:    		work.fb_CPU_exp_pack
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 			fb_CPU type defs for mk3 board
+-- Description: 			type definitions for wrapping CPU expansion socket pins Mk.2
 -- Dependencies: 
 --
 -- Revision: 
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
+use work.fb_CPU_pack.all;
 
 
-package fb_CPU_pack is
+package fb_CPU_exp_pack is
 
-	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68K, CPU_6800, CPU_80188);
-	type cpu_speed_opt is 
-	(
-		NONE,
-		CPUSPEED_6309_3_5,
-		CPUSPEED_68008_10,
-		CPUSPEED_65C02_8
-	);
 
-	constant	C_CPU_BYTELANES	: positive := 2;									-- number of data byte lanes
-
-	type t_cpu_wrap_o is record
-		cyc							: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
-		A_log							: std_logic_vector(23 downto 0);
-		we								: std_logic;
-		D_WR_stb						: std_logic;
-		D_WR							: std_logic_vector(7 downto 0);
-		ack							: std_logic;
-
+	type t_cpu_wrap_exp_o is record
 		exp_PORTB					: std_logic_vector(7 downto 0);
 		exp_PORTD					: std_logic_vector(11 downto 0);
 		exp_PORTD_o_en				: std_logic_vector(11 downto 0);
@@ -75,46 +58,18 @@ package fb_CPU_pack is
 		exp_PORTF_nOE				: std_logic;	
 
 		CPU_D_RnW					: std_logic;
-
-		noice_debug_5c				: std_logic;						-- A 5C instruction is being fetched (qualify with clken below)
-		noice_debug_cpu_clken	: std_logic;						-- clken and cpu rdy
-		noice_debug_A0_tgl		: std_logic;						-- 1 when current A0 is different to previous fetched
-		noice_debug_opfetch		: std_logic;						-- this cycle is an opcode fetch
-
 	end record;
 
-	type t_cpu_wrap_o_arr is array(natural range<>) of t_cpu_wrap_o;
+	type t_cpu_wrap_exp_o_arr is array(natural range<>) of t_cpu_wrap_exp_o;
 
-
-	type t_cpu_wrap_i is record
-
-		-- direct CPU control signals from system
-		nmi_n							: std_logic;
-		irq_n							: std_logic;
-
-		-- chipset control signals
-		cpu_halt						: std_logic;
-
-		-- wrapper stuff
-		rdy_ctdn						: unsigned(RDY_CTDN_LEN-1 downto 0);
-		cyc							: std_logic;
-
-
-		noice_debug_nmi_n			: std_logic;		-- debugger is forcing a cpu NMI
-		noice_debug_shadow		: std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
-		noice_debug_inhibit_cpu	: std_logic;		-- during a 5C op code, inhibit address / data to avoid
-																				-- spurious memory accesses
-		-- optional tuning signals
-
-		throttle_cpu_2MHz			: std_logic;		-- cpu throttle
-		cpu_2MHz_phi2_clken		: std_logic;		-- sys phi2 signal for throttle
+	type t_cpu_wrap_exp_i is record
 
 		-- cpu socket signals
 		CPUSKT_D						: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
 		CPUSKT_A						: std_logic_vector(23 downto 0);
-		exp_PORTD					: std_logic_vector(11 downto 0);
 
+		exp_PORTD					: std_logic_vector(11 downto 0);
 
 	end record;
 
-end fb_CPU_pack;
+end fb_CPU_exp_pack;

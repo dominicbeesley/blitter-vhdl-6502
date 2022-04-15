@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,11 @@
 -- 
 -- Create Date:    	9/8/2020
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component - 68008
+-- Module Name:    	fishbone bus - CPU wrapper component - 680x0
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for the 68008 processor slot
+-- Description: 		A fishbone wrapper for the 680x0 processor slot
 -- Dependencies: 
 --
 -- Revision: 
@@ -50,7 +50,7 @@ use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
 use work.fb_cpu_exp_pack.all;
 
-entity fb_cpu_68k is
+entity fb_cpu_680x0 is
 	generic (
 		CLOCKSPEED							: positive := 128;
 		SIM									: boolean := false
@@ -60,6 +60,7 @@ entity fb_cpu_68k is
 		-- configuration
 		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
 		fb_syscon_i								: in	fb_syscon_t;
+		cfg_mosram_i							: in std_logic;
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
@@ -74,9 +75,9 @@ entity fb_cpu_68k is
 		jim_en_i									: in		std_logic
 
 	);
-end fb_cpu_68k;
+end fb_cpu_680x0;
 
-architecture rtl of fb_cpu_68k is
+architecture rtl of fb_cpu_680x0 is
 
 --TODO: only uses address lines 19 downto 0!
 
@@ -115,20 +116,24 @@ architecture rtl of fb_cpu_68k is
 	signal i_CPUSKT_nIPL2_o	: std_logic;
 	signal i_CPUSKT_nIPL0_o	: std_logic;
 	signal i_CPUSKT_nIPL1_o	: std_logic;
+	signal i_CPUSKT_nDTACK_o: std_logic;
+	signal i_CPUSKT_nRES_o	: std_logic;
+	signal i_CPUSKT_nHALT_o	: std_logic;
 
-	-- port D in
+	signal i_CPU_D_RnW_o		: std_logic;
+
 	signal i_CPUSKT_nBG_i	: std_logic;
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_nUDS_i	: std_logic;
+	signal i_CPUSKT_nLDS_i	: std_logic;
 	signal i_CPUSKT_FC0_i	: std_logic;
 	signal i_CPUSKT_FC2_i	: std_logic;
 	signal i_CPUSKT_nAS_i	: std_logic;
 	signal i_CPUSKT_FC1_i	: std_logic;
+	signal i_CPUSKT_E_i		: std_logic;
 
-	-- port D out
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPUSKT_nHALT_o	: std_logic;
-
+	signal i_CPUSKT_D_i		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 1);
 
 	signal i_nDS_either		: std_logic; -- either of the LDS/UDS is low or 8 bit DS is low
 	signal r_cpuskt_A_vector: std_logic; -- the registered cpu address was at 00 00xx
@@ -157,65 +162,54 @@ architecture rtl of fb_cpu_68k is
 	signal i_cyc_ack_i		: std_logic;
 	signal r_wrap_cyc_dly	: std_logic;
 
-	signal r_cfg_68008		: std_logic;
-
 begin
 
-	p_cfg:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			if fb_syscon_i.rst = '1' then
-				if cpu_speed_opt_i = CPUSPEED_68008_10 then
-					r_cfg_68008 <= '1';
-				else
-					r_cfg_68008 <= '0';
-				end if;
-			end if;
-		end if;
-
-	end process;
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
 	assert G_BYTELANES >= 2 report "G_BYTELANES must be 2 or greater" severity failure;
+	
+	e_pinmap:entity work.fb_cpu_680x0_exp_pins
+	port map(
 
-	wrap_o.exp_PORTB(0) <= i_CPUSKT_VPA_o;
-	wrap_o.exp_PORTB(1) <= '1';
-	wrap_o.exp_PORTB(2) <= i_CPUSKT_CLK_o;
-	wrap_o.exp_PORTB(3) <= '1';
-	wrap_o.exp_PORTB(4) <= i_CPUSKT_nIPL1_o;
-	wrap_o.exp_PORTB(5) <= i_CPUSKT_nIPL0_o;
-	wrap_o.exp_PORTB(6) <= i_CPUSKT_nIPL2_o;
-	wrap_o.exp_PORTB(7) <= r_ndtack2;
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
 
+		-- local 6x09 wrapper signals to/from CPU expansion port 
 
-	i_CPUSKT_RnW_i		<= wrap_i.exp_PORTD(1);
-	i_CPUSKT_nUDS_i	<= wrap_i.exp_PORTD(2);
-	i_CPUSKT_FC0_i		<= wrap_i.exp_PORTD(3);
-	i_CPUSKT_FC2_i		<= wrap_i.exp_PORTD(4);
-	i_CPUSKT_nAS_i		<= wrap_i.exp_PORTD(5);
-	i_CPUSKT_FC1_i		<= wrap_i.exp_PORTD(6);
-	i_CPUSKT_nBG_i		<= wrap_i.exp_PORTD(7);
+		CPUSKT_VPA_i		=> i_CPUSKT_VPA_o,
+		CPUSKT_CLK_i		=> i_CPUSKT_CLK_o,
+		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
+		CPUSKT_nIPL1_i		=> i_CPUSKT_nIPL1_o,
+		CPUSKT_nIPL02_i	=> i_CPUSKT_nIPL02_o,
+		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_nDTACK_i	=> i_CPUSKT_nDTACK_o,
 
-	wrap_o.exp_PORTD <= (
-		8 => '1',										-- nBR
-		9 => i_CPUSKT_nRES_o,
-		10 => i_CPUSKT_nHALT_o,					-- 68K halt
-		others => '1'
+		CPUSKT_E_o			=> i_CPUSKT_E_i,
+		CPUSKT_nBG_o		=> i_CPUSKT_nBG_i,
+		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
+		CPUSKT_nUDS_o		=> i_CPUSKT_nUDS_i,
+		CPUSKT_nLDS_o		=> i_CPUSKT_nLDS_i,
+		CPUSKT_FC0_o		=> i_CPUSKT_FC0_i,
+		CPUSKT_FC2_o		=> i_CPUSKT_FC2_i,
+		CPUSKT_nAS_o		=> i_CPUSKT_nAS_i,
+		CPUSKT_FC1_o		=> i_CPUSKT_FC1_i,
 
-		);
+		-- shared per CPU signals
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
 
-	wrap_o.exp_PORTD_o_en <= (
-		8 => '1',
-		9 => '1',
-		10 => '1',
-		others => '0'
-		);
+		CPUSKT_A_o			=> i_CPUSKT_A_i,
+		CPUSKT_D_o			=> i_CPUSKT_D_i,
 
-	wrap_o.exp_PORTE_nOE <= r_PORTE_nOE;
-	wrap_o.exp_PORTF_nOE <= r_PORTF_nOE;
+		-- socket muxing for extra 16 bit plug
+		MUX_PORTE_nOE_i		=> r_PORTE_nOE,
+		MUX_PORTF_nOE_i		=> r_PORTF_nOE
+
+	);
+
 
 	-- TODO: make this a register in state machine and delay?
-	wrap_o.CPU_D_RnW <= 	'0' when i_CPUSKT_RnW_i = '0' else
+	i_CPU_D_RnW_o <= 	'0' when i_CPUSKT_RnW_i = '0' else
 							'1';
 
 
@@ -227,13 +221,11 @@ begin
 	wrap_o.D_wr_stb		<= r_WR_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
 
-
 	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' 
 									else '0';
 
 	-- either DS is low or 8 bit
-	i_nDS_either <= i_CPUSKT_nUDS_i when r_cfg_68008 = '1' else -- 68008
-						i_CPUSKT_nUDS_i and wrap_i.CPUSKT_A(0); -- 68000
+	i_nDS_either <= i_CPUSKT_nUDS_i and wrap_i.CPUSKT_A(0);
 
 	-- register async signals for meta stability and to delay relative to each other
 	e_m_DS_e:entity work.metadelay 
@@ -262,15 +254,11 @@ begin
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
 				r_cpuskt_A_m(23 downto 1) <= wrap_i.CPUSKT_A(23 downto 1);
-				if wrap_i.CPUSKT_A(19 downto 8) = x"000" and (r_cfg_68008 = '1' or wrap_i.CPUSKT_A(23 downto 20) = x"0") then
+				if wrap_i.CPUSKT_A(23 downto 8) = x"0000" then
 					r_cpuskt_A_vector <= '1';
 				end if;
 
-				if r_cfg_68008 = '1' then
-					r_cpuskt_A_m(0) <= wrap_i.CPUSKT_A(0);
-				else
-					r_cpuskt_A_m(0) <= '0';
-				end if;	
+				r_cpuskt_A_m(0) <= '0';
 			end if;
 		end if;
 	end process;
@@ -281,16 +269,7 @@ begin
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' and cfg_mosram_i = '1' else
 					x"8D3F" & r_cpuskt_A_m(7 downto 0) 	-- boot from Flash at 8D xxxx
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' else
-					r_cpuskt_A_m 
-							when r_cfg_68008 = '0' else
-					x"F" & r_cpuskt_A_m(19 downto 0) 
-							when r_cpuskt_A_m(19 downto 16) = x"F" 
-								or r_cpuskt_A_m(19 downto 16) = x"E"	else -- sys or chipset
-			      x"7" & r_cpuskt_A_m(19 downto 0) 
-			      		when r_cpuskt_A_m(19 downto 16) = x"D" and cfg_mosram_i = '1' else -- Flash ROM
-			      x"8" & r_cpuskt_A_m(19 downto 0) 
-			      		when r_cpuskt_A_m(19 downto 16) = x"D" else -- Flash ROM
-			      x"0" & r_cpuskt_A_m(19 downto 0); -- RAM
+					r_cpuskt_A_m; -- RAM
 
    
 
@@ -304,11 +283,7 @@ begin
 				else
 					r_cpu_clk <= '1';					
 				end if;
-				if r_cfg_68008 = '1' then
-					r_clkctdn <= to_unsigned(C_CLKD2_10-1, r_clkctdn'length);
-				else
 					r_clkctdn <= to_unsigned(C_CLKD2_20-1, r_clkctdn'length);					
-				end if;
 			else
 				r_clkctdn <= r_clkctdn - 1;
 			end if;
@@ -342,40 +317,23 @@ begin
 					if i_nAS_m = '0' then
 						-- start of cycle
 						if i_RnW_m = '1' then
-							if r_cfg_68008 = '1' then
-								-- don't need to wait to deduce byte lane
+							if i_CPUSKT_nUDS_i = '0' then
+								-- upper first
+								r_state <= rd_u;
+								r_cyc_o(1) <= '1';
+								r_WE <= '0';
+								r_A_log <= i_A_log;
+								-- only allow dtack if the lower isn't needed
+								r_lastcyc <= i_CPUSKT_nLDS_i;
+							else
 								r_state <= rd_l;
 								r_cyc_o(0) <= '1';
 								r_WE <= '0';
+								r_A_log <= i_A_log(23 downto 1) & '1';
 								r_lastcyc <= '1';
-								r_A_log <= i_A_log;
-							else							
-								if i_CPUSKT_nUDS_i = '0' then
-									-- upper first
-									r_state <= rd_u;
-									r_cyc_o(1) <= '1';
-									r_WE <= '0';
-									r_A_log <= i_A_log;
-									-- only allow dtack if the lower isn't needed
-									r_lastcyc <= wrap_i.CPUSKT_A(0);
-								else
-									r_state <= rd_l;
-									r_cyc_o(0) <= '1';
-									r_WE <= '0';
-									r_A_log <= i_A_log(23 downto 1) & '1';
-									r_lastcyc <= '1';
-								end if;
 							end if;
 						else
---							if r_cfg_68008 = '1' then
---								r_state <= wr_l;
---								r_cyc_o(0) <= '1';
---								r_WE <= '1';
---								r_lastcyc <= '1';
---								r_A_log <= i_A_log;
---							else
-								r_state <= idle_wr_ds;
---							end if;
+							r_state <= idle_wr_ds;
 						end if;
 						--TODO: - should this be staggered to avoid two drivers?
 						r_PORTF_nOE <= '0';
@@ -387,7 +345,7 @@ begin
 							r_state <= wr_u;
 							r_cyc_o(1) <= '1';
 							r_WE <= '1';
-							r_lastcyc <= wrap_i.CPUSKT_A(0) or r_cfg_68008;
+							r_lastcyc <= i_CPUSKT_nLDS_i;
 							r_A_log <= i_A_log;
 							r_WR_stb <= '1';
 						else
@@ -401,7 +359,7 @@ begin
 					end if;
 				when rd_u =>
 					if i_cyc_ack_i = '1' then
-						if r_cfg_68008 = '1' or wrap_i.CPUSKT_A(0) = '1' then
+						if i_CPUSKT_nLDS_i = '1' then
 							r_state <= wait_as_de;
 						else
 							r_A_log(0) <= '1';
@@ -415,11 +373,11 @@ begin
 						r_state <= wait_as_de;
 					end if;
 				when wr_u =>
-					if r_cfg_68008 = '1' and i_CPUSKT_nUDS_i = '0' then
+					if i_CPUSKT_nUDS_i = '0' then
 						r_WR_stb <= '1';
 					end if;
 					if i_cyc_ack_i = '1' then
-						if r_cfg_68008 = '1' or wrap_i.CPUSKT_A(0) = '1' then
+						if i_CPUSKT_nLDS_i = '1' then
 							r_state <= wait_as_de;
 						else
 							r_A_log(0) <= '1';
@@ -459,8 +417,7 @@ begin
 			if r_state = idle then
 				r_ndtack <= '1';
 			elsif r_wrap_cyc_dly = '1' and wrap_i.cyc = '1' and r_lastcyc = '1' then
-				if (r_cfg_68008 = '1' and wrap_i.rdy_ctdn <= C_CLKD2_10 * 2) or
-					(r_cfg_68008 = '0' and wrap_i.rdy_ctdn <= ((C_CLKD2_20 * 2)+3)) then 
+				if wrap_i.rdy_ctdn <= ((C_CLKD2_20 * 2)+3) then 
 					r_ndtack <= '0';
 				end if;
 			end if;
@@ -487,6 +444,7 @@ begin
 								 			'1';
 
 	i_CPUSKT_CLK_o 				<= r_cpu_clk;
+	i_CPUSKT_nDTACK_o				<= r_ndtack2;
 
 
 

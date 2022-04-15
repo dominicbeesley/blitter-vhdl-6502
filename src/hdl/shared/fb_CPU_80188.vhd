@@ -64,6 +64,12 @@ entity fb_cpu_80188 is
 		wrap_o									: out t_cpu_wrap_o;
 		wrap_i									: in t_cpu_wrap_i;
 
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- debug signals
+
 		debug_80188_state_o					: out std_logic_vector(2 downto 0);
 		debug_80188_ale_o						: out std_logic
 
@@ -121,6 +127,9 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_HLDA_i	: std_logic;
 	signal i_CPUSKT_nLOCK_i	: std_logic;
 
+	signal i_CPUSKT_A_i		: std_logic_vector(19 downto 8);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+
 	signal r_CLK_meta			: std_logic_vector((T_MAX_X1 * 4 - 2) downto 0);
 	signal i_CPU_CLK_posedge: std_logic;
 	signal i_CPU_CLK_negedge: std_logic;
@@ -134,7 +143,51 @@ begin
 
 	
 
-	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
+	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
+
+	e_pinmap:entity work.fb_cpu_80188_exp_pins is
+	port(
+
+		-- cpu wrapper signals
+		wrap_exp_o => wrap_exp_o,
+		wrap_exp_i => wrap_exp_i,
+
+		-- local 80188 wrapper signals to/from CPU expansion port 
+
+		CPUSKT_nTEST_i		=> i_CPUSKT_nTEST_o,
+		CPUSKT_X1_i			=> i_CPUSKT_X1_o,
+		CPUSKT_SRDY_i		=> i_CPUSKT_SRDY_o,
+		CPUSKT_ARDY_i		=> i_CPUSKT_ARDY_o,
+		CPUSKT_INT0_i		=> i_CPUSKT_INT0_o,
+		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
+		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_INT1_i		=> i_CPUSKT_INT1_o,
+		CPUSKT_DRQ0_i		=> i_CPUSKT_DRQ0_o,
+		CPUSKT_INT2_i		=> i_CPUSKT_INT2_o,
+		CPUSKT_HOLD_i		=> i_CPUSKT_HOLD_o,
+		CPUSKT_INT3_i		=> i_CPUSKT_INT3_o,
+
+		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+
+		CPUSKT_nS_o			=> i_CPUSKT_nS_i,
+		CPUSKT_nUCS_o		=> i_CPUSKT_nUCS_i,
+		CPUSKT_nLCS_o		=> i_CPUSKT_nLCS_i,
+		CPUSKT_RESET_o		=> i_CPUSKT_RESET_i,
+		CPUSKT_CLKOUT_o	=> i_CPUSKT_CLKOUT_i,
+		CPUSKT_nRD_o		=> i_CPUSKT_nRD_i,
+		CPUSKT_nWR_o		=> i_CPUSKT_nWR_i,
+		CPUSKT_nDEN_o		=> i_CPUSKT_nDEN_i,
+		CPUSKT_DTnR_o		=> i_CPUSKT_DTnR_i,
+		CPUSKT_ALE_o		=> i_CPUSKT_ALE_i,
+		CPUSKT_HLDA_o		=> i_CPUSKT_HLDA_i,
+		CPUSKT_nLOCK_o		=> i_CPUSKT_nLOCK_i,
+
+		CPUSKT_D_o			=> i_CPUSKT_D_i,
+		CPUSKT_A_o			=> i_CPUSKT_A_i
+
+
+	);
+
 
 
 	p_X1:process(fb_syscon_i)
@@ -169,53 +222,8 @@ begin
 	i_CPUSKT_INT3_o	<= '0';
 	i_CPUSKT_DRQ0_o   <= not wrap_i.nmi_n;
 
-	wrap_o.exp_PORTB(0)	<= i_CPUSKT_nTEST_o;
-	wrap_o.exp_PORTB(1)	<= i_CPUSKT_ARDY_o;
-	wrap_o.exp_PORTB(2)	<= i_CPUSKT_X1_o;
-	wrap_o.exp_PORTB(3)	<= i_CPUSKT_SRDY_o;
-	wrap_o.exp_PORTB(4)	<= i_CPUSKT_INT0_o;
-	wrap_o.exp_PORTB(5)	<= i_CPUSKT_nNMI_o;
-	wrap_o.exp_PORTB(6)	<= i_CPUSKT_nRES_o;
-	wrap_o.exp_PORTB(7)	<= i_CPUSKT_INT1_o;
 
-	--TODO: sort out CPUSKT_A
-	i_CPUSKT_nS_i(0)		<= wrap_i.CPUSKT_A(0);
-	i_CPUSKT_nS_i(1)		<= wrap_i.CPUSKT_A(1);
-	i_CPUSKT_nS_i(2)		<= wrap_i.CPUSKT_A(2);
-	i_CPUSKT_nUCS_i		<= wrap_i.CPUSKT_A(3);
-	i_CPUSKT_nLCS_i		<= wrap_i.CPUSKT_A(4);
-	i_CPUSKT_RESET_i		<= wrap_i.CPUSKT_A(5);
-	i_CPUSKT_CLKOUT_i		<= wrap_i.CPUSKT_A(6);
-
-
-	i_CPUSKT_nRD_i			<= wrap_i.exp_PORTD(0);
-	i_CPUSKT_nWR_i			<= wrap_i.exp_PORTD(1);
-	i_CPUSKT_nDEN_i		<= wrap_i.exp_PORTD(2);
-	i_CPUSKT_DTnR_i		<= wrap_i.exp_PORTD(4);
-	i_CPUSKT_ALE_i			<= wrap_i.exp_PORTD(5);
-	i_CPUSKT_HLDA_i		<= wrap_i.exp_PORTD(7);
-	i_CPUSKT_nLOCK_i		<= wrap_i.exp_PORTD(11);
-
-	wrap_o.exp_PORTD <= (
-		3						=> i_CPUSKT_INT2_o,
-		6						=> i_CPUSKT_DRQ0_o,
-		8						=> i_CPUSKT_HOLD_o,
-		10						=> i_CPUSKT_INT3_o,
-		others				=> '1'
-		);
-
-	wrap_o.exp_PORTD_o_en <= (
-		3 => '1',
-		6 => '1',
-		8 => '1',
-		10 => '1',	
-		others => '0'
-		);
-
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-
-	wrap_o.CPU_D_RnW <= 	'1' 	when i_CPUSKT_DTnR_i = '0' and i_CPUSKT_nDEN_i = '0' else
+	i_CPU_D_RnW_o 	<= 	'1' 	when i_CPUSKT_DTnR_i = '0' and i_CPUSKT_nDEN_i = '0' else
 								'0';
 
 	wrap_o.A_log 			<= r_log_A;
