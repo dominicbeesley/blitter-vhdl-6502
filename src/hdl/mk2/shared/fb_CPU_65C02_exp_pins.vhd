@@ -26,11 +26,11 @@
 -- 
 -- Create Date:    	7/4/2022
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component - 65816 pin mappings
+-- Module Name:    	fishbone bus - CPU wrapper component - 65C02 pin mappings
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		Map pins for 65816 expansion header in t_cpu_wrap_x types to 
+-- Description: 		Map pins for 65C02 expansion header in t_cpu_wrap_x types to 
 --							local pin signals for MK2 board
 -- Dependencies: 
 --
@@ -38,9 +38,6 @@
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
-
--- NOTE: this requires a board mod on the mk.2 board - the z80's RFSH pin needs to 
--- be connected to CPUSKT_VSS6VPA9BAKnAS_i
 
 
 library ieee;

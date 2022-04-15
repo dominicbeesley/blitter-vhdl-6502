@@ -39,9 +39,6 @@
 --
 ----------------------------------------------------------------------------------
 
--- NOTE: this requires a board mod on the mk.2 board - the z80's RFSH pin needs to 
--- be connected to CPUSKT_VSS6VPA9BAKnAS_i
-
 
 library ieee;
 use ieee.std_logic_1164.all;

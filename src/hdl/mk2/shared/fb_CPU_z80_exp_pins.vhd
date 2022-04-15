@@ -31,7 +31,7 @@
 -- Target Devices: 
 -- Tool versions: 
 -- Description: 		Map pins for z80 expansion header in t_cpu_wrap_x types to 
---							local pin signals
+--							local pin signals for Mk.2 board
 -- Dependencies: 
 --
 -- Revision: 
