@@ -126,8 +126,8 @@ architecture rtl of fb_cpu_68008 is
 	signal i_CPUSKT_FC1_i	: std_logic;
 	signal i_CPUSKT_E_i		: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(19 downto 0);
 
 	signal i_nDS_either		: std_logic; -- either of the LDS/UDS is low or 8 bit DS is low
 	signal r_cpuskt_A_vector: std_logic; -- the registered cpu address was at 00 00xx
@@ -135,7 +135,7 @@ architecture rtl of fb_cpu_68008 is
 	signal i_nAS_m				: std_logic;
 	signal i_nDS_either_m	: std_logic;
 	signal i_RnW_m				: std_logic;
-	signal r_cpuskt_A_m		: std_logic_vector(23 downto 0);
+	signal r_cpuskt_A_m		: std_logic_vector(19 downto 0);
 
 	type	t_state is (
 		idle 			-- waiting for a cpu cycle to start
@@ -200,7 +200,7 @@ begin
 	wrap_o.A_log 			<= r_A_log;
 	wrap_o.cyc(0)			<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb		<= r_WR_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
 
@@ -236,7 +236,7 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
-				r_cpuskt_A_m(23 downto 0) <= i_CPUSKT_A_i(23 downto 0);
+				r_cpuskt_A_m <= i_CPUSKT_A_i;
 				if i_CPUSKT_A_i(19 downto 8) = x"000" then
 					r_cpuskt_A_vector <= '1';
 				end if;
@@ -250,16 +250,14 @@ begin
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' and cfg_mosram_i = '1' else
 					x"8D3F" & r_cpuskt_A_m(7 downto 0) 	-- boot from Flash at 8D xxxx
 							when r_cpuskt_A_vector = '1' and r_m68k_boot = '1' and i_RnW_m = '1' else
-					x"F" & r_cpuskt_A_m(19 downto 0) 
+					x"F" & r_cpuskt_A_m 
 							when r_cpuskt_A_m(19 downto 16) = x"F" 
 								or r_cpuskt_A_m(19 downto 16) = x"E"	else -- sys or chipset
-			      x"7" & r_cpuskt_A_m(19 downto 0) 
+			      x"7" & r_cpuskt_A_m
 			      		when r_cpuskt_A_m(19 downto 16) = x"D" and cfg_mosram_i = '1' else -- Flash ROM
-			      x"8" & r_cpuskt_A_m(19 downto 0) 
+			      x"8" & r_cpuskt_A_m
 			      		when r_cpuskt_A_m(19 downto 16) = x"D" else -- Flash ROM
-			      x"0" & r_cpuskt_A_m(19 downto 0); -- RAM
-
-
+			      x"0" & r_cpuskt_A_m; -- RAM
 
 	p_cpu_clk:process(fb_syscon_i)
 	begin

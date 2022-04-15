@@ -70,7 +70,7 @@ entity fb_cpu_z80_exp_pins is
 		CPUSKT_nNMI_i							: in std_logic;
 		CPUSKT_nRES_i							: in std_logic;
 
-		CPU_D_RnW_i							: in std_logic;
+		CPU_D_RnW_i								: in std_logic;
 
 
 		CPUSKT_nRD_o							: out std_logic;
@@ -78,11 +78,11 @@ entity fb_cpu_z80_exp_pins is
 		CPUSKT_nMREQ_o							: out std_logic;
 		CPUSKT_nM1_o							: out std_logic;
 		CPUSKT_nRFSH_o							: out std_logic;
-		CPUSKT_nIOREQ_o							: out std_logic;
+		CPUSKT_nIOREQ_o						: out std_logic;
 		CPUSKT_nBUSACK_o						: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(23 downto 0)
+		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
+		CPUSKT_A_o								: out std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_z80_exp_pins;
@@ -109,7 +109,7 @@ begin
 	CPUSKT_nBUSACK_o	<= wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
 	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
 
 end rtl;

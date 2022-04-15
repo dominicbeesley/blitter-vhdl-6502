@@ -142,8 +142,8 @@ architecture rtl of fb_cpu_65c02 is
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_SYNC_i	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 	signal r_cfg_8Mhz			: std_logic;
 
@@ -200,8 +200,8 @@ begin
 	wrap_o.A_log 			<= r_log_A;
 	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
-	wrap_o.D_wr_stb			<= r_D_WR_stb;
+	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
+	wrap_o.D_wr_stb		<= r_D_WR_stb;
 	wrap_o.ack				<= i_ack;
 
 	p_phi0_dly:process(fb_syscon_i)
@@ -235,7 +235,7 @@ begin
 	
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
-							r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
+							r_log_A <= x"FF" & i_CPUSKT_A_i;
 						end if;
 
 
@@ -366,7 +366,7 @@ begin
 
   	wrap_o.noice_debug_5c	 <= '1' when 
   										i_CPUSKT_SYNC_i = '1' 
-  										and i_CPUSKT_D_i(7 downto 0) = x"5C" else
+  										and i_CPUSKT_D_i = x"5C" else
   								'0';
 
   	wrap_o.noice_debug_opfetch <= i_CPUSKT_SYNC_i and not r_cpu_hlt;

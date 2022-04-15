@@ -81,8 +81,8 @@ package fb_CPU_exp_pack is
 		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ		:		std_logic;		-- nSO is actually an output but pulled up on the board
 
 		-- control signals for cpu core on a per wrapper basis
-		CPUSKT_D						: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A						: std_logic_vector(23 downto 0);
+		CPUSKT_D						: std_logic_vector(7 downto 0);
+		CPUSKT_A						: std_logic_vector(19 downto 0);
 
 	end record;
 

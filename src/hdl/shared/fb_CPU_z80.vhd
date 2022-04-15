@@ -61,8 +61,8 @@ entity fb_cpu_z80 is
 	port(
 
 		-- configuration
-		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
-		fb_syscon_i								: in	fb_syscon_t;
+		cpu_en_i								: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in fb_syscon_t;
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
@@ -73,7 +73,7 @@ entity fb_cpu_z80 is
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- special m68k signals
-		jim_en_i									: in		std_logic
+		jim_en_i								: in std_logic
 
 	);
 end fb_cpu_z80;
@@ -122,8 +122,8 @@ architecture rtl of fb_cpu_z80 is
 	signal i_CPUSKT_nIOREQ_i	: std_logic;
 	signal i_CPUSKT_nBUSACK_i	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 begin
 
@@ -173,7 +173,7 @@ begin
 
 	wrap_o.cyc 				<= ( 0 => r_act, others => '0');
 	wrap_o.we  				<= r_WE;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb			<= r_WR_stb;
 	wrap_o.ack				<= not r_act;
 	wrap_o.A_log			<= r_A_log;
@@ -240,7 +240,7 @@ begin
 			i_A_log <= x"FFF" & i_CPUSKT_A_i(11 downto 0);
 		else
 			-- chip ram low memory
-			i_A_log <= x"00" & i_CPUSKT_A_i(15 downto 0); 	-- low memory from chip ram
+			i_A_log <= x"00" & i_CPUSKT_A_i; 	-- low memory from chip ram
 		end if;
 	end process;
 

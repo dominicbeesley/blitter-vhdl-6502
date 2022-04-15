@@ -51,6 +51,7 @@ use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_CPU_exp_pack.all;
 
 entity mk2blit is
 	generic (
@@ -348,6 +349,13 @@ architecture rtl of mk2blit is
 	signal i_throttle_cpu_2MHz			: std_logic;
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
+
+	-----------------------------------------------------------------------------
+	-- cpu expansion header wrapper signals
+	-----------------------------------------------------------------------------
+	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
+	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
+
 
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
@@ -918,27 +926,8 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 
-
-		CPUSKT_D_io								=> CPUSKT_D_io,
-		CPUSKT_A_i								=> CPUSKT_A_i,
-
-		CPUSKT_6EKEZnRD_i							=> CPUSKT_6EKEZnRD_i,
-		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i		=> CPUSKT_C6nML9BUSYKnBGZnBUSACK_i,
-		CPUSKT_RnWZnWR_i							=> CPUSKT_RnWZnWR_i,
-		CPUSKT_PHI16ABRT9BSKnDS_i				=> CPUSKT_PHI16ABRT9BSKnDS_i,
-		CPUSKT_PHI26VDAKFC0ZnMREQ_i			=> CPUSKT_PHI26VDAKFC0ZnMREQ_i,
-		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i			=> CPUSKT_SYNC6VPA9LICKFC2ZnM1_i,
-		CPUSKT_VSS6VPA9BAKnAS_i					=> CPUSKT_VSS6VPA9BAKnAS_i,
-		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i		=> CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i,
-		CPUSKT_6BE9TSCKnVPA_o					=> CPUSKT_6BE9TSCKnVPA_o,
-		CPUSKT_9Q_o									=> CPUSKT_9Q_o,
-		CPUSKT_KnBRZnBUSREQ_o					=> CPUSKT_KnBRZnBUSREQ_o,
-		CPUSKT_PHI09EKZCLK_o						=> CPUSKT_PHI09EKZCLK_o,
-		CPUSKT_RDY9KnHALTZnWAIT_o				=> CPUSKT_RDY9KnHALTZnWAIT_o,
-		CPUSKT_nIRQKnIPL1_o						=> CPUSKT_nIRQKnIPL1_o,
-		CPUSKT_nNMIKnIPL02_o						=> CPUSKT_nNMIKnIPL02_o,
-		CPUSKT_nRES_o								=> CPUSKT_nRES_o,
-		CPUSKT_9nFIRQLnDTACK_o					=> CPUSKT_9nFIRQLnDTACK_o,
+		wrap_exp_i							=> i_wrap_exp_i,
+		wrap_exp_o							=> i_wrap_exp_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -983,6 +972,39 @@ END GENERATE;
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_dma_cpu_int;
+
+	--===========================================================
+	-- CPU wrap external pins to/from typed objects to allow same
+	-- fb_CPU to be used for mk2/3 boards -- signals will be 
+	-- unpacked in lower level wrappers by fb_CPU_xxx_exp_pins 
+	-- components
+	--===========================================================
+
+	i_wrap_exp_i.CPUSKT_6EKEZnRD						<= CPUSKT_6EKEZnRD_i;
+	i_wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
+	i_wrap_exp_i.CPUSKT_RnWZnWR						<= CPUSKT_RnWZnWR_i;
+	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
+	i_wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ			<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
+	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
+	i_wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS				<= CPUSKT_VSS6VPA9BAKnAS_i;
+	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
+	i_wrap_exp_i.CPUSKT_D 								<= CPUSKT_D_io;
+	i_wrap_exp_i.CPUSKT_A 								<= CPUSKT_A_i;
+
+	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_exp_o.CPUSKT_6BE9TSCKnVPA;
+	CPUSKT_9Q_o						<= i_wrap_exp_o.CPUSKT_9Q;
+	CPUSKT_KnBRZnBUSREQ_o		<= i_wrap_exp_o.CPUSKT_KnBRZnBUSREQ;
+	CPUSKT_PHI09EKZCLK_o			<= i_wrap_exp_o.CPUSKT_PHI09EKZCLK;
+	CPUSKT_RDY9KnHALTZnWAIT_o	<= i_wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT;
+	CPUSKT_nIRQKnIPL1_o			<= i_wrap_exp_o.CPUSKT_nIRQKnIPL1;
+	CPUSKT_nNMIKnIPL02_o			<= i_wrap_exp_o.CPUSKT_nNMIKnIPL02;
+	CPUSKT_nRES_o					<= i_wrap_exp_o.CPUSKT_nRES;
+	CPUSKT_9nFIRQLnDTACK_o		<= i_wrap_exp_o.CPUSKT_9nFIRQLnDTACK;
+
+
+	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
+									i_p2c_cpu.D_rd(7 downto 0);
+
 
 
 	p_debug_btn:process(i_fb_syscon)

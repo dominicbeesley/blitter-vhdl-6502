@@ -194,8 +194,8 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_BA_i		: std_logic;
 	signal i_CPUSKT_AVMA_i	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 	signal r_cfg_not6309			: std_logic;
 
@@ -260,7 +260,7 @@ begin
 	-- note: don't start CYC until AS is settled
 	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb		<= i_D_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
 
@@ -285,7 +285,7 @@ begin
 						-- toggle A(11) on vector pull to avoid MOS jump table
 						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 12) & not(i_CPUSKT_A_i(11)) & i_CPUSKT_A_i(10 downto 0) ;
 					else 
-						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
+						r_log_A <= x"FF" & i_CPUSKT_A_i;
 					end if;
 					r_we <= not(i_CPUSKT_RnW_i);
 				end if;

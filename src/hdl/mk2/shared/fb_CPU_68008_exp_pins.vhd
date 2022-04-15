@@ -82,8 +82,8 @@ entity fb_cpu_68008_exp_pins is
 		CPUSKT_nAS_o							: out std_logic;
 		CPUSKT_FC1_o							: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(23 downto 0)
+		CPUSKT_D_o							: out std_logic_vector(7 downto 0);
+		CPUSKT_A_o							: out std_logic_vector(19 downto 0)
 
 	);
 end fb_cpu_68008_exp_pins;

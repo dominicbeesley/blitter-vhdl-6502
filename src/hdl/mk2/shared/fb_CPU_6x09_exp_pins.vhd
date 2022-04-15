@@ -80,8 +80,8 @@ entity fb_cpu_6x09_exp_pins is
 		CPUSKT_BA_o								: out std_logic;
 		CPUSKT_AVMA_o							: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(23 downto 0)
+		CPUSKT_D_o							: out std_logic_vector(7 downto 0);
+		CPUSKT_A_o							: out std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_6x09_exp_pins;
@@ -106,7 +106,7 @@ begin
 	CPUSKT_AVMA_o		<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
 	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
 
 end rtl;

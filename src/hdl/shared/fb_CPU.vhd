@@ -92,26 +92,9 @@ entity fb_cpu is
 		throttle_cpu_2MHz_i					: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 
-		CPUSKT_D_io									: inout	std_logic_vector(7 downto 0);
-		CPUSKT_A_i									: in		std_logic_vector(19 downto 0);
 
-		CPUSKT_6EKEZnRD_i							: in		std_logic;		
-		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i		: in		std_logic;
-		CPUSKT_RnWZnWR_i							: in		std_logic;
-		CPUSKT_PHI16ABRT9BSKnDS_i				: in		std_logic;		-- 6ABRT is actually an output but pulled up on the board
-		CPUSKT_PHI26VDAKFC0ZnMREQ_i			: in		std_logic;
-		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i			: in		std_logic;
-		CPUSKT_VSS6VPA9BAKnAS_i					: in		std_logic;
-		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i		: in		std_logic;		-- nSO is actually an output but pulled up on the board
-		CPUSKT_6BE9TSCKnVPA_o					: out		std_logic;
-		CPUSKT_9Q_o									: out		std_logic;
-		CPUSKT_KnBRZnBUSREQ_o					: out		std_logic;
-		CPUSKT_PHI09EKZCLK_o						: out		std_logic;
-		CPUSKT_RDY9KnHALTZnWAIT_o				: out		std_logic;
-		CPUSKT_nIRQKnIPL1_o						: out		std_logic;
-		CPUSKT_nNMIKnIPL02_o						: out		std_logic;
-		CPUSKT_nRES_o								: out		std_logic;
-		CPUSKT_9nFIRQLnDTACK_o					: out		std_logic;
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in  t_cpu_wrap_exp_i;
 
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
@@ -389,7 +372,6 @@ end component;
 	signal r_cpu_en_z80 : std_logic;
 	signal r_cpu_en_680x0 : std_logic;
 	signal r_cpu_en_68008 : std_logic;
---	signal r_cpu_en_6502 : std_logic;
 	signal r_cpu_en_65c02 : std_logic;
 	signal r_cpu_en_6800 : std_logic;
 	signal r_cpu_en_80188 : std_logic;
@@ -446,7 +428,6 @@ begin
 				r_cpu_en_z80 <= '0';
 				r_cpu_en_680x0 <= '0';
 				r_cpu_en_68008 <= '0';
---				r_cpu_en_6502 <= '0';
 				r_cpu_en_65c02 <= '0';
 				r_cpu_en_6800 <= '0';
 				r_cpu_en_80188 <= '0';
@@ -795,26 +776,6 @@ g68008:IF G_INCL_CPU_68008 GENERATE
 	);
 END GENERATE;
 
---g6502:IF G_OPT_INCLUDE_6502 GENERATE
---
---	e_wrap_6502:entity work.fb_cpu_6502
---	generic map (
---		SIM										=> SIM,
---		CLOCKSPEED								=> CLOCKSPEED,
---		G_JIM_DEVNO								=> G_JIM_DEVNO
---	) 
---	port map(
---
---		-- configuration
---		cpu_en_i									=> r_cpu_en_6502,
---		fb_syscon_i								=> fb_syscon_i,
---
---		wrap_o									=> i_wrap_o_all(C_IX_CPU_6502),
---		wrap_i									=> i_wrap_i
---
---	);
---END GENERATE;
-
 g65c02:IF G_INCL_CPU_65C02 GENERATE
 	e_wrap_65c02:entity work.fb_cpu_65c02
 	generic map (
@@ -921,31 +882,9 @@ END GENERATE;
 	-- ================================================================================================ --
 	-- expansion header signals to/from current CPU
 	-- ================================================================================================ --
+	wrap_exp_o					<= i_wrap_exp_o_cur_hard;
+	i_wrap_exp_i				<= wrap_exp_i;
 
-	i_wrap_exp_i.CPUSKT_6EKEZnRD						<= CPUSKT_6EKEZnRD_i;
-	i_wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
-	i_wrap_exp_i.CPUSKT_RnWZnWR						<= CPUSKT_RnWZnWR_i;
-	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
-	i_wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ			<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
-	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
-	i_wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS				<= CPUSKT_VSS6VPA9BAKnAS_i;
-	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
-	i_wrap_exp_i.CPUSKT_D 								<= CPUSKT_D_io;
-	i_wrap_exp_i.CPUSKT_A 								<= "0000" & CPUSKT_A_i;
-
-	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_exp_o_cur_hard.CPUSKT_6BE9TSCKnVPA;
-	CPUSKT_9Q_o						<= i_wrap_exp_o_cur_hard.CPUSKT_9Q;
-	CPUSKT_KnBRZnBUSREQ_o		<= i_wrap_exp_o_cur_hard.CPUSKT_KnBRZnBUSREQ;
-	CPUSKT_PHI09EKZCLK_o			<= i_wrap_exp_o_cur_hard.CPUSKT_PHI09EKZCLK;
-	CPUSKT_RDY9KnHALTZnWAIT_o	<= i_wrap_exp_o_cur_hard.CPUSKT_RDY9KnHALTZnWAIT;
-	CPUSKT_nIRQKnIPL1_o			<= i_wrap_exp_o_cur_hard.CPUSKT_nIRQKnIPL1;
-	CPUSKT_nNMIKnIPL02_o			<= i_wrap_exp_o_cur_hard.CPUSKT_nNMIKnIPL02;
-	CPUSKT_nRES_o					<= i_wrap_exp_o_cur_hard.CPUSKT_nRES;
-	CPUSKT_9nFIRQLnDTACK_o		<= i_wrap_exp_o_cur_hard.CPUSKT_9nFIRQLnDTACK;
-
-
-	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_exp_o_cur_hard.CPU_D_RnW = '0' else
-									i_wrap_D_rd(7 downto 0);
 
 	-- noice signals from current CPU
 

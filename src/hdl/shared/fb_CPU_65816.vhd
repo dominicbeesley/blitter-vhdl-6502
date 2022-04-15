@@ -119,7 +119,7 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_VPB_i	: std_logic;
 
 	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 
 
@@ -217,15 +217,15 @@ begin
 									r_log_A <= x"008F" & i_CPUSKT_A_i(7 downto 0);
 								else
 									-- bank 0 maps to FF in boot mode
-									r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
+									r_log_A <= x"FF" & i_CPUSKT_A_i;
 								end if;
 							else
 								-- not bank 0 map direct
-								r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i(15 downto 0);	
+								r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;	
 							end if;
 						else
 								-- not boot mode map direct
-							r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i(15 downto 0);
+							r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;
 						end if;
 					end if;
 
