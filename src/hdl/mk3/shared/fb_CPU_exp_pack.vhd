@@ -44,8 +44,6 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-use work.fb_CPU_pack.all;
-
 
 package fb_CPU_exp_pack is
 

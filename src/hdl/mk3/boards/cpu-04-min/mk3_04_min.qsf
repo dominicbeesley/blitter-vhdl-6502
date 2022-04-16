@@ -102,7 +102,6 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_disabled.vhd
 set_global_assignment -name SDC_FILE mk3_04_min.sdc
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
-set_global_assignment -name VHDL_FILE mk3blit_top.vhd
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_syscon.vhd
@@ -126,8 +125,8 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_VIA_blocker.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_clock_dll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_VERSION.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_exp_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_t65.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6x09_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6x09.vhd
@@ -151,6 +150,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
+set_global_assignment -name VHDL_FILE mk3blit_top.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
