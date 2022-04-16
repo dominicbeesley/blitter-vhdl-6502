@@ -96,6 +96,10 @@ entity fb_cpu is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in  t_cpu_wrap_exp_i;
 
+		hard_cpu_en_o							: out std_logic;
+
+		cpuskt_D_o								: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
 		JIM_page_i								: in  	std_logic_vector(15 downto 0);
@@ -137,7 +141,11 @@ entity fb_cpu is
 
 		debug_65816_vma_o						: out std_logic;
 
-		debug_SYS_VIA_block_o				: out std_logic
+		debug_SYS_VIA_block_o				: out std_logic;
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
+
 	);
 end fb_cpu;
 
@@ -241,6 +249,7 @@ architecture rtl of fb_cpu is
 	);
 	end component;
 
+
 	component fb_cpu_680x0 is
 	generic (
 		CLOCKSPEED							: positive := 128;
@@ -316,8 +325,62 @@ architecture rtl of fb_cpu is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i
 
-);
-end component;
+	);		
+	end component;
+
+	component fb_cpu_6800 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;
+		G_BYTELANES							: positive	:= 1
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
+
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i
+
+	);
+	end component;
+
+	component fb_cpu_80188 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;
+		G_BYTELANES							: positive	:= 1
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
+
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- debug signals
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+		debug_80188_ale_o						: out std_logic
+
+	);
+	end component;
+
 
 
 	function B2OZ(b:boolean) return natural is 
@@ -413,6 +476,7 @@ begin
 	-- BOOT TIME CONFIGURATION
 	-- ================================================================================================ --
 
+	hard_cpu_en_o <= r_hard_cpu_en;
 
 	-- PORTEFG nOE's selected in top level p_EFG_en process
 	p_config:process(fb_syscon_i)
@@ -551,6 +615,8 @@ begin
 		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
 															r_D_rd(7+I*8 downto I*8);
 	END GENERATE;
+
+	cpuskt_D_o <= i_wrap_D_rd;	-- send data out to socket, socket assignment handled at top level
 	
 	-- CAVEATS:
 	--   the process below has been trimmed with the following expectations:
@@ -777,7 +843,7 @@ g68008:IF G_INCL_CPU_68008 GENERATE
 END GENERATE;
 
 g65c02:IF G_INCL_CPU_65C02 GENERATE
-	e_wrap_65c02:entity work.fb_cpu_65c02
+	e_wrap_65c02:fb_cpu_65c02
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
@@ -797,6 +863,55 @@ g65c02:IF G_INCL_CPU_65C02 GENERATE
 
 	);
 END GENERATE;
+
+g6800:IF G_INCL_CPU_6800 GENERATE
+	e_wrap_6800:fb_cpu_6800
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_6800,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_6800),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_6800),
+		wrap_exp_i								=> i_wrap_exp_i
+
+	);
+END GENERATE;
+
+g80188:IF G_INCL_CPU_80188 GENERATE
+	e_wrap_6800:fb_cpu_80188
+	generic map (
+		SIM									=> SIM,
+		CLOCKSPEED							=> CLOCKSPEED,
+		G_BYTELANES							=> C_CPU_BYTELANES
+	)
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_65c02,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_80188),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_80188),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+		-- debug signals
+
+		debug_80188_state_o					=> debug_80188_state_o,
+		debug_80188_ale_o						=> debug_80188_ale_o
+
+	);
+END GENERATE;
+
 
 
 g65816:IF G_INCL_CPU_65816 GENERATE

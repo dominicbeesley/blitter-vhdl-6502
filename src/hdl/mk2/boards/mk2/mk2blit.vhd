@@ -355,7 +355,7 @@ architecture rtl of mk2blit is
 	-----------------------------------------------------------------------------
 	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
 	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
-
+	signal i_cpuskt_D_o					: std_logic_vector(7 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
@@ -926,8 +926,12 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 
+		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,
 		wrap_exp_o							=> i_wrap_exp_o,
+
+		hard_cpu_en_o						=> open,
+		cpuskt_D_o							=> i_cpuskt_D_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -1003,7 +1007,7 @@ END GENERATE;
 
 
 	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
-									i_p2c_cpu.D_rd(7 downto 0);
+									i_CPUSKT_D_o;
 
 
 
@@ -1040,7 +1044,6 @@ CFG_io <= (others => 'Z');
 
 
 
--- NOTE: CPU config moved to fb_CPU
 p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then

@@ -87,32 +87,32 @@ architecture rtl of fb_cpu_6x09_exp_pins is
 begin
 
 
-	wrap_o.exp_PORTB(0) <= CPUSKT_TSC_i;
-	wrap_o.exp_PORTB(1) <= CPUSKT_CLK_Q_i;
-	wrap_o.exp_PORTB(2) <= CPUSKT_CLK_E_i;
-	wrap_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
-	wrap_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
-	wrap_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
-	wrap_o.exp_PORTB(6) <= CPUSKT_nRES_i;
-	wrap_o.exp_PORTB(7) <= CPUSKT_nFIRQ_i;
+	wrap_exp_o.exp_PORTB(0) <= CPUSKT_TSC_i;
+	wrap_exp_o.exp_PORTB(1) <= CPUSKT_CLK_Q_i;
+	wrap_exp_o.exp_PORTB(2) <= CPUSKT_CLK_E_i;
+	wrap_exp_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
+	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
+	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
+	wrap_exp_o.exp_PORTB(6) <= CPUSKT_nRES_i;
+	wrap_exp_o.exp_PORTB(7) <= CPUSKT_nFIRQ_i;
 
-	wrap_o.exp_PORTD <= (
+	wrap_exp_o.exp_PORTD <= (
 		others => '1'
 		);
 
-	wrap_o.exp_PORTD_o_en <= (
+	wrap_exp_o.exp_PORTD_o_en <= (
 		others => '0'
 		);
 
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
+	wrap_exp_o.exp_PORTE_nOE <= '0';
+	wrap_exp_o.exp_PORTF_nOE <= '1';
 
 
-	CPUSKT_RnW_o		<= wrap_i.exp_PORTD(1);
-	CPUSKT_BS_o			<= wrap_i.exp_PORTD(2);
-	CPUSKT_LIC_o		<= wrap_i.exp_PORTD(4);
-	CPUSKT_BA_o			<= wrap_i.exp_PORTD(5);
-	CPUSKT_AVMA_o		<= wrap_i.exp_PORTD(6);
+	CPUSKT_RnW_o		<= wrap_exp_i.exp_PORTD(1);
+	CPUSKT_BS_o			<= wrap_exp_i.exp_PORTD(2);
+	CPUSKT_LIC_o		<= wrap_exp_i.exp_PORTD(4);
+	CPUSKT_BA_o			<= wrap_exp_i.exp_PORTD(5);
+	CPUSKT_AVMA_o		<= wrap_exp_i.exp_PORTD(6);
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
 	

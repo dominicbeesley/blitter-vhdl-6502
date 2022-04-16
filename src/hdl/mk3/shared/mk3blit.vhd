@@ -366,6 +366,14 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTF_nOE			: std_logic;
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
+		-----------------------------------------------------------------------------
+	-- cpu expansion header wrapper signals
+	-----------------------------------------------------------------------------
+	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
+	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
+	signal i_hard_cpu_en					: std_logic;
+	signal i_cpuskt_D_o					: std_logic_vector(15 downto 0);
+
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
 	-----------------------------------------------------------------------------
@@ -971,17 +979,12 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 
-		-- cpu expansion sockets
-		exp_PORTA_io						=> exp_PORTA_io,
-		exp_PORTA_nOE_o					=> exp_PORTA_nOE_o,
-		exp_PORTA_DIR_o					=> exp_PORTA_DIR_o,
-		exp_PORTB_o							=> exp_PORTB_o,
-		exp_PORTC_io						=> exp_PORTC_io,
-		exp_PORTD_io						=> exp_PORTD_io,
-		exp_PORTEFG_io						=> exp_PORTEFG_io,
-		exp_PORTE_nOE_o					=> i_cpu_exp_PORTE_nOE,
-		exp_PORTF_nOE_o					=> i_cpu_exp_PORTF_nOE,
-		exp_PORTG_nOE_o					=> i_cpu_exp_PORTG_nOE,
+		-- wrapper expansion header/socket pins
+		wrap_exp_i							=> i_wrap_exp_i,
+		wrap_exp_o							=> i_wrap_exp_o,
+
+		hard_cpu_en_o						=> i_hard_cpu_en,
+		cpuskt_D_o							=> i_cpuskt_D_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -1030,6 +1033,63 @@ END GENERATE;
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_dma_cpu_int;
+
+	--===========================================================
+	-- CPU wrap external pins to/from typed objects to allow same
+	-- fb_CPU to be used for mk2/3 boards -- signals will be 
+	-- unpacked in lower level wrappers by fb_CPU_xxx_exp_pins 
+	-- components
+	--===========================================================
+
+	-- PORTA is a 74lvc4245 need to control direction and enable
+	exp_PORTA_nOE_o <= not i_hard_cpu_en or i_fb_syscon.rst;
+	exp_PORTA_DIR_o <= not i_wrap_exp_o.CPU_D_RnW;
+	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
+						 	 i_CPUSKT_D_o(7 downto 0);
+
+	-- PORTB is hardwired output 74lvc4245
+
+	exp_PORTB_o <= wrap_exp_o.exp_PORTB;
+
+	-- PORTC is always input only CB3T buffer, can be output but not used
+
+	i_wrap_exp_i.CPUSKT_A_i(7 downto 0) <= exp_PORTC_io(7 downto 0);
+	i_wrap_exp_i.CPUSKT_A_i(19 downto 16) <= exp_PORTC_io(11 downto 8);
+	exp_PORTC_io <= (others => 'Z');
+
+
+	-- PORTD - individual cpu wrappers control direction and direction 
+
+	g_portd_o:for I in 11 downto 0 generate
+		exp_PORTD_io(I) <= i_wrap_exp_o.exp_PORTD(I) when i_wrap_exp_o.exp_PORTD_o_en(I) = '1' else
+							 'Z';
+	end generate;
+
+	-- PORTE,F,G are multiplexed CB3T's with PORTEFG_io connected to all three on one side
+	-- broken out to separate pins on expansion headers on other sides
+	-- to use as inputs relevant nOE needs to be asserted and data read (after a delay!)
+	-- only port F is used as inputs and needs the DIR signal asserted to output data
+
+	-- PORTE always inputs at present
+	i_exp_PORTE_nOE_o <= i_wrap_exp_o.exp_PORTE_nOE; 
+	-- NOTE: address 23 downto 20, 15 downto 8 only valid when portE is enabled
+	i_wrap_exp_i.CPUSKT_A(15 downto 8) <= exp_PORTEFG_io(7 downto 0);
+	i_wrap_exp_i.CPUSKT_A(23 downto 20) <= exp_PORTEFG_io(11 downto 8);
+
+	i_exp_PORTF_nOE_o <= i_wrap_exp_o.exp_PORTF_nOE;
+
+	-- PORTF data output on lines 11..4 on 16 bit cpus, 3..0 always inputs for config
+	g_portefg_o:for I in 7 downto 0 generate
+		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(7 downto 0) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
+							 'Z';
+	end generate;
+
+	i_exp_PORTEFG_io <= (others => 'Z');
+	
+	-- PORTG only used at reset, read in top level
+	i_exp_PORTG_nOE_o <= '1';
+
+
 
 
 	p_debug_btn:process(i_fb_syscon)
@@ -1129,12 +1189,9 @@ begin
 					r_cfg_mk2_cpubits <= "010";
 				when "0111000" =>
 					r_cfg_cpu_type <= CPU_6800;
-				when "0011110" =>
-					r_cfg_cpu_type <= CPU_68K;
-					r_cfg_cpu_speed_opt <= CPUSPEED_68008_10;
-					r_cfg_mk2_cpubits <= "000";
 				when "0011000" =>
-					r_cfg_cpu_type <= CPU_68K;
+					r_cfg_cpu_type <= CPU_680X0;
+					r_cfg_mk2_cpubits <= "000";
 				when "0100000" =>
 					r_cfg_cpu_type <= CPU_80188;
 				when others =>
@@ -1143,6 +1200,7 @@ begin
 		end if;
 	end if;
 end process;
+
 
 
 --TODO: MK2/MK3 harmonize

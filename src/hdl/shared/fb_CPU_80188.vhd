@@ -145,8 +145,8 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
 
-	e_pinmap:entity work.fb_cpu_80188_exp_pins is
-	port(
+	e_pinmap:entity work.fb_cpu_80188_exp_pins
+	port map (
 
 		-- cpu wrapper signals
 		wrap_exp_o => wrap_exp_o,

@@ -31,7 +31,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 			type definitions for wrapping CPU expansion socket pins Mk.2
+-- Description: 			type definitions for wrapping CPU expansion socket pins Mk.3
 -- Dependencies: 
 --
 -- Revision: 
@@ -65,7 +65,7 @@ package fb_CPU_exp_pack is
 	type t_cpu_wrap_exp_i is record
 
 		-- cpu socket signals
-		CPUSKT_D						: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+		CPUSKT_D						: std_logic_vector(15 downto 0);
 		CPUSKT_A						: std_logic_vector(23 downto 0);
 
 		exp_PORTD					: std_logic_vector(11 downto 0);
