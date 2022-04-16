@@ -117,7 +117,7 @@ begin
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
 	
 	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
 
 end rtl;
 

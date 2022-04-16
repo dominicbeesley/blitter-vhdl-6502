@@ -52,6 +52,7 @@ use work.board_config_pack.all;
 use work.HDMI_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_CPU_exp_pack.all;
 
 entity mk3blit is
 	generic (
@@ -65,7 +66,8 @@ entity mk3blit is
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_68k						: boolean := false;
+		G_INCL_CPU_680x0					: boolean := false;
+		G_INCL_CPU_68008					: boolean := false;
 
 		G_INCL_CHIPSET						: boolean := false;
 		G_INCL_CS_DMA						: boolean := false;
@@ -960,7 +962,8 @@ END GENERATE;
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_68k						=> G_INCL_CPU_68k
+		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
+		G_INCL_CPU_68008					=> G_INCL_CPU_68008
 	)
 	port map (
 
@@ -1049,12 +1052,12 @@ END GENERATE;
 
 	-- PORTB is hardwired output 74lvc4245
 
-	exp_PORTB_o <= wrap_exp_o.exp_PORTB;
+	exp_PORTB_o <= i_wrap_exp_o.exp_PORTB;
 
 	-- PORTC is always input only CB3T buffer, can be output but not used
 
-	i_wrap_exp_i.CPUSKT_A_i(7 downto 0) <= exp_PORTC_io(7 downto 0);
-	i_wrap_exp_i.CPUSKT_A_i(19 downto 16) <= exp_PORTC_io(11 downto 8);
+	i_wrap_exp_i.CPUSKT_A(7 downto 0) <= exp_PORTC_io(7 downto 0);
+	i_wrap_exp_i.CPUSKT_A(19 downto 16) <= exp_PORTC_io(11 downto 8);
 	exp_PORTC_io <= (others => 'Z');
 
 
@@ -1071,23 +1074,23 @@ END GENERATE;
 	-- only port F is used as inputs and needs the DIR signal asserted to output data
 
 	-- PORTE always inputs at present
-	i_exp_PORTE_nOE_o <= i_wrap_exp_o.exp_PORTE_nOE; 
+	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.exp_PORTE_nOE; 
 	-- NOTE: address 23 downto 20, 15 downto 8 only valid when portE is enabled
 	i_wrap_exp_i.CPUSKT_A(15 downto 8) <= exp_PORTEFG_io(7 downto 0);
 	i_wrap_exp_i.CPUSKT_A(23 downto 20) <= exp_PORTEFG_io(11 downto 8);
 
-	i_exp_PORTF_nOE_o <= i_wrap_exp_o.exp_PORTF_nOE;
+	i_cpu_exp_PORTF_nOE <= i_wrap_exp_o.exp_PORTF_nOE;
 
 	-- PORTF data output on lines 11..4 on 16 bit cpus, 3..0 always inputs for config
 	g_portefg_o:for I in 7 downto 0 generate
-		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(7 downto 0) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
+		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(I + 8) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
 							 'Z';
 	end generate;
 
-	i_exp_PORTEFG_io <= (others => 'Z');
+	exp_PORTEFG_io <= (others => 'Z');
 	
 	-- PORTG only used at reset, read in top level
-	i_exp_PORTG_nOE_o <= '1';
+	i_cpu_exp_PORTG_nOE <= '1';
 
 
 

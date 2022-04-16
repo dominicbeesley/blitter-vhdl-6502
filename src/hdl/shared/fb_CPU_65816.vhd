@@ -118,7 +118,7 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_VPA_i	: std_logic;
 	signal i_CPUSKT_VPB_i	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
+	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
 

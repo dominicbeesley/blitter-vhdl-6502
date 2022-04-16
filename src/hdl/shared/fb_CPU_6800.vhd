@@ -65,6 +65,7 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_6800 is
 	generic (
@@ -151,7 +152,7 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	e_pinmap:entity work.fb_cpu_6x09_exp_pins
+	e_pinmap:entity work.fb_cpu_6800_exp_pins
 	port map(
 
 		-- cpu wrapper signals

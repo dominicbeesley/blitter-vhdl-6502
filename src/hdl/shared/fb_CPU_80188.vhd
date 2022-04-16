@@ -46,6 +46,7 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_80188 is
 	generic (
@@ -127,6 +128,7 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_HLDA_i	: std_logic;
 	signal i_CPUSKT_nLOCK_i	: std_logic;
 
+	signal i_CPU_D_RnW_o		: std_logic;
 	signal i_CPUSKT_A_i		: std_logic_vector(19 downto 8);
 	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
 
@@ -229,7 +231,7 @@ begin
 	wrap_o.A_log 			<= r_log_A;
 	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
 	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_d_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
 
@@ -242,13 +244,13 @@ begin
 
 
 
-	i_io_addr <= x"FF" & wrap_i.CPUSKT_A(15 downto 8) & wrap_i.CPUSKT_D(7 downto 0);
-	i_mem_addr <= 	(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
-						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
-						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
-						(wrap_i.CPUSKT_A(19) and wrap_i.CPUSKT_A(18)) & 
-						wrap_i.CPUSKT_A(19 downto 8) & 
-						wrap_i.CPUSKT_D(7 downto 0);
+	i_io_addr <= x"FF" & i_CPUSKT_A_i(15 downto 8) & i_CPUSKT_D_i(7 downto 0);
+	i_mem_addr <= 	(i_CPUSKT_A_i(19) and i_CPUSKT_A_i(18)) & 
+						(i_CPUSKT_A_i(19) and i_CPUSKT_A_i(18)) & 
+						(i_CPUSKT_A_i(19) and i_CPUSKT_A_i(18)) & 
+						(i_CPUSKT_A_i(19) and i_CPUSKT_A_i(18)) & 
+						i_CPUSKT_A_i(19 downto 8) & 
+						i_CPUSKT_D_i(7 downto 0);
 
 	p_state:process(fb_syscon_i)
 	begin

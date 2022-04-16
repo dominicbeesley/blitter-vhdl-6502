@@ -64,12 +64,12 @@ package board_config_pack is
 	constant MAS_NO_CHIPSET		: natural := 0;
 
 
-	constant PERIPHERAL_COUNT_CHIPSET	: natural := 2;
+	constant PERIPHERAL_COUNT_CHIPSET	: natural := 3;
 	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
 	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
 	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 1;--unused
 	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 1;--unused
-	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 1;--unused
+	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 2;--unused
 
 
 	constant CONTROLLER_COUNT_CHIPSET	: natural := 2;

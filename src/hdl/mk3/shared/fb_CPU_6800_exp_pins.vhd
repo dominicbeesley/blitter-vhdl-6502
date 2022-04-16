@@ -85,56 +85,34 @@ end fb_cpu_6800_exp_pins;
 architecture rtl of fb_cpu_6800_exp_pins is
 begin
 
+	wrap_exp_o.exp_PORTB(0) <= CPUSKT_TSC_i;
+	wrap_exp_o.exp_PORTB(1) <= CPUSKT_Phi1_i;
+	wrap_exp_o.exp_PORTB(2) <= CPUSKT_Phi2_i;
+	wrap_exp_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
+	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
+	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
+	wrap_exp_o.exp_PORTB(6) <= CPUSKT_nRES_i;
+	wrap_exp_o.exp_PORTB(7) <= CPUSKT_DBE_i;
 
-	wrap_o.exp_PORTB(0) <= CPUSKT_TSC_i;
-	wrap_o.exp_PORTB(1) <= CPUSKT_CLK_Q_i;
-	wrap_o.exp_PORTB(2) <= CPUSKT_CLK_E_i;
-	wrap_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
-	wrap_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
-	wrap_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
-	wrap_o.exp_PORTB(6) <= CPUSKT_nRES_i;
-	wrap_o.exp_PORTB(7) <= CPUSKT_nFIRQ_i;
 
-	wrap_o.exp_PORTD <= (
+	CPUSKT_RnW_o		<= wrap_exp_i.exp_PORTD(1);
+	CPUSKT_BA_o			<= wrap_exp_i.exp_PORTD(5);
+	CPUSKT_VMA_o		<= wrap_exp_i.exp_PORTD(6);
+
+	wrap_exp_o.exp_PORTD <= (
 		others => '1'
 		);
 
-	wrap_o.exp_PORTD_o_en <= (
+	wrap_exp_o.exp_PORTD_o_en <= (
 		others => '0'
 		);
 
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-
-
-	wrap_o.exp_PORTB(0) <= CPUSKT_TSC_i;
-	wrap_o.exp_PORTB(1) <= CPUSKT_Phi1_i;
-	wrap_o.exp_PORTB(2) <= CPUSKT_Phi2_i;
-	wrap_o.exp_PORTB(3) <= CPUSKT_nHALT_i;
-	wrap_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
-	wrap_o.exp_PORTB(5) <= CPUSKT_nNMI_i;
-	wrap_o.exp_PORTB(6) <= CPUSKT_nRES_i;
-	wrap_o.exp_PORTB(7) <= CPUSKT_DBE_i;
-
-
-	CPUSKT_RnW_o		<= wrap_i.exp_PORTD(1);
-	CPUSKT_BA_o			<= wrap_i.exp_PORTD(5);
-	CPUSKT_VMA_o		<= wrap_i.exp_PORTD(6);
-
-	wrap_o.exp_PORTD <= (
-		others => '1'
-		);
-
-	wrap_o.exp_PORTD_o_en <= (
-		others => '0'
-		);
-
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
+	wrap_exp_o.exp_PORTE_nOE 	<= '0';
+	wrap_exp_o.exp_PORTF_nOE 	<= '1';
+	wrap_exp_o.CPU_D_RnW 		<= CPU_D_RnW_i;
 	
 	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
 
 end rtl;
 

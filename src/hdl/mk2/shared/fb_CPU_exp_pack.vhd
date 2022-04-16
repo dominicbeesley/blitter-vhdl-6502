@@ -49,6 +49,8 @@ use work.fb_CPU_pack.all;
 
 package fb_CPU_exp_pack is
 
+	constant	C_CPU_BYTELANES	: positive := 1;									-- number of data byte lanes
+
 
 	type t_cpu_wrap_exp_o is record
 		CPUSKT_6BE9TSCKnVPA					:		std_logic;

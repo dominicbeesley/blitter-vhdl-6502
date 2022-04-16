@@ -140,6 +140,7 @@ e_top:entity work.mk3blit
 		G_INCL_CS_BLIT						=> false,
 		G_INCL_CS_SND						=> true,
 		G_INCL_CS_AERIS					=> false,
+		G_INCL_CS_EEPROM					=> true,
 		
 		G_INCL_CPU_T65						=> true,
 		G_INCL_CPU_65C02					=> false,
@@ -148,7 +149,8 @@ e_top:entity work.mk3blit
 		G_INCL_CPU_65816					=> true,
 		G_INCL_CPU_6x09					=> true,
 		G_INCL_CPU_Z80						=> false,
-		G_INCL_CPU_68k						=> true,
+		G_INCL_CPU_68008					=> false,
+		G_INCL_CPU_680x0					=> true,
 
 		G_MEM_SWRAM_SLOT					=> 1,
 		G_MEM_FAST_IS_10					=> true,

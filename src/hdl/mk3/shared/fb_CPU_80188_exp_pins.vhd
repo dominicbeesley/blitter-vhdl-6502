@@ -98,41 +98,41 @@ end fb_cpu_80188_exp_pins;
 architecture rtl of fb_cpu_80188_exp_pins is
 begin
 
-	wrap_o.exp_PORTB(0)	<= CPUSKT_nTEST_i;
-	wrap_o.exp_PORTB(1)	<= CPUSKT_ARDY_i;
-	wrap_o.exp_PORTB(2)	<= CPUSKT_X1_i;
-	wrap_o.exp_PORTB(3)	<= CPUSKT_SRDY_i;
-	wrap_o.exp_PORTB(4)	<= CPUSKT_INT0_i;
-	wrap_o.exp_PORTB(5)	<= CPUSKT_nNMI_i;
-	wrap_o.exp_PORTB(6)	<= CPUSKT_nRES_i;
-	wrap_o.exp_PORTB(7)	<= CPUSKT_INT1_i;
+	wrap_exp_o.exp_PORTB(0)	<= CPUSKT_nTEST_i;
+	wrap_exp_o.exp_PORTB(1)	<= CPUSKT_ARDY_i;
+	wrap_exp_o.exp_PORTB(2)	<= CPUSKT_X1_i;
+	wrap_exp_o.exp_PORTB(3)	<= CPUSKT_SRDY_i;
+	wrap_exp_o.exp_PORTB(4)	<= CPUSKT_INT0_i;
+	wrap_exp_o.exp_PORTB(5)	<= CPUSKT_nNMI_i;
+	wrap_exp_o.exp_PORTB(6)	<= CPUSKT_nRES_i;
+	wrap_exp_o.exp_PORTB(7)	<= CPUSKT_INT1_i;
 
-	CPUSKT_nS_o(0)		<= wrap_i.CPUSKT_A(0);
-	CPUSKT_nS_o(1)		<= wrap_i.CPUSKT_A(1);
-	CPUSKT_nS_o(2)		<= wrap_i.CPUSKT_A(2);
-	CPUSKT_nUCS_o		<= wrap_i.CPUSKT_A(3);
-	CPUSKT_nLCS_o		<= wrap_i.CPUSKT_A(4);
-	CPUSKT_RESET_o		<= wrap_i.CPUSKT_A(5);
-	CPUSKT_CLKOUT_o	<= wrap_i.CPUSKT_A(6);
+	CPUSKT_nS_o(0)		<= wrap_exp_i.CPUSKT_A(0);
+	CPUSKT_nS_o(1)		<= wrap_exp_i.CPUSKT_A(1);
+	CPUSKT_nS_o(2)		<= wrap_exp_i.CPUSKT_A(2);
+	CPUSKT_nUCS_o		<= wrap_exp_i.CPUSKT_A(3);
+	CPUSKT_nLCS_o		<= wrap_exp_i.CPUSKT_A(4);
+	CPUSKT_RESET_o		<= wrap_exp_i.CPUSKT_A(5);
+	CPUSKT_CLKOUT_o	<= wrap_exp_i.CPUSKT_A(6);
 
 
-	CPUSKT_nRD_o		<= wrap_i.exp_PORTD(0);
-	CPUSKT_nWR_o		<= wrap_i.exp_PORTD(1);
-	CPUSKT_nDEN_o		<= wrap_i.exp_PORTD(2);
-	CPUSKT_DTnR_o		<= wrap_i.exp_PORTD(4);
-	CPUSKT_ALE_o		<= wrap_i.exp_PORTD(5);
-	CPUSKT_HLDA_o		<= wrap_i.exp_PORTD(7);
-	CPUSKT_nLOCK_o		<= wrap_i.exp_PORTD(11);
+	CPUSKT_nRD_o		<= wrap_exp_i.exp_PORTD(0);
+	CPUSKT_nWR_o		<= wrap_exp_i.exp_PORTD(1);
+	CPUSKT_nDEN_o		<= wrap_exp_i.exp_PORTD(2);
+	CPUSKT_DTnR_o		<= wrap_exp_i.exp_PORTD(4);
+	CPUSKT_ALE_o		<= wrap_exp_i.exp_PORTD(5);
+	CPUSKT_HLDA_o		<= wrap_exp_i.exp_PORTD(7);
+	CPUSKT_nLOCK_o		<= wrap_exp_i.exp_PORTD(11);
 
-	wrap_o.exp_PORTD <= (
-		3						=> i_CPUSKT_INT2_o,
-		6						=> i_CPUSKT_DRQ0_o,
-		8						=> i_CPUSKT_HOLD_o,
-		10						=> i_CPUSKT_INT3_o,
+	wrap_exp_o.exp_PORTD <= (
+		3						=> CPUSKT_INT2_i,
+		6						=> CPUSKT_DRQ0_i,
+		8						=> CPUSKT_HOLD_i,
+		10						=> CPUSKT_INT3_i,
 		others				=> '1'
 		);
 
-	wrap_o.exp_PORTD_o_en <= (
+	wrap_exp_o.exp_PORTD_o_en <= (
 		3 => '1',
 		6 => '1',
 		8 => '1',
@@ -140,15 +140,12 @@ begin
 		others => '0'
 		);
 
-	wrap_o.exp_PORTE_nOE <= '0';
-	wrap_o.exp_PORTF_nOE <= '1';
-
-	wrap_o.exp_PORTE_nOE <= MUX_PORTE_nOE;
-	wrap_o.exp_PORTF_nOE <= MUX_PORTF_nOE;
+	wrap_exp_o.exp_PORTE_nOE <= '0';
+	wrap_exp_o.exp_PORTF_nOE <= '1';
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(23 downto 1);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(19 downto 8);
+	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
 
 end rtl;
 

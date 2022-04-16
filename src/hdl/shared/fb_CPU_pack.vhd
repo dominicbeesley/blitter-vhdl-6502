@@ -44,7 +44,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-
+use work.fb_CPU_exp_pack.all;
 
 package fb_CPU_pack is
 
@@ -55,8 +55,6 @@ package fb_CPU_pack is
 		CPUSPEED_6309_3_5,
 		CPUSPEED_65C02_8
 	);
-
-	constant	C_CPU_BYTELANES	: positive := 1;									-- number of data byte lanes
 
 	type t_cpu_wrap_o is record
 		cyc							: std_logic_vector(C_CPU_BYTELANES-1 downto 0);

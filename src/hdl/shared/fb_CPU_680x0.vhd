@@ -92,7 +92,7 @@ architecture rtl of fb_cpu_680x0 is
 
 	signal r_m68k_boot		: std_logic;
 
-	signal r_cyc_o				: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_cyc_o				: std_logic_vector(1 downto 0);
 
 	signal i_rdy				: std_logic;
 
@@ -166,7 +166,6 @@ begin
 
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
-	assert G_BYTELANES >= 2 report "G_BYTELANES must be 2 or greater" severity failure;
 	
 	e_pinmap:entity work.fb_cpu_680x0_exp_pins
 	port map(
@@ -180,8 +179,9 @@ begin
 		CPUSKT_VPA_i		=> i_CPUSKT_VPA_o,
 		CPUSKT_CLK_i		=> i_CPUSKT_CLK_o,
 		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
+		CPUSKT_nIPL0_i		=> i_CPUSKT_nIPL0_o,
 		CPUSKT_nIPL1_i		=> i_CPUSKT_nIPL1_o,
-		CPUSKT_nIPL02_i	=> i_CPUSKT_nIPL02_o,
+		CPUSKT_nIPL2_i		=> i_CPUSKT_nIPL2_o,
 		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
 		CPUSKT_nDTACK_i	=> i_CPUSKT_nDTACK_o,
 
@@ -216,8 +216,8 @@ begin
 	wrap_o.A_log 			<= r_A_log;
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
-	wrap_o.D_wr				<=	wrap_i.CPUSKT_D(15 downto 8) when r_state = wr_u else
-									wrap_i.CPUSKT_D(7 downto 0);	
+	wrap_o.D_wr				<=	i_CPUSKT_D_i(15 downto 8) when r_state = wr_u else
+									i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_WR_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
 
@@ -225,7 +225,7 @@ begin
 									else '0';
 
 	-- either DS is low or 8 bit
-	i_nDS_either <= i_CPUSKT_nUDS_i and wrap_i.CPUSKT_A(0);
+	i_nDS_either <= i_CPUSKT_nUDS_i and i_CPUSKT_nLDS_i;
 
 	-- register async signals for meta stability and to delay relative to each other
 	e_m_DS_e:entity work.metadelay 
@@ -253,8 +253,8 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
-				r_cpuskt_A_m(23 downto 1) <= wrap_i.CPUSKT_A(23 downto 1);
-				if wrap_i.CPUSKT_A(23 downto 8) = x"0000" then
+				r_cpuskt_A_m(23 downto 1) <= i_CPUSKT_A_i(23 downto 1);
+				if i_CPUSKT_A_i = x"0000" then
 					r_cpuskt_A_vector <= '1';
 				end if;
 
