@@ -1050,6 +1050,8 @@ END GENERATE;
 	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
 						 	 i_CPUSKT_D_o(7 downto 0);
 
+	i_wrap_exp_i.CPUSKT_D(7 downto 0) <= exp_PORTA_io;
+
 	-- PORTB is hardwired output 74lvc4245
 
 	exp_PORTB_o <= i_wrap_exp_o.exp_PORTB;
@@ -1067,6 +1069,8 @@ END GENERATE;
 		exp_PORTD_io(I) <= i_wrap_exp_o.exp_PORTD(I) when i_wrap_exp_o.exp_PORTD_o_en(I) = '1' else
 							 'Z';
 	end generate;
+
+	i_wrap_exp_i.exp_PORTD <= exp_PORTD_io;
 
 	-- PORTE,F,G are multiplexed CB3T's with PORTEFG_io connected to all three on one side
 	-- broken out to separate pins on expansion headers on other sides
@@ -1086,6 +1090,9 @@ END GENERATE;
 		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(I + 8) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
 							 'Z';
 	end generate;
+
+	i_wrap_exp_i.CPUSKT_D(15 downto 8) <= exp_PORTEFG_io(11 downto 4);
+
 
 	exp_PORTEFG_io <= (others => 'Z');
 	
