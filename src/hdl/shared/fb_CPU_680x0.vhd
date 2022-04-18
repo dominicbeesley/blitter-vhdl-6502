@@ -155,9 +155,17 @@ architecture rtl of fb_cpu_680x0 is
 	,  reset1		-- reset buffers and wait
 		);
 
+	type t_mux_state is (
+		port_e,
+		port_f_next,
+		port_f,
+		port_e_next
+		);
+
+	signal r_state_mux		: t_mux_state;
+	signal i_PORTE_nOE		: std_logic;
+	signal i_PORTF_nOE		: std_logic;
 	signal r_state				: t_state;
-	signal r_PORTE_nOE		: std_logic;
-	signal r_PORTF_nOE		: std_logic;
 
 	signal i_cyc_ack_i		: std_logic;
 	signal r_wrap_cyc_dly	: std_logic;
@@ -202,8 +210,8 @@ begin
 		CPUSKT_D_o			=> i_CPUSKT_D_i,
 
 		-- socket muxing for extra 16 bit plug
-		MUX_PORTE_nOE_i		=> r_PORTE_nOE,
-		MUX_PORTF_nOE_i		=> r_PORTF_nOE
+		MUX_PORTE_nOE_i		=> i_PORTE_nOE,
+		MUX_PORTF_nOE_i		=> i_PORTF_nOE
 
 	);
 
@@ -223,6 +231,9 @@ begin
 
 	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' 
 									else '0';
+
+	i_PORTE_nOE <= '0' when r_state_mux = port_e else '1';
+	i_PORTF_nOE <= '0' when r_state_mux = port_f else '1';
 
 	-- either DS is low or 8 bit
 	i_nDS_either <= i_CPUSKT_nUDS_i and i_CPUSKT_nLDS_i;
@@ -254,7 +265,7 @@ begin
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
 				r_cpuskt_A_m(23 downto 1) <= i_CPUSKT_A_i(23 downto 1);
-				if i_CPUSKT_A_i = x"0000" then
+				if i_CPUSKT_A_i(23 downto 8) = x"0000" then
 					r_cpuskt_A_vector <= '1';
 				end if;
 
@@ -293,6 +304,8 @@ begin
 	end process;
 
 
+
+
 	p_act:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
@@ -304,13 +317,18 @@ begin
 			r_noice_clken <= '0';
 			r_state <= reset0;
 			r_A_log <= (others => '0');			
-			r_PORTE_nOE <= '0';
-			r_PORTF_nOE <= '1';
 			r_lastcyc <= '0';
+			r_state_mux <= port_e;
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_noice_clken <= '0';
 			r_WR_stb <= '0';
 			r_cyc_o <= (others => '0');
+
+			if r_state_mux = port_e_next then
+				r_state_mux <= port_e;
+			elsif r_state_mux = port_f_next then
+				r_state_mux <= port_f;
+			end if;
 
 			case r_state is 
 				when idle =>
@@ -335,9 +353,7 @@ begin
 						else
 							r_state <= idle_wr_ds;
 						end if;
-						--TODO: - should this be staggered to avoid two drivers?
-						r_PORTF_nOE <= '0';
-						r_PORTE_nOE <= '1';
+						r_state_mux <= port_f_next;
 					end if;
 				when idle_wr_ds =>
 					if i_nDS_either_m = '0' then
@@ -399,8 +415,7 @@ begin
 					r_state <= idle;
 				when others => 			-- or reset0
 					r_state <= reset1;
-					r_PORTE_nOE <= '0';
-					r_PORTF_nOE <= '1';
+					r_state_mux <= port_e_next;
 					r_lastcyc <= '0';
 
 			end case;
