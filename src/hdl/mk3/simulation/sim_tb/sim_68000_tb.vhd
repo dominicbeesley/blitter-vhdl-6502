@@ -15,6 +15,8 @@
 -- Revision: 
 ----------------------------------------------------------------------------------
 
+--TODO: 18/4/2022 - use newer core for this sim? FCx, VMA, E not correctly emulated
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -101,6 +103,9 @@ architecture Behavioral of sim_68000_tb is
 	signal	i_cpu_nVPA							: std_logic;
 	signal	i_cpu_nVMA							: std_logic;
 	signal	i_cpu_E								: std_logic;
+
+	signal	i_CPU_D_out							: std_logic_vector(15 downto 0);
+	signal	i_CPU_drive_data					: std_logic;
 
 begin
 	
@@ -272,29 +277,32 @@ begin
 
 
 
-	e_cpu:entity work.TG68K
-	generic map (
-		cpu			  => "00"
-	)
+	e_cpu:entity work.TG68
 	port map (
 		clk          		=> i_cpu_CLK,
 		reset        		=> i_exp_PORTD_io(9),
-		halt					=> i_exp_PORTD_io(10),
-      berr					=> i_CPU_BERR,
+		clkena_in			=> '1',
+--		halt					=> i_exp_PORTD_io(10),
+--      berr					=> i_CPU_BERR,
       ipl           		=> i_cpu_IPL,
       addr          		=> i_cpu_A,
-      fc						=> i_cpu_FC,
-      data(15 downto 8)	=> i_exp_PORTEFG_io(11 downto 4),
-      data(7 downto 0)	=> i_exp_PORTA_io_cpu,     
+--      fc						=> i_cpu_FC,
+      data_in(15 downto 8)	=> i_exp_PORTEFG_io(11 downto 4),
+      data_in(7 downto 0)	=> i_exp_PORTA_io_cpu,     
+      data_out				=> i_CPU_D_out,
+      drive_data			=> i_CPU_drive_data,
       as            		=> i_cpu_AS,
       uds            	=> i_CPU_UDS,
       lds            	=> i_cpu_LDS,
       rw            		=> i_cpu_RnW,
-      dtack         		=> i_cpu_nDTACK,
-      e						=> i_cpu_E,
-      VPA					=> i_cpu_nVPA,
-      VMA					=> i_cpu_nVMA
+      dtack         		=> i_cpu_nDTACK
+--      e						=> i_cpu_E,
+--      VPA					=> i_cpu_nVPA,
+--      VMA					=> i_cpu_nVMA
    );
+
+   i_exp_PORTF(11 downto 4) <= i_CPU_D_out(15 downto 8) when i_CPU_drive_data = '1' else (others => 'Z');
+   i_exp_PORTA_io_cpu <= i_CPU_D_out(7 downto 0) when i_CPU_drive_data = '1' else (others => 'Z');
 
 
 	--TODO: WARNING: berr, ignored
