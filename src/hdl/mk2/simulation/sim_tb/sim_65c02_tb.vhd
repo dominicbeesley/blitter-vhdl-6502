@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		For mk1 board simulation
+-- Description: 		For mk2 board simulation
 --
 -- Dependencies: 
 --
