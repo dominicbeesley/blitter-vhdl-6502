@@ -107,7 +107,7 @@ architecture rtl of fb_cpu_65c02 is
 	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
 
 	constant SUBSTATE_D_WR_2: t_substate := SUBSTATEMAX_2 - to_unsigned(7, t_substate'length);		-- TODO: this is too fast for a 2MHz part!
-	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(4, t_substate'length);
+	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
 
 	signal r_cpu_hlt			: std_logic;	-- need to register this at the start of the cycle following
