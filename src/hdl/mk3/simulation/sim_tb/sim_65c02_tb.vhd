@@ -44,7 +44,8 @@ use IEEE.NUMERIC_STD.ALL;
 entity sim_65c02_tb is
 generic (
 		G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom";
-		G_RAMDUMPFILE: string := "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_RAMDUMPFILE: string := "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin";
+		G_CPU_8MHz	 : boolean := false -- if set 8MHZ WDC part, else 4MHz Rockwell
 	);
 end sim_65c02_tb;
 
@@ -124,6 +125,9 @@ architecture Behavioral of sim_65c02_tb is
 	signal	i_CPU_nNMI								:	std_logic;
 	signal	i_CPU_nRES								:	std_logic;
 	signal	i_CPU_BE									:  std_logic;
+
+	signal	i_CFG_speed								:  std_logic_vector(2 downto 0);
+	signal	i_CFG_type								:  std_logic_vector(3 downto 0);
 begin
 
 	e_SYS:entity work.sim_SYS_tb
@@ -155,6 +159,12 @@ begin
 		sim_reg_halt_o			=> sim_reg_halt
 	);
 	
+	i_CFG_speed <= "101" when G_CPU_8MHz -- hard cpu speed (W65c02s @ 8MHz)
+			else "110"; -- hard cpu speed (R65c02 @ 4MHz);
+
+	i_CFG_type <= "1110" when G_CPU_8MHz -- hard cpu speed (W65c02s @ 8MHz)
+			else "1101"; -- hard cpu speed (R65c02 @ 4MHz);
+
 	-- config pins
 	i_exp_PORTG <= (
 		2 downto 0 => "111" -- Model B
@@ -163,11 +173,11 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "101" -- hard cpu speed (65c02 @ 8MHz)
+	, 11 downto 9 => i_CFG_speed
 		);
 
 	i_exp_PORTF <= (
-		3 downto 0 => "1110" -- 65C02,
+		3 downto 0 => i_CFG_type
 	,	others => 'H'
 		);
 
@@ -293,9 +303,9 @@ begin
 	);
 
 
-
+g_cpu_8:IF G_CPU_8MHz GENERATE
 	e_cpu: entity work.real_6502_tb 
-	--NMOS
+	--CMOS - not really, just a bit quicker...
 	GENERIC MAP (
 			dly_phi0a => 1 ns,	-- phi timings are actually from phi0 so just bodge these!
 			dly_phi0b => 1 ns,
@@ -305,16 +315,6 @@ begin
 			dly_dwrite=> 40 ns,	-- dwrite must be > dhold
 			dly_dhold => 20 ns
 		)
-	--CMOS - not really, just a bit quicker...
-	--GENERIC MAP (
-	--	dly_phi0a => 1 ns,
-	--	dly_phi0b => 1 ns,
-	--	dly_phi0c => 1 ns,
-	--	dly_phi0d => 1 ns,
-	--	dly_addr  => 10 ns, -- faster than spec!
-	--	dly_dwrite=> 40 ns,	-- dwrite must be > dhold
-	--	dly_dhold => 30 ns
-	--)
 	PORT MAP (
 		A => i_CPU_A(15 downto 0),
 		D => i_exp_PORTA_io_cpu,
@@ -329,6 +329,36 @@ begin
 		PHI1 => i_CPU_PHI1,
 		PHI2 => i_CPU_PHI2
 		);
+END GENERATE;
+
+
+g_cpu_4:IF not G_CPU_8MHz GENERATE
+	e_cpu: entity work.real_6502_tb 
+	--CMOS - not really, just a bit quicker...
+	GENERIC MAP (
+			dly_phi0a => 15 ns,	-- phi timings are actually from phi0 so just bodge these!
+			dly_phi0b => 10 ns,
+			dly_phi0c => 5 ns,
+			dly_phi0d => 5 ns,
+			dly_addr  => 70 ns, 
+			dly_dwrite=> 55 ns,	-- dwrite must be > dhold
+			dly_dhold => 30 ns
+		)
+	PORT MAP (
+		A => i_CPU_A(15 downto 0),
+		D => i_exp_PORTA_io_cpu,
+		nRESET => i_CPU_nRES,
+		RDY => i_CPU_RDY,
+		nIRQ => i_CPU_nIRQ,
+		nNMI => i_CPU_nNMI,
+		nSO => i_CPU_nSO,
+		RnW => i_CPU_RnW,
+		SYNC => i_CPU_SYNC,
+		PHI0 => i_CPU_PHI0,
+		PHI1 => i_CPU_PHI1,
+		PHI2 => i_CPU_PHI2
+		);	
+END GENERATE;
 
 	i_CPU_nML <= '1';		-- not simulated here
 
@@ -347,7 +377,7 @@ begin
 	(	1 => i_CPU_RnW,
 		3 => i_CPU_PHI2,
 		4 => i_CPU_SYNC,
-		5 => '1',
+		5 => '1',				-- WDC 's' VPB - not simulated here
 		6 => i_CPU_nML,
 		others => 'H'
 	);

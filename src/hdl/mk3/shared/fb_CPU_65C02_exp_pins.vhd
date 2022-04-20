@@ -72,6 +72,7 @@ entity fb_cpu_65C02_exp_pins is
 
 		CPUSKT_RnW_o							: out std_logic;
 		CPUSKT_SYNC_o							: out std_logic;
+		CPUSKT_VPB_o							: out std_logic;
 
 		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
 		CPUSKT_A_o								: out std_logic_vector(15 downto 0)
@@ -94,6 +95,7 @@ begin
 
 	CPUSKT_RnW_o		<= wrap_exp_i.exp_PORTD(1);
 	CPUSKT_SYNC_o		<= wrap_exp_i.exp_PORTD(4);
+	CPUSKT_VPB_o		<= wrap_exp_i.exp_PORTD(5);
 
 
 	wrap_exp_o.exp_PORTD <= (

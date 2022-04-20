@@ -1204,7 +1204,7 @@ begin
 					r_cfg_mk2_cpubits <= "000";
 				when "0100000" =>
 					r_cfg_cpu_type <= CPU_80188;
-				when "1110111" =>
+				when "1101110" =>
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_mk2_cpubits <= "011";
 				when "1110101" =>

@@ -96,17 +96,17 @@ architecture rtl of fb_cpu_65c02 is
 
 	--TODO: sort this all out to be more intuitive 
 
-	constant SUBSTATEMAX_2	: t_substate := to_unsigned(31, t_substate'length);
+	constant SUBSTATEMAX_4	: t_substate := to_unsigned(15, t_substate'length);
 	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
 
 	-- address latch state:
-	constant SUBSTATE_A_2	: t_substate := SUBSTATEMAX_2 - to_unsigned(6, t_substate'length);		-- TODO: this is too fast for a 2MHz part!
+	constant SUBSTATE_A_4	: t_substate := SUBSTATEMAX_4 - to_unsigned(13, t_substate'length);		
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
 
-	constant SUBSTATE_D_2	: t_substate := to_unsigned(2, t_substate'length);		-- TODO: this is too fast for a 2MHz part!
+	constant SUBSTATE_D_4	: t_substate := to_unsigned(2, t_substate'length);		
 	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
 
-	constant SUBSTATE_D_WR_2: t_substate := SUBSTATEMAX_2 - to_unsigned(7, t_substate'length);		-- TODO: this is too fast for a 2MHz part!
+	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(13, t_substate'length);		
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
 
@@ -129,7 +129,7 @@ architecture rtl of fb_cpu_65c02 is
 
 
 	-- port b
-	signal i_CPUSKT_BE_o		: std_logic;
+	signal i_CPUSKT_BE_o		: std_logic;		-- note only for the WDC 's' parts
 	signal i_CPUSKT_PHI0_o	: std_logic;
 	signal i_CPUSKT_RDY_o	: std_logic;
 	signal i_CPUSKT_nIRQ_o	: std_logic;
@@ -141,9 +141,11 @@ architecture rtl of fb_cpu_65c02 is
 
 	signal i_CPUSKT_RnW_i	: std_logic;
 	signal i_CPUSKT_SYNC_i	: std_logic;
+	signal i_CPUSKT_VPB_i	: std_logic;		-- note only for the WDC 's' parts
 
 	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
+
 
 	signal r_cfg_8Mhz			: std_logic;
 
@@ -181,6 +183,7 @@ begin
 
 		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
 		CPUSKT_SYNC_o		=> i_CPUSKT_SYNC_i,
+		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i,
 
 		CPUSKT_D_o			=> i_CPUSKT_D_i,
 		CPUSKT_A_o			=> i_CPUSKT_A_i
@@ -230,7 +233,7 @@ begin
 
 			case r_state is
 				when phi1 =>
-					if (r_substate = SUBSTATE_A_2 and r_cfg_8MHz = '0') or
+					if (r_substate = SUBSTATE_A_4 and r_cfg_8MHz = '0') or
 						(r_substate = SUBSTATE_A_8 and r_cfg_8MHz = '1') then
 	
 						if r_cpu_hlt = '0' then
@@ -264,7 +267,7 @@ begin
 						r_state <= phi2;
 						r_PHI0 <= '1';
 						if r_cfg_8MHz = '0' then
-							r_substate <= SUBSTATEMAX_2;
+							r_substate <= SUBSTATEMAX_4;
 						else
 							r_substate <= SUBSTATEMAX_8;
 						end if;
@@ -274,7 +277,7 @@ begin
 
 				when phi2 =>
 
-					if (r_substate = SUBSTATE_D_WR_2 and r_cfg_8MHz = '0') or
+					if (r_substate = SUBSTATE_D_WR_4 and r_cfg_8MHz = '0') or
 						(r_substate = SUBSTATE_D_WR_8 and r_cfg_8MHz = '1') then
 						r_D_WR_stb <= '1';
 					end if;
@@ -286,7 +289,7 @@ begin
 							r_PHI0 <= '0';
 							r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
 							if r_cfg_8MHz = '0' then
-								r_substate <= SUBSTATEMAX_2;
+								r_substate <= SUBSTATEMAX_4;
 							else
 								r_substate <= SUBSTATEMAX_8;
 							end if;
@@ -297,7 +300,7 @@ begin
 
 				when others =>
 					r_state <= phi1;
-					r_substate <= SUBSTATEMAX_2;
+					r_substate <= SUBSTATEMAX_4;
 					r_PHI0 <= '0';
 			end case;
 
@@ -305,7 +308,7 @@ begin
 			-- bodge for reset - need to better work out the state machine!
 			if r_fbreset_prev = '0' and fb_syscon_i.rst = '1' then
 				r_state <= phi1;
-				r_substate <= SUBSTATEMAX_2;
+				r_substate <= SUBSTATEMAX_4;
 				r_PHI0 <= '0';				
 				r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
 			end if;
@@ -321,7 +324,7 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
-			(r_rdy_ctup >= SUBSTATE_D_2 and r_cfg_8MHz = '0') or
+			(r_rdy_ctup >= SUBSTATE_D_4 and r_cfg_8MHz = '0') or
 			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and
 		(r_throttle_cpu_2MHz = '0' or wrap_i.cpu_2MHz_phi2_clken = '1')

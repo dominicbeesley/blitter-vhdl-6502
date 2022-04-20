@@ -182,11 +182,13 @@ All jumpers marked nc should be left unconnected as they may be debug outputs
     even if the T65 core is being used.
 
 
+TODO: update this!
+
 | cpu[0]  | cpu[1]  | cpu[2]  | processor   | speed max
 |---------|---------|---------|-------------|-----------
 |    o    |    o    |    o    | 6502A       |     2 MHz
-|    o    |    o    |    +    | 65C02       |     2
-|    o    |    +    |    o    | 65C02       |     8
+|    o    |    o    |    +    | R65C02      |     4
+|    o    |    +    |    o    | W65C02S     |     8
 |    o    |    +    |    +    | 65C816      |     8
 |    +    |    o    |    o    | 6809E/6309E |     2
 |    +    |    o    |    +    | 6309E       |     4
