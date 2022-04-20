@@ -529,9 +529,7 @@ begin
 							r_cpu_en_6x09 <= '1';
 						when CPU_65C02 =>
 							r_cpu_run_ix_act <= C_IX_CPU_65C02;
-							if cfg_cpu_speed_opt_i = CPUSPEED_65C02_8 then
-								r_do_sys_via_block <= '1';	
-							end if;
+							r_do_sys_via_block <= '1';	
 							r_cpu_en_65c02 <= '1';
 						when CPU_80188 =>
 							r_cpu_run_ix_act <= C_IX_CPU_80188;
