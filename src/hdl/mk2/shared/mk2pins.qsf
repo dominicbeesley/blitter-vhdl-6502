@@ -160,7 +160,7 @@ set_location_assignment PIN_T4 -to CPUSKT_PHI16ABRT9BSKnDS_i
 set_location_assignment PIN_T8 -to CPUSKT_PHI26VDAKFC0ZnMREQ_i
 set_location_assignment PIN_T9 -to CPUSKT_RDY9KnHALTZnWAIT_o
 set_location_assignment PIN_T3 -to CPUSKT_SYNC6VPA9LICKFC2ZnM1_i
-set_location_assignment PIN_T7 -to CPUSKT_VSS6VPA9BAKnAS_i
+set_location_assignment PIN_T7 -to CPUSKT_VSS6VPB9BAKnAS_i
 set_location_assignment PIN_N9 -to CPUSKT_nIRQKnIPL1_o
 set_location_assignment PIN_T11 -to CPUSKT_nNMIKnIPL02_o
 set_location_assignment PIN_L14 -to CPUSKT_nRES_o

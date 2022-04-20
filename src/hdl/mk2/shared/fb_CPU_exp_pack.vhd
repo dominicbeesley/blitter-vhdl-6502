@@ -77,7 +77,7 @@ package fb_CPU_exp_pack is
 		CPUSKT_PHI16ABRT9BSKnDS				:		std_logic;		-- 6ABRT is actually an output but pulled up on the board
 		CPUSKT_PHI26VDAKFC0ZnMREQ			:		std_logic;
 		CPUSKT_SYNC6VPA9LICKFC2ZnM1		:		std_logic;
-		CPUSKT_VSS6VPA9BAKnAS				:		std_logic;
+		CPUSKT_VSS6VPB9BAKnAS				:		std_logic;
 		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ		:		std_logic;		-- nSO is actually an output but pulled up on the board
 
 		-- control signals for cpu core on a per wrapper basis

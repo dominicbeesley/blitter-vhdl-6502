@@ -141,7 +141,7 @@ entity mk2blit is
 		CPUSKT_PHI16ABRT9BSKnDS_i				: in		std_logic;		-- 6ABRT is actually an output but pulled up on the board
 		CPUSKT_PHI26VDAKFC0ZnMREQ_i			: in		std_logic;
 		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i			: in		std_logic;
-		CPUSKT_VSS6VPA9BAKnAS_i					: in		std_logic;
+		CPUSKT_VSS6VPB9BAKnAS_i					: in		std_logic;
 		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i		: in		std_logic;		-- nSO is actually an output but pulled up on the board
 
 
@@ -990,7 +990,7 @@ END GENERATE;
 	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
 	i_wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ			<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
 	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
-	i_wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS				<= CPUSKT_VSS6VPA9BAKnAS_i;
+	i_wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS				<= CPUSKT_VSS6VPB9BAKnAS_i;
 	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
 	i_wrap_exp_i.CPUSKT_D 								<= CPUSKT_D_io;
 	i_wrap_exp_i.CPUSKT_A 								<= CPUSKT_A_i;

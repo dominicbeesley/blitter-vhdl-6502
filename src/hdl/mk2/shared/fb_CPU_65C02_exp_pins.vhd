@@ -71,6 +71,7 @@ entity fb_cpu_65C02_exp_pins is
 
 		CPUSKT_RnW_o							: out std_logic;
 		CPUSKT_SYNC_o							: out std_logic;
+		CPUSKT_VPB_o							: out std_logic;
 
 		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
 		CPUSKT_A_o								: out std_logic_vector(15 downto 0)
@@ -81,7 +82,7 @@ end fb_cpu_65C02_exp_pins;
 architecture rtl of fb_cpu_65C02_exp_pins is
 begin
 
-	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= CPUSKT_BE_i;
+	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= CPUSKT_BE_i;						-- WDC 's' parts only
 	wrap_exp_o.CPUSKT_9Q 					<= '1';
 	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 		<= '1';
 	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_PHI0_i;
@@ -93,6 +94,7 @@ begin
 
 	CPUSKT_RnW_o				<= wrap_exp_i.CPUSKT_RnWZnWR;
 	CPUSKT_SYNC_o				<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
+	CPUSKT_VPB_o				<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
 	CPUSKT_A_o 					<= wrap_exp_i.CPUSKT_A(15 downto 0);
