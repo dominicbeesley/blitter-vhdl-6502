@@ -96,6 +96,7 @@ architecture rtl of fb_cpu_65c02 is
 
 	--TODO: sort this all out to be more intuitive 
 	--TODO: test phi0 to phi2 skew during boot and adjust?
+	--TODO: 4MHz needs sorting out, runs at 1MHz with Throttle enabled, some 2MHz accesses are at 1MHz
 
 	constant SUBSTATEMAX_4	: t_substate := to_unsigned(15, t_substate'length);
 	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
