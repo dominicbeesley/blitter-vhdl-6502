@@ -95,18 +95,19 @@ architecture rtl of fb_cpu_65c02 is
 
 
 	--TODO: sort this all out to be more intuitive 
+	--TODO: test phi0 to phi2 skew during boot and adjust?
 
 	constant SUBSTATEMAX_4	: t_substate := to_unsigned(15, t_substate'length);
 	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
 
 	-- address latch state:
-	constant SUBSTATE_A_4	: t_substate := SUBSTATEMAX_4 - to_unsigned(13, t_substate'length);		
+	constant SUBSTATE_A_4	: t_substate := SUBSTATEMAX_4 - to_unsigned(9, t_substate'length);		-- TODO: this is a touch fast (should be 11/12)
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
 
-	constant SUBSTATE_D_4	: t_substate := to_unsigned(2, t_substate'length);		
+	constant SUBSTATE_D_4	: t_substate := to_unsigned(2, t_substate'length);
 	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
 
-	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(13, t_substate'length);		
+	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(5, t_substate'length);		
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
 
