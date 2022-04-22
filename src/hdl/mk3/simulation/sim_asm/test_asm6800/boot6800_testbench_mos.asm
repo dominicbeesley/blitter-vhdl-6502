@@ -8,7 +8,7 @@
 handle_res:	
 		lds	#0x100
 
-		ldx	#1000
+		ldx	#10
 llopa:		dex
 		bne	llopa
 
