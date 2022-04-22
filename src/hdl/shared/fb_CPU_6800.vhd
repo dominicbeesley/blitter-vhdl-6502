@@ -17,6 +17,8 @@
 -- A bit flaky on test, occasionally crashes on test-1.ihx in mode 0. Not sure if
 -- data setup or address setup is too tight
 
+-- TODO: sys accesses are at 1MHz!
+
 -- MIT License
 -- -----------------------------------------------------------------------------
 -- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
