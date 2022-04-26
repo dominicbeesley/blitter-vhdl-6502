@@ -40,13 +40,13 @@
 
 set systemTime [clock seconds]
 set tm [clock format $systemTime -format {%Y-%m-%d:%H:%M:%S}]
-
+set board [file tail [pwd]]
 
 if {
     ![catch {exec svnversion .. } svnv] 
     && ![catch {exec svn info | sed -n -e 's/^Relative URL:\\s*\\(.*\\)/\\1/p'} svnb]
    } {
-  set outdata "$svnv $tm\r$svnb"
+  set outdata "$svnv $tm $board\r$svnb"
   set shortname "$svnv"
 
 } else {
@@ -57,11 +57,11 @@ if {
     && ![catch {exec git branch --show-current } gitb] 
     && ![catch {exec git config --get remote.origin.url } giturl]
     } {
-    set outdata "$gitv $tm\r$gitb:[regsub {^https?://} $giturl ""]"
+    set outdata "$gitv $tm $board\r$gitb:[regsub {^https?://} $giturl ""]"
     set shortname "$gitv"
   } else {
     puts "Not in GIT, just show build date $gitv $gitb"
-    set outdata "UNVERSIONED $tm\UNVERSIONED"
+    set outdata "UNVERSIONED $tm $board\\UNVERSIONED"
     set shortname {UNVERSIONED}
   }
 }
@@ -73,6 +73,7 @@ close $oftag
 set of [open "version.vhd" w]
 
 puts $of "-- Automatically generated file (get-version.tcl) DO NOT EDIT!"
+puts $of "-- [regsub {\r} $outdata "\\r"]"
 puts $of "library IEEE;"
 puts $of "use IEEE.STD_LOGIC_1164.ALL;"
 puts $of "use IEEE.NUMERIC_STD.ALL;"
