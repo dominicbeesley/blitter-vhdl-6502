@@ -31,7 +31,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		board configuration file
+-- Description: 		board build configuration 
 -- Dependencies: 
 --
 -- Revision: 
@@ -45,7 +45,29 @@ use IEEE.math_real.all;
 
 package board_config_pack is
 
-	constant GBUILD_INCL_HDMI	: boolean := false;
+	constant G_INCL_HDMI						: boolean := false;
+	constant G_INCL_CHIPSET						: boolean := true;
+	constant G_INCL_CS_DMA						: boolean := true;
+	constant G_DMA_CHANNELS						: natural := 1;
+	constant G_INCL_CS_BLIT						: boolean := false;
+	constant G_INCL_CS_SND						: boolean := true;
+	constant G_SND_CHANNELS						: natural := 4;
+	constant G_INCL_CS_AERIS					: boolean := false;
+	constant G_INCL_CS_EEPROM					: boolean := false;
+		
+	constant G_INCL_CPU_T65						: boolean := true;
+	constant G_INCL_CPU_65C02					: boolean := false;
+	constant G_INCL_CPU_6800					: boolean := false;
+	constant G_INCL_CPU_80188					: boolean := false;
+	constant G_INCL_CPU_65816					: boolean := true;
+	constant G_INCL_CPU_6x09					: boolean := true;
+	constant G_INCL_CPU_Z80						: boolean := false;
+	constant G_INCL_CPU_68008					: boolean := false;
+	constant G_INCL_CPU_680x0					: boolean := false;
+
+	constant G_MEM_SWRAM_SLOT					: natural := 1;
+	constant G_MEM_FAST_IS_10					: boolean := false;
+	constant G_MEM_SLOW_IS_45					: boolean := false;
 
 
 
