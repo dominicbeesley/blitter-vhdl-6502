@@ -104,7 +104,6 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name SDC_FILE mk3_16_max.sdc
 
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_disabled.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd
@@ -154,7 +153,6 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
-set_global_assignment -name VHDL_FILE mk3blit_top.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
@@ -168,7 +166,7 @@ set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
-set_global_assignment -name TOP_LEVEL_ENTITY mk3blit_top
+set_global_assignment -name TOP_LEVEL_ENTITY mk3blit
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_68000_tb -section_id eda_simulation
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"

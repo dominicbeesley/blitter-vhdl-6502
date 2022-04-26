@@ -44,7 +44,30 @@ use IEEE.math_real.all;
 
 package board_config_pack is
 
-	constant GBUILD_INCL_HDMI		: boolean := true;
+	constant G_INCL_HDMI							: boolean := true;
+	constant G_INCL_CHIPSET						: boolean := true;
+	constant G_INCL_CS_DMA						: boolean := true;
+	constant G_DMA_CHANNELS						: natural := 1;
+	constant G_INCL_CS_BLIT						: boolean := false;
+	constant G_INCL_CS_SND						: boolean := true;
+	constant G_SND_CHANNELS						: natural := 4;
+	constant G_INCL_CS_AERIS					: boolean := false;
+	constant G_INCL_CS_EEPROM					: boolean := true;
+		
+	constant G_INCL_CPU_T65						: boolean := true;
+	constant G_INCL_CPU_65C02					: boolean := true;
+	constant G_INCL_CPU_6800					: boolean := true;
+	constant G_INCL_CPU_80188					: boolean := true;
+	constant G_INCL_CPU_65816					: boolean := true;
+	constant G_INCL_CPU_6x09					: boolean := true;
+	constant G_INCL_CPU_Z80						: boolean := false;
+	constant G_INCL_CPU_68008					: boolean := false;
+	constant G_INCL_CPU_680x0					: boolean := true;
+
+	constant G_MEM_SWRAM_SLOT					: natural := 0;
+	constant G_MEM_FAST_IS_10					: boolean := true;
+	constant G_MEM_SLOW_IS_45					: boolean := true;
+
 
 	constant PERIPHERAL_COUNT		: natural := 6;
 	constant PERIPHERAL_NO_VERSION		: natural := 0;

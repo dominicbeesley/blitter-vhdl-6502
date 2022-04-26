@@ -58,33 +58,7 @@ entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-
-		G_INCL_CPU_T65						: boolean := false;
-		G_INCL_CPU_65C02					: boolean := false;
-		G_INCL_CPU_6800					: boolean := false;
-		G_INCL_CPU_80188					: boolean := false;
-		G_INCL_CPU_65816					: boolean := false;
-		G_INCL_CPU_6x09					: boolean := false;
-		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_680x0					: boolean := false;
-		G_INCL_CPU_68008					: boolean := false;
-
-		G_INCL_CHIPSET						: boolean := false;
-		G_INCL_CS_DMA						: boolean := false;
-		G_DMA_CHANNELS						: natural := 2;
-		G_INCL_CS_BLIT						: boolean := false;
-		G_INCL_CS_SND						: boolean := false;
-		G_SND_CHANNELS						: natural := 4;
-		G_INCL_CS_AERIS					: boolean := false;
-
-		G_INCL_CS_EEPROM					: boolean := false;
-		
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
-
-		G_MEM_SWRAM_SLOT					: natural := 1;
-		G_MEM_FAST_IS_10					: boolean := false;
-		G_MEM_SLOW_IS_45					: boolean := false
-
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -467,7 +441,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 		SIM							=> SIM,
 		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> GBUILD_INCL_HDMI
+		G_INCL_HDMI					=> G_INCL_HDMI
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
@@ -1219,7 +1193,6 @@ begin
 end process;
 
 
-
 --TODO: MK2/MK3 harmonize
 i_memctl_configbits <= 
 	"1111111" &
@@ -1270,7 +1243,7 @@ SD_MOSI_o <= '1';
 -- H D M I
 --====================================================
 
-
+G_HDMI:IF G_INCL_HDMI GENERATE
 	i_per_p2c_intcon(PERIPHERAL_NO_HDMI)		<= i_p2c_hdmi_per;
 	i_c2p_hdmi_per			<= i_per_c2p_intcon(PERIPHERAL_NO_HDMI);
 
@@ -1304,7 +1277,7 @@ SD_MOSI_o <= '1';
 		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank
 	);
-
+END GENERATE;
 
 
 end rtl;

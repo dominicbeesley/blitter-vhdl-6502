@@ -162,7 +162,7 @@ begin
 
 
 
-	e_daughter: entity work.mk3blit_top
+	e_daughter: entity work.mk3blit
 	generic map (
 		SIM => true
 	)
