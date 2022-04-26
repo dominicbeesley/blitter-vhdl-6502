@@ -884,7 +884,7 @@ g6800:IF G_INCL_CPU_6800 GENERATE
 END GENERATE;
 
 g80188:IF G_INCL_CPU_80188 GENERATE
-	e_wrap_6800:fb_cpu_80188
+	e_wrap_80188:fb_cpu_80188
 	generic map (
 		SIM									=> SIM,
 		CLOCKSPEED							=> CLOCKSPEED,
@@ -893,7 +893,7 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> r_cpu_en_65c02,
+		cpu_en_i									=> r_cpu_en_80188,
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_80188),
