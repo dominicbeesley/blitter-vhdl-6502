@@ -23,7 +23,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_65c02_tb is
 generic (
-		G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom";
+		G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom";
 		G_RAMDUMPFILE: string := "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
 	);
 end sim_65c02_tb;

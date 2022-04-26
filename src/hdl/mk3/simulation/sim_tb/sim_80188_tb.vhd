@@ -22,6 +22,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_80188_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asmx86/build/bootx86_testbench_mos.rom"
+	);
 end sim_80188_tb;
 
 architecture Behavioral of sim_80188_tb is
@@ -101,7 +104,7 @@ begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asmx86/build/bootx86_testbench_mos.rom",
+		G_MOSROMFILE => G_MOSROMFILE,
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
 		G_MK3 => true
 	)
@@ -338,7 +341,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asmx86/build/bootx86_testbench_mos.rom",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)

@@ -25,6 +25,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_6502_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+	);
 end sim_6502_tb;
 
 architecture Behavioral of sim_6502_tb is

@@ -24,6 +24,9 @@ use work.SIM_SYS_pack.all;
 
 
 entity sim_65816_elk_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+	);
 end sim_65816_elk_tb;
 
 architecture Behavioral of sim_65816_elk_tb is
@@ -109,7 +112,7 @@ begin
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
+		G_MOSROMFILE => G_MOSROMFILE,
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
 		G_MK3 => true,
 		G_SIM_SYS_TYPE => SIM_SYS_ELK
@@ -361,7 +364,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)

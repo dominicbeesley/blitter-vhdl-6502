@@ -23,7 +23,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_6x09_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm09/build/test_rom0.bin"
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm09/build/test_rom0.bin"
 	);
 end sim_6x09_tb;
 

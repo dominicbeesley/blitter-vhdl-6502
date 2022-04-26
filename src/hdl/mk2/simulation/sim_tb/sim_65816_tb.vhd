@@ -26,7 +26,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_65816_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../simulation/sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
 	);
 end sim_65816_tb;
 

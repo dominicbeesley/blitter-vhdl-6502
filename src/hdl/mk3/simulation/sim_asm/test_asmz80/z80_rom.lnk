@@ -1,8 +1,0 @@
--i build/z80_rom.ihx
--b CODE2=0xC000
--b CODE_VEC=0xFF00
--m
--j
-build/font_data.rel
-build/z80_rom.rel
--e
