@@ -1252,7 +1252,7 @@ SYS_AUX_o(3)				<= i_debug_80188_ale;
 
 SYS_AUX_io(0) <= i_debug_wrap_sys_st;
 SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
-SYS_AUX_io(2) <= i_debug_write_cycle_repeat;
+SYS_AUX_io(2) <= i_wrap_exp_o.CPU_D_RnW;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');

@@ -188,27 +188,12 @@ begin
 		end if;
 	end process;
 
-	p_state:process(fb_syscon_i)
+	p_state:process(fb_syscon_i, r_state)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-
 			r_a_stb <= '0';
 
-			case r_state is
-				when phi1_0 =>
-					r_state <= phi1_1;
-				when phi1_1 =>
-					r_state <= phi1_2;
-				when phi1_2 =>
-					r_state <= phi1_3;
-				when phi1_3 =>
-					r_state <= phi1_4;
-				when phi1_4 =>
-					r_state <= phi1_5;
-				when phi1_5 =>
-					r_state <= phi1_6;
-				when phi1_6 =>
-
+			if r_state = phi1_5 then
 					if r_cpu_hlt = '0' then
 						if i_boot = '1' then
 							if i_CPUSKT_D_i(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
@@ -247,8 +232,30 @@ begin
 						r_cpu_hlt <= wrap_i.cpu_halt;
 						r_cpu_res <= '0';					
 					end if;
+			end if;
+		end if;
+	end process;
 
-								
+
+	p_clk_gen:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+
+
+			case r_state is
+				when phi1_0 =>
+					r_state <= phi1_1;
+				when phi1_1 =>
+					r_state <= phi1_2;
+				when phi1_2 =>
+					r_state <= phi1_3;
+				when phi1_3 =>
+					r_state <= phi1_4;
+				when phi1_4 =>
+					r_state <= phi1_5;
+				when phi1_5 =>
+					r_state <= phi1_6;
+				when phi1_6 =>								
 					r_state <= phi1_7;
 				when phi1_7 =>
 					r_PHI0 <= '1';
