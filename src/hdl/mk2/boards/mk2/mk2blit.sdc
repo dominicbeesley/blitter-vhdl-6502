@@ -95,36 +95,45 @@ set_false_path -from [get_clocks {snd_pll}] -to [get_clocks {main_pll}]
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*rst_flop}]
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*set_flop}]
 
-set_false_path -from [get_registers {fb_cpu:*|r_cpu_en_*} ]
-set_false_path -from [get_registers {fb_cpu:*|r_hard_cpu_en} ]
-set_false_path -from [get_registers {fb_cpu:*|r_do_sys_via_block} ]
-set_false_path -from [get_registers {fb_cpu:*|r_cpu_run_ix*} ]
+
+set_false_path -from [get_registers {r_cfg_swromx} ]
+set_false_path -from [get_registers {r_cfg_mosram} ]
+set_false_path -from [get_registers {r_cfg_swram_enable} ]
+set_false_path -from [get_registers {r_cfg_cpu_use_t65} ]
+set_false_path -from [get_registers {r_cfg_mk2_cpubits*} ]
+set_false_path -from [get_registers {r_cfg_cpu_type.*} ]
+set_false_path -from [get_registers {r_cfg_cpu_speed_opt.*} ]
+
+set_false_path -from [get_registers {e_fb_cpu|r_cpu_en_*} ]
+set_false_path -from [get_registers {e_fb_cpu|r_cpu_run_ix*} ]
 
 #**************************************************************
 # Set Multicycle Path
 #**************************************************************
 
 #cpu multi-cycles
-#set t65paths [ get_pins {e_top|e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
-set t65regs  [ get_registers {*|T65:e_cpu|*} ]
+set t65paths [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
+set t65regs  [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 
-#set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
-#set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
+set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
+set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
 set_multicycle_path -setup -end -from  $t65regs 2
 set_multicycle_path -hold -end -from  $t65regs 1
 
 #blitter addr calcs multi-cycles
 
-set blitpaths [ get_registers {*|blit_addr:addr_gen|r_addr_out*} ]
+set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
-set_multicycle_path -setup -end -to  $blitpaths 2
-set_multicycle_path -hold -end -to  $blitpaths 1
+set blitpaths2 [ get_registers "$blit|*" ]
+
+set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
+set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
 
 
 #aeris - not thoroughly checked!
 
-set aeris {e_top|\GCHIPSET:GAERIS:e_fb_aeris}
+set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
 set aeris_src_regs [get_registers "$aeris|r_op*"] 
 set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
 set aeris_ctr_regs [get_registers "$aeris|r_counters*"]

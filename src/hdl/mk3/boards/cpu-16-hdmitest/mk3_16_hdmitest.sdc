@@ -152,19 +152,17 @@ set_multicycle_path -hold -end -from  $t65regs 1
 
 #blitter addr calcs multi-cycles
 
-set blitpaths [ get_pins {\GCHIPSET:GBLIT:e_fb_blit|addr_gen|*|*} ]
-set blitpaths2 [ get_registers {\GCHIPSET:GBLIT:e_fb_blit|*} ]
+set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
-set_multicycle_path -setup -end -from  $blitpaths  -to  $blitpaths 2
-set_multicycle_path -hold -end -from  $blitpaths  -to  $blitpaths 1
+set blitpaths2 [ get_registers "$blit|*" ]
 
-set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths 2
-set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths 1
+set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
+set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
 
 
 #aeris - not thoroughly checked!
 
-set aeris {\GCHIPSET:GAERIS:e_fb_aeris}
+set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
 set aeris_src_regs [get_registers "$aeris|r_op*"] 
 set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
 set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
