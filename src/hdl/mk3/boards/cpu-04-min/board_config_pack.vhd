@@ -71,7 +71,7 @@ package board_config_pack is
 
 
 
-	constant PERIPHERAL_COUNT	: natural := 6;
+	constant PERIPHERAL_COUNT	: natural := 5;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS	: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;

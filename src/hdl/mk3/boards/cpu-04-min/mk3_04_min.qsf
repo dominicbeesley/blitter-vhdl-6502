@@ -83,6 +83,8 @@ source ../../simulation/sim_tb/sim_t65.qsf
 
 source ../../simulation/sim_tb/sim_65816.qsf
 
+source ../../simulation/sim_tb/sim_65c02.qsf
+
 source ../../simulation/sim_tb/sim_t65_elk.qsf
 
 source ../../simulation/sim_tb/sim_65816_elk.qsf
@@ -93,6 +95,7 @@ source ../../simulation/sim_tb/sim_6x09.qsf
 
 source ../../simulation/sim_tb/sim_6800.qsf
 
+source ../../simulation/sim_tb/sim_80188.qsf
 
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top

@@ -103,6 +103,7 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
 set_global_assignment -name SDC_FILE mk3_16_tiny.sdc
 
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd
@@ -151,8 +152,9 @@ set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
-set_global_assignment -name VHDL_FILE ../../shared/mk3blit_tiny.vhd
-
+set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound_cha.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd

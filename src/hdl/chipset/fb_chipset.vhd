@@ -198,6 +198,26 @@ architecture rtl of fb_chipset is
 		);
 	end component;
 
+	component fb_i2c is
+		generic (
+			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+			CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
+			BUS_SPEED							: natural := 400000							-- i2c bus speed in Hz
+		);
+		port(
+
+			-- eeprom signals
+			I2C_SCL_io							: inout	std_logic;
+			I2C_SDA_io							: inout	std_logic;
+
+			-- fishbone signals
+
+			fb_syscon_i							: in		fb_syscon_t;
+			fb_c2p_i								: in		fb_con_o_per_i_t;
+			fb_p2c_o								: out		fb_con_i_per_o_t
+
+		);
+	end component;
 
 	-----------------------------------------------------------------------------
 	-- fishbone signals
@@ -496,7 +516,7 @@ GEEPROM: IF G_INCL_CS_EEPROM GENERATE
 	i_c2p_eeprom_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM)	<=	i_p2c_eeprom_per;
 
-	e_fb_eeprom:entity work.fb_i2c
+	e_fb_eeprom:fb_i2c
 	generic map (
 		SIM									=> SIM,
 		CLOCKSPEED							=> CLOCKSPEED
