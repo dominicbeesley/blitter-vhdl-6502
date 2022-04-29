@@ -264,7 +264,12 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
+	-----------------------------------------------------------------------------
+	-- sys signals
+	-----------------------------------------------------------------------------
 
+	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
+	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -498,10 +503,33 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-		SND_L_o			=> SND_L_o,
-		SND_R_o			=> SND_R_o
+		snd_dat_o		=> i_dac_sample,
+		snd_dat_change_clken_o => open
+
 	);
 
+	G_SND_DAC:IF G_INCL_CS_SND GENERATE
+		SND_R_o <= i_dac_snd_pwm;
+		SND_L_o <= i_dac_snd_pwm;
+
+		e_dac_snd: entity work.dac_1bit 
+		generic map (
+			G_SAMPLE_SIZE		=> 10,
+			G_SYNC_DEPTH		=> 0
+		)
+   	port map (
+			rst_i					=> i_fb_syscon.rst,
+			clk_dac				=> i_fb_syscon.clk,
+
+			sample				=> i_dac_sample,
+		
+			bitstream			=> i_dac_snd_pwm
+		);
+	END GENERATE;
+	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
+		SND_R_o <= '0';
+		SND_L_o <= '0';
+	END GENERATE;
 
 
 END GENERATE;
@@ -510,6 +538,8 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_chipset_cpu_int <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
+	SND_R_o <= '0';
+	SND_L_o <= '0';
 END GENERATE;
 
 

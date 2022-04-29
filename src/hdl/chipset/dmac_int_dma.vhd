@@ -72,7 +72,6 @@ entity fb_DMAC_int_dma is
 		dma_halt_i							: in		STD_LOGIC
 	 );
 
-	 -- sound
 	 constant	A_CHA_SEL		: integer := 15;
 end fb_DMAC_int_dma;
 

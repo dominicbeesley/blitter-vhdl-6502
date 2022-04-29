@@ -74,16 +74,18 @@ component fb_chipset
 		-- sound clock
 		clk_snd_i				: in std_logic;
 
+		-- sound output - do D->A business at top level as 1MPaula and Blitter use different DACs
+		snd_dat_o							: out		signed(9 downto 0);
+		snd_dat_change_clken_o			: out		std_logic;
+
+
 		-- 6845 signals to Aeris
 		vsync_i					: in std_logic;
 		hsync_i					: in std_logic;
 
 		-- top level ports -- TODO: should EEPROM really be part of chipset? - probably due to where it sits in address map
 		I2C_SCL_io				: inout std_logic;
-		I2C_SDA_io				: inout std_logic;
-
-		SND_L_o					: out std_logic;
-		SND_R_o					: out std_logic
+		I2C_SDA_io				: inout std_logic
 
 	);
 	end component;

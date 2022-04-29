@@ -152,10 +152,6 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
-set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
-set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
-set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
-set_global_assignment -name VHDL_FILE ../../../chipset/aeris.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound_cha.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd

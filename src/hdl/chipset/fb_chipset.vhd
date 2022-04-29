@@ -74,21 +74,129 @@ entity fb_chipset is
 		-- sound clock
 		clk_snd_i				: in std_logic;
 
+		-- sound output - do D->A business at top level as 1MPaula and Blitter use different DACs
+		snd_dat_o							: out		signed(9 downto 0);
+		snd_dat_change_clken_o			: out		std_logic;
+
 		-- 6845 signals to Aeris
 		vsync_i					: in std_logic;
 		hsync_i					: in std_logic;
 
 		-- top level ports -- TODO: should EEPROM really be part of chipset? - probably due to where it sits in address map
 		I2C_SCL_io				: inout std_logic;
-		I2C_SDA_io				: inout std_logic;
-
-		SND_L_o					: out std_logic;
-		SND_R_o					: out std_logic
+		I2C_SDA_io				: inout std_logic
 
 	);
 end fb_chipset;
 
 architecture rtl of fb_chipset is
+
+
+	-----------------------------------------------------------------------------
+	-- component definitions for optional components
+	-----------------------------------------------------------------------------
+
+	component fb_dmac_aeris is
+		generic (
+			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
+			CLOCKSPEED							: natural
+		);
+	   Port (
+			-- fishbone signals		
+			fb_syscon_i							: in		fb_syscon_t;
+
+			-- peripheral interface (control registers)
+			fb_per_c2p_i						: in		fb_con_o_per_i_t;
+			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+
+			-- controller interface (dma)
+			fb_con_c2p_o						: out		fb_con_o_per_i_t;
+			fb_con_p2c_i						: in		fb_con_i_per_o_t;
+
+			cpu_halt_o							: out		std_logic;
+
+			hsync_i								: in		std_logic;
+			vsync_i								: in		std_logic;
+
+			dbg_state_o							: out		std_logic_vector(3 downto 0)
+
+		);
+	end component;
+
+	component fb_dmac_blit is
+		generic (
+			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
+			G_STRIDE_HIGH						: integer := 11
+		);
+	   Port (
+			-- fishbone signals		
+			fb_syscon_i							: in		fb_syscon_t;
+
+			-- peripheral interface (control registers)
+			fb_per_c2p_i						: in		fb_con_o_per_i_t;
+			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+
+			-- controller interface (dma)
+			fb_con_c2p_o						: out		fb_con_o_per_i_t;
+			fb_con_p2c_i						: in		fb_con_i_per_o_t;
+
+			cpu_halt_o							: out		std_logic;
+			blit_halt_i							: in		std_logic
+		);
+	end component;
+
+	component fb_DMAC_int_dma is
+		 generic (
+			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
+			G_CHANNELS							: natural := 2;
+			CLOCKSPEED							: natural
+		 );
+	    Port (
+
+			-- fishbone signals		
+			fb_syscon_i							: in		fb_syscon_t;
+
+			-- peripheral interface (control registers)
+			fb_per_c2p_i						: in		fb_con_o_per_i_t;
+			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+
+			-- controller interface (dma)
+			fb_con_c2p_o						: out		fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
+			fb_con_p2c_i						: in		fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
+
+			int_o									: out		STD_LOGIC;		-- interrupt active hi
+			cpu_halt_o							: out		STD_LOGIC;
+			dma_halt_i							: in		STD_LOGIC
+		 );
+	end component;
+
+
+	component fb_DMAC_int_sound is
+		generic (
+			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
+			G_CHANNELS							: natural := 4
+		);
+		Port (
+
+			-- fishbone signals		
+			fb_syscon_i							: in		fb_syscon_t;
+
+			-- peripheral interface (control registers)
+			fb_per_c2p_i						: in		fb_con_o_per_i_t;
+			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+
+			-- controller interface (dma)
+			fb_con_c2p_o						: out		fb_con_o_per_i_t;
+			fb_con_p2c_i						: in		fb_con_i_per_o_t;
+
+			cpu_halt_o							: out		STD_LOGIC;
+
+			-- sound specific
+			snd_clk_i							: in		std_logic;
+			snd_dat_o							: out		signed(9 downto 0);
+			snd_dat_change_clken_o			: out		std_logic
+		);
+	end component;
 
 
 	-----------------------------------------------------------------------------
@@ -150,11 +258,6 @@ architecture rtl of fb_chipset is
 	signal i_blit_cpu_halt				: std_logic;							-- cpu halt request out from blit
 	signal i_aeris_cpu_halt				: std_logic;							-- cpu halt request out from aeris
 	signal i_snd_cpu_halt				: std_logic;							-- cpu halt request out from snd
-
-	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
-	signal i_snd_dat_o					: signed(9 downto 0);   			-- sound data out
-
 
 
 begin
@@ -247,7 +350,7 @@ GDMA:IF G_INCL_CS_DMA GENERATE
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA)	<=	i_p2c_dma_per;
 	i_c2p_dma_per 		<= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
 
-	e_fb_dma:entity work.fb_DMAC_int_dma
+	e_fb_dma:fb_DMAC_int_dma
 	 generic map (
 		SIM									=> SIM,
 		G_CHANNELS							=> G_DMA_CHANNELS,
@@ -283,7 +386,7 @@ GBLIT:IF G_INCL_CS_BLIT GENERATE
 	i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
 
-	e_fb_blit:entity work.fb_dmac_blit
+	e_fb_blit:fb_dmac_blit
 	 generic map (
 		SIM									=> SIM
 	 )
@@ -317,7 +420,7 @@ GAERIS: IF G_INCL_CS_AERIS GENERATE
 	i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
 
-	e_fb_aeris:entity work.fb_dmac_aeris
+	e_fb_aeris:fb_dmac_aeris
 	 generic map (
 		SIM									=> SIM,
 		CLOCKSPEED							=> CLOCKSPEED
@@ -356,7 +459,7 @@ GSND:IF G_INCL_CS_SND GENERATE
 	i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)	<= i_p2c_snd_per;
 
-	e_fb_snd:entity work.fb_DMAC_int_sound
+	e_fb_snd:fb_DMAC_int_sound
 	 generic map (
 		SIM									=> SIM,
 		G_CHANNELS							=> G_SND_CHANNELS
@@ -375,30 +478,13 @@ GSND:IF G_INCL_CS_SND GENERATE
 		fb_con_p2c_i						=> i_p2c_snd_con,
 
 		snd_clk_i							=> clk_snd_i,
-		snd_dat_o							=> i_snd_dat_o,
+		snd_dat_o							=> snd_dat_o,
+		snd_dat_change_clken_o			=> snd_dat_change_clken_o,
 
 		cpu_halt_o							=> i_snd_cpu_halt
 
 	 );
 
-	i_dac_sample <= i_snd_dat_o;
-
-	SND_R_o <= i_dac_snd_pwm;
-	SND_L_o <= i_dac_snd_pwm;
-
-	e_dac_snd: entity work.dac_1bit 
-	generic map (
-		G_SAMPLE_SIZE		=> 10,
-		G_SYNC_DEPTH		=> 0
-	)
-   port map (
-		rst_i					=> fb_syscon_i.rst,
-		clk_dac				=> fb_syscon_i.clk,
-
-		sample				=> i_dac_sample,
-		
-		bitstream			=> i_dac_snd_pwm
-	);
 END GENERATE;
 GNOTSND:IF NOT G_INCL_CS_SND GENERATE
 	i_snd_cpu_halt <= '0';
