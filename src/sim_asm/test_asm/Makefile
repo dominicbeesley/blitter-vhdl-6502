@@ -5,7 +5,7 @@ TARGETS=	$(ASMTARGETS)
 
 INCS=		hw.inc common.inc os.inc
 LIBS=		
-SCRIPTS=../../../../../scripts
+SCRIPTS=../../scripts
 BUILD=./build
 
 #BLIT_LIB_OBJS=	blit_lib.o blit_lib_ctl_full.o blit_lib_copy.o blit_lib__rd_bloc_be.o blit_lib_plot.o

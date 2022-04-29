@@ -497,6 +497,12 @@ mos_handle_res:
 	sta	$200
 	inc	$200
 
+	; test SW RAM r/w
+	lda	#14
+	sta	$FE30
+	lda	#17
+	sta	$8000
+	lda	$8000
 
 	; test throttle
 
