@@ -153,6 +153,8 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
