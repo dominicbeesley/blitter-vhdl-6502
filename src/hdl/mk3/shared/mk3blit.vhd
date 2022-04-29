@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -178,7 +178,6 @@ architecture rtl of mk3blit is
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
-
 	-----------------------------------------------------------------------------
 	-- fishbone signals
 	-----------------------------------------------------------------------------
@@ -197,7 +196,6 @@ architecture rtl of mk3blit is
 	signal i_c2p_mem				: fb_con_o_per_i_t;
 	signal i_p2c_mem				: fb_con_i_per_o_t;
 
-
 	-- memory control registers wrapper
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
 	signal i_p2c_memctl			: fb_con_i_per_o_t;
@@ -213,7 +211,6 @@ architecture rtl of mk3blit is
 	-- chipset controller
 	signal i_c2p_chipset_con	: fb_con_o_per_i_t;
 	signal i_p2c_chipset_con	: fb_con_i_per_o_t;
-
 
 	-- intcon controller->peripheral
 	signal i_con_c2p_intcon		: fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
@@ -249,7 +246,6 @@ architecture rtl of mk3blit is
 	signal i_noice_debug_opfetch		: std_logic;							-- this cycle is an opcode fetch
 	signal r_noice_debug_btn			: std_logic;
 
-	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_flasher						: std_logic_vector(3 downto 0);	-- a simple set of slow clocks for generating flashing 
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
@@ -265,9 +261,10 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
 	-----------------------------------------------------------------------------
-	-- sys signals
+	-- sound signals
 	-----------------------------------------------------------------------------
 
+	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
 	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
 
@@ -509,8 +506,6 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	);
 
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
-		SND_R_o <= i_dac_snd_pwm;
-		SND_L_o <= i_dac_snd_pwm;
 
 		e_dac_snd: entity work.dac_1bit 
 		generic map (
@@ -527,8 +522,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		);
 	END GENERATE;
 	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
-		SND_R_o <= '0';
-		SND_L_o <= '0';
+		i_dac_snd_pwm <= '0';
 	END GENERATE;
 
 
@@ -536,12 +530,13 @@ END GENERATE;
 GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_chipset_cpu_halt <= '0';
 	i_chipset_cpu_int <= '0';
+	i_dac_snd_pwm <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
-	SND_R_o <= '0';
-	SND_L_o <= '0';
 END GENERATE;
 
+	SND_R_o <= i_dac_snd_pwm;
+	SND_L_o <= i_dac_snd_pwm;
 
 
 
