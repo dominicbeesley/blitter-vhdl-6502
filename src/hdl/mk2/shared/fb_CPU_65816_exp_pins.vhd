@@ -98,7 +98,7 @@ begin
 	CPUSKT_RnW_o		<= wrap_exp_i.CPUSKT_RnWZnWR;
 	CPUSKT_VDA_o		<= wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
 	CPUSKT_VPA_o		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	CPUSKT_VPB_o		<= wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS;
+	CPUSKT_VPB_o		<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
 	
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
 	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);

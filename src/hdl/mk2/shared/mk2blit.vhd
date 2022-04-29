@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -52,31 +52,12 @@ use work.board_config_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_CPU_exp_pack.all;
+use work.fb_chipset_pack.all;
 
 entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-
-		G_INCL_CPU_T65						: boolean := true;
-		G_INCL_CPU_65C02					: boolean := true;
-		G_INCL_CPU_6800					: boolean := false;
-		G_INCL_CPU_80188					: boolean := false;
-		G_INCL_CPU_65816					: boolean := true;
-		G_INCL_CPU_6x09					: boolean := true;
-		G_INCL_CPU_Z80						: boolean := true;
-		G_INCL_CPU_68008					: boolean := true;
-
-		G_INCL_CHIPSET						: boolean := true;
-		G_INCL_CS_DMA						: boolean := true;
-		G_DMA_CHANNELS						: natural := 2;
-		G_INCL_CS_BLIT						: boolean := true;
-		G_INCL_CS_SND						: boolean := true;
-		G_SND_CHANNELS						: natural := 4;
-		G_INCL_CS_AERIS					: boolean := true;
-
-		G_INCL_CS_EEPROM					: boolean := true;
-
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
 	);
 	port(
@@ -201,34 +182,6 @@ architecture rtl of mk2blit is
 	signal i_c2p_cpu				: fb_con_o_per_i_t;
 	signal i_p2c_cpu				: fb_con_i_per_o_t;
 
-	-- blit controller
-	signal i_c2p_blit_con		: fb_con_o_per_i_t;
-	signal i_p2c_blit_con		: fb_con_i_per_o_t;
-	-- blit peripheral interface control registers
-	signal i_c2p_blit_per		: fb_con_o_per_i_t;
-	signal i_p2c_blit_per		: fb_con_i_per_o_t;
-
-	-- aeris controller
-	signal i_c2p_aeris_con		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_con		: fb_con_i_per_o_t;
-	-- aeris peripheral interface control registers
-	signal i_c2p_aeris_per		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_per		: fb_con_i_per_o_t;
-
-	-- dma controller
-	signal i_c2p_dma_con			: fb_con_o_per_i_arr(G_DMA_CHANNELS-1 downto 0);
-	signal i_p2c_dma_con			: fb_con_i_per_o_arr(G_DMA_CHANNELS-1 downto 0);
-	-- dma peripheral interface control registers
-	signal i_c2p_dma_per			: fb_con_o_per_i_t;
-	signal i_p2c_dma_per			: fb_con_i_per_o_t;
-
-	-- sound controller
-	signal i_c2p_snd_con			: fb_con_o_per_i_t;
-	signal i_p2c_snd_con			: fb_con_i_per_o_t;
-	-- sound peripheral interface control registers
-	signal i_c2p_snd_per			: fb_con_o_per_i_t;
-	signal i_p2c_snd_per			: fb_con_i_per_o_t;
-
 	-- cpu beeb motherboard wrapper
 	signal i_c2p_sys				: fb_con_o_per_i_t;
 	signal i_p2c_sys				: fb_con_i_per_o_t;
@@ -236,10 +189,6 @@ architecture rtl of mk2blit is
 	-- blitter board RAM/ROM memory wrapper
 	signal i_c2p_mem				: fb_con_o_per_i_t;
 	signal i_p2c_mem				: fb_con_i_per_o_t;
-
-	-- i2c eeprom control registers wrapper
-	signal i_c2p_eeprom			: fb_con_o_per_i_t;
-	signal i_p2c_eeprom			: fb_con_i_per_o_t;
 
 	-- memory control registers wrapper
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
@@ -263,15 +212,6 @@ architecture rtl of mk2blit is
 	-- intcon peripheral->controller
 	signal i_per_c2p_intcon		: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
 	signal i_per_p2c_intcon		: fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
-
-	-- chipset controller->peripheral
-	signal i_con_c2p_chipset	: fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	signal i_con_p2c_chipset	: fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	-- chipset peripheral->controller
-	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
-	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
-
-
 
 	-----------------------------------------------------------------------------
 	-- inter component (non-fishbone) signals
@@ -300,16 +240,6 @@ architecture rtl of mk2blit is
 	signal i_noice_debug_opfetch		: std_logic;							-- this cycle is an opcode fetch
 	signal r_noice_debug_btn			: std_logic;
 
-	signal i_dma_cpu_int					: std_logic;							-- interrupt out from dma
-	signal i_dma_cpu_halt				: std_logic;							-- cpu halt request out from dma
-	signal i_blit_cpu_halt				: std_logic;							-- cpu halt request out from blit
-	signal i_aeris_cpu_halt				: std_logic;							-- cpu halt request out from aeris
-	signal i_snd_cpu_halt				: std_logic;							-- cpu halt request out from snd
-
-	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
-	signal i_snd_dat_o					: signed(9 downto 0);   			-- sound data out
 	signal i_flasher						: std_logic_vector(3 downto 0);	-- a simple set of slow clocks for generating flashing 
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
@@ -324,11 +254,13 @@ architecture rtl of mk2blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
-	-- chipset c2p intcon to peripheral sel
-	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
-	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET)-1 downto 0);  -- address decoded selected peripheral
-	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET-1 downto 0);	-- address decoded selected peripherals as one-hot		
+	-----------------------------------------------------------------------------
+	-- sound signals
+	-----------------------------------------------------------------------------
 
+	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
+	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
+	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -342,7 +274,8 @@ architecture rtl of mk2blit is
 	-- cpu control signals
 	-----------------------------------------------------------------------------
 	signal i_cpu_IRQ_n					: std_logic;
-	signal i_cpu_halt						: std_logic;
+	signal i_chipset_cpu_halt			: std_logic;
+	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic;
 
@@ -423,7 +356,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 		SIM							=> SIM,
 		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> GBUILD_INCL_HDMI
+		G_INCL_HDMI					=> G_INCL_HDMI
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
@@ -501,276 +434,76 @@ END GENERATE;
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)		<= i_c2p_chipset_con;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
-	e_chipset_con:entity work.fb_intcon_many_to_one
+	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
-		G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
+		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
-
 		fb_syscon_i						=> i_fb_syscon,
 
 		-- peripheral port connect to controllers
-		fb_con_c2p_i => i_con_c2p_chipset,
-		fb_con_p2c_o => i_con_p2c_chipset,
+		fb_per_c2p_i 	=> i_c2p_chipset_per,
+		fb_per_p2c_o 	=> i_p2c_chipset_per,
 
 		-- controller port connecto to peripherals
-		fb_per_c2p_o					=> i_c2p_chipset_con,
-		fb_per_p2c_i					=> i_p2c_chipset_con
+		fb_con_c2p_o	=> i_c2p_chipset_con,
+		fb_con_p2c_i	=> i_p2c_chipset_con,
 
-	);
+		clk_snd_i		=> i_clk_snd,
 
-	-- address decode to select peripheral
-	e_addr2s_chipset:entity work.address_decode_chipset
-	generic map (
-		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT_CHIPSET,
-		G_INCL_CS_DMA						=> G_INCL_CS_DMA,
-		G_DMA_CHANNELS						=> G_DMA_CHANNELS,
-		G_INCL_CS_BLIT						=> G_INCL_CS_BLIT,
-		G_INCL_CS_SND						=> G_INCL_CS_SND,
-		G_SND_CHANNELS						=> G_SND_CHANNELS,
-		G_INCL_CS_AERIS					=> G_INCL_CS_AERIS,
-		G_INCL_CS_EEPROM					=> G_INCL_CS_EEPROM
-	)
-	port map (
-		addr_i						=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_o					=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_o				=> i_chipset_intcon_peripheral_sel_oh
-	);
-
-	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
-	generic map (
-		SIM => SIM,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET,
-		G_ADDRESS_WIDTH => 8
-	)
-	port map (
-		fb_syscon_i 		=> i_fb_syscon,
-
-		fb_con_c2p_i		=>	i_c2p_chipset_per,
-		fb_con_p2c_o		=> i_p2c_chipset_per,
-
-		fb_per_c2p_o => i_per_c2p_chipset,
-		fb_per_p2c_i => i_per_p2c_chipset,		
-
-		peripheral_sel_addr_o					=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_chipset_intcon_peripheral_sel_oh
-
-	);
-
-GDMA:IF G_INCL_CS_DMA GENERATE
-
-	G_DMA_C:FOR I in 0 TO G_DMA_CHANNELS-1 GENERATE
-		
-		i_con_c2p_chipset(MAS_NO_CHIPSET_DMA_0 + I)	<= i_c2p_dma_con(I);
-		i_p2c_dma_con(i) 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_DMA_0 + I);
-	END GENERATE;
-	
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA)	<=	i_p2c_dma_per;
-	i_c2p_dma_per 		<= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
-
-	e_fb_dma:entity work.fb_DMAC_int_dma
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_DMA_CHANNELS,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_dma_per,
-		fb_per_p2c_o						=> i_p2c_dma_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_dma_con,
-		fb_con_p2c_i						=> i_p2c_dma_con,
-
-		int_o									=> i_dma_cpu_int,
-		cpu_halt_o							=> i_dma_cpu_halt,
-		dma_halt_i							=> i_aeris_cpu_halt
-	 );
-END GENERATE;
-GNODMA:IF NOT G_INCL_CS_DMA GENERATE
-	i_dma_cpu_halt <= i_aeris_cpu_halt;
-	i_dma_cpu_int <= '0';
-END GENERATE;
-
-GBLIT:IF G_INCL_CS_BLIT GENERATE
-
-	i_con_c2p_chipset(MAS_NO_CHIPSET_BLIT)		<= i_c2p_blit_con;
-	i_p2c_blit_con 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_BLIT);
-	i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
-
-	e_fb_blit:entity work.fb_dmac_blit
-	 generic map (
-		SIM									=> SIM
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_blit_per,
-		fb_per_p2c_o						=> i_p2c_blit_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_blit_con,
-		fb_con_p2c_i						=> i_p2c_blit_con,
-
-		cpu_halt_o							=> i_blit_cpu_halt,
-		blit_halt_i							=> i_aeris_cpu_halt
-
-	 );
-END GENERATE;
-GNOTBLIT:IF NOT G_INCL_CS_BLIT GENERATE
-	i_blit_cpu_halt <= i_aeris_cpu_halt;
-END GENERATE;
-
-GAERIS: IF G_INCL_CS_AERIS GENERATE
-
-	i_con_c2p_chipset(MAS_NO_CHIPSET_AERIS)	<= i_c2p_aeris_con;
-	i_p2c_aeris_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_AERIS);
-	
-	i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
-
-	e_fb_aeris:entity work.fb_dmac_aeris
-	 generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_aeris_per,
-		fb_per_p2c_o						=> i_p2c_aeris_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_aeris_con,
-		fb_con_p2c_i						=> i_p2c_aeris_con,
-
-		cpu_halt_o							=> i_aeris_cpu_halt,
+		cpu_halt_o		=> i_chipset_cpu_halt,
+		cpu_int_o		=> i_chipset_cpu_int,
 
 		vsync_i								=> i_vsync,
 		hsync_i								=> i_hsync,
 
-		dbg_state_o							=> i_aeris_dbg_state
+		I2C_SDA_io		=> I2C_SDA_io,
+		I2C_SCL_io		=> I2C_SCL_io,
 
-	 );
+		snd_dat_o		=> i_dac_sample,
+		snd_dat_change_clken_o => open
+
+	);
+
+	G_SND_DAC:IF G_INCL_CS_SND GENERATE
+
+		e_dac_snd: entity work.dac_1bit 
+		generic map (
+			G_SAMPLE_SIZE		=> 10,
+			G_SYNC_DEPTH		=> 0
+		)
+   	port map (
+			rst_i					=> i_fb_syscon.rst,
+			clk_dac				=> i_fb_syscon.clk,
+
+			sample				=> i_dac_sample,
+		
+			bitstream			=> i_dac_snd_pwm
+		);
+	END GENERATE;
+	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
+		i_dac_snd_pwm <= '0';
+	END GENERATE;
+
+
 END GENERATE;
-GNOTAERIS: IF NOT G_INCL_CS_AERIS GENERATE
-	i_aeris_cpu_halt <= '0';
+GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
+	i_chipset_cpu_halt <= '0';
+	i_chipset_cpu_int <= '0';
+	i_dac_snd_pwm <= '0';
+	I2C_SDA_io <= 'Z';
+	I2C_SCL_io <= 'Z';
 END GENERATE;
-
-
-GSND:IF G_INCL_CS_SND GENERATE
-	i_con_c2p_chipset(MAS_NO_CHIPSET_SND)			<= i_c2p_snd_con;
-	i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
-	
-	i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)	<= i_p2c_snd_per;
-
-	e_fb_snd:entity work.fb_DMAC_int_sound
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_SND_CHANNELS
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_snd_per,
-		fb_per_p2c_o						=> i_p2c_snd_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_snd_con,
-		fb_con_p2c_i						=> i_p2c_snd_con,
-
-		snd_clk_i							=> i_clk_snd,
-		snd_dat_o							=> i_snd_dat_o,
-
-		cpu_halt_o							=> i_snd_cpu_halt
-
-	 );
-
-	i_dac_sample <= i_snd_dat_o;
 
 	SND_BITS_L_o		<= i_dac_snd_pwm;
 	SND_BITS_L_AUX_o	<= i_dac_snd_pwm;
 	SND_BITS_R_o		<= i_dac_snd_pwm;
 	SND_BITS_R_AUX_o	<= i_dac_snd_pwm;
-
-	e_dac_snd: entity work.dac_1bit 
-	generic map (
-		G_SAMPLE_SIZE		=> 10,
-		G_SYNC_DEPTH		=> 0
-	)
-   port map (
-		rst_i					=> i_fb_syscon.rst,
-		clk_dac				=> i_fb_syscon.clk,
-
-		sample				=> i_dac_sample,
-		
-		bitstream			=> i_dac_snd_pwm
-	);
-END GENERATE;
-GNOTSND:IF NOT G_INCL_CS_SND GENERATE
-	i_snd_cpu_halt <= '0';
-
-END GENERATE;
-
-
-GEEPROM: IF G_INCL_CS_EEPROM GENERATE
-	i_c2p_eeprom <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM)	<=	i_p2c_eeprom;
-
-	e_fb_eeprom:entity work.fb_i2c
-	generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	)
-	port map (
-
-		-- eeprom signals
-		I2C_SCL_io							=> I2C_SCL_io,
-		I2C_SDA_io							=> I2C_SDA_io,
-
-		-- fishbone signals
-
-		fb_syscon_i							=> i_fb_syscon,
-		fb_c2p_i								=> i_c2p_eeprom,
-		fb_p2c_o								=> i_p2c_eeprom
-	);
-
-END GENERATE;
-GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
-I2C_SDA_io <= 'Z';
-I2C_SCL_io <= 'Z';
-END GENERATE;
-
-	i_cpu_halt <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;-- or i_snd_cpu_halt;
-
-END GENERATE;
-GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
-	i_cpu_halt <= '0';
-	i_dma_cpu_int <= '0';
-END GENERATE;
-
 
 
 
@@ -902,11 +635,15 @@ END GENERATE;
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
+
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
+		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
+		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
+		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
 		G_INCL_CPU_68008					=> G_INCL_CPU_68008
 	)
 	port map (
@@ -962,7 +699,7 @@ END GENERATE;
 		fb_p2c_i								=> i_p2c_cpu,
 
 		-- chipset control signals
-		cpu_halt_i							=> i_cpu_halt,
+		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
 
@@ -975,7 +712,7 @@ END GENERATE;
 
 	);
 
-	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_dma_cpu_int;
+	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
 
 	--===========================================================
 	-- CPU wrap external pins to/from typed objects to allow same
@@ -1116,7 +853,7 @@ i_cfg_debug_button <= CFG_io(7);
 CFG_io(10) <= i_fb_syscon.rst;
 CFG_io(11) <= i_debug_wrap_cyc;
 CFG_io(12) <= i_debug_sys_rd_ack;
-CFG_io(13) <= i_c2p_aeris_con.cyc;
+CFG_io(13) <= '0';
 
 i_hsync <= CFG_io(15);
 i_vsync <= CFG_io(14);
@@ -1127,7 +864,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
 				'1'			 when i_fb_syscon.rst_state = run else
 				i_flasher(1);
-LED_o(1) <= not i_cpu_halt;
+LED_o(1) <= not i_chipset_cpu_halt;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= i_swmos_shadow;
 

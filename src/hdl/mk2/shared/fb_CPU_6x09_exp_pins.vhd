@@ -99,7 +99,7 @@ begin
 	CPUSKT_RnW_o		<= wrap_exp_i.CPUSKT_RnWZnWR;
 	CPUSKT_BS_o			<= wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS;
 	CPUSKT_LIC_o		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	CPUSKT_BA_o			<= wrap_exp_i.CPUSKT_VSS6VPA9BAKnAS;
+	CPUSKT_BA_o			<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
 	CPUSKT_AVMA_o		<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
