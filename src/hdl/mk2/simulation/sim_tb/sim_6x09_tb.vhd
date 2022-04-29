@@ -74,7 +74,7 @@ architecture Behavioral of sim_6x09_tb is
 	signal	i_CPU_PHI16ABRT9BSKnDS				:	std_logic;		-- 6ABRT is actually an output but pulled up on the board
 	signal	i_CPU_PHI26VDAKFC0ZnMREQ			:	std_logic;
 	signal	i_CPU_SYNC6VPA9LICKFC2ZnM1			:	std_logic;
-	signal	i_CPU_VSS6VPA9BAKnAS					:	std_logic;
+	signal	i_CPU_VSS6VPB9BAKnAS					:	std_logic;
 	signal	i_CPU_nSO6MX9AVMAKFC1ZnIOREQ		:	std_logic;		-- nSO is actually an output but pulled up on the board
 	signal	i_CPU_6BE9TSCKnVPA					:	std_logic;
 	signal	i_CPU_9Q									:	std_logic;
@@ -186,7 +186,7 @@ begin
 		CPUSKT_PHI16ABRT9BSKnDS_i			=> i_CPU_PHI16ABRT9BSKnDS,
 		CPUSKT_PHI26VDAKFC0ZnMREQ_i		=> i_CPU_PHI26VDAKFC0ZnMREQ,
 		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i		=> i_CPU_SYNC6VPA9LICKFC2ZnM1,
-		CPUSKT_VSS6VPA9BAKnAS_i				=> i_CPU_VSS6VPA9BAKnAS, 
+		CPUSKT_VSS6VPB9BAKnAS_i				=> i_CPU_VSS6VPB9BAKnAS, 
 		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i	=> i_CPU_nSO6MX9AVMAKFC1ZnIOREQ, 
 		CPUSKT_6BE9TSCKnVPA_o				=> i_CPU_6BE9TSCKnVPA,
 		CPUSKT_9Q_o								=> i_CPU_9Q,
@@ -223,7 +223,7 @@ begin
 
 		CLK_E				=> i_CPU_PHI09EKZCLK,
 		CLK_Q				=> i_CPU_9Q,
-		BA					=> i_CPU_VSS6VPA9BAKnAS,
+		BA					=> i_CPU_VSS6VPB9BAKnAS,
 		BS					=> i_CPU_PHI16ABRT9BSKnDS,
 		BUSY				=> i_CPU_C6nML9BUSYKnBGZnBUSACK
 		);
