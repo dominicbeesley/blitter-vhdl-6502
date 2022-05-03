@@ -8,7 +8,7 @@ information about the static build information for the current firmware.
 Locations FC 0000 to FC 0080 contain a set of strings delimited by 0 bytes
 and terminated by two zero bytes:
 
-	
+```
  | string index | Contents                                             |
  |--------------|------------------------------------------------------|
  | 0            | Repo version:                                        |
@@ -25,6 +25,7 @@ and terminated by two zero bytes:
  |              | the repo name is shortened and the format should not |
  |              | be relied on and may change                          |
  |--------------|------------------------------------------------------|
+```
 
 More strings may be added in future
 
@@ -52,7 +53,7 @@ and presented in page FC 0100
  | FC 0003      | - reserved -                                         |
  |--------------|------------------------------------------------------|
  | FC 0004      | Hard CPU type (ABI/Instruction Set)                  |
- |              |    65xx series                                       |
+ |              |    65xx series                                      
  |              | 00 6502A                                             |
  |              | 01 65C02/65SC02/W65C02 (no CE or Rockwell ext.s)     |
  |              | 03 R65C02 (Rockwell ext.s)                           |
