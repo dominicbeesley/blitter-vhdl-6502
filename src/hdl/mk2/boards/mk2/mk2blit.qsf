@@ -100,6 +100,7 @@ source ../../simulation/sim_tb/sim_z80a.qsf
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:tcl/get-version.tcl"
 
 set_global_assignment -name SDC_FILE mk2blit.sdc
+set_global_assignment -name VHDL_FILE ../../../shared/firmware_info_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk2blit.vhd
 set_global_assignment -name VHDL_FILE version.vhd

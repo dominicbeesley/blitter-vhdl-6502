@@ -175,6 +175,10 @@ architecture rtl of mk3blit is
 	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
 	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
+	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
+	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
+
+
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
@@ -546,7 +550,10 @@ END GENERATE;
 
 		fb_syscon_i							=> i_fb_syscon,
 		fb_c2p_i								=> i_c2p_version,
-		fb_p2c_o								=> i_p2c_version
+		fb_p2c_o								=> i_p2c_version,
+
+		cfg_bits_i							=> r_cfg_ver_boot
+
 	);
 
 
@@ -882,8 +889,12 @@ begin
 	if rising_edge(i_fb_syscon.clk) then
 
 		if i_fb_syscon.prerun(0) = '1' then
+			r_cfg_ver_boot 	<= (others => '0');	-- clear rest
+			r_cfg_ver_boot(15 downto 12) <= exp_PORTEFG_io(3 downto 0);	-- portF[3..0] pins
+
 			v_cfg_pins_cpu_type_and_speed(6 downto 3) := exp_PORTEFG_io(3 downto 0);
 		elsif i_fb_syscon.prerun(1) = '1' then
+			r_cfg_ver_boot(11 downto 0) <= exp_PORTEFG_io;
 			-- read port G at boot time
 			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3);
 			v_cfg_pins_cpu_type_and_speed(2 downto 0) := exp_PORTEFG_io(11 downto 9);

@@ -34,7 +34,7 @@
 #  Dependencies: 
 # 
 #  Revision: 
-#  Additional Comments: 
+#  Additional Comments: Note "|" (PIPE) chars will be read as x"00" in rom
 # 
 # --------------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ if {
     ![catch {exec svnversion .. } svnv] 
     && ![catch {exec svn info | sed -n -e 's/^Relative URL:\\s*\\(.*\\)/\\1/p'} svnb]
    } {
-  set outdata "$svnv $tm $board\r$svnb"
+  set outdata "S:$svnv|$tm|$board|$svnb"
   set shortname "$svnv"
 
 } else {
@@ -57,13 +57,18 @@ if {
     && ![catch {exec git branch --show-current } gitb] 
     && ![catch {exec git config --get remote.origin.url } giturl]
     } {
-    set outdata "$gitv $tm $board\r$gitb:[regsub {^https?://} $giturl ""]"
+    set outdata "G:$gitv|$tm|$board|$gitb:[regsub {\.git$} [regsub {github.com/?} [regsub {^https?://} $giturl ""] ""] "" ]"
     set shortname "$gitv"
   } else {
     puts "Not in GIT, just show build date $gitv $gitb"
     set outdata "UNVERSIONED $tm $board\\UNVERSIONED"
     set shortname {UNVERSIONED}
   }
+}
+
+if {[string length $outdata] > 126} {
+  puts stderr "concatenated string is too long!"
+  return error
 }
 
 set oftag [open "version.tag" w]
@@ -73,13 +78,13 @@ close $oftag
 set of [open "version.vhd" w]
 
 puts $of "-- Automatically generated file (get-version.tcl) DO NOT EDIT!"
-puts $of "-- [regsub {\r} $outdata "\\r"]"
+puts $of "-- $outdata {.}"
 puts $of "library IEEE;"
 puts $of "use IEEE.STD_LOGIC_1164.ALL;"
 puts $of "use IEEE.NUMERIC_STD.ALL;"
 puts $of "use IEEE.STD_LOGIC_MISC.ALL;"
 puts $of "entity version_rom is port ("
-puts $of " A : in std_logic_vector(7 downto 0);"
+puts $of " A : in std_logic_vector(6 downto 0);"
 puts $of " Q : out std_logic_vector(7 downto 0)"
 puts $of ");"
 puts $of "end version_rom;"
@@ -89,7 +94,7 @@ puts $of "begin"
 puts $of "Q <="
 for {set i 0} {$i < [string length $outdata] && $i < 256} {incr i} {
   set char [string index $outdata $i]
-  scan $char %c ascii
+  if { $char == "|" } { set ascii 0 } else { scan $char %c ascii }
   set hx [format %02X $ascii]
   puts $of "   x\"$hx\" when unsigned(A) = $i else "
 }

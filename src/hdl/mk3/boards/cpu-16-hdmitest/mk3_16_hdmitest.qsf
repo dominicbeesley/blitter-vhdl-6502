@@ -114,6 +114,7 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_enabled.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/firmware_info_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd

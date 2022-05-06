@@ -45,6 +45,8 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
+use work.firmware_info_pack.all;
+use work.board_config_pack.all;
 
 entity fb_version is
 	generic (
@@ -56,7 +58,9 @@ entity fb_version is
 
 		fb_syscon_i							: in		fb_syscon_t;
 		fb_c2p_i								: in		fb_con_o_per_i_t;
-		fb_p2c_o								: out		fb_con_i_per_o_t
+		fb_p2c_o								: out		fb_con_i_per_o_t;
+
+		cfg_bits_i							: in		std_logic_vector(31 downto 0)
 	);
 end fb_version;
 
@@ -80,7 +84,7 @@ begin
 	fb_p2c_o.D_rd <= r_Q;
 
 	e_version:entity work.version_rom port map (
-		A => r_A,
+		A => r_A(6 downto 0),
 		Q => i_Q
 	);
 
@@ -102,7 +106,28 @@ begin
 							r_A <= fb_c2p_i.A(7 downto 0);
 						end if;
 					when act =>
-						r_Q <= i_Q;
+						if r_A(7) = '1' then
+							case to_integer(unsigned('0' & r_A(2 downto 0))) is
+								when 0 =>
+									r_Q <= FW_API_level;
+								when 1 =>
+									r_Q <= std_logic_vector(to_unsigned(firmware_board_level'POS(FW_board_level), 8));
+								when 2 => 
+									r_Q <= FW_API_sublevel;
+								when 4 =>
+									r_Q <= cfg_bits_i(7 downto 0);
+								when 5 =>
+									r_Q <= cfg_bits_i(15 downto 8);
+								when 6 =>
+									r_Q <= cfg_bits_i(23 downto 16);
+								when 7 =>
+									r_Q <= cfg_bits_i(31 downto 24);
+								when others =>
+									r_Q <= x"00";
+							end case;
+						else
+							r_Q <= i_Q;
+						end if;
 						r_ack <= '1';
 						state <= wrel;
 					when wrel => 

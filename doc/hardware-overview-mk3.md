@@ -639,10 +639,11 @@ Additional mappings:
 
   $FE3E:
 
+```
   Bit(s) | Value | Meaning
   -------|-------|--------------------------------------
    0    *|   1   | t65 core in operation
-         |   0   | hard cput in operation
+         |   0   | hard cpu in operation
    3..1 *|  000  | 6502A @ 2 MHz
          |  100  | 65C02 @4Mhz
          |  010  | 65C02 @8Mhz          --currently 4Mhz
@@ -656,15 +657,16 @@ Additional mappings:
    5     |   ?   | ?
    6     |   ?   | ?
    7     |   1   | bugbtn pressed         
-
+```
   $FE3F:
-
+```
   Bit(s) | Value | Meaning
   -------|-------|--------------------------------------
    0    *|   1   | memi jumper fitted i.e. chip swrom/ram disabled
          |   0   | normal
    1     |   X   | inverted bugout signal
    7..2  |   ?   | ?
+```
 
 NOTE: bits marked * are latched at reset time and do not reflect the active state
 of the config pins

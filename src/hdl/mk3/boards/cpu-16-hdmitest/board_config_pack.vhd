@@ -42,7 +42,12 @@
 library ieee;
 use IEEE.math_real.all;
 
+library work;
+use work.firmware_info_pack.all;
+
 package board_config_pack is
+
+	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
 
 	constant G_INCL_HDMI							: boolean := true;
 	constant G_INCL_CHIPSET						: boolean := true;

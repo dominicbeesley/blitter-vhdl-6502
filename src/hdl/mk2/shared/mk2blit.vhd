@@ -169,6 +169,10 @@ architecture rtl of mk2blit is
 	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
 	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
+	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
+	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
+
+
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
@@ -513,7 +517,10 @@ END GENERATE;
 
 		fb_syscon_i							=> i_fb_syscon,
 		fb_c2p_i								=> i_c2p_version,
-		fb_p2c_o								=> i_p2c_version
+		fb_p2c_o								=> i_p2c_version,
+
+		cfg_bits_i							=> r_cfg_ver_boot
+
 	);
 
 
@@ -791,10 +798,20 @@ begin
 			r_cfg_mosram <= not CFG_io(5);
 			r_cfg_swram_enable <= CFG_io(8);
 
+			r_cfg_ver_boot(15 downto 0) <= CFG_io;
+			r_cfg_ver_boot(31 downto 16) <= (others => '0');
 
 			-- TODOMK2:choose config switch
 			-- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
-			r_cfg_SYS_type <= SYS_BBC;		
+
+
+			case CFG_io(13 downto 11) is
+				when "110" =>
+					r_cfg_SYS_type <= SYS_ELK;		
+				when others =>
+					r_cfg_SYS_type <= SYS_BBC;		
+			end case;
+
 			r_cfg_mk2_cpubits <= CFG_io(3 downto 1);
 
 			r_cfg_do6502_debug <= '0';
@@ -839,7 +856,7 @@ begin
 	end if;
 end process;
 
---TODO: MK2/MK3 harmonize
+--TODO: remove after updating BLTUTILS ROMs
 i_memctl_configbits <= 
 	CFG_io(15 downto 9) &
 	r_cfg_swram_enable &
