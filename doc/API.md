@@ -55,12 +55,16 @@ and presented in page FC 0080 onwards
  |--------------|------------------------------------------------------|
  | FC 0084..87  | Configuration bits in force, see table below         | [1]
  |--------------|------------------------------------------------------|
+ | FC 0088..8F  | Capabilities, see table below                        |
+ |--------------|------------------------------------------------------|
 ```
 
 [1] The configuration bits are read at boot time. Unused bits should be masked out
 as future firmwares will likely utilize these bits
 
 #### Configuration bits
+
+FC 0084..FC 0087
 
 The configuration bits are mapped differently for each board level:
 
@@ -89,4 +93,37 @@ The configuration bits are mapped differently for each board level:
  | FC 0085      | PORTF[3..0] & PORTG[11..8]        |
  | FC 0086      | - unused -                        |
  | FC 0087      | - unused -                        |
+
+### Blitter Capabilities
+
+FC 0088..FC 008F
+
+The capabilities of the current firmware build are exposed in API>0 at these 
+locations the capabilities describe which devices and functions are available
+in the current build
+
+ | address | bit # | descriptions                   |
+ |---------|-------|--------------------------------|
+ | FC 0088 | 0     | Chipset                        |
+ |         | 1     | DMA                            |
+ |         | 2     | Blitter                        |
+ |         | 3     | Aeris                          |
+ |         | 4     | i2c                            |
+ |         | 5     | Paula sound                    |
+ |         | 6     | HDMI framebuffer               |
+ |         | 7     | T65 soft CPU                   |
+ |---------|-------|--------------------------------|
+ | FC 0089 | 0     | 65C02 hard CPU                 |
+ |         | 1     | 6800 hard CPU                  |
+ |         | 2     | 80188 hard CPU                 |
+ |         | 3     | 65816 hard CPU                 |
+ |         | 4     | 6x09 hard CPU                  |
+ |         | 5     | Z80 hard CPU                   |
+ |         | 6     | 68008 hard CPU                 |
+ |         | 7     | 680x0 hard CPU                 |
+ |---------|-------|--------------------------------|
+ | FC 008A | *     | - reserved - all bits read 0   |
+ |   to    |       |                                |
+ | FC 008F |       |                                |
+ |---------|-------|--------------------------------|
 

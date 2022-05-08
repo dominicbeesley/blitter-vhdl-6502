@@ -75,8 +75,35 @@ architecture rtl of fb_version is
 	signal	r_A		: std_logic_vector(7 downto 0);
 	signal	r_Q		: std_logic_vector(7 downto 0);
 
+	signal	i_cap_bits : std_logic_vector(15 downto 0);
+
+	function to_std(b: boolean) return std_ulogic is
+	begin
+		if b then
+			return '1';
+		else
+			return '0';
+		end if;
+	end function to_std;
+
 begin
 
+	i_cap_bits(0) 				<= to_std(G_INCL_CHIPSET);
+	i_cap_bits(1) 				<= to_std(G_INCL_CS_DMA and G_INCL_CHIPSET);
+	i_cap_bits(2) 				<= to_std(G_INCL_CS_BLIT and G_INCL_CHIPSET);
+	i_cap_bits(3) 				<= to_std(G_INCL_CS_AERIS and G_INCL_CHIPSET);
+	i_cap_bits(4) 				<= to_std(G_INCL_CS_EEPROM and G_INCL_CHIPSET);
+	i_cap_bits(5) 				<= to_std(G_INCL_CS_SND and G_INCL_CHIPSET);
+	i_cap_bits(6) 				<= to_std(G_INCL_HDMI);
+	i_cap_bits(7) 				<= to_std(G_INCL_CPU_T65);
+	i_cap_bits(8) 				<= to_std(G_INCL_CPU_65C02);
+	i_cap_bits(9) 				<= to_std(G_INCL_CPU_6800);
+	i_cap_bits(10)				<= to_std(G_INCL_CPU_80188);
+	i_cap_bits(11)				<= to_std(G_INCL_CPU_65816);
+	i_cap_bits(12)				<= to_std(G_INCL_CPU_6x09);
+	i_cap_bits(13)				<= to_std(G_INCL_CPU_Z80);
+	i_cap_bits(14)				<= to_std(G_INCL_CPU_68008);
+	i_cap_bits(15)				<= to_std(G_INCL_CPU_680x0);
 
 	fb_p2c_o.rdy_ctdn <= (others => '0') when state = wrel else to_unsigned(1, RDY_CTDN_LEN);
 	fb_p2c_o.ack <= r_ack;
@@ -107,7 +134,7 @@ begin
 						end if;
 					when act =>
 						if r_A(7) = '1' then
-							case to_integer(unsigned('0' & r_A(2 downto 0))) is
+							case to_integer(unsigned(r_A(3 downto 0))) is
 								when 0 =>
 									r_Q <= FW_API_level;
 								when 1 =>
@@ -122,6 +149,10 @@ begin
 									r_Q <= cfg_bits_i(23 downto 16);
 								when 7 =>
 									r_Q <= cfg_bits_i(31 downto 24);
+								when 8 =>
+									r_Q <= i_cap_bits(7 downto 0);
+								when 9 =>
+									r_Q <= i_cap_bits(15 downto 8);
 								when others =>
 									r_Q <= x"00";
 							end case;
