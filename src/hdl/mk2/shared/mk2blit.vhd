@@ -867,9 +867,6 @@ i_memctl_configbits <=
 
 i_cfg_debug_button <= CFG_io(7);
 
-CFG_io(10) <= i_fb_syscon.rst;
-CFG_io(11) <= i_debug_wrap_cyc;
-CFG_io(12) <= i_debug_sys_rd_ack;
 CFG_io(13) <= '0';
 
 i_hsync <= CFG_io(15);
