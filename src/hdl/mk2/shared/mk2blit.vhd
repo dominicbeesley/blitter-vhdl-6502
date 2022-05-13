@@ -845,10 +845,12 @@ begin
 				when "011" =>
 					r_cfg_cpu_type <= CPU_65C02;
 					r_cfg_mk2_cpubits <= "011";
+					r_cfg_do6502_debug <= '1';
 				when "101" =>
 					r_cfg_cpu_type <= CPU_65C02;
 					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
 					r_cfg_mk2_cpubits <= "101";
+					r_cfg_do6502_debug <= '1';
 				when others =>
 					null;
 			end case;

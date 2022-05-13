@@ -367,7 +367,7 @@ begin
 
 	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_i(0);
 
-  	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2 and r_substate = 0 else '0';
+  	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2 and r_substate = 0 and i_ack = '1' else '0';
 
   	wrap_o.noice_debug_5c	 <= '1' when 
   										i_CPUSKT_SYNC_i = '1' 
