@@ -25,6 +25,9 @@ library work;
 use work.SIM_SYS_pack.all;
 
 entity sim_t65_elk_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+	);
 end sim_t65_elk_tb;
 
 architecture Behavioral of sim_t65_elk_tb is
@@ -81,8 +84,9 @@ begin
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
+		G_MOSROMFILE => G_MOSROMFILE,
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true,
 		G_SIM_SYS_TYPE => SIM_SYS_ELK
 	)
 	port map (
@@ -117,11 +121,11 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "111" -- hard cpu speed
+	, 11 downto 9 => "101" -- hard cpu speed 8MHz
 		);
 
 	i_exp_PORTF <= (
-		7 downto 4 => "1110" -- 65c02,
+		3 downto 0 => "1100" -- 65816,
 	,	others => 'H'
 		);
 
@@ -158,7 +162,7 @@ begin
 
 
 
-	e_daughter: entity work.mk3blit_top
+	e_daughter: entity work.mk3blit
 	generic map (
 		SIM => true
 	)
@@ -258,7 +262,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm/blit-bringup2-rom0.rom",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)

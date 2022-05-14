@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -48,39 +48,18 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 use work.fishbone.all;
-use work.mk3blit_pack.all;
+use work.board_config_pack.all;
 use work.HDMI_pack.all;
+use work.fb_SYS_pack.all;
+use work.fb_CPU_pack.all;
+use work.fb_CPU_exp_pack.all;
+use work.fb_chipset_pack.all;
 
 entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-
-		G_INCL_CPU_T65						: boolean := false;
-		G_INCL_CPU_65C02					: boolean := false;
-		G_INCL_CPU_6800					: boolean := false;
-		G_INCL_CPU_80188					: boolean := false;
-		G_INCL_CPU_65816					: boolean := false;
-		G_INCL_CPU_6x09					: boolean := false;
-		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_68k						: boolean := false;
-
-		G_INCL_CHIPSET						: boolean := false;
-		G_INCL_CS_DMA						: boolean := false;
-		G_DMA_CHANNELS						: natural := 2;
-		G_INCL_CS_BLIT						: boolean := false;
-		G_INCL_CS_SND						: boolean := false;
-		G_SND_CHANNELS						: natural := 4;
-		G_INCL_CS_AERIS					: boolean := false;
-
-		G_INCL_CS_EEPROM					: boolean := false;
-		
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
-
-		G_MEM_SWRAM_SLOT					: natural := 1;
-		G_MEM_FAST_IS_10					: boolean := false;
-		G_MEM_SLOW_IS_45					: boolean := false
-
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -190,13 +169,18 @@ architecture rtl of mk3blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
-	signal i_cfg_do6502_debug	: std_logic;
-	signal i_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);
-	signal i_cfg_softt65			: std_logic;
+	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
+
+	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
+	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
+
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
-
 
 	-----------------------------------------------------------------------------
 	-- fishbone signals
@@ -208,34 +192,6 @@ architecture rtl of mk3blit is
 	signal i_c2p_cpu				: fb_con_o_per_i_t;
 	signal i_p2c_cpu				: fb_con_i_per_o_t;
 
-	-- blit controller
-	signal i_c2p_blit_con		: fb_con_o_per_i_t;
-	signal i_p2c_blit_con		: fb_con_i_per_o_t;
-	-- blit peripheral interface control registers
-	signal i_c2p_blit_per		: fb_con_o_per_i_t;
-	signal i_p2c_blit_per		: fb_con_i_per_o_t;
-
-	-- aeris controller
-	signal i_c2p_aeris_con		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_con		: fb_con_i_per_o_t;
-	-- aeris peripheral interface control registers
-	signal i_c2p_aeris_per		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_per		: fb_con_i_per_o_t;
-
-	-- dma controller
-	signal i_c2p_dma_con			: fb_con_o_per_i_arr(G_DMA_CHANNELS-1 downto 0);
-	signal i_p2c_dma_con			: fb_con_i_per_o_arr(G_DMA_CHANNELS-1 downto 0);
-	-- dma peripheral interface control registers
-	signal i_c2p_dma_per			: fb_con_o_per_i_t;
-	signal i_p2c_dma_per			: fb_con_i_per_o_t;
-
-	-- sound controller
-	signal i_c2p_snd_con			: fb_con_o_per_i_t;
-	signal i_p2c_snd_con			: fb_con_i_per_o_t;
-	-- sound peripheral interface control registers
-	signal i_c2p_snd_per			: fb_con_o_per_i_t;
-	signal i_p2c_snd_per			: fb_con_i_per_o_t;
-
 	-- cpu beeb motherboard wrapper
 	signal i_c2p_sys				: fb_con_o_per_i_t;
 	signal i_p2c_sys				: fb_con_i_per_o_t;
@@ -243,10 +199,6 @@ architecture rtl of mk3blit is
 	-- blitter board RAM/ROM memory wrapper
 	signal i_c2p_mem				: fb_con_o_per_i_t;
 	signal i_p2c_mem				: fb_con_i_per_o_t;
-
-	-- i2c eeprom control registers wrapper
-	signal i_c2p_eeprom			: fb_con_o_per_i_t;
-	signal i_p2c_eeprom			: fb_con_i_per_o_t;
 
 	-- memory control registers wrapper
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
@@ -270,15 +222,6 @@ architecture rtl of mk3blit is
 	-- intcon peripheral->controller
 	signal i_per_c2p_intcon		: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
 	signal i_per_p2c_intcon		: fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
-
-	-- chipset controller->peripheral
-	signal i_con_c2p_chipset	: fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	signal i_con_p2c_chipset	: fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	-- chipset peripheral->controller
-	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
-	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
-
-
 
 	-----------------------------------------------------------------------------
 	-- inter component (non-fishbone) signals
@@ -307,16 +250,6 @@ architecture rtl of mk3blit is
 	signal i_noice_debug_opfetch		: std_logic;							-- this cycle is an opcode fetch
 	signal r_noice_debug_btn			: std_logic;
 
-	signal i_dma_cpu_int					: std_logic;							-- interrupt out from dma
-	signal i_dma_cpu_halt				: std_logic;							-- cpu halt request out from dma
-	signal i_blit_cpu_halt				: std_logic;							-- cpu halt request out from blit
-	signal i_aeris_cpu_halt				: std_logic;							-- cpu halt request out from aeris
-	signal i_snd_cpu_halt				: std_logic;							-- cpu halt request out from snd
-
-	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
-	signal i_snd_dat_o					: signed(9 downto 0);   			-- sound data out
 	signal i_flasher						: std_logic_vector(3 downto 0);	-- a simple set of slow clocks for generating flashing 
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
@@ -331,11 +264,13 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
-	-- chipset c2p intcon to peripheral sel
-	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
-	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET)-1 downto 0);  -- address decoded selected peripheral
-	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET-1 downto 0);	-- address decoded selected peripherals as one-hot		
+	-----------------------------------------------------------------------------
+	-- sound signals
+	-----------------------------------------------------------------------------
 
+	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
+	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
+	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -349,7 +284,8 @@ architecture rtl of mk3blit is
 	-- cpu control signals
 	-----------------------------------------------------------------------------
 	signal i_cpu_IRQ_n					: std_logic;
-	signal i_cpu_halt						: std_logic;
+	signal i_chipset_cpu_halt			: std_logic;
+	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic;
 
@@ -361,6 +297,14 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTE_nOE			: std_logic;
 	signal i_cpu_exp_PORTF_nOE			: std_logic;
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
+
+		-----------------------------------------------------------------------------
+	-- cpu expansion header wrapper signals
+	-----------------------------------------------------------------------------
+	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
+	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
+	signal i_hard_cpu_en					: std_logic;
+	signal i_cpuskt_D_o					: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
@@ -396,8 +340,6 @@ architecture rtl of mk3blit is
 	signal	i_debug_wrap_sys_cyc		: std_logic;
 	signal	i_debug_wrap_sys_st		: std_logic;
 
-	signal	i_aeris_dbg_state			: std_logic_vector(3 downto 0);
-
 	signal	i_debug_65816_vma			: std_logic;
 
 	signal	i_debug_jim_hi_wr			: std_logic;
@@ -406,6 +348,8 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_write_cycle_repeat : std_logic;
 
+	signal   i_debug_80188_state		: std_logic_vector(2 downto 0);
+	signal   i_debug_80188_ale			: std_logic;
 
 begin
 
@@ -451,7 +395,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 		SIM							=> SIM,
 		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> GBUILD_INCL_HDMI
+		G_INCL_HDMI					=> G_INCL_HDMI
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
@@ -527,277 +471,76 @@ END GENERATE;
 
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
-	i_con_c2p_intcon(MAS_NO_CHIPSET)		<= i_c2p_chipset_con;
+	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
-	e_chipset_con:entity work.fb_intcon_many_to_one
+	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
-		G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
+		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
-
 		fb_syscon_i						=> i_fb_syscon,
 
 		-- peripheral port connect to controllers
-		fb_con_c2p_i => i_con_c2p_chipset,
-		fb_con_p2c_o => i_con_p2c_chipset,
+		fb_per_c2p_i 	=> i_c2p_chipset_per,
+		fb_per_p2c_o 	=> i_p2c_chipset_per,
 
 		-- controller port connecto to peripherals
-		fb_per_c2p_o					=> i_c2p_chipset_con,
-		fb_per_p2c_i					=> i_p2c_chipset_con
+		fb_con_c2p_o	=> i_c2p_chipset_con,
+		fb_con_p2c_i	=> i_p2c_chipset_con,
+
+		clk_snd_i		=> i_clk_snd,
+
+		cpu_halt_o		=> i_chipset_cpu_halt,
+		cpu_int_o		=> i_chipset_cpu_int,
+
+		vsync_i			=> i_vsync,
+		hsync_i			=> i_hsync,
+
+		I2C_SDA_io		=> I2C_SDA_io,
+		I2C_SCL_io		=> I2C_SCL_io,
+
+		snd_dat_o		=> i_dac_sample,
+		snd_dat_change_clken_o => open
 
 	);
 
-	-- address decode to select peripheral
-	e_addr2s_chipset:entity work.address_decode_chipset
-	generic map (
-		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT_CHIPSET,
-		G_INCL_CS_DMA						=> G_INCL_CS_DMA,
-		G_DMA_CHANNELS						=> G_DMA_CHANNELS,
-		G_INCL_CS_BLIT						=> G_INCL_CS_BLIT,
-		G_INCL_CS_SND						=> G_INCL_CS_SND,
-		G_SND_CHANNELS						=> G_SND_CHANNELS,
-		G_INCL_CS_AERIS					=> G_INCL_CS_AERIS,
-		G_INCL_CS_EEPROM					=> G_INCL_CS_EEPROM
-	)
-	port map (
-		addr_i						=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_o					=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_o				=> i_chipset_intcon_peripheral_sel_oh
-	);
+	G_SND_DAC:IF G_INCL_CS_SND GENERATE
 
-	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
-	generic map (
-		SIM => SIM,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET,
-		G_ADDRESS_WIDTH => 8
-	)
-	port map (
-		fb_syscon_i 		=> i_fb_syscon,
+		e_dac_snd: entity work.dac_1bit 
+		generic map (
+			G_SAMPLE_SIZE		=> 10,
+			G_SYNC_DEPTH		=> 0
+		)
+   	port map (
+			rst_i					=> i_fb_syscon.rst,
+			clk_dac				=> i_fb_syscon.clk,
 
-		fb_con_c2p_i		=>	i_c2p_chipset_per,
-		fb_con_p2c_o		=> i_p2c_chipset_per,
-
-		fb_per_c2p_o => i_per_c2p_chipset,
-		fb_per_p2c_i => i_per_p2c_chipset,		
-
-		peripheral_sel_addr_o					=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_chipset_intcon_peripheral_sel_oh
-
-	);
-
-GDMA:IF G_INCL_CS_DMA GENERATE
-
-	G_DMA_C:FOR I in 0 TO G_DMA_CHANNELS-1 GENERATE
+			sample				=> i_dac_sample,
 		
-		i_con_c2p_chipset(MAS_NO_CHIPSET_DMA_0 + I)	<= i_c2p_dma_con(I);
-		i_p2c_dma_con(i) 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_DMA_0 + I);
+			bitstream			=> i_dac_snd_pwm
+		);
 	END GENERATE;
-	
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA)	<=	i_p2c_dma_per;
-	i_c2p_dma_per 		<= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
+	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
+		i_dac_snd_pwm <= '0';
+	END GENERATE;
 
-	e_fb_dma:entity work.fb_DMAC_int_dma
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_DMA_CHANNELS,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_dma_per,
-		fb_per_p2c_o						=> i_p2c_dma_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_dma_con,
-		fb_con_p2c_i						=> i_p2c_dma_con,
-
-		int_o									=> i_dma_cpu_int,
-		cpu_halt_o							=> i_dma_cpu_halt,
-		dma_halt_i							=> i_aeris_cpu_halt
-	 );
-END GENERATE;
-GNODMA:IF NOT G_INCL_CS_DMA GENERATE
-	i_dma_cpu_halt <= i_aeris_cpu_halt;
-	i_dma_cpu_int <= '0';
-END GENERATE;
-
-GBLIT:IF G_INCL_CS_BLIT GENERATE
-
-	i_con_c2p_chipset(MAS_NO_CHIPSET_BLIT)		<= i_c2p_blit_con;
-	i_p2c_blit_con 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_BLIT);
-	i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
-
-	e_fb_blit:entity work.fb_dmac_blit
-	 generic map (
-		SIM									=> SIM
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_blit_per,
-		fb_per_p2c_o						=> i_p2c_blit_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_blit_con,
-		fb_con_p2c_i						=> i_p2c_blit_con,
-
-		cpu_halt_o							=> i_blit_cpu_halt,
-		blit_halt_i							=> i_aeris_cpu_halt
-
-	 );
-END GENERATE;
-GNOTBLIT:IF NOT G_INCL_CS_BLIT GENERATE
-	i_blit_cpu_halt <= i_aeris_cpu_halt;
-END GENERATE;
-
-GAERIS: IF G_INCL_CS_AERIS GENERATE
-
-	i_con_c2p_chipset(MAS_NO_CHIPSET_AERIS)	<= i_c2p_aeris_con;
-	i_p2c_aeris_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_AERIS);
-	
-	i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
-
-	e_fb_aeris:entity work.fb_dmac_aeris
-	 generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_aeris_per,
-		fb_per_p2c_o						=> i_p2c_aeris_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_aeris_con,
-		fb_con_p2c_i						=> i_p2c_aeris_con,
-
-		cpu_halt_o							=> i_aeris_cpu_halt,
-
-		vsync_i								=> i_vsync,
-		hsync_i								=> i_hsync,
-
-		dbg_state_o							=> i_aeris_dbg_state
-
-	 );
-END GENERATE;
-GNOTAERIS: IF NOT G_INCL_CS_AERIS GENERATE
-	i_aeris_cpu_halt <= '0';
-END GENERATE;
-
-
-GSND:IF G_INCL_CS_SND GENERATE
-	i_con_c2p_chipset(MAS_NO_CHIPSET_SND)			<= i_c2p_snd_con;
-	i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
-	
-	i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)	<= i_p2c_snd_per;
-
-	e_fb_snd:entity work.fb_DMAC_int_sound
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_SND_CHANNELS
-	 )
-    Port map (
-
-		-- fishbone signals		
-		fb_syscon_i							=> i_fb_syscon,
-
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_snd_per,
-		fb_per_p2c_o						=> i_p2c_snd_per,
-
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_snd_con,
-		fb_con_p2c_i						=> i_p2c_snd_con,
-
-		snd_clk_i							=> i_clk_snd,
-		snd_dat_o							=> i_snd_dat_o,
-
-		cpu_halt_o							=> i_snd_cpu_halt
-
-	 );
-
-	i_dac_sample <= i_snd_dat_o;
-
-	SND_R_o <= i_dac_snd_pwm;
-	SND_L_o <= i_dac_snd_pwm;
-
-	e_dac_snd: entity work.dac_1bit 
-	generic map (
-		G_SAMPLE_SIZE		=> 10,
-		G_SYNC_DEPTH		=> 0
-	)
-   port map (
-		rst_i					=> i_fb_syscon.rst,
-		clk_dac				=> i_fb_syscon.clk,
-
-		sample				=> i_dac_sample,
-		
-		bitstream			=> i_dac_snd_pwm
-	);
-END GENERATE;
-GNOTSND:IF NOT G_INCL_CS_SND GENERATE
-	i_snd_cpu_halt <= '0';
-
-END GENERATE;
-
-
-GEEPROM: IF G_INCL_CS_EEPROM GENERATE
-	i_c2p_eeprom <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM)	<=	i_p2c_eeprom;
-
-	e_fb_eeprom:entity work.fb_i2c
-	generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	)
-	port map (
-
-		-- eeprom signals
-		I2C_SCL_io							=> I2C_SCL_io,
-		I2C_SDA_io							=> I2C_SDA_io,
-
-		-- fishbone signals
-
-		fb_syscon_i							=> i_fb_syscon,
-		fb_c2p_i								=> i_c2p_eeprom,
-		fb_p2c_o								=> i_p2c_eeprom
-	);
-
-END GENERATE;
-GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
-I2C_SDA_io <= 'Z';
-I2C_SCL_io <= 'Z';
-END GENERATE;
-
-
-	i_cpu_halt <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;-- or i_snd_cpu_halt;
 
 END GENERATE;
 GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
-	i_cpu_halt <= '0';
-	i_dma_cpu_int <= '0';
+	i_chipset_cpu_halt <= '0';
+	i_chipset_cpu_int <= '0';
+	i_dac_snd_pwm <= '0';
+	I2C_SDA_io <= 'Z';
+	I2C_SCL_io <= 'Z';
 END GENERATE;
 
+	SND_R_o <= i_dac_snd_pwm;
+	SND_L_o <= i_dac_snd_pwm;
 
 
 
@@ -807,7 +550,10 @@ END GENERATE;
 
 		fb_syscon_i							=> i_fb_syscon,
 		fb_c2p_i								=> i_c2p_version,
-		fb_p2c_o								=> i_p2c_version
+		fb_p2c_o								=> i_p2c_version,
+
+		cfg_bits_i							=> r_cfg_ver_boot
+
 	);
 
 
@@ -818,7 +564,7 @@ END GENERATE;
 	port map (
 
 		-- configuration
-		do6502_debug_i						=> i_cfg_do6502_debug,
+		do6502_debug_i						=> r_cfg_do6502_debug,
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
@@ -947,18 +693,17 @@ END GENERATE;
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_68k						=> G_INCL_CPU_68k
+		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
+		G_INCL_CPU_68008					=> G_INCL_CPU_68008
 	)
 	port map (
 
 		-- configuration
 
-		cfg_do6502_debug_o				=> i_cfg_do6502_debug,
-		cfg_mk2_cpubits_o					=> i_cfg_mk2_cpubits,
-		cfg_softt65_o						=> i_cfg_softt65,
-
-
-      cfg_sys_type_i                => r_cfg_sys_type,      
+		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+     	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
@@ -968,17 +713,12 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 
-		-- cpu expansion sockets
-		exp_PORTA_io						=> exp_PORTA_io,
-		exp_PORTA_nOE_o					=> exp_PORTA_nOE_o,
-		exp_PORTA_DIR_o					=> exp_PORTA_DIR_o,
-		exp_PORTB_o							=> exp_PORTB_o,
-		exp_PORTC_io						=> exp_PORTC_io,
-		exp_PORTD_io						=> exp_PORTD_io,
-		exp_PORTEFG_io						=> exp_PORTEFG_io,
-		exp_PORTE_nOE_o					=> i_cpu_exp_PORTE_nOE,
-		exp_PORTF_nOE_o					=> i_cpu_exp_PORTF_nOE,
-		exp_PORTG_nOE_o					=> i_cpu_exp_PORTG_nOE,
+		-- wrapper expansion header/socket pins
+		wrap_exp_i							=> i_wrap_exp_i,
+		wrap_exp_o							=> i_wrap_exp_o,
+
+		hard_cpu_en_o						=> i_hard_cpu_en,
+		cpuskt_D_o							=> i_cpuskt_D_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -1009,7 +749,7 @@ END GENERATE;
 		fb_p2c_i								=> i_p2c_cpu,
 
 		-- chipset control signals
-		cpu_halt_i							=> i_cpu_halt,
+		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
 
@@ -1020,11 +760,77 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block
+		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
+		debug_80188_state_o				=> i_debug_80188_state,
+		debug_80188_ale_o					=> i_debug_80188_ale
 
 	);
 
-	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_dma_cpu_int;
+	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
+
+	--===========================================================
+	-- CPU wrap external pins to/from typed objects to allow same
+	-- fb_CPU to be used for mk2/3 boards -- signals will be 
+	-- unpacked in lower level wrappers by fb_CPU_xxx_exp_pins 
+	-- components
+	--===========================================================
+
+	-- PORTA is a 74lvc4245 need to control direction and enable
+	exp_PORTA_nOE_o <= not i_hard_cpu_en or i_fb_syscon.rst;
+	exp_PORTA_DIR_o <= not i_wrap_exp_o.CPU_D_RnW;
+	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
+						 	 i_CPUSKT_D_o(7 downto 0);
+
+	i_wrap_exp_i.CPUSKT_D(7 downto 0) <= exp_PORTA_io;
+
+	-- PORTB is hardwired output 74lvc4245
+
+	exp_PORTB_o <= i_wrap_exp_o.exp_PORTB;
+
+	-- PORTC is always input only CB3T buffer, can be output but not used
+
+	i_wrap_exp_i.CPUSKT_A(7 downto 0) <= exp_PORTC_io(7 downto 0);
+	i_wrap_exp_i.CPUSKT_A(19 downto 16) <= exp_PORTC_io(11 downto 8);
+	exp_PORTC_io <= (others => 'Z');
+
+
+	-- PORTD - individual cpu wrappers control direction and direction 
+
+	g_portd_o:for I in 11 downto 0 generate
+		exp_PORTD_io(I) <= i_wrap_exp_o.exp_PORTD(I) when i_wrap_exp_o.exp_PORTD_o_en(I) = '1' else
+							 'Z';
+	end generate;
+
+	i_wrap_exp_i.exp_PORTD <= exp_PORTD_io;
+
+	-- PORTE,F,G are multiplexed CB3T's with PORTEFG_io connected to all three on one side
+	-- broken out to separate pins on expansion headers on other sides
+	-- to use as inputs relevant nOE needs to be asserted and data read (after a delay!)
+	-- only port F is used as inputs and needs the DIR signal asserted to output data
+
+	-- PORTE always inputs at present
+	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.exp_PORTE_nOE; 
+	-- NOTE: address 23 downto 20, 15 downto 8 only valid when portE is enabled
+	i_wrap_exp_i.CPUSKT_A(15 downto 8) <= exp_PORTEFG_io(7 downto 0);
+	i_wrap_exp_i.CPUSKT_A(23 downto 20) <= exp_PORTEFG_io(11 downto 8);
+
+	i_cpu_exp_PORTF_nOE <= i_wrap_exp_o.exp_PORTF_nOE;
+
+	-- PORTF data output on lines 11..4 on 16 bit cpus, 3..0 always inputs for config
+	g_portefg_o:for I in 7 downto 0 generate
+		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(I + 8) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
+							 'Z';
+	end generate;
+
+	i_wrap_exp_i.CPUSKT_D(15 downto 8) <= exp_PORTEFG_io(11 downto 4);
+
+
+	exp_PORTEFG_io <= (others => 'Z');
+	
+	-- PORTG only used at reset, read in top level
+	i_cpu_exp_PORTG_nOE <= '1';
+
+
 
 
 	p_debug_btn:process(i_fb_syscon)
@@ -1050,8 +856,12 @@ END GENERATE;
 	end process;
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 
+-- enable port F/G for reading configuration
 p_EFG_en:process(i_fb_syscon, i_cpu_exp_PORTE_nOE, i_cpu_exp_PORTF_nOE, i_cpu_exp_PORTG_nOE)
 begin
 	if i_fb_syscon.rst = '1' then
@@ -1072,12 +882,22 @@ begin
 
 end process;
 
--- NOTE: CPU config moved to fb_CPU
+-- configure hard/soft cpu
 p_config:process(i_fb_syscon)
+variable v_cfg_pins_cpu_type_and_speed : std_logic_vector(6 downto 0);
 begin
 	if rising_edge(i_fb_syscon.clk) then
-		if i_fb_syscon.prerun(1) = '1' then
+
+		if i_fb_syscon.prerun(0) = '1' then
+			r_cfg_ver_boot 	<= (others => '0');	-- clear rest
+			r_cfg_ver_boot(15 downto 12) <= exp_PORTEFG_io(3 downto 0);	-- portF[3..0] pins
+
+			v_cfg_pins_cpu_type_and_speed(6 downto 3) := exp_PORTEFG_io(3 downto 0);
+		elsif i_fb_syscon.prerun(1) = '1' then
+			r_cfg_ver_boot(11 downto 0) <= exp_PORTEFG_io;
 			-- read port G at boot time
+			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3);
+			v_cfg_pins_cpu_type_and_speed(2 downto 0) := exp_PORTEFG_io(11 downto 9);
 			r_cfg_swromx <= not exp_PORTEFG_io(4);
 			r_cfg_mosram <= not exp_PORTEFG_io(5);
 			r_cfg_swram_enable <= exp_PORTEFG_io(6);
@@ -1087,18 +907,61 @@ begin
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
+		elsif i_fb_syscon.prerun(2) = '1' then
+
+			r_cfg_do6502_debug <= '0';
+
+			if r_cfg_cpu_use_t65 = '1' then
+				r_cfg_do6502_debug <= '1';
+			end if;
+
+			r_cfg_cpu_type <= NONE;
+			r_cfg_cpu_speed_opt <= NONE;
+			r_cfg_mk2_cpubits <= "111";
+
+			-- select cpu configuration	
+			case v_cfg_pins_cpu_type_and_speed is
+				when "1100101" =>
+					r_cfg_cpu_type <= CPU_65816;
+					r_cfg_mk2_cpubits <= "001";
+					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "0111111" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_mk2_cpubits <= "110";
+				when "0111010" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
+					r_cfg_mk2_cpubits <= "010";
+				when "0111000" =>
+					r_cfg_cpu_type <= CPU_6800;
+				when "0011000" =>
+					r_cfg_cpu_type <= CPU_680X0;
+					r_cfg_mk2_cpubits <= "000";
+				when "0100000" =>
+					r_cfg_cpu_type <= CPU_80188;
+				when "1101110" =>
+					r_cfg_cpu_type <= CPU_65c02;
+					r_cfg_mk2_cpubits <= "011";
+				when "1110101" =>
+					r_cfg_cpu_type <= CPU_65c02;
+					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
+					r_cfg_mk2_cpubits <= "101";
+				when others =>
+					null;
+			end case;
 		end if;
 	end if;
 end process;
 
 
+--TODO: MK2/MK3 harmonize
 i_memctl_configbits <= 
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
 	r_cfg_swromx &
-	i_cfg_mk2_cpubits &
-	not i_cfg_softt65;
+	r_cfg_mk2_cpubits &
+	not r_cfg_cpu_use_t65;
 
 i_cfg_debug_button <= SYS_AUX_io(6);
 
@@ -1114,26 +977,16 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= i_swmos_shadow;
+LED_o(3) <= not i_debug_write_cycle_repeat;
 
 
--- unused stuff
---SYS_AUX_io(0)	<= 'Z';
---SYS_AUX_io(1)	<= 'Z';
---SYS_AUX_io(2)	<= 'Z';
---SYS_AUX_io(3)	<= 'Z';
+SYS_AUX_o(2 downto 0)	<= i_debug_80188_state;
 
+SYS_AUX_o(3)				<= i_debug_80188_ale;
 
-SYS_AUX_o			<= (
-	0 => i_vga_debug_r,
-	1 => i_vga_debug_g,
-	2 => i_vga_debug_b,
-	3 => not (i_vga_debug_hs or i_vga_debug_vs)
-);
-
-SYS_AUX_io(0) <= i_vga_debug_hs;
-SYS_AUX_io(1) <= i_vga_debug_vs;
-SYS_AUX_io(2) <= i_vga_debug_blank;
+SYS_AUX_io(0) <= i_debug_wrap_sys_st;
+SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
+SYS_AUX_io(2) <= i_wrap_exp_o.CPU_D_RnW;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');
@@ -1151,7 +1004,7 @@ SD_MOSI_o <= '1';
 -- H D M I
 --====================================================
 
-
+G_HDMI:IF G_INCL_HDMI GENERATE
 	i_per_p2c_intcon(PERIPHERAL_NO_HDMI)		<= i_p2c_hdmi_per;
 	i_c2p_hdmi_per			<= i_per_c2p_intcon(PERIPHERAL_NO_HDMI);
 
@@ -1185,7 +1038,7 @@ SD_MOSI_o <= '1';
 		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank
 	);
-
+END GENERATE;
 
 
 end rtl;

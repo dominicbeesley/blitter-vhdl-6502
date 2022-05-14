@@ -91,14 +91,6 @@ begin
 
 	debug_mem_a_stb_o <= fb_c2p_i.a_stb;
 
---	p_latch_d:process(fb_syscon_i, state, MEM_D_io)
---	begin
---		if fb_syscon_i.rst = '1' then
---			fb_p2c_o.D_rd <= (others => '0');
---		elsif state /= idle and state /= act then
---			fb_p2c_o.D_rd <= MEM_D_io;
---		end if;
---	end process;
 
 	fb_p2c_o.D_rd <= MEM_D_io;
 
@@ -185,7 +177,6 @@ begin
 
 								fb_p2c_o.rdy_ctdn <= to_unsigned(v_rdy_first, RDY_CTDN_LEN);			
 								state <= v_st_first;
-
 							end if;
 						end if;
 					when wait1 =>
@@ -213,7 +204,6 @@ begin
 						state <= act;
 						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
 						fb_p2c_o.ack <= '1';
-						--fb_p2c_o.D_rd <= MEM_D_io;
 					when act =>
 						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
 						fb_p2c_o.ack <= '0';

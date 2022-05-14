@@ -35,18 +35,21 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	        MikeStirling				Stuff from Mike Stirling/Hoglet from the BeebFPGA project
 	        Missing					Where to place missing 3rd party libraries with incompatible licences
 	          JohnKent				6800, 6809 cores
-	          P65816				65816 core
+	          P65816				65816 core	          
 	        T6502					The T65 core
-	        TG68					The TG68 core
-	      fishbone					The Fishbone Bus basic components and definitions
-	    mk3						Projects and files relevant to the Mk.3 board
+	        TG68					The TG68 core	        
+	      fishbone					The Fishbone Bus basic components and definitions	    
+	      simulation
+	    mk3 (or mk2)				Projects and files relevant to the Mk.3/2 board
 	      boards					contains individual builds
 	      	cpu-16-max				MAX10 16000LE build with all options except HDMI
-	      shared					HDL shared between all mk.3 builds
+	      	...
+	      shared					HDL shared between all mk.3/2 builds
 	      testing					Projects for board testing and production
 	        mk3-board-erc				A simple Project to perform board ERC  
 	        mk3-erc-68000				Perform ERC on a 68000 plug-in cpu board
 	      simulation				ModelSim testbenches and test assembler code
 	      	sim_asm					Assembler test code for various CPUs
 	      	sim_tb					VHDL testbenches and .qsf configurations
-	      	
+	    shared					Blitter board specific files shared between mk2/3
+	    simulation_shared				TODO: move to library/simulation

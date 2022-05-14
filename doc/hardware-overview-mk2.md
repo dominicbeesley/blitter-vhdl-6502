@@ -164,10 +164,10 @@ All jumpers marked nc should be left unconnected as they may be debug outputs
                 +-----------------------------------------+
          cfg#         0 1 2 3 4 5 6 7 8 9 A B C D E F
 
-                  S S t c c c s m n b m b n n n n V H 3 3
-                  n n 6 p p p w o c u e u c c c c S S v v
-                  d d 5 u u u r s   g m g         Y Y 3 3
-                  L R   0 1 2 o r   b i o         N N
+                  S S t c c c s m n b m b s s s n V H 3 3
+                  n n 6 p p p w o c u e u y y y c S S v v
+                  d d 5 u u u r s   g m g s s s   Y Y 3 3
+                  L R   0 1 2 o r   b i o 0 1 2   N N
                               m a   t   u         C C
                               x m   n   t
                                   
@@ -181,18 +181,35 @@ All jumpers marked nc should be left unconnected as they may be debug outputs
     fitted cpu: (o = open, + = closed). It is important to set these correctly
     even if the T65 core is being used.
 
+  * sys[] - these jumpers should be set to the correct configuration for the 
+    fitted type of host computer (o = open, + = closed). It is important to set 
+    these correctly
 
+```
 | cpu[0]  | cpu[1]  | cpu[2]  | processor   | speed max
 |---------|---------|---------|-------------|-----------
 |    o    |    o    |    o    | 6502A       |     2 MHz
-|    o    |    o    |    +    | 65C02       |     2
-|    o    |    +    |    o    | 65C02       |     8
+|    o    |    o    |    +    | R65C02      |     4
+|    o    |    +    |    o    | W65C02S     |     8
 |    o    |    +    |    +    | 65C816      |     8
 |    +    |    o    |    o    | 6809E/6309E |     2
 |    +    |    o    |    +    | 6309E       |     4
 |    +    |    +    |    o    | Z80A        |     8
 |    +    |    +    |    +    | 68008       |     8
+```    
+
+```
+| sys[0]  | sys[1]  | sys[2]  | host/SYS    |
+|---------|---------|---------|-------------|
+|    o    |    o    |    o    | Model B     |
+|    +    |    o    |    o    | Electron    |
+|    o    |    +    |    o    | Model B+    |
+|    +    |    +    |    o    | Master 128  |
+```
+all other settings are reserved
+
           
+
 
   * **swromx** when fitted ROM sets are swapped.
     When this jumper is open the T65 core will see ROM set 0

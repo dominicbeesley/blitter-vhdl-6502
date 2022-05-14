@@ -1,0 +1,9 @@
+-i build/z80_rom.ihx
+-b CODE=0xF000
+-b CODE_VEC=0xFF00
+-b DATA=0x100
+-m
+-j
+build/font_data.rel
+build/z80_rom.rel
+-e

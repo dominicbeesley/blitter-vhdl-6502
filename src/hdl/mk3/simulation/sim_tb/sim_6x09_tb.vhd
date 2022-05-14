@@ -1,4 +1,26 @@
-----------------------------------------------------------------------------------
+-- MIT License
+-- -----------------------------------------------------------------------------
+-- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+-- -----------------------------------------------------------------------------
+
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
@@ -8,7 +30,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		For mk1 board simulation
+-- Description: 		For mk3 board simulation
 --
 -- Dependencies: 
 --
@@ -22,6 +44,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_6x09_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm09/build/test_rom0.bin"
+	);
 end sim_6x09_tb;
 
 architecture Behavioral of sim_6x09_tb is
@@ -107,8 +132,9 @@ begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm09/test_rom0.bin",
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE => G_MOSROMFILE,
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,
@@ -141,7 +167,7 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "111" -- hard cpu speed (6809)
+	, 11 downto 9 => "010" -- hard cpu speed (6309@3.5)
 		);
 
 	i_exp_PORTF <= (
@@ -196,7 +222,7 @@ begin
 
 	
 
-	e_daughter: entity work.mk3blit_top
+	e_daughter: entity work.mk3blit
 	generic map (
 		SIM => true
 	)
@@ -346,7 +372,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm09/test_rom0.bin",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)

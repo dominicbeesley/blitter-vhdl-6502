@@ -22,6 +22,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_6800_tb is
+generic (
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm6800/build/boot6800_testbench_mos.rom"
+	);
 end sim_6800_tb;
 
 architecture Behavioral of sim_6800_tb is
@@ -105,8 +108,9 @@ begin
 
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
-		G_MOSROMFILE => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
-		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE => G_MOSROMFILE,
+		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_MK3 => true
 	)
 	port map (
 		SYS_phi0_o				=> i_SYS_phi0,
@@ -194,7 +198,7 @@ begin
 
 	
 
-	e_daughter: entity work.mk3blit_top
+	e_daughter: entity work.mk3blit
 	generic map (
 		SIM => true
 	)
@@ -271,6 +275,9 @@ begin
 
 
 	e_cpu:entity work.real_6800_tb
+	generic map (
+				dly_addr  => 80 ns -- faster than spec!
+	)
 	port map (
 		A					=> i_cpu_A(15 downto 0),
 		D					=> i_exp_PORTA_io_cpu,
@@ -341,7 +348,7 @@ begin
 	generic map (
 		size 			=> 16*1024,
 		dump_filename => "",
-		romfile => "../../../../simulation/sim_asm/test_asm6800/boot6800_testbench_mos.rom",
+		romfile => G_MOSROMFILE,
 		tco => 55 ns,
 		taa => 55 ns
 	)

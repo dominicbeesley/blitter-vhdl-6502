@@ -22,10 +22,7 @@
 ------------------------------------------------------------------------------
 --
 
--- This is a quick'n'dirty wrapper for the TG68_fast core that mimics the bus
--- behaviour of the 68008 processor. There are no guarantees that this is 
--- modelled accurately but it has been used to simulate a 68008 successfully
--- enough to develop a CPU interfacing FPGA.
+
 
 library ieee;
 use ieee.std_logic_1164.all;

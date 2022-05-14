@@ -6,10 +6,8 @@ set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_68000_tb -section_id 
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68K_Pack.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68K_ALU.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68KdotC_Kernel.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68K.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68_fast.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/TG68/TG68.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_68000_tb
@@ -19,6 +17,6 @@ set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_pack.vhd -section_id sim_68000_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_SYS_tb.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_pack.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_tb.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_68000_tb.vhd -section_id sim_68000_tb

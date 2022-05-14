@@ -45,7 +45,7 @@ create_clock -name {CLK_48M} -period 20.833 -waveform { 0.000 10.416 } [get_port
 # Create Generated Clock
 #**************************************************************
 
-set MAINPLL {e_top|e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1}
+set MAINPLL {e_fb_clocks|\g_not_sim_pll:e_pll|altpll_component|auto_generated|pll1}
 create_generated_clock -name {main_pll} -duty_cycle 50/1 -multiply_by 8 -divide_by 3 \
 	-source [get_pins "$MAINPLL|inclk[0]"] \
 	-master_clock {CLK_48M} \
@@ -56,7 +56,7 @@ create_generated_clock -name {snd_pll} -duty_cycle 50/1 -multiply_by 80 -divide_
 	-master_clock {CLK_48M} \
 	[get_pins "$MAINPLL|clk[1]"] 
 
-set HDMIPLL {e_top|e_fb_HDMI|\g_not_sim_pll:e_pll_hdmi|altpll_component|auto_generated|pll1}
+set HDMIPLL {e_fb_HDMI|\g_not_sim_pll:e_pll_hdmi|altpll_component|auto_generated|pll1}
 create_generated_clock -name {hdmi_tmds} -duty_cycle 50/1 -multiply_by 45 -divide_by 16 \
 	-source [get_pins "$HDMIPLL|inclk[0]"] \
 	-master_clock {CLK_48M} \
@@ -124,26 +124,25 @@ set_false_path -from [get_clocks {snd_pll}] -to [get_clocks {main_pll}]
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*rst_flop}]
 #set_false_path -from {fb_syscon:e_fb_syscon|r_rst_state.run} -to [get_keepers {*flancter*set_flop}]
 
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_t65} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_6x09} ]
-#set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_z80} ]
-#set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_68k} ]
-#set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_6502} ]
-#set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_65c02} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_6800} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_65816} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_en_t65} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cfg_cpubits*} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cfg_hard_cpu_type.*} ]
-set_false_path -from [get_registers {e_top|e_fb_cpu|r_cpu_run_ix*} ]
+
+set_false_path -from [get_registers {r_cfg_swromx} ]
+set_false_path -from [get_registers {r_cfg_mosram} ]
+set_false_path -from [get_registers {r_cfg_swram_enable} ]
+set_false_path -from [get_registers {r_cfg_cpu_use_t65} ]
+set_false_path -from [get_registers {r_cfg_mk2_cpubits*} ]
+set_false_path -from [get_registers {r_cfg_cpu_type.*} ]
+set_false_path -from [get_registers {r_cfg_cpu_speed_opt.*} ]
+
+set_false_path -from [get_registers {e_fb_cpu|r_cpu_en_*} ]
+set_false_path -from [get_registers {e_fb_cpu|r_cpu_run_ix*} ]
 
 #**************************************************************
 # Set Multicycle Path
 #**************************************************************
 
 #cpu multi-cycles
-set t65paths [ get_pins {e_top|e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
-set t65regs  [ get_pins {e_top|e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
+set t65paths [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
+set t65regs  [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 
 set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
 set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
@@ -153,13 +152,32 @@ set_multicycle_path -hold -end -from  $t65regs 1
 
 #blitter addr calcs multi-cycles
 
-set blitpaths [ get_pins {\GBLIT:e_fb_blit|addr_gen|*|*} ]
+set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
-set_multicycle_path -setup -end -from  $blitpaths  -to  $blitpaths 2
-set_multicycle_path -hold -end -from  $blitpaths  -to  $blitpaths 1
+set blitpaths2 [ get_registers "$blit|*" ]
+
+set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
+set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
 
 
+#aeris - not thoroughly checked!
 
+set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
+set aeris_src_regs [get_registers "$aeris|r_op*"] 
+set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
+set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
+
+set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
+set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 2
+set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 2
+set_multicycle_path -hold -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 1
+
+set_multicycle_path -setup -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 2
+set_multicycle_path -hold -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 1
 
 
 #**************************************************************

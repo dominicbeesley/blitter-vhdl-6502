@@ -123,7 +123,7 @@ begin
 
 	i_rtl_intr <= '0';
 	i_rtl_nmi <= '0';
-	i_rtl_por <= not nRES_i;
+	i_rtl_por <= nRES_i;
 
 	p_ad_del:process
 	begin
