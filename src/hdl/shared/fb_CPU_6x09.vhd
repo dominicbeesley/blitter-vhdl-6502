@@ -122,7 +122,7 @@ architecture rtl of fb_cpu_6x09 is
 --! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 --TODO: Make the timings below meet specs! Currently bodged
 
--- Timings in fast clock cycles - 1
+-- Timings in fast clock cycles - 2!
 -- 2MHz timings
    constant T_phA_2 : natural := 12;
    constant T_phB_2 : natural := 12;
@@ -134,10 +134,10 @@ architecture rtl of fb_cpu_6x09 is
    constant T_tDH_2 : natural := 2;
 
 -- 3MHz timings
-   constant T_phA_3 : natural := 8;
-   constant T_phB_3 : natural := 8;
-   constant T_phC_3 : natural := 8;
-   constant T_phD_3 : natural := 8;			-- 4*9/128 =~ 3.55MHz!
+   constant T_phA_3 : natural := 7;
+   constant T_phB_3 : natural := 7;
+   constant T_phC_3 : natural := 7;
+   constant T_phD_3 : natural := 7;			-- 4*9/128 =~ 3.55MHz!
    constant T_tAD_3 : natural := 10;		-- really should be 13
    constant T_tDD_3 : natural := 8;
    constant T_tDS_3 : natural := 0;
