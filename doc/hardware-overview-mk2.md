@@ -2,8 +2,7 @@
 -----------------
 
 
-This document describes the firmware for the mk.2 board which is no longer supported
-For the latest mk.3 board see
+This document describes the firmware for the mk.2 board, for the latest mk.3 board see
         -       [Mk.3 overview](hardware-overview-mk3.md)
 
 
