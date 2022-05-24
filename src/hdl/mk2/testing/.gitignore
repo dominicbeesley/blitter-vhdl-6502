@@ -1,0 +1,12 @@
+*/db
+*/incremental_db
+*/output_files
+*/simulation
+*/greybox_tmp
+*/*.qws
+*/*.qdf
+*/*.chg
+*/*.bak
+*/*.rpt
+*/makefile.deps
+*/*.out.sdc
