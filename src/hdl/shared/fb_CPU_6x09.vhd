@@ -348,6 +348,7 @@ begin
 						r_cpu_Q <= '0';
 						r_ph_ring <= (others => '0');
 					end if;
+					r_cfg_throttle <= wrap_i.throttle_cpu_2MHz;
 				when phD =>
 					if (r_cfg_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1') and
 						((r_cfg_3_5_MHz = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1') then
@@ -369,7 +370,6 @@ begin
 							r_wrap_ack <= '1';
 							r_cpu_E <= '0';
 							r_ph_ring <= (others => '0');
-							r_cfg_throttle <= wrap_i.throttle_cpu_2MHz;
 							if fb_syscon_i.rst = '0' then
 								r_cpu_res <= '0';
 							end if;
