@@ -134,6 +134,8 @@ begin
 			if wrap_i.cpu_2MHz_phi2_clken = '1' then
 				r_throttle_wait <= '0';
 			end if;
+
+			r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
 		end if;
 
 	end process;
@@ -175,11 +177,9 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_cpu_halt <= '0';
-			r_throttle_cpu_2MHz <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_t65_clken = '1' then
 				r_cpu_halt <= wrap_i.cpu_halt;
-				r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
 			end if;
 		end if;			
 	end process;

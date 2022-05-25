@@ -127,7 +127,8 @@ architecture rtl of fb_cpu_65c02 is
 
 	signal r_fbreset_prev	: std_logic := '0';
 
-	signal r_throttle_cpu_2MHz : std_logic;
+	signal r_throttle			: std_logic;
+	signal r_had_sys_phi2 	: std_logic;
 
 
 	-- port b
@@ -233,6 +234,10 @@ begin
 				end if;
 			end if;
 
+			if wrap_i.cpu_2MHz_phi2_clken = '1' then
+				r_had_sys_phi2 <= '1';
+			end if;
+
 			case r_state is
 				when phi1 =>
 					if (r_substate = SUBSTATE_A_4 and r_cfg_8MHz = '0') or
@@ -277,6 +282,10 @@ begin
 						r_substate <= r_substate - 1;
 					end if;
 
+					r_had_sys_phi2 <= '0';
+					r_throttle <= wrap_i.throttle_cpu_2MHz;
+
+
 				when phi2 =>
 
 					if (r_substate = SUBSTATE_D_WR_4 and r_cfg_8MHz = '0') or
@@ -289,7 +298,6 @@ begin
 						if i_ack then
 							r_state <= phi1;
 							r_PHI0 <= '0';
-							r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
 							if r_cfg_8MHz = '0' then
 								r_substate <= SUBSTATEMAX_4;
 							else
@@ -312,7 +320,7 @@ begin
 				r_state <= phi1;
 				r_substate <= SUBSTATEMAX_4;
 				r_PHI0 <= '0';				
-				r_throttle_cpu_2MHz <= wrap_i.throttle_cpu_2MHz;
+				r_throttle <= wrap_i.throttle_cpu_2MHz;
 			end if;
 			r_fbreset_prev <= fb_syscon_i.rst;
 
@@ -329,7 +337,7 @@ begin
 			(r_rdy_ctup >= SUBSTATE_D_4 and r_cfg_8MHz = '0') or
 			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and
-		(r_throttle_cpu_2MHz = '0' or wrap_i.cpu_2MHz_phi2_clken = '1')
+		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
 
 			else
 				'0';
