@@ -197,7 +197,9 @@ architecture rtl of fb_cpu_6x09 is
 	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
 
-	signal r_cfg_not6309			: std_logic;
+	signal r_cfg_3_5_MHz		: std_logic;
+	signal r_cfg_throttle	: std_logic;
+	signal r_had_sys_phi2	: std_logic;
 
 begin
 
@@ -206,9 +208,9 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			if fb_syscon_i.rst = '1' then
 				if cpu_speed_opt_i = CPUSPEED_6309_3_5 then
-					r_cfg_not6309 <= '1';
+					r_cfg_3_5_MHz <= '1';
 				else
-					r_cfg_not6309 <= '0';
+					r_cfg_3_5_MHz <= '0';
 				end if;
 			end if;
 		end if;
@@ -264,7 +266,7 @@ begin
 	wrap_o.D_wr_stb		<= i_D_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
 
-	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_not6309 = '1' else
+	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_3_5_MHz = '1' else
 						r_DD_ring(T_tDD_2);
 
 
@@ -274,7 +276,7 @@ begin
 			r_a_stb <= '0';
 			if r_cpu_res = '0' and 
 				r_cpu_6x09_VMA = '1' and (
-				(r_cfg_not6309 = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
+				(r_cfg_3_5_MHz = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
 				) then
 
 				if wrap_i.noice_debug_inhibit_cpu = '1' then
@@ -321,32 +323,38 @@ begin
 
 			r_wrap_ack <= '0';
 
+			if wrap_i.cpu_2MHz_phi2_clken = '1' then
+				r_had_sys_phi2 <= '1';
+			end if;
+
 			case r_state is
 				when phA => 
-					if (r_cfg_not6309 = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
+					if (r_cfg_3_5_MHz = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
 						r_state <= phB;
 						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_Q <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
+					r_had_sys_phi2 <= '0';
 				when phB =>
-					if (r_cfg_not6309 = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
+					if (r_cfg_3_5_MHz = '1' and r_PH_ring(T_phB_3) = '1') or r_PH_ring(T_phB_2) = '1' then
 						r_state <= phC;
 						r_cpu_E <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phC =>
-					if (r_cfg_not6309 = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
+					if (r_cfg_3_5_MHz = '1' and r_PH_ring(T_phC_3) = '1') or r_PH_ring(T_phC_2) = '1' then
 						r_state <= phD;
 						r_cpu_Q <= '0';
 						r_ph_ring <= (others => '0');
 					end if;
 				when phD =>
-					if (r_cfg_not6309 = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1' then
+					if (r_cfg_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1') and
+						((r_cfg_3_5_MHz = '1' and r_PH_ring(T_phD_3) = '1') or r_PH_ring(T_phD_2) = '1') then
 						if 
 							r_cpu_res = '1' 
 							or r_cpu_6x09_VMA = '0' 
-							or (r_cfg_not6309 = '1' and r_DS_ring(T_tDS_3) = '1')
+							or (r_cfg_3_5_MHz = '1' and r_DS_ring(T_tDS_3) = '1')
 							or wrap_i.noice_debug_inhibit_cpu = '1'
 							or r_DS_ring(T_tDS_2) = '1' then
 							r_state <= phA;
@@ -361,6 +369,7 @@ begin
 							r_wrap_ack <= '1';
 							r_cpu_E <= '0';
 							r_ph_ring <= (others => '0');
+							r_cfg_throttle <= wrap_i.throttle_cpu_2MHz;
 							if fb_syscon_i.rst = '0' then
 								r_cpu_res <= '0';
 							end if;
