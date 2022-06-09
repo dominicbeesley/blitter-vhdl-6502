@@ -108,7 +108,9 @@ entity fb_sys is
 		debug_write_cycle_repeat_o			: out		std_logic;
 
 		debug_wrap_sys_cyc_o					: out		std_logic;
-		debug_wrap_sys_st_o					: out		std_logic
+		debug_wrap_sys_st_o					: out		std_logic;
+
+		debug_sys_D_dir						: out		std_logic
 
 	);
 end fb_sys;
@@ -188,6 +190,7 @@ begin
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
 	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
 	debug_wrap_sys_st_o <= i_SYScyc_st_clken;
+	debug_sys_D_dir		<= '1' when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else '0';
 
 	-- used to synchronise throttled cpu
 	cpu_2MHz_phi2_clken_o <= i_SYScyc_end_clken;
