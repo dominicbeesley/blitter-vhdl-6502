@@ -38,10 +38,6 @@
 --
 ----------------------------------------------------------------------------------
 
---TODO: no effort is made here to register the 2MHz part to the system clock
--- due to the jitter on some SYS clock cycles which are not exactly 2MHz the 
--- CPU may miss some cycles!
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -197,10 +193,11 @@ begin
 
 
 
-	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					
-										and (r_PHI0_dly(r_PHI0_dly'high) = '1' 	
-										or r_PHI0_dly(0) = '1')
-										else												
+	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
+										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
+										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
+										else												-- bank address so hold is short
+																							-- and setup late														
 							'0';
 
 	wrap_o.A_log 			<= r_log_A;
@@ -223,7 +220,6 @@ begin
 	variable v_ctupnext : t_substate;	
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-
 			r_a_stb <= '0';
 			r_D_WR_stb <= '0';
 
