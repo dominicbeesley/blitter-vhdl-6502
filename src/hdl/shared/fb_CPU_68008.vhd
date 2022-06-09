@@ -254,9 +254,9 @@ begin
 							when r_cpuskt_A_m(19 downto 16) = x"F" 
 								or r_cpuskt_A_m(19 downto 16) = x"E"	else -- sys or chipset
 			      x"7" & r_cpuskt_A_m
-			      		when r_cpuskt_A_m(19 downto 16) = x"D" and cfg_mosram_i = '1' else -- Flash ROM
+			      		when r_cpuskt_A_m(19 downto 16) = x"D" and cfg_mosram_i = '1' else -- BB/Chip RAM MOS ROM
 			      x"8" & r_cpuskt_A_m
-			      		when r_cpuskt_A_m(19 downto 16) = x"D" else -- Flash ROM
+			      		when r_cpuskt_A_m(19 downto 16) = x"D" else -- Flash MOS ROM
 			      x"0" & r_cpuskt_A_m; -- RAM
 
 	p_cpu_clk:process(fb_syscon_i)
