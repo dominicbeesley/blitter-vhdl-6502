@@ -163,10 +163,10 @@ All jumpers marked nc should be left unconnected as they may be debug outputs
                 +-----------------------------------------+
          cfg#         0 1 2 3 4 5 6 7 8 9 A B C D E F
 
-                  S S t c c c s m n b m b s s s n V H 3 3
-                  n n 6 p p p w o c u e u y y y c S S v v
-                  d d 5 u u u r s   g m g s s s   Y Y 3 3
-                  L R   0 1 2 o r   b i o 0 1 2   N N
+                  S S t c c c s m n b m b n s s s V H 3 3
+                  n n 6 p p p w o c u e u c y y y S S v v
+                  d d 5 u u u r s   g m g   s s s Y Y 3 3
+                  L R   0 1 2 o r   b i o   0 1 2 N N
                               m a   t   u         C C
                               x m   n   t
                                   
