@@ -20,19 +20,40 @@ Note: some of the registers below may be aliased in "unused" areas of the
 Physical 24-bit memory map. The use of aliased registers is discouraged
 as these unused areas may be repurposed in future firmware releases.
 
+```
+    +--------------------------+-----------------------+ 
+    | Physical address range   | hardware item         |
+    +--------------------------+-----------------------+
+    | $00 0000 - $1F FFFF      | SRAM                * | 
+    +--------------------------+-----------------------+
+    | $20 0000 - $5F FFFF      | SRAM repeats        * | 
+    +--------------------------+-----------------------+
+    | $60 0000 - $7F FFFF      | BB SRAM repeats     * | (if disabled then SRAM will appear here)
+    +--------------------------+-----------------------+
+    | $80 0000 - $BF FFFF      | EEPROM repeats        | (256/512Kb onboard Flash on mk.2)**
+    +--------------------------+-----------------------+ 
+    |       ---- undefined ---- do not use ----        |
+    +--------------------------+-----------------------+ 
+    | $FA 0000 - $FB FDFF      | HDMI memory           | 
+    +--------------------------+-----------------------+ 
+    | $FB FE00 - $FB FFFF      | HDMI registers        | 
+    +--------------------------+-----------------------+ 
+    | $FC 0000 - $FC FFFF      | Debug/Version info    | 
+    +--------------------------+-----------------------+ 
+    | $FE FC00 - $FE FCFF      | Chipset registers     | 
+    +--------------------------+-----------------------+
+    |  "system" (except for SWRAM/SWMOS)               |
+    | $FF 0000 - $FF 7FFF      | SYS RAM               |
+    | $FF 8000 - $FF BFFF      | SYS ROM / SWRAM       |
+    | $FF C000 - $FF FBFF      | SYS MOS / SWMOS       |
+    | $FF FC00 - $FF FEFF      | SYS HARDWARE          |
+    | $FF FF00 - $FF FFFF      | SYS MOS / SWMOS       |
+    +--------------------------------------------------+
+```
 
-
-        
-        FA      HDMI
-        FB      HDMI
-
- | FF FE31      | Debug mem control
- | FF FE32      | Debug mem control backup
- | FF FE35      | Debug reg
- | FF FE36      | Aux mem control
- | FF FE37      | BLTURBO "Low Turbo"
- | FF FE3E..3F  | Mk.2 configuratio bits (deprecated)
-
+* On Mk.2 board the entirety of the range 00 0000 to 7F FFFF is served by
+a single battery backed RAM. On the Mk.3 various combinations of normal
+and battery backed RAM may be mapped to the area.
 
 
 # Using JIM
@@ -136,6 +157,36 @@ number will read back.
 ```
 
 
+# Logical to Physical Mapping
+
+There is a layer of address remapping between the currently running CPU and
+the hardware resources of the board. This allows for:
+
+ - different CPU's require ROM at different locations
+ - 8, 16, 32 bit CPU requirements
+ - providing enhanced Sideways ROM/RAM
+
+
+## MOS Compatible memory Map
+
+In general most 8-bit CPUs use a "MOS compatible" memory map such that RAM
+appears at 0-7FFF, Sideways ROM/RAM at 8000-BFFF and MOS ROM at C000-FFFF with
+a "hole" for hardware register access at FC00-FEFF.
+
+The default mappings for 6502, 65c02, 65816, 6809, 6309 and 6800 all use a 
+similar mapping.
+
+
+TODO: rom / ram mappings here
+
+
+At boot time the RAM at 0000-7FFF is mapped to motherboard memory on 65xx systems
+this will allow most games and demos to run without and modification. 
+
+The motherboard memory has a maximum speed 
+
+### Sideways ROM/RAM
+
 
 
 # Register Reference
@@ -144,10 +195,12 @@ number will read back.
 
 The entire memory map of the BBC micro appears in bank FF. When accessed 
 via the JIM mechanism of an 8-bit CPU this is just like addressing direct
-to a normal 160bit address. On a 16 or 32 bit CPU the motherboard resources
-can be accessed here. Note however that "special". 
+to a normal 16bit address. On a 16 or 32 bit CPU the motherboard resources
+can be accessed here. 
 
-Note: when reading through to the motherboard in this way the Blitter
+For more information see (Logical to Physical Mapping)[#logical-to-physical-mapping]
+
+Note: when reading through to the motherboard via JIM the Blitter
 sideways ROM/RAM mapping is NOT performed therefore it is possible to
 access all ROMS on the motherboard by using this mechanism as the ROM
 select register is always written to both the Blitter copy AND the 
@@ -157,36 +210,32 @@ motherboard.
 ```
  | Phys Address | Contents                                             |
  |--------------|------------------------------------------------------|
+ | FF FCFD..FF  | JIM device and paging registers
+ |--------------|------------------------------------------------------|
+ | FF FE05      | Electron ROM paging register - note: experimental    |
+ |--------------|------------------------------------------------------|
+ | FF FE30      | ROM paging register                                  |
+ |              | The blitter retains its own copy of the ROM paging   |
+ |              | register for mapping Sideways RAM/ROM from ChipRAM   |
+ |--------------|------------------------------------------------------|
+ | FF FE31      | Sideways MOS/NoIce control                           |
+ |--------------|------------------------------------------------------|
+ | FF FE32      | Sideways MOS/NoIce restore                           |
+ |--------------|------------------------------------------------------|
  | FF FE35      | Debug register                                       |
  |              | This register is used to debug firmware and should   |
  |              | not be accessed                                      |
  |--------------|------------------------------------------------------|
  | FF FE36      | Memory aux control 1                                 |
  |              | Bit 7 - 2MHz throttle                                |
- |              |    when set any 65xx/T65/6x09 CPU will be throttled  |
- |              |    to 2MHz and synchronized with the motherboard phi2| 
- |              |    clock.                                            |
  |--------------|------------------------------------------------------|
- | FF FE37      | "Low Turbo" register.                                |
- |              | Any bit that is set it in this                       |
- |              | register will cause a 4K chunk of memory visiuble to |
- |              | an 8-bit cpu in the range 0-7FFF to be mapped to     |
- |              | ChipRAM instead of the motherboard memory. This is   |
- |              | used by the *BLTURBO command 'L' option to accelerate|
- |              | programs on CPUs that run at >2MHz                   |
+ | FF FE37      | "Low Mem Turbo" register.                            |
  |--------------|------------------------------------------------------|
  | FF FE3E..3F  | Mk.2 config registers (deprecated)                   |
  |              | Reads back configuration registers for older Mk.2    |
  |              | firmware                                             |
 
 ```
-
-### FF FE3E..3F - Old Mk.2 firmware config registers
-
-NOTE: these registers are now deprecated. On firmwares after May 2022 the 
-configuration MUST be read using the mechanisms outlined in the 
-[Boot Time Configuration](#boot-time-configuration) section
-
 
 
 Note: the registers at FE3x may be moved to a different location in future
@@ -195,6 +244,69 @@ hardware. For this reason caution should be exercised when using these
 registers. If there is a reason to access these directly please contact
 the firmware authors to register an interest. It may be possible to 
 add an OSWORD call to the utility ROM to support your needs.
+
+
+### FF FCFD..FCFF - JIM paging registers
+
+See the section [Using JIM](#using-jim) for information on these registers
+
+### FF FE30 ROMSEL
+
+This register is kept in sync with the same register on the motherboard.
+It is used to control the selection of sideways ROM/RAM in the logical
+address space FF 8000..BFFF
+
+When enabled sideways RAM/ROM accesses are mapped to Flash and ChipRAM
+as outlined in the [Logical to Physical Mapping](#logical-to-physical)
+section above. 
+
+Note: this register is effectively ignored if the SWROM inhibit jumper
+is fitted.
+
+
+### FF FE31, 32
+TODO: move from hardware overview documents to here and rewrite
+
+
+### FF FE36 Throttle CPU
+
+Bit 7
+-----
+When set any 65xx/T65/6x09 CPU will be throttled to 2MHz and synchronized 
+with the motherboard phi2 clock. This can be useful to ensure that games
+and demos run correctly. See \*BLTURBO command
+
+
+### FF FE37 Low Memory Turbo
+
+This register controls the mapping of the "low" portion of memory in the
+65xx, T65, 6809 and 6800 CPU's logical to physical mappings. [Note: Z80
+addresses are mapped differently]
+
+Any bit that is set it in this register will cause a 4K chunk of memory
+visible to an 8-bit cpu in the range 0-7FFF to be mapped to ChipRAM instead 
+of the motherboard memory. This is used by the \*BLTURBO command 'L' option 
+to accelerate programs on CPUs that run at >2MHz
+
+i.e. ?&FE37 = &81 will cause addresses 0..0FFF and 7000-7FFF to come from
+ChipRam when performing logical to physical address mapping.
+
+The mapping causes logical addresses FF xxxx to become 00 xxxx. The first
+32k of ChipRAM is generally reserved for this purpose.
+
+Note: setting this at run time will likely crash the machine unless the 
+current contents of the relevant memory are copied to chipRam first.
+
+### FF FE3E..3F - Old Mk.2 firmware config registers
+
+NOTE: these registers are now deprecated. On firmwares after May 2022 the 
+configuration MUST be read using the mechanisms outlined in the 
+[Boot Time Configuration](#boot-time-configuration) section.
+
+Information about the old registers is contained in the [Old Mk.2 Firmware
+Documentaton.md] file.
+
+
 
 
 ## Boot Time Configuration 
