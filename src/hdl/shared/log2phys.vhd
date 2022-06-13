@@ -140,9 +140,7 @@ begin
 					end if;			
 				elsif swmos_shadow_i = '1' or cfg_mosram_i = '1' then
 					if map0n1 then
---						r_mosrom_A <= x"7F" & "00";							-- SWMOS from slot #8 map 0 RAM at							7F 0000 - 7F 3FFF
-						-- don't do mosram in map 0 for now, use BLTURBO!
-						r_mosrom_A <= x"FF" & "11";								-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
+						r_mosrom_A <= x"7F" & "00";							-- SWMOS from slot #8 map 0 RAM at							7F 0000 - 7F 3FFF
 					else
 						r_mosrom_A <= x"7D" & "00";							-- SWMOS from slot #8 map 1 RAM at							7D 0000 - 7D 3FFF
 					end if;
