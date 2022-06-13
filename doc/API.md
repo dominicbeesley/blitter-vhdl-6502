@@ -179,6 +179,7 @@ motherboard.
  |              | Reads back configuration registers for older Mk.2    |
  |              | firmware                                             |
 
+```
 
 ### FF FE3E..3F - Old Mk.2 firmware config registers
 
@@ -187,7 +188,6 @@ configuration MUST be read using the mechanisms outlined in the
 [Boot Time Configuration](#boot-time-configuration) section
 
 
-```
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
