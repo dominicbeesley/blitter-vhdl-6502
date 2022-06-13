@@ -192,9 +192,9 @@ begin
 
 
 
-	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
+	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 						-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
-										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
+										and r_PHI0_dly(1) = '1' 					-- board doesn't crash into the bank
 										else												-- bank address so hold is short
 																							-- and setup late														
 							'0';
