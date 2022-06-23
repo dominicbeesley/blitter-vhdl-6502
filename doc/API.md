@@ -132,7 +132,7 @@ The following points should be noted:
 There is a layer of address remapping between the currently running CPU and
 the hardware resources of the board. This allows for:
 
- - different CPU's require ROM at different locations
+ - different CPUs require ROM at different locations
  - 8, 16, 32 bit CPU requirements
  - providing enhanced Sideways ROM/RAM
 
@@ -374,7 +374,7 @@ TODO
 
 The BBC Micro series feature a "page-wide" address expansion mechanism
 that allows hardware to appear outside the normal memory map. This is
-useful where there is a limited address space, such as on 8-bit CPU's 
+useful where there is a limited address space, such as on 8-bit CPUs 
 limited to 64K of memory. 
 
 The Blitter and Paula use 3 registers to control access to the JIM memory
@@ -545,7 +545,7 @@ and demos run correctly. See \*BLTURBO command
 ### FF FE37 Low Memory Turbo
 
 This register controls the mapping of the "low" portion of memory in the
-65xx, T65, 6809 and 6800 CPU's logical to physical mappings. [Note: Z80
+65xx, T65, 6809 and 6800 CPUs logical to physical mappings. [Note: Z80
 addresses are mapped differently]
 
 Any bit that is set it in this register will cause a 4K chunk of memory
