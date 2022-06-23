@@ -167,7 +167,7 @@ begin
 					and A_i(15 downto 8) /= x"FD"
 					and A_i(15 downto 8) /= x"FE" then -- MOS access
 				if noice_debug_shadow_i = '1' and A_i(13 downto 12) = "00" then
-						A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow ram from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
+						A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow RAM from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
 					else
 						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
 				end if;

@@ -282,125 +282,10 @@ all other settings are reserved
   2-3 [S] - 3.3V  [65C02, 65816] (slower, uses less power)
 
 
-# 3. Memory Map Overview
-
-TODO: move this to [API.md]
-
-    +--------------------------+-----------------------+ 
-    |  logical/physical addr   | hardware item         |
-    +--------------------------+-----------------------+
-    | $00 0000 - $1F FFFF      | SRAM                  | (2Mb onboard SRAM on mk.2)
-    +--------------------------+-----------------------+
-    | $20 0000 - $7F FFFF      | SRAM repeats          | (may contain ram in future)
-    +--------------------------+-----------------------+
-    | $80 0000 - $BF FFFF      | EEPROM repeats        | (256/512Kb onboard Flash on mk.2)**
-    +--------------------------+-----------------------+ 
-    |       ---- undefined ---- do not use ----        |
-    +--------------------------+-----------------------+ 
-    | $FA 0000 - $FA FFFF      | HDMI registers        | 
-    +--------------------------+-----------------------+ 
-    | $FB 0000 - $FB FFFF      | HDMI memory           | 
-    +--------------------------+-----------------------+ 
-    | $FB 0000 - $FB FFFF      | Debug info            | 
-    +--------------------------+-----------------------+ 
-    | $FE FC00 - $FE FCFF      | Chipset registers     | 
-    +--------------------------+-----------------------+
-    |  "system" (except for SWRAM/SWMOS)               |
-    | $FF 0000 - $FF 7FFF      | SYS RAM               |
-    | $FF 8000 - $FF BFFF      | SYS ROM / SWRAM       |
-    | $FF C000 - $FF FBFF      | SYS MOS / SWMOS       |
-    | $FF FC00 - $FF FEFF      | SYS HARDWARE          |
-    | $FF FF00 - $FF FFFF      | SYS MOS / SWMOS       |
-    +--------------------------------------------------+
-
-    **TODO: check this 1/10/2020 mapping has changed, need to rework 68008 mappings?**
-
-    NOTE: The address selection logic is simplified such that the SYS and chipset registers repeat:
-      - Any bank with both top bits set will select either SYS or Chipset/Debug info
-      - Odd banks will be SYS in this area (A(16) set)
-      - Even banks will be Chipset registers A(17) clear or debug info A(17) set in this area
-      - It is advised to not use any addresses other than the official ones for accessing
-        devices as chip select logic may be changed
-
-Note: the EEPROM is repeated at 80 0000, 90 0000 so that the same base address of
-90 0000 can be used for both the mk.1 and mk.2 boards
-
-The addresses above are not valid in all situations:
-- JIM accesses can now access the entire memory space including SYS which 
-  may be useful for accessing screen memory in 64k memory modes such as Flex
-  etc
-- 64k CPU directly accesses the "system area only" i.e bank $FF for 8bit cpus 
-- BLIT/SOUND/DMAC can access all addresses, i.e. to  blit to / from SYStem memory/peripherals appear at
-  addresses $FF xxxx
-
-## 3.1 Sideways RAM/ROM mappings to physical memory
-
-NOTE: Sideways ROM/RAM is enabled only while a MOS compatible map is in effect i.e. in Flex mode it has no effect.
-NOTE: Sideways ROM/RAM is only visible to the CPU to access these addresses via DMA the physical address of the ROM/RAM slot needs to be used which can be obtained by OSBYTE xx TODO: OSBYTE to map rom/ram/etc to physical address. Accessing FF 8000 - FF BFFF will always access the roms on the motherboard, Acessing FF C000 - FF FBFF, FF FF00 - FF FFFF will always access the mos rom on the motherboard.
-NOTE: if the "memi" jumper is fitted all these settings are ignored
-
-Sideways ROM/RAM SETs:
-----------------------
-
-There are two sideways rom SETs that allow for having roms switch between the hard and soft CPU sets.
-Map 0 is in effect if the t65 jumper is fitted 
-Map 1 is in effect for hard processors
-If SWROMx is fitted the above mappings are swapped
 
 
-```
-
-MAP 0
------
 
 
-    0   BB RAM      $ 7E 0000 - 7E 3FFF
-    1   EEPROM      $ 8E 0000 - 8E 3FFF
-    2   BB RAM      $ 7E 4000 - 7E 7FFF
-    3   EEPROM      $ 8E 4000 - 8E 7FFF
-    4   SYS IC 52
-    5   SYS IC 88
-    6   SYS IC 100
-    7   SYS IC 101
-    8   BB RAM      $ 7F 0000 - 7F 3FFF NB: also used as the SW MOS/FLEX bank
-    9   EEPROM      $ 8F 0000 - 8F 3FFF 
-    A   BB RAM      $ 7F 4000 - 7F 7FFF
-    B   EEPROM      $ 8F 4000 - 8F 7FFF
-    C   BB RAM      $ 7F 8000 - 7F BFFF
-    D   EEPROM      $ 8F 8000 - 8F BFFF
-    E   BB RAM      $ 7F C000 - 7F FFFF
-    F   EEPROM      $ 8F C000 - 8F FFFF NB: also used as the SW MOS debug bank
-                                        This slot will normally contain a copy
-                                        of the bltutils rom
-
-MAP 1
------
-
-
-    0   BB RAM      $ 7C 0000 - 7C 3FFF
-    1   EEPROM      $ 8C 0000 - 8C 3FFF
-    2   BB RAM      $ 7C 4000 - 7C 7FFF
-    3   EEPROM      $ 8C 4000 - 8C 7FFF
-    4   BB RAM      $ 7C 8000 - 7C BFFF
-    5   EEPROM      $ 8C 8000 - 8C BFFF
-    6   BB RAM      $ 7C C000 - 7C FFFF
-    7   EEPROM      $ 8C C000 - 8C FFFF
-    8   BB RAM      $ 7D 0000 - 7D 3FFF NB: also used as the SW MOS/FLEX bank
-    9   EEPROM      $ 8D 0000 - 8D 3FFF NB: also used for MOS in Map 1 (not when mosram fitted)
-    A   BB RAM      $ 7D 4000 - 7D 7FFF
-    B   EEPROM      $ 8D 4000 - 8D 7FFF
-    C   BB RAM      $ 7D 8000 - 7D BFFF
-    D   EEPROM      $ 8D 8000 - 8D BFFF
-    E   BB RAM      $ 7D C000 - 7D FFFF
-    F   EEPROM      $ 8D C000 - 8D FFFF NB: also used as the SW MOS debug bank
-                                        This slot will normally contain a copy
-                                        of the bltutils rom
-
-    In addition in when Map 1 is in effect the default mapping for the MOS rom 
-    (when flex is not active) is from EEPROM #9 at 8C 0000 unless mosram is fitted when 
-    it comes from SWRAM #8
-
-```
 
 
 M68008 address mapping oddities{#m68kmap}
@@ -418,6 +303,7 @@ M68008 address mapping oddities{#m68kmap}
     | E            | The Chipset registers bank               |   FE |
     +--------------+------------------------------------------+------+
     | D            | Current MOS - when mosram not fitted     |   8D |
+    +--------------+------------------------------------------+------+
     |              |  -- "" --   - when mosram is fitted      |   7D |
     +--------------+------------------------------------------+------+
     | others       | Map to RAM                               |00..0C|
@@ -521,7 +407,7 @@ latch has been set.
 
 ## 3.4 Sideways MOS
 
-The memory area at $FF C000 to $FF FBFF and $FF FF00 to $FF FFFF can be mapped to a sideways RAM bank (#9 or #8) with the use of the SWMOS reg
+The memory area at $FF C000 to $FF FBFF and $FF FF00 to $FF FFFF can be mapped to a sideways ROM/RAM bank (#9/#8) with the use of the SWMOS reg
 
 **SWMOS reg**
 
@@ -535,7 +421,7 @@ disables the on-board JIM registers.
 ```
 Bit     Purpose
 ===     =======
-0  #    SWMOS_EN
+0  #    MOSRAM_EN
         When set to 1 the MOS will execute from sideways bank #8 this bit is
         not normally reset when the break key is pressed a full reset 
 		    is needed to return to executing from the SYS socket should the #8 
@@ -654,7 +540,7 @@ SWMOS debug save (65x02 only)
 
 
     (READ)
-    0  #    SWMOS_EN
+    0  #    MOSRAM_EN
             *CURRENT*
             BIT 0 of SWMOS 
     1  #    BLIT_JIM_EN
