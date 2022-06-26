@@ -136,7 +136,7 @@ begin
 					if map0n1 then		
 						r_mosrom_A <= x"9F" & "11";							-- NOICE shadow MOS from slot #F map 0 					9F C000 - 9F FFFF
 					else
-						r_mosrom_A <= x"9D" & "11";							-- in map 1 NOICE shadow 1 MOS is taken from				9D C000 - 9D FFFF
+						r_mosrom_A <= x"9D" & "11";							-- NOICE shadow MOS from slot #F map 0						9D C000 - 9D FFFF
 					end if;			
 				elsif swmos_shadow_i = '1' or cfg_mosram_i = '1' then
 					if map0n1 then
