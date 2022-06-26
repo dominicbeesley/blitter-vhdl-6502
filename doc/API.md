@@ -27,25 +27,16 @@ access the physical address map.
 The physical memory map is separated in to the broad areas in the table
 below. The following sections describe these in more detail.
 
-    +--------------------------+-----------------------+ 
-    | Physical address         | hardware item         |
-    +--------------------------+-----------------------+
-    | $00 0000 - $7F FFFF      | ChipRAM               | 
-    +--------------------------+-----------------------+
-    | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
-    +--------------------------+-----------------------+ 
-    |       ---- undefined ---- do not use ----        |
-    +--------------------------+-----------------------+ 
-    | $FA 0000 - $FB FDFF      | HDMI memory           | 
-    +--------------------------+-----------------------+ 
-    | $FB FE00 - $FB FFFF      | HDMI registers        | 
-    +--------------------------+-----------------------+ 
-    | $FC 0000 - $FC FFFF      | Debug/Version info    | 
-    +--------------------------+-----------------------+ 
-    | $FE FC00 - $FE FCFF      | Chipset registers     | 
-    +--------------------------+-----------------------+
-    | $FF 0000 - $FF FFFF      | Motherboard           |
-    +--------------------------------------------------+
+ | Physical address         | hardware item         |
+ |--------------------------|-----------------------|
+ | $00 0000 - $7F FFFF      | ChipRAM               | 
+ | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
+ | $C0 0000 - $F9 FFFF      | Undefined do not use  |
+ | $FA 0000 - $FB FDFF      | HDMI memory           | 
+ | $FB FE00 - $FB FFFF      | HDMI registers        | 
+ | $FC 0000 - $FC FFFF      | Debug/Version info    | 
+ | $FE FC00 - $FE FCFF      | Chipset registers     | 
+ | $FF 0000 - $FF FFFF      | Motherboard           |
 
 The Physical memory map is used when:
  - accessing devices or memory via the JIM page-wide interface
@@ -161,7 +152,17 @@ address expansion mechanism see [Using JIM](#using-jim)
 
 ### Shadow/Turbo memory
 
-TODO
+The normal mapping for the MOS memory map is to have the bottom 32k access
+motherboard RAM. This is a good default setting for running existing 6502
+games and demos which expect to run at 2MHz but will restrict the speed of
+the CPU. 
+
+It is possible using the [Lowmem Turbo](#TODO) register to configure
+the logical to physical mapping to remap this area to faster chip ram
+
+see [](#TODO FE37 regsiter)
+see [](#TODO link BLTURBO command)
+
 
 
 ### Sideways ROM/RAM
@@ -196,13 +197,24 @@ battery backed or not.
 As these mappings are quite complex and subject to change it is strongly
 advised that the OSWORD 99 API be used to query these mappings in software.
 
+#### ROM access speeds
+
+Depending on the mapping of the current ROM the CPU may or may not be able
+to run at greater than 2MHz depending on the ROM slot.
+
+When running from a motherboard ("SYS") rom slot the CPU will always be 
+restricted to running at 2MHz.
+
+If running from EEPROM or BBRAM the memory will be accessed at either 45ns 
+or 55ns with additional overhead of address mapping and arbitration the 
+maximum speed of most CPUs will be held to around 6.5Mhz (this may vary/change)
+
 #### BBC B
 
 TODO: This may well need to change!? Any thoughts?
 
 
-MAP 0
------
+##### BBC MAP 0
 
   | # | Type      | Physical address   | Notes                                 
   |---|-----------|--------------------|---------------------------------------
@@ -223,9 +235,7 @@ MAP 0
   | E | BB RAM    | 7F C000 - 7F FFFF  |                                       
   | F | EEPROM    | 9F C000 - 9F FFFF  | NB: also used as the NoIce debug bank
 
-MAP 1
------
-
+##### BBC MAP 1
 
   | # | Type      | Physical address   | Notes                                 
   |---|-----------|--------------------|---------------------------------------
@@ -250,8 +260,7 @@ MAP 1
 
 #### Electron
 
-MAP 0
------
+##### Electron MAP 0
 
   | # | Type      | Physical address   | Notes                                 
   |---|-----------|--------------------|---------------------------------------
@@ -272,9 +281,7 @@ MAP 0
   | E | BB RAM    | 7E 4000 - 7E 7FFF  |                                       
   | F | EEPROM    | 8E 4000 - 8E 7FFF  |                                       
 
-MAP 1
------
-
+##### Electron MAP 1
 
   | # | Type      | Physical address   | Notes                                 
   |---|-----------|--------------------|---------------------------------------
@@ -307,22 +314,44 @@ TBC
 ### MOS in Map 1
 
 When a Map 1 is in force the MOS at LC000..LFFFF is taken from Map 1's 
-slot #9.
+slot #9 (#5 on Elk). However, if [MOSRAM](#mosram) is in force the MOS 
+will be taken from slot #8 (#4 on Elk)
 
 ### MOSRAM
 
 When either the MOSRAM jumper is fitted or a '1' has has been written to the 
 MOSRAM bit of the SWMOS_CTL register the MOS at LC000-LFFFF will be taken
-from slot #8 of the current map. 
+from slot #8 (#4 on Elk) of the current map. 
 
 This is useful for debugging the MOS ROM using NoIce and is also used to 
 make a "flat" 64K RAM map for running non-MOS operating systems such as 
 Flex for the 6800, 6809 or 6309.
 
+The BLTURBO command can also be used to copy a ROM based MOS to ram and
+run from there to provide a speed boost.
+
+See also TODO link to FF FE31/32
+
 TODO: remove FLEX shadow from vhdl
 TODO: rename SWMOS_SHADOW to MOSRAM throughout vhdl/docs
+TODO: BLTURBO link 
 
 ### NoIce Debugger mappings
+
+## 6502/65C02/T65 extras
+
+On the 65xx (not 65816) series CPUs there are some advanced facilities
+to assist using the NoIce debugger.
+
+NMI - when an NMI is detected extra logic is enabled to discover the
+source (debug button or motherboard) and to enter the NoIce debugger
+if it is enabled if the debug button is pressed.
+
+5C NOP - when NoIce is enabled should an unknown/illegal opcode $5C
+be executed then special processing is performed to enter the noice
+debugger.
+
+For more information read the section [The NoIce Debugger](#the-noice-debugger)
 
 ## 6809/6309 extras
 
@@ -334,6 +363,10 @@ points. For this reason there is an extra logical mapping applied to
 BA and BS pins being 0 and 1 respectively, then bit 11 of the address
 is toggles such that vectors normally at LFFF0..F will actually be
 read from LF7F0..F
+
+On the 6x09 series processors the motherboard NMI line is actually
+routed to the 6x09's FIRQ input as that is more suitable for fast
+data transfers. The NMI input is mapped direct to the debug button.
 
 ## 65816 extras
 
@@ -361,13 +394,83 @@ has not been widely used and may change in future. To exit boot mode
 write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) see [below](#ff-fe31)
 
 
-## 68008
+## Motorolla M68K series
 
-TODO, get from old doco
+### 68K boot
 
-## 68000
+When the 68008 first boots it needs its vectors to appear at 0 0000 to 0 00FF but
+that would normally map to RAM. A facility is provided such that a boot ROM can appear
+at 8D 3F00 (or 7D 3F00 if mosram is fitted) and it will be remapped to appear to the 
+cpu to be at 0 0000, for reads only. This mapping will remain in effect until the first 
+access of the JIM device register. 
 
-TODO
+The normal boot action of an OS ROM should be:
+
+```
+    ; copy rom vectors to low memory
+    lea     $D0000,A6
+    movea   #0, A0
+    move.w  $FF, D0
+.lp:move.l  (A6)+,(A0)+       ; note during "boot" writes to RAM pass through but reads from the bottom
+                              ; page of RAM map to the boot rom 
+    dbf     D0,.lp
+
+    ; switch maps by temporarily selecting blitter device
+    move.b  #$D1,$FFCFF       ; set jim device number
+```
+
+i.e. copy the vectors to RAM and then select the blitter JIM device
+
+NOTE: this may be changed in future as it relies on the M68k running in map 1.
+
+### 68008 specifics
+
+The 68008 can address only 1MB of memory space which is remapped as follows to 
+allow access to both ROM and RAMS
+
+The 68008 processor has a special memory mapping: when the top bit(19) of the 
+address is set
+
+ | A19..16      | Mapping                                  | Bank |
+ |--------------|------------------------------------------|------|
+ | F            | MOS logical bank                         |    FF|
+ | E            | The Chipset registers bank               |    FE|
+ | D            | Current MOS - when mosram not fitted     |    8D|
+ |              |  -- "" --   - when mosram is fitted      |    7D|
+ | others       | Map to RAM                               |00..0C|
+
+
+Whilst this does not expose all possible addresses it is still possible to access
+all addresses via the JIM interface as the memory exposed at LF0000-LFFFFF is 
+actually the MOS logical map along with all the usual ROM/JIM/etc mappings.
+
+NOTE: this may be changed in future as it relies on the M68k running in map 1.
+
+### 68000 / 68010 specifics
+
+The 68000 plugin for the Mk.3 board actually has a full set of 24 address lines
+sufficient to fully address all of the physical memory map. However there are
+still logical mappings applied:
+
+ | A19..16      | Mapping                                  | Bank |
+ |--------------|------------------------------------------|------|
+ | FF           | MOS logical bank                         |    FF|
+ | others       | Map direct to physical address           |00..FE|
+
+
+The boot mapping described [above](#68k-boot) is also applied to allow the 
+initial reset time vectors to appear in low-memory.
+
+### 68000 / 68008 agnostic code
+
+The 8 bit and 16 bit version of the M68k are functionally almost 
+identical apart from the address bus width. If the boot ROM is written
+to be compiled at L8Dxxxx or L7Dxxxx it should work on both the 8 and
+16 bit varieties.
+
+TODO: two separate versions of boot rom must be compiled for running 
+either from RAM (at L7D0000 or L8D0000) - consider extra mapping so that
+boot rom is always at a single address?
 
 
 # Using JIM
@@ -381,7 +484,6 @@ The Blitter and Paula use 3 registers to control access to the JIM memory
 map. These appear in the FRED page of memory - which can be accessed 
 direct by 8-bit CPUs. [where Physical Addresses start FF they can be 
 accessed direct on 8-bit CPUs]
-
 
 
  | Phys Address | Contents                         
@@ -427,8 +529,8 @@ stored in little-endian format in zeropage address &80
         LDX &80:TYA:STA &FD00,X                         \ write value
 ```
 
-Note: on the Blitter the board will NOT output any access to the page 
-select registers to the motherboard when the Blitter is selected as the current
+Note: on the Blitter the board will NOT output any read or write access to the page 
+select registers on to the motherboard when the Blitter is selected as the current
 device. However, on the Paula 1MHz bus device all accesses will be sent to all 
 hardware. Care should be taken if there are devices on the 1MHz bus that might
 respond to these accesses (such as an unmodified RetroClinic DataCentre)
@@ -480,12 +582,15 @@ can be accessed here.
 
 For more information see (Logical to Physical Mapping)[#logical-to-physical-mapping]
 
-Note: when reading through to the motherboard via JIM the Blitter
+Note: When reading through to the motherboard via JIM the Blitter
 sideways ROM/RAM mapping is NOT performed therefore it is possible to
 access all ROMS on the motherboard by using this mechanism as the ROM
 select register is always written to both the Blitter copy AND the 
 motherboard.
 
+Note: When reading this address range direct from  CPUs with a larger 
+address space than 64k (i.e. 65816, 68K, x86) the logical to physical
+translation *is* performed
 
  | Phys Address | Contents                                             
  |--------------|------------------------------------------------------
@@ -498,8 +603,6 @@ motherboard.
  | FF FE36      | Memory aux control 1      
  | FF FE37      | "Low Mem Turbo" register.
  | FF FE3E..3F  | Mk.2 config registers (deprecated)
-
-
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -527,19 +630,120 @@ Note: this register is effectively ignored if the SWROM inhibit jumper
 is fitted.
 
 
-### FF FE31
+### FF FE31 SWMOS
 
-### FF FE32
-TODO: move from hardware overview documents to here and rewrite
+This register controls the various MOS mapping options
+
+ | Bit    | Purpose
+ |--------|------------------------------------------------------------------
+ | 0  #   | MOSRAM_EN 
+ | 1      | - reserved -
+ | 2      | SWMOS_DEBUG 
+ | 3  #   | SWMOS_DEBUG_EN
+ | 4      | - reserved -
+ | 5      | 65816 boot
+ | 6      | SWMOS_DEBUG_5C
+ | 7      | SWMOS_DEBUG_ACT
+
+Note: items marked # are _not_ reset on a normal break, instead a "full reset"
+must be performed by either power-cycling or holding down BREAK for 3 seconds.
+
+Note: reserved items currently read as zero. To ensure compatibility with
+future firmwares it is recommended these bits should be left unmodified i.e.
+use OR or AND to set/clear bits rather than writing direct.
+
+
+ * **MOSRAM_EN** when set to 1 the MOS will execute from sideways RAM bank #8. 
+   Note: this setting may also be in force due to the MOSRAM jumper being fitted
+   but currently this bit will still read back as '0'
+
+ * **SWMOS_DEBUG** When set to 1 the MOS logical area LC000-LFFFF is remapped to 
+   allow NoIce to run:
+
+   | logical address range    | Mapped to
+   |--------------------------|---------------------------------------
+   | LC000-LCFFF              | 7E 8000 This is the hidden slot #4 of map 0
+   | LD000-LFBFF, LFF00-LFFFF | Rom #F of current map (either (9F D000 or 9D D000))
+
+   Note: on the Electron the ROM will be #3
+
+   Note: writing this bit has no effect unless bit 3 is also set
+   Note: this mapping does not take effect until the next instruction *after* 
+   the current instruction has been executed.
+
+ * **SWMOS_DEBUG_EN** This bit, when set enables the extra debugging features 
+   the 5C debugging on the 6502/T65/65C02 CPUs and also the NMI debug on 65xx
+   and 6x09 CPUs
+
+   See [Noice Debugger](#the-noice-debugger) below
+
+ * **65816 boot** In 65816 mode when this bit is set then the 65816 accesses 
+   to logical CPU bank 0 will have the same mapping applied as the 64k address
+   space of the 65x02 processors, accesses to bank CPU logical bank FF will 
+   also access the MOS logical memory map. 
+
+   Additionally in boot mode when the CPU is executing in "native mode" hardware
+   vector accesses (VPB pin == '0' and E pin = '0') will be made from *physical
+   address* 00 8Fxx
+
+   When this bit is cleared logical banks 00..FE map direct to a physical address
+   and FF goes through the MOS logical mapping
+
+   This bit is reset to '1' on reset to enter boot mode.
+
+ * **SWMOS_DEBUG_5C** This bit indicates that debug mode was entered due to a 
+   5C opcode being executed (as opposed to a debug button NMI).
+
+   See [Noice Debugger](#the-noice-debugger) below.
+
+
+ * **SWMOS_DEBUG_ACT** This bit is set by the debug state machine when the debugger
+   has been entered due to the debug NMI button or a 5C instruction being executed
+   or bits 2 and 3 being set.
+
+
+### FF FE32 SWMOS save register
+
+This register holds a copy of some of the bits of the FE31 SWMOS register taken
+at the time that the debugger is entered (due to a debug button NMI or the 
+5C instruction being executed)
+
+ | Bit    | Purpose           | Current/Saved
+ |--------|-------------------|----------------------------------------------
+ | 0  #   | MOSRAM_EN         | current
+ | 1      | - reserved -      | -
+ | 2      | SWMOS_DEBUG       | saved
+ | 3  #   | SWMOS_DEBUG_EN    | current
+ | 4      | - reserved -      | -
+ | 5      | 65816 boot        | - 
+ | 6      | SWMOS_DEBUG_5C    | current
+ | 7      | SWMOS_DEBUG_ACT   | current
+
+
+The main purpose of this register is that any write to this register initiates
+a state machine which will restore the state of the SWMOS_DEBUG bit in FE31 and
+hence the MOS remapping to the state it was before the debugger was entered.
+
+
+To return after a debug interrupt the NoIce Monitor code does:
+
+```
+        STA     $FE32                           ; reset DEBUG map by writing restore reg
+        RTI
+```
 
 
 ### FF FE36 Throttle CPU
 
-Bit 7
------
-When set any 65xx/T65/6x09 CPU will be throttled to 2MHz and synchronized 
+Bit 7, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and synchronized 
 with the motherboard phi2 clock. This can be useful to ensure that games
-and demos run correctly. See \*BLTURBO command
+and demos run correctly. 
+
+See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
+command.
+
+All other bits should be left alone (they may be non-zero) for future
+expansion.
 
 
 ### FF FE37 Low Memory Turbo
@@ -562,6 +766,9 @@ The mapping causes logical addresses FF xxxx to become 00 xxxx. The first
 Note: setting this at run time will likely crash the machine unless the 
 current contents of the relevant memory are copied to chipRam first.
 
+See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
+command.
+
 ### FF FE3E..3F - Old Mk.2 firmware config registers
 
 NOTE: these registers are now deprecated. On firmwares after May 2022 the 
@@ -570,8 +777,6 @@ configuration MUST be read using the mechanisms outlined in the
 
 Information about the old registers is contained in the [Old Mk.2 Firmware
 Documentaton.md] file.
-
-
 
 
 ## Boot Time Configuration 
@@ -651,11 +856,9 @@ The configuration bits are mapped differently for each board level:
 
 ##### Paula
 
-???
+The current Paula firmware does not implement these registers.
 
-##### Mk.1
-
-???
+TODO/CHECK, more info on how to detect/work round this?
 
 ##### Mk.2
 
@@ -702,5 +905,178 @@ in the current build
  |             | 6     | 68008 hard CPU                 |
  |             | 7     | 680x0 hard CPU                 |
  | FC 008A..8F | *     | - reserved - all bits read 0   |
- |-------------|-------|--------------------------------|
+
+
+# The NoIce debugger
+
+TODO: tidy up and check the below - it may be wrong/out of date
+
+### 3.5.1 DEBUG MEMORY MAP [65x02 only]
+
+When the debug memory map is enabled (bit 0 and 2 of $FE31 SMOS are both set)
+the MOS area of memory i.e. C000-FBFF and FF00 to FFFF will be mapped as follows:
+```
+C000-CFFF   = physical RAM 7E 8000 to 7E 8FFF this can be used by the 
+              debugger as scratch memory, buffer space, etc
+              [this is the SWRAM memory for ROM #4 which is always obscured by
+              the SYS ROM]
+D000-FBFF 
+and
+FF00-FFFF   = the top portion of SWROM #F (i.e. $ 8F D000 - 8F FFFF)
+```
+
+DEBUG NMI [65x02 only]
+======================
+A debug switch can be fitted to ground the bugbtn header pin input, which will 
+cause an NMI [ on the 6809 the CPU nNMI input is dedicated to this pin]
+      
+A falling edge on this input will (after 16 8MHz cycles) perform the following:
+  - save existing bits 0, 1 and 2 in FE31, these will be readable from FE32 
+  - cause an NMI 
+  - wait for the next NMI fetch and set bits 0 and 2 in the FE31 SWMOS register 
+    to map in the debug memory and ROM #8 into the MOS workspace
+
+This behaviour will be inhibited by holding the CPU nNMI low until $FE32 is 
+next written to restore $FE31, this is to stop spurious multiple NMIs being 
+generated from the debug button.
+
+A consequence of these behaviours is that real NMI's will be lost whilst the
+debugger is active.
+
+Bit 3 of SWMOS must be set to enable this behaviour
+
+DEBUG NOP [65x02 only]
+======================
+On the 6502A and 65c02 processors the opcode $5C is a NOP, when bit 3 of SWMOS
+is set executing this instuction will cause the following behaviour:
+
+  - save existing bits 0, 1 and 2 in FE31, these will be readable from FE32 
+  - wait for the next vector fetch and set bits 0 and 2 in the FE31 SWMOS 
+    register to map in the debug memory and ROM #8 into the MOS workspace
+    [if an IRQ is pending this will be processed first]
+  - cause and hold and nmi (as debug button)
+This will effectively cause a BRK instruction to appear to have been executed
+3 bytes after the 5C instruction (the 5C nop takes 2 bytes as arguments).
+
+This is used by the NoICE debugger as its break point instruction, leaving the 
+BRK instruction to be used as the regular MOS error mechanism.
+
+Bit 3 of SWMOS must be set to enable this behaviour
+
+WRITING BITs 2/3 of SWMOS
+================================================ 
+Writing a '1' to bits 2 and 3 of the SWMOS register will enter the noice debug 
+memory map after the next instruction, saving the to the $FE32 register as above
+this allows the debugger memory to be entered with an instruction sequence 
+as below (example for 6809)
+
+    ldx   #<address of entry routine in debugger memory>
+    pshs  X
+    lda   #$0C
+    ora   $FE31
+    sta   $FE31
+    rts
+
+the final rts will pull the debugger entry address from the stack in the 
+_current_ map and set the PC to that address. The memory map will then be
+swapped ready for the next instruction.
+
+
+SWMOS debug save (65x02 only)
+-----------------------------
+[See FE32 above]
+
+
+[Note: this is likely to change to along with SWMOS register]
+
+When a debug NMI occurs on a 65x02 machine the SWMOS register will be saved
+here prior to setting the SWMOS bits 0, 1 and 2 can be read by the debugger
+to check the machine state before a debug NMI and to restore the state when
+exiting the NMI
+
+Any write to this register is a special case. A state machine will wait until
+after the next CPU sync that before writing the data contained in this register
+to $FE31. This for an exit from a debug NMI of the form
+
+    .nmi_exit_to_sys
+      pla
+      tax
+      pla
+      tay
+      pla
+      sta $FE32
+      rti                 ; at this point the old SWMOS state will be restored 
+                          ; from the contents of $FE32
+
+The current values of FE31 are returned in FE32 to allow code such as below to 
+access the memory map as it stood when the debug nmi / 5C occurred.
+
+    .get_byte
+      lda $FE31
+      pha
+      lda $FE32
+      sta $FE31
+      lda ($00),Y
+      tax
+      pla
+      sta $FE31
+      rts
+
+This code would need to be executed from memory other than C000-FFFF as the 
+act of setting FE31 would likely page out the current code!
+
+
+# Deprecated registers:
+
+May 2022
+
+The following registers are now deprecated and should not be used in new software
+and are likely to be removed from the firmware. This information is retained in
+case of looking at older software.
+
+CONFIG registers
+
+  **FF FE3E,F** this register pair can be used to read back the current values
+  on the configuration pins, the values are inverted and give a '1' where a 
+  jumper is fitted. Writing to this register is reserved for future uses and
+  should be avoided.
+
+  $FE3E:
+
+```
+  Bit(s) | Value | Meaning
+  -------|-------|--------------------------------------
+   0    *|   1   | t65 core in operation
+         |   0   | hard cpu in operation
+   3..1 *|  000  | 6502A @ 2 MHz
+         |  100  | 65C02 @4Mhz
+         |  010  | 65C02 @8Mhz          --currently 4Mhz
+         |  110  | 65C816 @8Mhz         --currently 4Mhz
+         |  001  | 6809E/6309E @2Mhz
+         |  101  | 6309E @4Mhz
+         |  011  | Z80A @8Mhz
+         |  111  | 68008 @8Mhz
+   4    *|   1   | swromx not fitted 
+         |   0   | swromx fitted
+   5     |   ?   | ?
+   6     |   ?   | ?
+   7     |   1   | bugbtn pressed         
+```
+  $FE3F:
+```
+  Bit(s) | Value | Meaning
+  -------|-------|--------------------------------------
+   0    *|   1   | memi jumper fitted i.e. chip swrom/ram disabled
+         |   0   | normal
+   1     |   X   | inverted bugout signal
+   7..2  |   ?   | ?
+```
+
+NOTE: bits marked * are latched at reset time and do not reflect the active state
+of the config pins
+NOTE: bits marked ? should be masked out and ignored as these are used for various
+debugging and test purposes which is likely to change with firmware updates
+
+
+
 
