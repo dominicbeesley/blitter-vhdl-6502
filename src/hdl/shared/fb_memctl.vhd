@@ -123,7 +123,6 @@ architecture rtl of fb_memctl is
 	signal	r_noice_debug_shadow			:	std_logic;
 	signal	r_noice_debug_shadow_saved	:	std_logic;
 	signal	r_noice_debug_en				:	std_logic := '0';
-	signal	r_flex_shadow					:	std_logic := '0';
 
 	signal	r_noice_debug_act				: 	std_logic;
 	signal	r_noice_debug_5C				:  std_logic;
@@ -172,7 +171,7 @@ begin
 								r_noice_debug_act
 							& 	r_noice_debug_5C
 							& 	r_65816_boot
-							&	r_flex_shadow
+							&	'0'
 							&  r_noice_debug_en
 							&	r_noice_debug_shadow
 							&	'0'
@@ -180,7 +179,7 @@ begin
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 1 else		
 								-- FE32 / swmos "save" register
 								"000"													-- return to non-debug
-							&	r_flex_shadow
+							&	'0'
 							&  r_noice_debug_en
 							&	r_noice_debug_shadow_saved
 							&	'0'
@@ -206,7 +205,6 @@ begin
 				DEBUG_REG_o <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
 					r_throttle_cpu_2MHz <= '0';
-					r_flex_shadow <= '0';
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
 				end if;		
@@ -227,10 +225,7 @@ begin
 											DEBUG_REG_o <= fb_c2p_i.D_wr;
 										when 1 =>
 											r_swmos_shadow <= fb_c2p_i.D_wr(0);
-											-- r_swmos_noice_shadow <= fb_c2p_i.D_wr(2); -- this is done in the debug
-																										-- state machine after the next cycle
 											r_noice_debug_en <= fb_c2p_i.D_wr(3);
-											r_flex_shadow <= fb_c2p_i.D_wr(4);
 											r_65816_boot <= fb_c2p_i.D_wr(5);
 											r_noice_debug_written_en <= '1';
 											r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
