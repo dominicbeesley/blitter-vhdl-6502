@@ -182,7 +182,7 @@ There are also options
 
 <img src="assets/getting-started/roms-vac.jpg" size="80%" />
 
-I can be useful to keep a note of ROM CRCs when they are first loaded,
+It can be useful to keep a note of ROM CRCs when they are first loaded,
 especially to sideways RAM to check for corruption. Here you can see that
 the ROMS at #7 and #F have the same CRC.
 
@@ -203,6 +203,21 @@ not a problem for games as by default they'll run from normal motherboard
 memory at 2MHz but ROMs may run faster which may cause problems (see MMFS
 below). Would it be better to boot in "Throttled" mode where these CPUs 
 boot strictly limited to 2MHz unless explicitly unlocked?
+
+
+### Rom options
+
+Any preferences on how the sideways ROM/RAM is split I've gone for a 
+very arbitrary choice of RAM at even slots, ROM at odd slots and with
+the motherboard punching through at slots 4-7 in map 0.
+
+I need to add the following stuff
+ * optional write protect on RAM slots
+ * optional "slow" setting on non-motherboard slots
+ * SRCOPY command
+
+Would a "hard" unplug be useful? Any other requests for ROM management
+
 
 ### 65C02 "soft" CPU
 
