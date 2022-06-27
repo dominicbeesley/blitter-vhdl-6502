@@ -253,5 +253,9 @@ to the fact that the level shifters/FPGA on the board do not drive the
 voltage for the databus high enough for the 816's CMOS level inputs.
 
 
+## J8 power select
 
-
+This jumper can select between taking power from the SYS/CPU socket header
+(normal operation) or from the P11 AUX POWER connector (programming when not
+fitted in a machine). This jumper should nearly always be in the East position
+marked "SYS"
