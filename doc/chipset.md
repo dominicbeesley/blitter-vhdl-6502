@@ -12,13 +12,13 @@ Note: all chipset addresses registers work with *physical adddresses* care shoul
       what the CPU sees!
 
 
-# DMAC - the DMA controller
---------------------------------
+# The DMAC
 
 Physical Base address: **FE FC90**
 
 The DMAC or DMA controller is a simple device for reading/writing bytes 
-from/to hardware registers or memory.
+from/to hardware registers or memory at high speed or tied to certain
+events.
 
 There are four DMA channels.
 
@@ -295,12 +295,11 @@ FIRST_A                                 PXMASK_NEXT   8   ; used internally
 
 
 
-Aeris
------
+# The Aeris
 
 The Aeris chipset performs a function analogous to the copper chip in the Amiga
 Copper chip but with its functionality tweaked to better suit the BBC Micro and
-its 8 bittedness 
+its 8-bit nature.
 
 
 Horizontal ticks are 1/32nd of a PAL line i.e. 500kHz measured from the start of HS
@@ -308,8 +307,7 @@ Horizontal ticks are 1/32nd of a PAL line i.e. 500kHz measured from the start of
 Vertical ticks are raster lines after VS
 
 
-Registers
----------
+## Aeris Registers
 
 FE FCB0 +
 
@@ -318,7 +316,7 @@ FE FCB0 +
               bit 6 - interrupt, may be used to cause an interrupt
               bit 3..0 - may be used to pass data from Aeris program to CPU
 
-      1     Base Address, 24 bit memory address of program.
+      1..3  Base Address, 24 bit memory address of program.
 
 
 
@@ -328,14 +326,14 @@ VSYNCS will restart the program immediately.
 
 A program consists of simple instructions as outlined below. These can be stored
 either in SYStem memory in which case the program will execute at roughly 1MHz
-when sharing cycles with the CPU or 2MHz otherwise; in chip RAM it will run at 
-either 4MHz when sharing with the CPU or 8MHz otherwise.
+when sharing cycles with the CPU or 2MHz otherwise; in chip RAM it will much 
+faster [TODO: table of speeds]
 
 During blits there may be further slow downs due to cycle sharing, the proposed
 SYNC/UNSYNC instructions might be used to mitigate this
 
 
-Operations
+## Operations
 ==========
 
 [Items marked * are not yet implemented]

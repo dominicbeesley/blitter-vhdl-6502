@@ -4,11 +4,13 @@ Getting Started - BBC Model B
 Parts list:
  - Blitter board
  - BLTUTILs EEPROM
- - 6809ROMS.ssd
- - 6502ROMS.ssd
- - spare 74LS245
- - spare 74HCT245
+ - roms65.ssd
+ - tools65.ssd
+ - paula.ssd
+ - demo65.ssd
+ - bigfonts.ssd
 
+ - roms09.ssd
 
 
 # Preparing the base machine
@@ -187,6 +189,269 @@ especially to sideways RAM to check for corruption. Here you can see that
 the ROMS at #7 and #F have the same CRC.
 
 
+You could now remove the BLTUTILs ROM from the motherboard however it
+is not recommended as it can be useful to use the MEMI jumper to boot
+with the Blitter ROMs disabled. (see [Troubleshooting](#troubleshooting))
+
+
+## VideoNULA
+
+Some of the demos in this document work best when there is a VideoNULA 
+fitted. They use the advanced palette features of the NULA. However, 
+the demos will run without the NULA but the colours will be wrong.
+
+The VideoNULA ROM be present in the machine. You may either install it 
+in the spare motherboard slot or load it to a spare sideways ROM socket. 
+You should insert the disc/image supplies with your NULA and type
+
+    \*SRLOAD NULA 3
+
+Note: it is worth loading ROM images for frequently used and important
+ROMS to odd-numbered sockets or to a motherboard socket (4-7) as the
+sideways RAM sockets are more prone to becoming corrupted by errant
+software.
+
+
+# Try out CLOCKSP
+
+You may now check to see the speed of the system:
+
+    \*DIN 0 TOOLS65
+    CHAIN"CLOCKSP"
+
+<img src="assets/getting-started/clocksp-base.jpg" size="80%" />
+
+As can be seen this is running at 2MHz. Even though the T65 core is 
+capable of running at up to 16MHz per cycle on this firmware it is being
+held back to 2MHz by the fact that the BASIC ROM, MOS and RAM are all being
+accessed from the motherboard which has a maximum speed of 2MHz.
+
+We could make BASIC a little faster by loading the BASIC ROM in to a Blitter
+sideways RAM socket:
+
+    \*DIN 0 ROMS65
+    \*SRLOAD BASIC2 E
+
+And press CTRL-Break
+
+    \*DIN 0 TOOLS65
+    CHAIN"CLOCKSP"
+
+<img src="assets/getting-started/clocksp-f2.jpg" size="80%" />
+
+This has more or less doubled the speed of BASIC but we can do more:
+
+    MODE 7
+    \*BLTURBO L7F
+    RUN
+
+<img src="assets/getting-started/clocksp-f3.jpg" size="80%" />
+
+
+The [BLTURBO Lxx](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
+command with the "L" switch will copy low memory in the range 0..7FFF to 
+fast Blitter ChipRAM and then redirect CPU accesses to use this RAM. Each bit
+in the number after "L" indicates a block of &1000 that will be redirected so
+in our test above the memory 0-6FFF is taken from ChipRAM and 7000-7FFF is
+on the motherboard.
+
+The reason we had to switch to MODE 7 is that the MOS is currently unaware of
+this remapping and will write any screen bound information to ChipRAM where there
+is a remapping.
+
+i.e. switch to MODE 0 and make the top most bank of memory be remapped    
+
+    \*BLTURBO L80
+
+You will now need to type blind:
+
+    MODE 0
+
+The mode should change and give some garbage at the bottom. The data that are
+being written to 7000-7FFF are now going to ChipRAM instead of the motherboard
+so the video system will display the old data. Repeatedly typing
+
+    \*HELP
+
+The help information will write correctly to much of the screen but no the 4K
+that we have redirected to ChipRAM
+
+    \*BLTURBO L00
+
+will restore the screen.
+
+<img src="assets/getting-started/blturbo-1.jpg" size="80%" />
+
+We can have mode 0 work normally *and* have faster basic by using 
+
+    \*BLTURBO L07
+
+This will remap 0-2FFF to ChipRAM and leave screen ram at 3000-7FFF pointing at
+the motherboard
+
+<img src="assets/getting-started/blturbo-2.jpg" size="80%" />
+
+Sometimes it is desirable, when ROMs or RAM is remapped to fast memory to have
+the T65 run at a stable 2MHz this can be acheived with:
+
+    \*BLTURBO T
+
+This will "throttle" the core such that all memory accesses are synchronised
+the motherboard's phi2 clock.
+
+One can type 
+
+    \*BLTURBO ?
+
+to query the current settings.
+
+<img src="assets/getting-started/blturbo-3.jpg" size="80%" />
+
+When you have finished you may wish to erase the Blitter copy of the BASIC2 rom
+
+    \*SRERASE E
+
+And Ctrl-Break - you may find the machine crashes when deleting the current 
+language!
+
+
+# Testing Sound
+
+The Blitter board contains a Chipset feature called Paula which is closely 
+modelled on the Amiga's Chip of the same name. One of the distinctive features
+of the Paula is that it contains several independent channels which can play
+sound samples at different sample rates. This is in contrast to newer machines
+and many older machines such as the Archimedes etc that require complex 
+and CPU intensive digital signal processing to play different notes. The
+Paula concept is very much suited to 8 bit machines.
+
+The Blitter board may be hooked up to the BBC Micro motherboard by attaching 
+flying leads from the L and 0 pins of the Blitter audio header to the top
+and bottom of resistor R172 on the motherboard respectively.
+
+The audio headers are J3 on the Mk.2 and J32 on the Mk.3. The ground loop 
+connector (J4 on the Mk.2 LK34 on the Mk.3) should be left un-bridged. 
+
+<img src="assets/getting-started/mk2-audio-hookup.jpg" size="80%" />
+
+This will mix the Paula sound with that of the BBC Micro and play it out 
+through the internal speaker. Of course, it will sound pretty tinny and not
+show off the true capabilities through a tiny speaker. 
+
+Other options:
+  
+  * connect the Blitter as above and then unplug the BBC's internal speaker
+    into "PC Speakers" or hifi
+
+  * connect a larger speaker 4-16ohms to the bbc micro's speaker header. The
+    LM386 is capable of delivering a few watts which is usually loud enough. 
+    Alternatively there are a number of small amplifier modules on ebay which
+    will deliver a decent amount of loudness from a single 5V supply which can 
+    be source from the BBC motherboard [this is the solution I use]
+
+  * connect some "PC Speakers" or other amplifier direct to the Blitter sound 
+    output - you may need to experiment with the ground loop jumper if there 
+    is excessive hum. You will not get the BBC motherboard sounds through the 
+    speakers
+
+Note: care should be taken when connecting to hifi equipment that the earthing
+arrangements of the BBC Micro and Hifi are not incompatible. PC Speakers tend
+to be designed to be hooked up to a device such as a desktop PC which is 
+referenced to mains earth. If in doubt, ask!
+
+## Playing some tunes
+
+The paula.ssd demo disk contains a handful of tracker modules and a player.
+More mod's are available on stardot.org.uk - as these are quite large it is
+recommended that .adl or ADFS disks are used as these allow for much larger
+trackers and are many times faster to load. (TODO: investigate ADFS MMFS)
+
+    \*DIN 0 paula
+    \*EXEC !BOOT
+
+You should now be able to select one of the tunes to play - it may take some
+time to load.
+
+<img src="assets/getting-started/modplay-1.gif" size="80%" />
+
+Press H for options or ESCape to stop.
+
+# Blitter
+
+The Blitter Chipset feature is a virtual device for quickly performing
+various bitmap operations such as drawing sprites and lines. For more
+information see [Chipset](chipset.md#the-blitter)
+
+## Run the demo
+
+
+    \*DIN 0 DEMO65
+    \*EXEC !BOOT
+
+You should see demo which shows some smoot scrolling of large graphics
+at 50 frames a second.
+
+<img src="assets/getting-started/demo65.jpg" size="80%" />
+
+
+# Aeris
+
+The Aeris is a Chipset feature which is analogous to [Copper](https://second.wiki/wiki/copper_amiga)
+chip of the Amiga. It can very quickly perform operations that are
+synchronised to the position of the display raster with very little
+intervention from the CPU. This can produce some advanced graphics
+effects such as palette cycling and vertical rupture whilst leaving 
+the CPU free to handle game or demo control logic. 
+
+For more information see [Chipset Aeris](chipset.md#the-aeris)
+
+
+## Hookup the Aeris
+
+To stay in sync with the display raster, whatever the screen mode, the
+Aeris needs to monitor the horizontal and vertical sync lines of the 
+CRTC controller. To do this please hook up the Blitter board to the 
+CRTC as follows:
+
+### mk.2 Aeris Hookup
+
+ * Pin 14 of the configuration header (J5) should be attached to pin 40 of the
+   CRTC (IC2, near middle North of the motherboard)
+ * Pin 15 of the configuration header should be attached to pin 39 of
+   IC2
+
+<img src="assets/getting-started/mk2-aeris-hookup.jpg" size="80%" />
+
+### mk.3 Aeris hookup
+
+  TODO
+
+
+## Bigfonts demo
+
+The supplied bigfonts.ssd demo shows off some of the capabilities of the 
+Aeris by scrolling some large bitmaps (using the Blitter Chipset) and 
+doing various palette cycling and poking:
+ 
+ * the outlines of the letters are cycled once per frame to make them
+   appear to move at a different speed to the letters
+ * the copper bars redefine the palette on each line without CPU 
+   intervention
+ * the copper bars are redefined also in the middle of the line
+
+<img src="assets/getting-started/bigfonts.jpg" size="80%" />
+
+To show how much the Aeris and Blitter can assist with off-loading CPU
+processing this demo is written in C, which is relatively slow, and runs the
+CPU at 2MHz.
+
+A further demonstration of the Aeris can be had by going back to the 
+music player demo above and pressing the 'A' key. The colours of certain
+text-columns in mode 7 are used to form a vu-meter.
+
+
+# Hard CPUs
+
 
 
 
@@ -195,7 +460,7 @@ the ROMS at #7 and #F have the same CRC.
 
 ## NOTES/Q's for Hoglet
 
-### Default Turbo
+### Default Turbo/Throttle off
 
 Currently the 65xx and 6x09 CPUs by default boot in a trim that allows them
 to go as fast as the memory they are accessing will allow. This is usually
@@ -203,6 +468,15 @@ not a problem for games as by default they'll run from normal motherboard
 memory at 2MHz but ROMs may run faster which may cause problems (see MMFS
 below). Would it be better to boot in "Throttled" mode where these CPUs 
 boot strictly limited to 2MHz unless explicitly unlocked?
+
+
+### BLTURBO L
+
+I've not really given much thought to doing proper shadow memory. It should
+be possible to do something akin to the B+ but that will mean some fannying 
+around with the MOS? Or maybe just checking for instructions executing from
+C000-D000? 
+
 
 
 ### Rom options
