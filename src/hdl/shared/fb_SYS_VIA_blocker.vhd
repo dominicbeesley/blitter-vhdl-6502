@@ -80,7 +80,10 @@ architecture rtl of fb_sys_via_blocker is
 
 begin
 
-	i_iorb_cs <= '1' when A_i(23 downto 4) = x"FFFE4" and cfg_sys_type_i /= SYS_ELK else
+	i_iorb_cs <= '1' when (
+		A_i(23 downto 4) = x"FFFE4" or 
+		A_i(23 downto 4) = x"FFFE6"
+		) and cfg_sys_type_i /= SYS_ELK else
 			'0';
 
 	SYS_VIA_block_o <= r_iorb_block and i_iorb_cs;

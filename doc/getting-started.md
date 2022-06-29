@@ -592,7 +592,9 @@ You should now be able to swap between sets and have a functioning system
 # Hard CPUs
 
 The following sections give a brief introduction to running alternate
-CPUs in the sockets provided on the Blitter board.
+CPUs in the sockets provided on the Blitter board. 
+
+Please remove the SWROMX jumper if you fitted it above
 
 # Running a 65C02
 
@@ -601,18 +603,117 @@ a faster W65C02S at 8MHz.
 
 The pictures in the example show the W65C02S8P-10 please ensure that
 you have selected the correct jumper settings for the speed grade and
-supply voltage required
+supply voltage required. In general most of the older 65C02 chips 
+should be run at 5V but the W65C02S (i.e. S suffix) do not run well
+at 5V due to their requirement for a larger voltage swing on the data
+and control lines.
 
 **MK2**
 
 Insert the CPU into the board as pictured and set the CPU configuration
 jumpers as follows:
 
+ * for 4MHz or faster parts fit CFG3 and leave CFG1 and CFG2 empty
+ * for 8MHz or faster parts fit CFG2 and leave CFG1 and CFG3 empty
 
+For further information see [Hardware overview Mk.2](hardware-overview-mk2.md#j5-system-config)
 
+<img src="assets/getting-started/w65c02s-fit.jpg" width="80%" />
 
+Please ensure that:
 
+ * the Pin 1 notch is to the West
+ * the CPU is in the topmost CPU slot
 
+## Loading ROMS and MOS
+
+The hard CPU needs its own set of ROMS separate to those used in normal
+T65 mode. These should be loaded as follows:
+
+    \*DIN 0 ROMS65
+    \*SRLOAD BLTUTIL F X
+    \*SRLOAD BASIC2 7 X
+    \*SRLOAD MOS120 9 X
+
+Note: the X modifier after the ROM slot indicates that it should be loaded
+to the other bank
+
+The last of these commands loads the MOS operating system ROM into slot 9 
+in map 1 - this is a special slot in that it is used to provide the MOS rom.
+
+You should check that these, and no other, ROMs are loaded to map 1 by typing
+
+    \*ROMS ACX
+
+Which will list all the ROMs in map 1 along with their CRC. your list should
+look like this:
+
+<img src="assets/getting-started/w65c02-roms-1.jpg" width="80%" />
+
+Any unwanted roms should be unloaded using
+
+    \*SRERASE # X
+
+for each unwanted ROM, substituting the ROM number as appropriate.
+
+You are now ready to boot to the alternate ROM set. You should remove the 
+jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break
+
+<img src="assets/getting-started/w65c02-boot-1.jpg" width="80%" />
+
+Notice that the boot message now says "65C02 8MHz".
+
+There's not much you can do other than type in BASIC programs as there is
+no filing system present yet.
+
+Switch back to T65 by refitting CFG0 and pressing CTRL-Break
+
+    \*DIN 0 TOOLS65
+    LOAD"CLOCKSP"
+    PRINT ~PAGE
+
+This will load the CLOCKSP program to memory and display page which will be
+something like "E00" or "1900". Remove CFG0 and press CTRL-Break again. Then
+execute the commands below, substituting XXXX for the value of page from 
+above.
+
+    PAGE=&XXXX
+    OLD
+    LIST
+
+You should now see the CLOCKSP program listed and be able to run it.
+
+    RUN
+
+You should now get the CLOCKSP results you may try using BLTURBO Lxx as 
+described [above](#try-out-clocksp)
+
+    \*BLTURBO L03
+    RUN
+
+This should run somewhat faster. Note depending on the configuration and type
+of board you have the CPU may not be able to run at full speed.
+
+You can get some more performance in BASIC by running a new version of BASIC.
+Switch back to T65 by refitting CFG0 and loading BASIC 4.32
+
+    \*DIN 0 ROMS65
+    \*SRLOAD BAS432 7 X
+    \*DIN 0 TOOLS65
+    LOAD "CLOCKSP"
+
+Then switch back to the 65C02 by removing CFG0 and pressing CTRL-Break 
+
+    PAGE=&XXXX
+    OLD
+    RUN
+
+CLOCKSP should now run significantly faster, especially the Trig/Log test.
+
+Copying files from the T65 to the 65C02 like this is somewhat laborious. So, 
+you will probably want now to switch back to T65 mode and load the ROM images
+for your favoured filing system and other utility ROMS to the alternate ROM
+set. Use SRLOAD but do remember to use the X modifier as appropriate.
 
 
 
