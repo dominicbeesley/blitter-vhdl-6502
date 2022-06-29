@@ -1,16 +1,10 @@
 Getting Started - BBC Model B
 =============================
 
-Parts list:
- - Blitter board
- - BLTUTILs EEPROM
- - roms65.ssd
- - tools65.ssd
- - paula.ssd
- - demo65.ssd
- - bigfonts.ssd
+This guide is intended to guide you through some first steps in using the 
+Blitter board. It is not intended to be a complete reference.
 
- - roms09.ssd
+The accompanying disc images are available [here](assets/getting-started/discs.zip)
 
 
 # Preparing the base machine
