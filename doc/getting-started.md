@@ -47,6 +47,10 @@ that have been widely tested are:
  * 8271 DFS
  * HOSTFS
 
+The commands in the examples below i.e. DIN refer to the MMFS insert disk
+command where this command is seen and you are using a different filing 
+system then insert the relevant disc using the relevant command or by
+inserting the given floppy disc.
 
 ## Strip down the Blitter to a minimal configuration
 
@@ -68,7 +72,6 @@ jumpers
 **Mk.3**
 
 TODO
-
 
 ## Insert the Blitter into the motherboard
 
@@ -193,6 +196,17 @@ You could now remove the BLTUTILs ROM from the motherboard however it
 is not recommended as it can be useful to use the MEMI jumper to boot
 with the Blitter ROMs disabled. (see [Troubleshooting](#troubleshooting))
 
+## ROM Notes
+
+In map 0 the slots #4-#7 map directly to the four motherboard sockets
+and the MOS ROM is taken from the motherboard socket
+
+In map 0 (the default map, for alternate map see [Alternate ROM sets](#alternate-rom-sets))
+the even numbered slots map to battery backed RAM and odd numbered slots
+map to Flash EEPROM. There is little difference between the two except
+that RAM is marginally faster but is more susceptible to accidental 
+erasure or corruption
+
 
 ## VideoNULA
 
@@ -311,6 +325,9 @@ When you have finished you may wish to erase the Blitter copy of the BASIC2 rom
 
     \*SRERASE E
 
+This command can be used to clear any ROM/RAM slot (including motherboard sockets
+where sideways RAM is fitted).
+
 And Ctrl-Break - you may find the machine crashes when deleting the current 
 language!
 
@@ -366,7 +383,7 @@ More mod's are available on stardot.org.uk - as these are quite large it is
 recommended that .adl or ADFS disks are used as these allow for much larger
 trackers and are many times faster to load. (TODO: investigate ADFS MMFS)
 
-    \*DIN 0 paula
+    \*DIN 0 PAULA
     \*EXEC !BOOT
 
 You should now be able to select one of the tunes to play - it may take some
@@ -450,7 +467,157 @@ music player demo above and pressing the 'A' key. The colours of certain
 text-columns in mode 7 are used to form a vu-meter.
 
 
+# Alternate ROM sets
+
+The Blitter provides a second bank of sideways ROM/RAM which may either be
+used as an alternate set of ROMs for the T65 core or as a separate set of
+ROMs for a hard CPU.
+
+In this section an example will be given of loading up an alternate ROM set.
+
+Before starting please check that your machine is set to run in Map 0 you
+should get a boot message like the one in the picture below the important
+parts are circled.
+
+<img src="assets/getting-started/mk2-first-boot-map0.jpg" width="80%" />
+
+
+If you don't please check that the jumpers are set follows:
+
+**MK2**
+
+J5 (config):
+  
+  - CFG0 FITTED 
+  - CFG4 NOT FITTED 
+
+Refer to [Hardware overview](harware-overview-mk2.md#j5-system-config)
+
+**MK3**
+
+TODO
+
+## Accessing the alternate ROM set
+
+The SRLOAD, SRERASE and ROMS commands all take an optional X switch which
+will display the opposite set map to the one currently being accessed by the
+CPU. Alternatively the map to use can be explicitly set by adding a 0 or 1 as
+the final parameter.
+
+## Check alternate set is blank
+
+Executing the next line when in T65 mode and the SWROMX jumper is not fitted
+will list the alternate ROM set from map 1
+
+    \*ROMS ACX
+
+This will be equivalent to executing 
+
+    \*ROMS AC1
+
+
+If you have started with a blank blitter board you should get a display like
+this:
+
+<img src="assets/getting-started/roms-alt-all-blank.jpg" width="80%" />
+
+Note: the special CRC F1EF is an indicator that all bytes of the entire 16K 
+of each bank is set to the value &FF.
+
+If any of the ROM slots is not blank or doesn't have a CRC of F1EF then
+type 
+
+    \*SRERASE # 1
+
+replacing # for the number of the non-blank slot.
+
+## Loading up an alternate ROM set
+
+When the Blitter has an alternate ROM set active not only do the sideways
+ROM slots come from the alternate ROM set so does the operating system MOS
+ROM. For this reason first we will load up an alternate MOS ROM and try
+rebooting.
+
+    \*DIN 0 ROMS65
+    \*SRLOAD M.MOS120 9 X
+
+Rom slot #9 in map 1 has a special purpose as it is the MOS rom slot for
+that map and therefore should not be used for loading normal ROM images.
+
+You should now type
+
+    \*ROMS ACX
+
+and the CRC for slot #9 should now be 4694 which is the CRC of the MOS 
+ROM.
+
+You can now try booting to the alternate ROM set by fitting a jumper as 
+follows:
+
+**MK2**
+    
+    J5 - fit jumper to CFG4 (SWROMX)
+
+
+**MK3**
+
+    TODO
+
+Refer to [Hardware overview](harware-overview-mk2.md#j5-system-config)
+
+You may change the jumper settings any time when the blitter is running
+- they will will only take effect after the next time Break is pressed.
+Usually when swapping between maps it is best to press CTRL-Break to 
+ensure that the MOS updates its ROM map.
+
+Press CTRL-Break, you should see:
+
+<img src="assets/getting-started/roms-alt-boot-lang.jpg" width="80%" />
+
+This shows that the MOS in slot #9 has been recognised but no other ROMS
+are present.
+
+Please now switch back to map 0 by removing the SWROMX jumper and reboot
+with CTRL-Break.
+
+You should now load up the remainder of the ROMS to the alternate ROM
+set:
+
+    \*DIN 0 ROMS65
+    \*SRLOAD BLTUTIL F X
+    \*SRLOAD BASIC2 3 X
+
+If you are using ADFS, HOSTFS, DFS you may also load these ROMS to the
+alternate set. Unfortunately, at present MMFS relies on timing loops to
+function correctly and so cannot be run from a Blitter ROM slot. It is 
+hoped to have a correction for this in the near future whereby ROM slots
+can be marked as throttled.
+
+You should now be able to swap between sets and have a functioning system
+
 # Hard CPUs
+
+The following sections give a brief introduction to running alternate
+CPUs in the sockets provided on the Blitter board.
+
+# Running a 65C02
+
+In this guide you may run either a Rockwell 65C02 or similar at 4MHz or
+a faster W65C02S at 8MHz.
+
+The pictures in the example show the W65C02S8P-10 please ensure that
+you have selected the correct jumper settings for the speed grade and
+supply voltage required
+
+**MK2**
+
+Insert the CPU into the board as pictured and set the CPU configuration
+jumpers as follows:
+
+
+
+
+
 
 
 
