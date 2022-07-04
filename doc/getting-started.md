@@ -745,7 +745,7 @@ Insert the 6309 in the correct set of pins with pin 1 of the CPU to the left
 and the CPU inserted into the lower of the 6502/6x09 socket pair near the top 
 left.
 
-<img src="assets/getting-started/w65c02-boot-1.jpg" width="80%" />
+<img src="assets/getting-started/6809-fit.jpg" width="80%" />
 
 Please ensure that:
 
@@ -753,39 +753,179 @@ Please ensure that:
  * the CPU is in the second highest CPU slot, be careful it overlaps the 65xx
    sockets
 
-
 ## Load 6x09 ROMs
 
 You should now be able to start the machine to load a set of ROMS and an 
-operating system
+operating system.
 
-When you are in T65 mode you can type
+To double check that you have the configuration selected for the 6809 you can
+type 
 
     \*BLINFO
 
-as a command to see the configuration, the hard cpu that is configurated
+as a command to see the configuration, the hard cpu that is configured
 should display even when it is not selected.
 
 
+<img src="assets/getting-started/6809-blinfo.jpg" width="80%" />
+
 You will then need to load the 6809 MOS and BASIC roms from T65 mode:
- *SRLOAD M.MOS6809 9 X
- *SRLOAD R.BASIC 3 X
- *SRLOAD R.UTILS09 F X
 
-and check with *ROMS X
+    \*DIN 0 ROMS69
+    \*SRLOAD M.MOS6809 9 X
+    \*SRLOAD R.BASIC 3 X
+    \*SRLOAD R.UTILS09 F X
 
-You should then be able to boot the 6809 by removing the T65 jumper (CFG0) and press ctrl-break. Without a filing 6x09 system you should still be able to laboriously load/save BASIC programs by booting to T65 load the BASIC program there then switch to 6x09 mode (maybe fiddle with PAGE) then type OLD to get the program and vice-versa.
+and check with 
 
-I really need to look at the troubleshooting bit but if things go pear shaped then there are a few things you can try:
-- boot to T65 mode and hold down the £ key which should bring up a menu from there you can inspect ROMS and erase any suspect ones, I tend to forget the "X" modifier and load 6809 roms into the 6502 space by accident
-- if you're unsure you can go nuclear and erase the whole of ROM or flash from the menu
-- if you can't get at the menu you can fit a jumper to CFG8 which will inhibit the sideways rom stuff and try rebooting, you can then try the £ thing again and wipe Flash/RAM to get back to blank
+    \*ROMS X
 
-The attached SSD should contain the latest ROMS/MOS for the 6x09 - I had to build it on my work machine and the build system is awful so I might have messed something up. High on my todo list is to get all this build stuff unpicked an placed on GitHub, I'm just unsure how to best cater for all the different build options I have and how to structure the projects in Git so I can nicely deploy all the finished articles into SSDs and deploy them into my hostfs directories.
+If you get any other ROMS, you should delete them using \*SRERASE # X
 
-If you're feeling adventurous you could try the HOSTFS rom in 6809 mode but I've not tested this with the RS423 port for a while - I have a second UART thing that I got from Myelin a while back. It should work in theory but I've not used it in anger for a few years. It was the next thing on my list to check.
+Ensure you have loaded from ROMS68 not the 6502 ssd!
 
-For reference I've put a copy of my SVN in all its horror on gdrive - don't laugh, or cry! https://drive.google.com/file/d/1vgHyFDlZTaGzx_KrfFISKzdlKKMGWqqF/view?usp=sharing
+You should have these ROMS:
+
+<img src="assets/getting-started/6809-roms.jpg" width="80%" />
+
+You should now be able to boot the 6809 by removing the T65 jumper (CFG0) and 
+press CTRL-Break. 
+
+<img src="assets/getting-started/6809-boot-1.jpg" width="80%" />
+
+You should get a screen as above. As there is now no filings system there is
+not much you can do other than type programs in and try them out.
+
+However, you may use the T65 mode to load BASIC programs into memory and then
+access them on the 6x09
+
+Switch back to T65 by refitting CFG0 and pressing CTRL-Break
+
+    \*DIN 0 TOOLS65
+    LOAD"CLOCKSP"
+    PRINT ~PAGE
+
+This will load the CLOCKSP program to memory and display page which will be
+something like "E00" or "1900". Remove CFG0 and press CTRL-Break again. Then
+execute the commands below, substituting XXXX for the value of page from 
+above.
+
+    PAGE=&XXXX
+    OLD
+    LIST
+
+You should now see the CLOCKSP program listed and be able to run it. This
+should run a little faster then a 2MHz 6502 
+
+    RUN
+
+
+### HOSTFS on 6x09
+
+Alternatively the ROMS69.ssd contains a ROM R.HOSTFS which is the HOSTFS 
+filing system ported to the 6809. This is set to run with a baud rate of
+38,400.
+
+see:
+    [https://github.com/sweharris/TubeHost]
+    [https://mdfs.net/Software/Tube/Serial/]
+
+
+<img src="assets/getting-started/6809-clocksp.jpg" width="80%" />
+
+The timings are a little faster but fairly similar to a 6502. This first
+comparison is a little flattering of the 6809 as in 2MHz mode it actually
+run slightly faster than 2MHz. To give a fairer comparison it is possible
+to throttle the CPU to be exactly 2MHz and synchronized with the BBC's 
+motherboard clock.
+
+    \*BLTURBO T
+
+<img src="assets/getting-started/6809-clocksp.jpg" width="80%" />
+
+Now most of the timings are within around 10% of the 6502's times. The
+trig/log functions are significantly faster as the 6809 BASIC ROM uses
+the algorithms from BBC BASIC 4.32.
+
+The ports of BASIC currently in use for the 6809/6309 have not been 
+heavily optimised for the 6809. In future it should be possible to improve
+on thse numbers
+
+## 3.5 MHz
+
+If you have a HD63C09E chip then you can run this at 3.5MHz. Change the 
+CPU configuration jumpers as below
+
+**MK2**
+
+The jumpers should be set as follows:
+
+    P6 - 5V
+    CFG1,CFG3 on J5 fitted
+    CFG2 on J5 clear
+
+
+Note: It has been found that newer MC68B09E CPUs will happily run at 3.5MHz
+though it is unlikely that these will support the extended instruction set
+of the HD63C09E that is used in the following examples.
+
+You should now be able to reboot to the 6309. You should transfer the CLOCKSP
+program to the 6309 using the method above or using HOSTFS. Running CLOCKSP
+should now give better results
+
+<img src="assets/getting-started/6309-clocksp-1.jpg" width="80%" />
+
+This is still somewhat held back by the fact that the memory used to store
+the BASIC program is running at 2MHz. You can used the BLTURBO command to 
+use fast ChipRAM shadow memory
+
+    \*BLTURBO L07
+
+This should give a little more of a boost
+
+<img src="assets/getting-started/6309-clocksp-2.jpg" width="80%" />
+
+However, this is still no using all the facilities of the 6309 processor
+which features a "native" mode which runs around 25% faster than the 6809
+by eliminating most of the CPUs "dead" cycles. Also, the 6309 offers extra
+registers and instructions which may be used to improve performance.
+
+Switch back to T65 mode and load alternate operating system and BASIC ROMS:
+
+    \*DIN 0 ROMS69
+    \*SRLOAD M.MOS630N 9 X
+    \*SRLOAD R.BAS6309 3 X
+
+Note: the correct MOS filename ends with "N" for native.
+
+Repeating the CLOCKSP tests above (don't forget BLTURBO L07) should give an
+even greater improvement.
+
+<img src="assets/getting-started/6309-clocksp-3.jpg" width="80%" />
+
+6x09 MOS ROMS
+
+  | Filename  | Description
+  |-----------|------------------------------------------------
+  | M.MOS6809 | The MOS120 ROM for 6809. No 6309 specifics
+  | M.MOS6309 | As above with optimisations for 6309
+  | M.MOS630N | As above in "native mode". 25% faster
+
+6x09 BASIC ROMS
+
+  | Filename  | Description
+  |-----------|------------------------------------------------
+  | R.BASIC   | BBC BASIC 4.32 with 6809 assembler
+  | R.BAS6309 | BBC BASIC 4.32 with 6309 assembler and 6309 optimisations
+
+
+6x09 Filing system ROMS
+
+  | Filename  | Description
+  |-----------|------------------------------------------------
+  | R.HOSTFS  | HostFS over RS423 serial
+  | R.HOSTFSM | HostFS over "Myelin" second serial port
+  | R.HOSTFST | HostFS over TCP/IP using WizNet ethernet module
 
 
 # Troubleshooting
