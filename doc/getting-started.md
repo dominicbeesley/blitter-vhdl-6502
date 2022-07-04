@@ -596,7 +596,7 @@ CPUs in the sockets provided on the Blitter board.
 
 Please remove the SWROMX jumper if you fitted it above
 
-# Running a 65C02
+## Running a 65C02
 
 In this guide you may run either a Rockwell 65C02 or similar at 4MHz or
 a faster W65C02S at 8MHz.
@@ -625,7 +625,7 @@ Please ensure that:
  * the Pin 1 notch is to the West
  * the CPU is in the topmost CPU slot
 
-## Loading ROMS and MOS
+### Loading ROMS and MOS
 
 The hard CPU needs its own set of ROMS separate to those used in normal
 T65 mode. These should be loaded as follows:
@@ -661,7 +661,11 @@ jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break
 
 <img src="assets/getting-started/w65c02-boot-1.jpg" width="80%" />
 
-Notice that the boot message now says "65C02 8MHz".
+Notice that the boot message now says "65C02 8MHz". You may also type
+
+    \*BLINFO
+
+as a command to see the configuration.
 
 There's not much you can do other than type in BASIC programs as there is
 no filing system present yet.
@@ -715,6 +719,73 @@ you will probably want now to switch back to T65 mode and load the ROM images
 for your favoured filing system and other utility ROMS to the alternate ROM
 set. Use SRLOAD but do remember to use the X modifier as appropriate.
 
+## Running a 6809 or 6309
+
+The Blitter supports either a 68B09E, 63B09E at 2MHz or a 63C09E at 3.5MHz. 
+
+Before starting this tutorial please remove the MEMI and SWROMX jumpers if
+they are fitted and ensure you can boot to T65 mode.
+
+### 2MHz
+
+All the CPUs listed above may be run at 2MHz it is sensible even when using
+a 63C09E to try it out at 2MHz first.
+
+**MK2**
+
+The jumpers should be set as follows:
+
+    P6 - 5V
+    CFG1 on J5 fitted
+    CFG2,CFG3 on J5 clear
+
+For details see [Mk.2 Hardware Overview](https://github.com/dominicbeesley/blitter-vhdl-6502/blob/main/doc/hardware-overview-mk2.md#j5-system-config)
+
+Insert the 6309 in the correct set of pins with pin 1 of the CPU to the left 
+and the CPU inserted into the lower of the 6502/6x09 socket pair near the top 
+left.
+
+<img src="assets/getting-started/w65c02-boot-1.jpg" width="80%" />
+
+Please ensure that:
+
+ * the Pin 1 notch is to the West
+ * the CPU is in the second highest CPU slot, be careful it overlaps the 65xx
+   sockets
+
+
+## Load 6x09 ROMs
+
+You should now be able to start the machine to load a set of ROMS and an 
+operating system
+
+When you are in T65 mode you can type
+
+    \*BLINFO
+
+as a command to see the configuration, the hard cpu that is configurated
+should display even when it is not selected.
+
+
+You will then need to load the 6809 MOS and BASIC roms from T65 mode:
+ *SRLOAD M.MOS6809 9 X
+ *SRLOAD R.BASIC 3 X
+ *SRLOAD R.UTILS09 F X
+
+and check with *ROMS X
+
+You should then be able to boot the 6809 by removing the T65 jumper (CFG0) and press ctrl-break. Without a filing 6x09 system you should still be able to laboriously load/save BASIC programs by booting to T65 load the BASIC program there then switch to 6x09 mode (maybe fiddle with PAGE) then type OLD to get the program and vice-versa.
+
+I really need to look at the troubleshooting bit but if things go pear shaped then there are a few things you can try:
+- boot to T65 mode and hold down the £ key which should bring up a menu from there you can inspect ROMS and erase any suspect ones, I tend to forget the "X" modifier and load 6809 roms into the 6502 space by accident
+- if you're unsure you can go nuclear and erase the whole of ROM or flash from the menu
+- if you can't get at the menu you can fit a jumper to CFG8 which will inhibit the sideways rom stuff and try rebooting, you can then try the £ thing again and wipe Flash/RAM to get back to blank
+
+The attached SSD should contain the latest ROMS/MOS for the 6x09 - I had to build it on my work machine and the build system is awful so I might have messed something up. High on my todo list is to get all this build stuff unpicked an placed on GitHub, I'm just unsure how to best cater for all the different build options I have and how to structure the projects in Git so I can nicely deploy all the finished articles into SSDs and deploy them into my hostfs directories.
+
+If you're feeling adventurous you could try the HOSTFS rom in 6809 mode but I've not tested this with the RS423 port for a while - I have a second UART thing that I got from Myelin a while back. It should work in theory but I've not used it in anger for a few years. It was the next thing on my list to check.
+
+For reference I've put a copy of my SVN in all its horror on gdrive - don't laugh, or cry! https://drive.google.com/file/d/1vgHyFDlZTaGzx_KrfFISKzdlKKMGWqqF/view?usp=sharing
 
 
 # Troubleshooting
