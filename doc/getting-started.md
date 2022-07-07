@@ -141,8 +141,8 @@ It is desirable to have the utility ROM be in the highest slot:
 Please use the ROMS65.SSD file with your filing system. In this example it
 is on MMFS
 
-    \*DIN 0 ROMS65
-    \*SRLOAD BLTUTIL F
+    *DIN 0 ROMS65
+    *SRLOAD BLTUTIL F
 
 This will load the ROM in slot F of the current map. You should get the 
 following:
@@ -151,7 +151,7 @@ following:
 
 You should now press CTRL-BREAK to refresh the MOS ROM table. Typing:
 
-    \*ROMS
+    *ROMS
 
 Should now show
 
@@ -170,7 +170,7 @@ you will need to press CTRL-BREAK to get the MOS to reload the ROMS table.
 You can at any time add a parameter "A" to the \*ROMS command and it will
 show all the ROMS, even those ignored by the MOS
 
-    \*ROMS A
+    *ROMS A
 
 <img src="assets/getting-started/roms-a.jpg" size="80%" />
 
@@ -212,7 +212,7 @@ The VideoNULA ROM be present in the machine. You may either install it
 in the spare motherboard slot or load it to a spare sideways ROM socket. 
 You should insert the disc/image supplies with your NULA and type
 
-    \*SRLOAD NULA 3
+    *SRLOAD NULA 3
 
 Note: it is worth loading ROM images for frequently used and important
 ROMS to odd-numbered sockets or to a motherboard socket (4-7) as the
@@ -224,7 +224,7 @@ software.
 
 You may now check to see the speed of the system:
 
-    \*DIN 0 TOOLS65
+    *DIN 0 TOOLS65
     CHAIN"CLOCKSP"
 
 <img src="assets/getting-started/clocksp-base.jpg" size="80%" />
@@ -237,12 +237,12 @@ accessed from the motherboard which has a maximum speed of 2MHz.
 We could make BASIC a little faster by loading the BASIC ROM in to a Blitter
 sideways RAM socket:
 
-    \*DIN 0 ROMS65
-    \*SRLOAD BASIC2 E
+    *DIN 0 ROMS65
+    *SRLOAD BASIC2 E
 
 And press CTRL-Break
 
-    \*DIN 0 TOOLS65
+    *DIN 0 TOOLS65
     CHAIN"CLOCKSP"
 
 <img src="assets/getting-started/clocksp-f2.jpg" size="80%" />
@@ -250,7 +250,7 @@ And press CTRL-Break
 This has more or less doubled the speed of BASIC but we can do more:
 
     MODE 7
-    \*BLTURBO L7F
+    *BLTURBO L7F
     RUN
 
 <img src="assets/getting-started/clocksp-f3.jpg" size="80%" />
@@ -269,7 +269,7 @@ is a remapping.
 
 i.e. switch to MODE 0 and make the top most bank of memory be remapped    
 
-    \*BLTURBO L80
+    *BLTURBO L80
 
 You will now need to type blind:
 
@@ -279,12 +279,12 @@ The mode should change and give some garbage at the bottom. The data that are
 being written to 7000-7FFF are now going to ChipRAM instead of the motherboard
 so the video system will display the old data. Repeatedly typing
 
-    \*HELP
+    *HELP
 
 The help information will write correctly to much of the screen but no the 4K
 that we have redirected to ChipRAM
 
-    \*BLTURBO L00
+    *BLTURBO L00
 
 will restore the screen.
 
@@ -292,7 +292,7 @@ will restore the screen.
 
 We can have mode 0 work normally *and* have faster basic by using 
 
-    \*BLTURBO L07
+    *BLTURBO L07
 
 This will remap 0-2FFF to ChipRAM and leave screen ram at 3000-7FFF pointing at
 the motherboard
@@ -302,14 +302,14 @@ the motherboard
 Sometimes it is desirable, when ROMs or RAM is remapped to fast memory to have
 the T65 run at a stable 2MHz this can be acheived with:
 
-    \*BLTURBO T
+    *BLTURBO T
 
 This will "throttle" the core such that all memory accesses are synchronised
 the motherboard's phi2 clock.
 
 One can type 
 
-    \*BLTURBO ?
+    *BLTURBO ?
 
 to query the current settings.
 
@@ -317,7 +317,7 @@ to query the current settings.
 
 When you have finished you may wish to erase the Blitter copy of the BASIC2 rom
 
-    \*SRERASE E
+    *SRERASE E
 
 This command can be used to clear any ROM/RAM slot (including motherboard sockets
 where sideways RAM is fitted).
@@ -377,8 +377,8 @@ More mod's are available on stardot.org.uk - as these are quite large it is
 recommended that .adl or ADFS disks are used as these allow for much larger
 trackers and are many times faster to load. (TODO: investigate ADFS MMFS)
 
-    \*DIN 0 PAULA
-    \*EXEC !BOOT
+    *DIN 0 PAULA
+    *EXEC !BOOT
 
 You should now be able to select one of the tunes to play - it may take some
 time to load.
@@ -396,8 +396,8 @@ information see [Chipset](chipset.md#the-blitter)
 ## Run the demo
 
 
-    \*DIN 0 DEMO65
-    \*EXEC !BOOT
+    *DIN 0 DEMO65
+    *EXEC !BOOT
 
 You should see demo which shows some smoot scrolling of large graphics
 at 50 frames a second.
@@ -503,11 +503,11 @@ the final parameter.
 Executing the next line when in T65 mode and the SWROMX jumper is not fitted
 will list the alternate ROM set from map 1
 
-    \*ROMS ACX
+    *ROMS ACX
 
 This will be equivalent to executing 
 
-    \*ROMS AC1
+    *ROMS AC1
 
 
 If you have started with a blank blitter board you should get a display like
@@ -521,7 +521,7 @@ of each bank is set to the value &FF.
 If any of the ROM slots is not blank or doesn't have a CRC of F1EF then
 type 
 
-    \*SRERASE # 1
+    *SRERASE # 1
 
 replacing # for the number of the non-blank slot.
 
@@ -532,15 +532,15 @@ ROM slots come from the alternate ROM set so does the operating system MOS
 ROM. For this reason first we will load up an alternate MOS ROM and try
 rebooting.
 
-    \*DIN 0 ROMS65
-    \*SRLOAD M.MOS120 9 X
+    *DIN 0 ROMS65
+    *SRLOAD M.MOS120 9 X
 
 Rom slot #9 in map 1 has a special purpose as it is the MOS rom slot for
 that map and therefore should not be used for loading normal ROM images.
 
 You should now type
 
-    \*ROMS ACX
+    *ROMS ACX
 
 and the CRC for slot #9 should now be 4694 which is the CRC of the MOS 
 ROM.
@@ -577,9 +577,9 @@ with CTRL-Break.
 You should now load up the remainder of the ROMS to the alternate ROM
 set:
 
-    \*DIN 0 ROMS65
-    \*SRLOAD BLTUTIL F X
-    \*SRLOAD BASIC2 3 X
+    *DIN 0 ROMS65
+    *SRLOAD BLTUTIL F X
+    *SRLOAD BASIC2 3 X
 
 If you are using ADFS, HOSTFS, DFS you may also load these ROMS to the
 alternate set. Unfortunately, at present MMFS relies on timing loops to
@@ -630,10 +630,10 @@ Please ensure that:
 The hard CPU needs its own set of ROMS separate to those used in normal
 T65 mode. These should be loaded as follows:
 
-    \*DIN 0 ROMS65
-    \*SRLOAD BLTUTIL F X
-    \*SRLOAD BASIC2 7 X
-    \*SRLOAD MOS120 9 X
+    *DIN 0 ROMS65
+    *SRLOAD BLTUTIL F X
+    *SRLOAD BASIC2 7 X
+    *SRLOAD MOS120 9 X
 
 Note: the X modifier after the ROM slot indicates that it should be loaded
 to the other bank
@@ -643,7 +643,7 @@ in map 1 - this is a special slot in that it is used to provide the MOS rom.
 
 You should check that these, and no other, ROMs are loaded to map 1 by typing
 
-    \*ROMS ACX
+    *ROMS ACX
 
 Which will list all the ROMs in map 1 along with their CRC. your list should
 look like this:
@@ -652,7 +652,7 @@ look like this:
 
 Any unwanted roms should be unloaded using
 
-    \*SRERASE # X
+    *SRERASE # X
 
 for each unwanted ROM, substituting the ROM number as appropriate.
 
@@ -663,7 +663,7 @@ jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break
 
 Notice that the boot message now says "65C02 8MHz". You may also type
 
-    \*BLINFO
+    *BLINFO
 
 as a command to see the configuration.
 
@@ -672,7 +672,7 @@ no filing system present yet.
 
 Switch back to T65 by refitting CFG0 and pressing CTRL-Break
 
-    \*DIN 0 TOOLS65
+    *DIN 0 TOOLS65
     LOAD"CLOCKSP"
     PRINT ~PAGE
 
@@ -692,7 +692,7 @@ You should now see the CLOCKSP program listed and be able to run it.
 You should now get the CLOCKSP results you may try using BLTURBO Lxx as 
 described [above](#try-out-clocksp)
 
-    \*BLTURBO L03
+    *BLTURBO L03
     RUN
 
 This should run somewhat faster. Note depending on the configuration and type
@@ -701,9 +701,9 @@ of board you have the CPU may not be able to run at full speed.
 You can get some more performance in BASIC by running a new version of BASIC.
 Switch back to T65 by refitting CFG0 and loading BASIC 4.32
 
-    \*DIN 0 ROMS65
-    \*SRLOAD BAS432 7 X
-    \*DIN 0 TOOLS65
+    *DIN 0 ROMS65
+    *SRLOAD BAS432 7 X
+    *DIN 0 TOOLS65
     LOAD "CLOCKSP"
 
 Then switch back to the 65C02 by removing CFG0 and pressing CTRL-Break 
@@ -718,6 +718,90 @@ Copying files from the T65 to the 65C02 like this is somewhat laborious. So,
 you will probably want now to switch back to T65 mode and load the ROM images
 for your favoured filing system and other utility ROMS to the alternate ROM
 set. Use SRLOAD but do remember to use the X modifier as appropriate.
+
+### Loading a filing system
+
+You may now switch back to T65 mode and can load a filings system ROM to the
+alternate ROM set using 
+
+    *SRLOAD XXXX 3 X 
+
+substituting the filename of a filing system ROM image for XXXX.
+
+The following filing systems are tested and known to work
+
+    * DFS 2.26
+    * DFS 0.90
+    * ADFS 1.3\*
+    * HOSTFS
+    * MMFS
+
+Other filing systems may or may not work. Please report any difficulties on
+the startdot forum.
+
+
+## Running a 65816
+
+The Blitter supports a w65c816s as a hard CPU. The 65816 can operate almost
+identically to a 65C02 processor and the ROM set and tests described above in
+the 65C02 can be utilised but it is important still to set the jumpers 
+specifically for the 65816 as it uses slightly different control signals and
+damage could occur if these are not set first.
+
+**MK2**
+
+The speed grade of the CPU should be 8MHz or higher. Due to the fact that
+the 65816 needs CMOS voltage levels on the databus it is important that
+the 65816 voltage be set to 3.3V on P6.
+
+Insert the CPU into the board as pictured and set the CPU configuration
+jumpers as follows:
+
+ * fit CFG2 and CFG3 and leave CFG1 empty
+
+For further information see [Hardware overview Mk.2](hardware-overview-mk2.md#j5-system-config)
+
+<img src="assets/getting-started/w65c812s-fit.jpg" width="80%" />
+
+Please ensure that:
+
+ * the Pin 1 notch is to the West
+ * the CPU is in the topmost CPU slot
+
+You should can now try all the same tests as for the 65C02. Please follow the
+instructions from the section *Loading ROMS and MOS* for the 65C02 above.
+
+### 65816 Communicator BASIC
+
+The 65816 has advanced facilities such as addressing up to 16MB of memory and
+extra instructions. There is not much software yet to take advantage of this
+
+However, there is a 65816 specific version of BBC BASIC which has been ported 
+which is available at https://github.com/dominicbeesley/CommunicatorBasic100/releases
+
+You should be able to run this extended version of BASIC by mounting the 
+SSD (BAS816_BLIT.SSD) and executing !B00T. Ensure that you are running 
+in hard cpu (not T65) mode:
+
+    *DIN 0 BAS816BLIT
+    *EXEC !BOOT
+
+This should load up some files and return a > prompt. Typing 
+
+    REPORT
+
+should show "6816 BASIC (c) 2020 Dossy". 
+
+<img src="assets/getting-started/bas816-1.jpg" width="80%" />
+
+You may now run BASIC programs as normal i.e. CLOCKSP:
+
+<img src="assets/getting-started/bas816-1.jpg" width="80%" />
+
+
+
+
+
 
 ## Running a 6809 or 6309
 
@@ -761,7 +845,7 @@ operating system.
 To double check that you have the configuration selected for the 6809 you can
 type 
 
-    \*BLINFO
+    *BLINFO
 
 as a command to see the configuration, the hard cpu that is configured
 should display even when it is not selected.
@@ -771,14 +855,14 @@ should display even when it is not selected.
 
 You will then need to load the 6809 MOS and BASIC roms from T65 mode:
 
-    \*DIN 0 ROMS69
-    \*SRLOAD M.MOS6809 9 X
-    \*SRLOAD R.BASIC 3 X
-    \*SRLOAD R.UTILS09 F X
+    *DIN 0 ROMS69
+    *SRLOAD M.MOS6809 9 X
+    *SRLOAD R.BASIC 3 X
+    *SRLOAD R.UTILS09 F X
 
 and check with 
 
-    \*ROMS X
+    *ROMS X
 
 If you get any other ROMS, you should delete them using \*SRERASE # X
 
@@ -801,7 +885,7 @@ access them on the 6x09
 
 Switch back to T65 by refitting CFG0 and pressing CTRL-Break
 
-    \*DIN 0 TOOLS65
+    *DIN 0 TOOLS65
     LOAD"CLOCKSP"
     PRINT ~PAGE
 
@@ -839,7 +923,7 @@ run slightly faster than 2MHz. To give a fairer comparison it is possible
 to throttle the CPU to be exactly 2MHz and synchronized with the BBC's 
 motherboard clock.
 
-    \*BLTURBO T
+    *BLTURBO T
 
 <img src="assets/getting-started/6809-clocksp.jpg" width="80%" />
 
@@ -879,7 +963,7 @@ This is still somewhat held back by the fact that the memory used to store
 the BASIC program is running at 2MHz. You can used the BLTURBO command to 
 use fast ChipRAM shadow memory
 
-    \*BLTURBO L07
+    *BLTURBO L07
 
 This should give a little more of a boost
 
@@ -892,9 +976,9 @@ registers and instructions which may be used to improve performance.
 
 Switch back to T65 mode and load alternate operating system and BASIC ROMS:
 
-    \*DIN 0 ROMS69
-    \*SRLOAD M.MOS630N 9 X
-    \*SRLOAD R.BAS6309 3 X
+    *DIN 0 ROMS69
+    *SRLOAD M.MOS630N 9 X
+    *SRLOAD R.BAS6309 3 X
 
 Note: the correct MOS filename ends with "N" for native.
 
