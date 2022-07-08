@@ -761,7 +761,7 @@ jumpers as follows:
 
 For further information see [Hardware overview Mk.2](hardware-overview-mk2.md#j5-system-config)
 
-<img src="assets/getting-started/w65c812s-fit.jpg" width="80%" />
+<img src="assets/getting-started/w65c816s-fit.jpg" width="80%" />
 
 Please ensure that:
 
@@ -796,12 +796,17 @@ should show "6816 BASIC (c) 2020 Dossy".
 
 You may now run BASIC programs as normal i.e. CLOCKSP:
 
-<img src="assets/getting-started/bas816-1.jpg" width="80%" />
+<img src="assets/getting-started/bas816-2.jpg" width="80%" />
 
+This will be somewhat slower than the figures obtained for a 65C02 running 
+BASIC 4.32 but this is explained, in part, by the fact that the BASIC 
+interpreter is using larger, slower, 24 bit pointers which allows for much
+larger programs and data:
 
+<img src="assets/getting-started/bas816-3.jpg" width="80%" />
 
-
-
+Currently the program/data size is limited to just slightly less than 512K.
+However, if there is sufficient interest, this could be increased.
 
 ## Running a 6809 or 6309
 
