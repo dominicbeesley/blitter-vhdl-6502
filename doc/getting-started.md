@@ -54,6 +54,13 @@ inserting the given floppy disc.
 
 ## Strip down the Blitter to a minimal configuration
 
+You may have been supplied with a buttons board to make changing jumper 
+settings easier. If you have then you may connect the board as described
+in [Buttons Board](buttons-mk1.md). NOTE: wherever a jumper is left open
+in this guide the corresponding switch should be in the UP position. i.e.
+British switch sense - down for on
+
+
 **Mk.2**
 
 * remove all hard CPUs
@@ -68,6 +75,8 @@ inserting the given floppy disc.
 
 [See Hardware Overview](hardware-overview-mk2.md) for more information about
 jumpers
+
+
 
 **Mk.3**
 

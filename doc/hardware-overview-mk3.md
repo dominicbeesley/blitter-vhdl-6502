@@ -269,7 +269,7 @@ tolerant, level shifters must be used if 5V devices are to be connected
     +---------+
       S S 3 G
       D C v N
-      A L 2 D
+      A L 3 D
 
 
 ## J56 PORTG configuration options
@@ -332,8 +332,8 @@ All other settings are reserved for future use
             battery backed RAM when fitted. When not fitted the (default)
             boot ROM (MOS) will be taken from set #1's ROM#9
             (see the section on Sideways memory below)
-    6       SWRAM disable - when fitted in ROM set #0 all ROMs will be
-            read from the motherboard and the on board sideways memory
+    6       MEMI - when fitted in ROM set #0 all ROMs will be read from the
+            motherboard and the on board sideways memory
             will be ignored. 
     7,8     RESERVED for future expansion
 
