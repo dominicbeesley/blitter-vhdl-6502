@@ -27,6 +27,12 @@ Your machine should now look like this:
 
 <img src="assets/getting-started/empty-mb.jpg" width="80%" />
 
+## Check S9 on the BBC Motherboard
+
+Ensure either that S9 is fitted on the motherboard (it may be a wire link) or
+that a Disc Interface is fitted. If your machine at one point had a disc 
+interface that has now been removed you should remake S9.
+
 ## Choosing a filing system
 
 The Blitter in 6502 mode should work with most filing systems *except* for 
