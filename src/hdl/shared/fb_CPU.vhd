@@ -72,8 +72,8 @@ entity fb_cpu is
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
 		G_INCL_CPU_680x0					: boolean := false;
-		G_INCL_CPU_68008					: boolean := false
-
+		G_INCL_CPU_68008					: boolean := false;
+		G_INCL_CPU_ARM2						: boolean := false
 	);
 	port(
 
@@ -381,6 +381,32 @@ architecture rtl of fb_cpu is
 	);
 	end component;
 
+	component fb_cpu_arm2 is
+	generic (
+		CLOCKSPEED							: positive := 128;
+		SIM									: boolean := false
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+		cfg_mosram_i							: in std_logic;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- special m68k signals
+
+		jim_en_i									: in		std_logic
+
+	);
+	end component;
 
 
 	function B2OZ(b:boolean) return natural is 
@@ -401,7 +427,8 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
 	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
 	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
-	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_68008 + 1; -- always add 1 at end though it might not be actually used!
+	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_68008);
+	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + 1; -- always add 1 at end though it might not be actually used!
 
 	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
 	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
@@ -439,6 +466,7 @@ architecture rtl of fb_cpu is
 	signal r_cpu_en_6800 : std_logic;
 	signal r_cpu_en_80188 : std_logic;
 	signal r_cpu_en_65816 : std_logic;
+	signal r_cpu_en_arm2 : std_logic;
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
@@ -537,6 +565,9 @@ begin
 						when CPU_Z80 =>
 							r_cpu_run_ix_act <= C_IX_CPU_Z80;
 							r_cpu_en_z80 <= '1';						
+						when CPU_ARM2 =>
+							r_cpu_run_ix_act <= C_IX_CPU_ARM2;
+							r_cpu_en_arm2 <= '1';						
 						when others => 
 							null;
 					end case;
@@ -567,6 +598,9 @@ begin
 						r_hard_cpu_en <= '1';
 					when CPU_Z80 =>
 						r_cpu_run_ix_hard <= C_IX_CPU_Z80;
+						r_hard_cpu_en <= '1';
+					when CPU_ARM2 =>
+						r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
 						r_hard_cpu_en <= '1';
 					when others => 
 						null;
@@ -815,6 +849,31 @@ g680x0:IF G_INCL_CPU_680x0 GENERATE
 
 	);
 END GENERATE;
+
+gARM2:IF G_INCL_CPU_ARM2 GENERATE
+	e_wrap_680x0:fb_cpu_arm2
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_arm2,
+		fb_syscon_i								=> fb_syscon_i,
+		cfg_mosram_i							=> cfg_mosram_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_ARM2),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_ARM2),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+ 		jim_en_i									=> jim_en_i
+
+	);
+END GENERATE;
+
 
 g68008:IF G_INCL_CPU_68008 GENERATE
 	e_wrap_68008:fb_cpu_68008

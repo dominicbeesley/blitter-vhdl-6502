@@ -946,6 +946,9 @@ begin
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
 					r_cfg_mk2_cpubits <= "101";
+				when "0110111" =>
+					r_cfg_cpu_type <= CPU_ARM2;
+					r_cfg_mk2_cpubits <= "000";
 				when others =>
 					null;
 			end case;

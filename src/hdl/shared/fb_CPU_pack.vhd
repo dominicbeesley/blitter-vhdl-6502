@@ -48,7 +48,7 @@ use work.fb_CPU_exp_pack.all;
 
 package fb_CPU_pack is
 
-	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_680x0, CPU_6800, CPU_80188);
+	type cpu_type is (NONE, CPU_6x09, CPU_6502, CPU_65C02, CPU_65816, CPU_Z80, CPU_68008, CPU_680x0, CPU_6800, CPU_80188, CPU_ARM2);
 	type cpu_speed_opt is 
 	(
 		NONE,
