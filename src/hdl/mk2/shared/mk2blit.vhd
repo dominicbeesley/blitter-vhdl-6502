@@ -233,6 +233,7 @@ architecture rtl of mk2blit is
 	signal i_turbo_lo_mask				: std_logic_vector(7 downto 0);	-- which blocks of 16 pages to run at full speed
 
 	signal i_swmos_shadow				: std_logic;							-- shadow mos from SWRAM slot #8	
+	signal i_rom_write_protect			: std_logic;							-- when set prevent all swrom/ram/mos writes - Hoglet
 
 	signal i_noice_debug_nmi_n			: std_logic;							-- debugger is forcing a cpu NMI
 	signal i_noice_debug_shadow		: std_logic;							-- debugger memory MOS map is active (overrides shadow_mos)
@@ -536,6 +537,7 @@ END GENERATE;
 		do6502_debug_i						=> r_cfg_do6502_debug,
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
+		rom_write_protect_o				=> i_rom_write_protect,
 		cfgbits_i							=> i_memctl_configbits,
 
 		-- noice debugger signals to cpu
@@ -683,6 +685,7 @@ END GENERATE;
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
+		rom_write_protect_i				=> i_rom_write_protect,
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_i				=> i_noice_debug_nmi_n,

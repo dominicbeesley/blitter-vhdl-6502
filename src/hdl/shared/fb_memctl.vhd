@@ -66,6 +66,7 @@ entity fb_memctl is
 		turbo_lo_mask_o					: out	std_logic_vector(7 downto 0);
 
 		swmos_shadow_o						: out	std_logic;		-- shadow mos from SWRAM slot #8
+		rom_write_protect_o				: out std_logic;
 
 		boot_65816_o						: out std_logic;
 
@@ -137,7 +138,9 @@ architecture rtl of fb_memctl is
 
 	signal   r_65816_boot					: 	std_logic;
 
-	signal	r_throttle_cpu_2MHz				: 	std_logic;
+	signal	r_throttle_cpu_2MHz			: 	std_logic;
+
+	signal	r_rom_protect					:  std_logic;		-- Hoglet special - write protect all roms/mos 
 
 begin
 
@@ -148,6 +151,7 @@ begin
 	turbo_lo_mask_o <= r_turbo_lo;
 
 	swmos_shadow_o <= r_swmos_shadow;
+	rom_write_protect_o <= r_rom_protect;
 
 	noice_debug_nmi_n_o <= 
 		r_noice_debug_nmi_n when do6502_debug_i = '1' else
@@ -171,7 +175,7 @@ begin
 								r_noice_debug_act
 							& 	r_noice_debug_5C
 							& 	r_65816_boot
-							&	'0'
+							&	r_rom_protect
 							&  r_noice_debug_en
 							&	r_noice_debug_shadow
 							&	'0'
@@ -207,6 +211,7 @@ begin
 					r_throttle_cpu_2MHz <= '0';
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
+					r_rom_protect <= '0';
 				end if;		
 				r_con_rdy <= '0';
 			else
@@ -226,6 +231,7 @@ begin
 										when 1 =>
 											r_swmos_shadow <= fb_c2p_i.D_wr(0);
 											r_noice_debug_en <= fb_c2p_i.D_wr(3);
+											r_rom_protect <= fb_c2p_i.D_wr(4);
 											r_65816_boot <= fb_c2p_i.D_wr(5);
 											r_noice_debug_written_en <= '1';
 											r_noice_debug_written_val <= fb_c2p_i.D_wr(2);

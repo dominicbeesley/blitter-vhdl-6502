@@ -81,12 +81,14 @@ entity log2phys is
 		-- memctl signals in
 		jim_en_i								: in  std_logic;		-- local jim override
 		swmos_shadow_i						: in	std_logic;		-- shadow mos from SWRAM slot #8
+		rom_write_protect_i				: in  std_logic;		-- Hoglet special write protect for rom/mos/ram, redirects all writes to a "daft" address
 
 		-- noice debugger signals to cpu
 		noice_debug_shadow_i				: in std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
 
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
+		we_i									: in std_logic;
 		-- mapped address
 		A_o									: out std_logic_vector(23 downto 0)
 
@@ -157,7 +159,11 @@ begin
 		A_o <= A_i;
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
-				A_o <= r_pagrom_A & A_i(13 downto 0);
+				if we_i = '1' and rom_write_protect_i = '1' then
+					A_o <= x"FC00FF";
+				else
+					A_o <= r_pagrom_A & A_i(13 downto 0);
+				end if;
 			elsif A_i(15 downto 8) = x"FD" then
 				if jim_en_i = '1' then
 					A_o <= JIM_page_i & A_i(7 downto 0);
@@ -167,9 +173,11 @@ begin
 					and A_i(15 downto 8) /= x"FD"
 					and A_i(15 downto 8) /= x"FE" then -- MOS access
 				if noice_debug_shadow_i = '1' and A_i(13 downto 12) = "00" then
-						A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow RAM from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
-					else
-						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
+					A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow RAM from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
+				elsif we_i = '1' and rom_write_protect_i = '1' then
+					A_o <= x"FC00FF";
+				else
+					A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot calculated in process
 				end if;
 			elsif A_i(15) = '0' and turbo_lo_mask_i(to_integer(unsigned(A_i(14 downto 12)))) = '1' then
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF

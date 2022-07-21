@@ -107,6 +107,8 @@ entity fb_cpu is
 
 		-- memctl signals
 		swmos_shadow_i							: in	std_logic;		-- shadow mos from SWRAM slot #8
+		rom_write_protect_i					: in	std_logic;		-- write protect all sideways rom/ram/mos
+
 		turbo_lo_mask_i						: in 	std_logic_vector(7 downto 0);
 
 		-- noice debugger signals to cpu
@@ -713,10 +715,12 @@ begin
 
 		jim_en_i								=> jim_en_i,
 		swmos_shadow_i						=> swmos_shadow_i,
+		rom_write_protect_i				=> rom_write_protect_i,
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
 		A_i									=> i_wrap_o_cur_act.A_log,
+		we_i									=> i_wrap_o_cur_act.we,
 		A_o									=> i_wrap_phys_A
 	);
 

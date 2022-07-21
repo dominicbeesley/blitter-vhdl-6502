@@ -640,7 +640,7 @@ This register controls the various MOS mapping options
  | 1      | - reserved -
  | 2      | SWMOS_DEBUG 
  | 3  #   | SWMOS_DEBUG_EN
- | 4      | - reserved -
+ | 4  #   | ROM protect           ** HOG branch only **
  | 5      | 65816 boot
  | 6      | SWMOS_DEBUG_5C
  | 7      | SWMOS_DEBUG_ACT
@@ -676,6 +676,9 @@ use OR or AND to set/clear bits rather than writing direct.
    and 6x09 CPUs
 
    See [Noice Debugger](#the-noice-debugger) below
+
+ * **ROM protect** when set all writes to the sideways ROM slots will be ignored
+   This is provisional for Hoglet.
 
  * **65816 boot** In 65816 mode when this bit is set then the 65816 accesses 
    to logical CPU bank 0 will have the same mapping applied as the 64k address
