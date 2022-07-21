@@ -330,7 +330,7 @@ Flex for the 6800, 6809 or 6309.
 The BLTURBO command can also be used to copy a ROM based MOS to ram and
 run from there to provide a speed boost.
 
-See also TODO link to FF FE31/32
+See also: Registers [FF FE31 SWROM](#ff-fe31-swmos), [FF FE32 SWMOS save register](#ff-fe32-swmos-save-register)
 
 TODO: remove FLEX shadow from vhdl
 TODO: rename SWMOS_SHADOW to MOSRAM throughout vhdl/docs
@@ -391,7 +391,7 @@ It is possible to remap the 65816 to use a "flatter" memory map where
 the bank register maps directly to the Physical bank *except* for bank
 FF which will go through a MOS compatible logical to physical mapping. This
 has not been widely used and may change in future. To exit boot mode
-write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) see [below](#ff-fe31)
+write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) see [below](#ff-fe31-swmos)
 
 
 ## Motorolla M68K series
