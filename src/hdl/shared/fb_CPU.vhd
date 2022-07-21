@@ -427,7 +427,7 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
 	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
 	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
-	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_68008);
+	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_68008 + B2OZ(G_INCL_CPU_68008);
 	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + 1; -- always add 1 at end though it might not be actually used!
 
 	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
@@ -851,7 +851,7 @@ g680x0:IF G_INCL_CPU_680x0 GENERATE
 END GENERATE;
 
 gARM2:IF G_INCL_CPU_ARM2 GENERATE
-	e_wrap_680x0:fb_cpu_arm2
+	e_wrap_arm2:fb_cpu_arm2
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED

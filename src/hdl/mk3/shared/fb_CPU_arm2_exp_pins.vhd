@@ -74,10 +74,6 @@ entity fb_cpu_arm2_exp_pins is
 
 		CPU_D_RnW_i								: in std_logic;
 
-		MUX_PORTE_nOE_i						: in std_logic;
-		MUX_PORTF_nOE_i						: in std_logic;
-
-
 		CPUSKT_nM_o								: out std_logic_vector(1 downto 0);
 		CPUSKT_nRW_o							: out std_logic;
 		CPUSKT_nBW_o							: out std_logic;
@@ -114,29 +110,24 @@ begin
 	CPUSKT_nOPC_o		<= wrap_exp_i.exp_PORTD(4);
 	CPUSKT_nMREQ_o		<= wrap_exp_i.exp_PORTD(5);
 	CPUSKT_nTRAN_o		<= wrap_exp_i.exp_PORTD(6);
-
-	wrap_exp_i.exp_PORTD(7)	<= CPUBRD_nBL_i(2);
-	wrap_exp_i.exp_PORTD(8)	<= CPUBRD_nBL_i(3);
-
 	CPUSKT_nCPI_o		<= wrap_exp_i.exp_PORTD(9);
 
-	wrap_exp_i.exp_PORTD(10)<= CPUSKT_CPB_i(2);
-	wrap_exp_i.exp_PORTD(11)<= CPUSKT_CPA_i(3);
 
 
 
 	wrap_exp_o.exp_PORTD <= (
-		8 downto 7 => CPUBRD_nBL_i(3 downto 2),
-		9 => CPUSKT_CPB_i,
-		10 => CPUSKT_CPA_i,					-- 68K halt
+		7 =>  CPUBRD_nBL_i(2),
+		8 => CPUBRD_nBL_i(3),
+		10 => CPUSKT_CPB_i,
+		11 => CPUSKT_CPA_i,
 		others => '1'
 		);
 
 	wrap_exp_o.exp_PORTD_o_en <= (
 		7 => '1',
 		8 => '1',
-		9 => '1',
 		10 => '1',
+		11 => '1',
 		others => '0'
 		);
 
@@ -144,8 +135,8 @@ begin
 	wrap_exp_o.exp_PORTF_nOE <= '1';
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(23 downto 1);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
 
 end rtl;
 
