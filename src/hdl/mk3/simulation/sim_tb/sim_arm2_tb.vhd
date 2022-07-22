@@ -112,7 +112,6 @@ architecture Behavioral of sim_arm2_tb is
 
 	-- latched at start of phi1 for this cycle
 	signal	latched_CPU_nRW					: std_logic;	
-	signal	latched_CPU_MREQ					: std_logic;
 
 	-- latched data from fpga byte lanes
 	signal	r_latched_CPU_D_o					: std_logic_vector(31 downto 0);						
@@ -120,6 +119,7 @@ architecture Behavioral of sim_arm2_tb is
 
 	component arm2_a23_core is
 	port(
+		i_phi1					: in std_logic;		
 		i_phi2					: in std_logic;		
 		i_nirq					: in std_logic;
 		i_nfirq					: in std_logic;
@@ -127,6 +127,8 @@ architecture Behavioral of sim_arm2_tb is
 
 		io_D						: inout std_logic_vector(31 downto 0);
 
+		o_A						: out std_logic_vector(31 downto 0);
+		o_nMREQ					: out std_logic;
 		o_nrw						: out std_logic
 	);
 	end component;
@@ -308,24 +310,23 @@ begin
    begin
    	if rising_edge(i_CPUSKT_phi1_o) then
    		latched_CPU_nRW <= i_CPUSKT_nRW_i;
-   		latched_CPU_MREQ <= i_CPUSKT_nMREQ_i;
    	end if;
    end process;
 
----   -- TODO: multiplex Data bus with 543 buffers
----   glatch_data_write:FOR I in 3 downto 0 GENERATE
----   	i_exp_PORTA_io_cpu <= i_CPU_D_io(7+I*8 downto I*8) when latched_CPU_nRW = '0' and i_CPUBRD_nBL_o(I) = '0' else (others => 'Z');
----   END GENERATE;
----
----   glatch_data_read:FOR I in 3 downto 0 GENERATE
----   	r_latched_CPU_D_o(7+I*8 downto I*8) <= i_exp_PORTA_io_cpu when latched_CPU_nRW = '1' and i_CPUBRD_nBL_o(I) = '0' else r_latched_CPU_D_o(7+I*8 downto I*8);   	
----   END GENERATE;
----
----   i_CPU_D_io <= r_latched_CPU_D_o when latched_CPU_nRW = '1' and latched_CPU_MREQ = '0' else (others => 'Z');
+   -- TODO: multiplex Data bus with 543 buffers
+   glatch_data_write:FOR I in 3 downto 0 GENERATE
+   	i_exp_PORTA_io_cpu <= i_CPU_D_io(7+I*8 downto I*8) when latched_CPU_nRW = '1' and i_CPUBRD_nBL_o(I) = '0' else (others => 'Z');
+   END GENERATE;
+
+   glatch_data_read:FOR I in 3 downto 0 GENERATE
+   	r_latched_CPU_D_o(7+I*8 downto I*8) <= i_exp_PORTA_io_cpu when latched_CPU_nRW = '0' and i_CPUBRD_nBL_o(I) = '0' else r_latched_CPU_D_o(7+I*8 downto I*8);   	
+   END GENERATE;
+
+   i_CPU_D_io <= r_latched_CPU_D_o when latched_CPU_nRW = '0' else (others => 'Z');
 
 ---	i_CPU_D_io <= x"E1A00000" when i_CPUSKT_phi1_o = '0' and latched_CPU_nRW = '0' else (others => 'Z'); --MOV R0,R0
 
-	i_CPU_D_io <= x"E5CF0000" when i_CPUSKT_phi1_o = '0' and latched_CPU_nRW = '0' else (others => 'Z'); --STRB R0,[PC]
+---	i_CPU_D_io <= x"E5CF0000" when i_CPUSKT_phi1_o = '0' and latched_CPU_nRW = '0' else (others => 'Z'); --STRB R0,[PC]
 
    -- wire up PORT B
 	i_CPUSKT_ABRT_o 	<= i_exp_PORTB_o_cpu(0);
@@ -374,14 +375,16 @@ begin
 
 	e_arm2:arm2_a23_core
 	port map (
+		i_phi1		=> i_CPUSKT_phi1_o,
 		i_phi2		=> i_CPUSKT_phi2_o,
 		i_nirq		=> i_CPUSKT_nIRQ_o,
 		i_nfirq		=> i_CPUSKT_nFIRQ_o,
 		i_reset  	=> i_CPUSKT_RES_o,
 
-
 		io_D			=> i_CPU_D_io,
 
+		o_A			=> i_CPU_A_i,
+		o_nMREQ		=> i_CPUSKT_nMREQ_i,
 		o_nrw			=> i_CPUSKT_nRW_i
 
 	);

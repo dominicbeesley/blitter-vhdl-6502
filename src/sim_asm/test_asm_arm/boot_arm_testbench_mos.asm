@@ -15,5 +15,24 @@ lp:	add	r0,r0,r1
 
 	.section "romvectors", "acrx"
 
-	B	reset
+	B	reset1			; reset
+	subs	pc,lr,#4			; undefined
+	subs	pc,lr,#4			; swi
+	subs	pc,lr,#4			; prefetch abort
+	subs	pc,lr,#4			; data abort
+	subs	pc,lr,#4			; uk
+	subs	pc,lr,#4			; irq
+	subs	pc,lr,#4			; firq
 
+
+reset1:	mov	r0,#16
+	mov	r1,#0
+rlp:	ldmia	r1,{r2,r3,r4,r5}
+	stmia	r1!,{r2,r3,r4,r5}
+	subs	r0,r0,#1
+	bne	rlp
+
+	mov	r12,#0xFFFFFCFF
+	mov	r0,#0xD1
+	strb	r0,[r12]
+	b	reset

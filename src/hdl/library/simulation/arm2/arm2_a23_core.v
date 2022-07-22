@@ -46,12 +46,15 @@
 module arm2_a23_core
 (
 input                       i_phi2,
+input                       i_phi1,
 
 input                       i_nirq,              // Interrupt request, active high
 input                       i_nfirq,             // Fast Interrupt request, active high
 
 input                       i_reset,
 
+output    [31:0]            o_A,
+output                      o_nMREQ,
 output                      o_nrw,
 
 inout     [31:0]            io_D
@@ -170,7 +173,10 @@ assign read_data = io_D;
 assign o_nrw = write_enable;
 assign fetch_stall = 1'd0;
 assign fetch_abort = 1'd0;
+assign o_A = execute_address;
+assign o_nMREQ = !execute_address_valid;
 
+assign io_D = (write_enable & !i_phi1)?write_data:{32{1'dZ}};
 
 a23_decode u_decode (
     .i_clk                              ( i_clk                             ),
