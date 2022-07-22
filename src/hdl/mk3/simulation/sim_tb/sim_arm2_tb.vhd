@@ -131,6 +131,16 @@ architecture Behavioral of sim_arm2_tb is
 	-- latched data from fpga byte lanes
 	signal	r_latched_CPU_D_o					: std_logic_vector(31 downto 0);						
 
+
+	component arm2_a23_core is
+	port(
+		i_phi2					: in std_logic;
+		i_irq						: in std_logic;
+		i_firq					: in std_logic
+	);
+	end component;
+
+
 begin
 	
 	e_SYS:entity work.sim_SYS_tb
@@ -365,6 +375,14 @@ begin
 	i_exp_PORTE <= (
 		7 downto 0 => i_cpu_A_i(15 downto 8),
 		11 downto 8 => i_cpu_A_i(23 downto 20)
+	);
+
+
+	e_arm2:arm2_a23_core
+	port map (
+		i_phi2		=> i_CPUSKT_phi2_o,
+		i_irq			=> not i_CPUSKT_nIRQ_o,
+		i_firq		=> not i_CPUSKT_nFIRQ_o
 	);
 
 
