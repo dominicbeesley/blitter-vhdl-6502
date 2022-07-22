@@ -58,6 +58,7 @@
 module a23_wishbone
 (
 input                       i_clk,
+input                       i_reset,
 
 // Core Accesses to Wishbone bus
 input                       i_select,
@@ -67,21 +68,24 @@ input       [3:0]           i_byte_enable,    // valid for writes only
 input                       i_data_access,
 input                       i_exclusive,      // high for read part of swap access
 input       [31:0]          i_address,
+input                       i_translate,      // assert the translate pin from the core.
 output                      o_stall,
+output                      o_abort,
 
 // Cache Accesses to Wishbone bus
 input                       i_cache_req,
 
 // Wishbone Bus
-output reg  [31:0]          o_wb_adr = 'd0,
-output reg  [3:0]           o_wb_sel = 'd0,
-output reg                  o_wb_we  = 'd0,
+output reg  [31:0]          o_wb_adr,
+output reg  [3:0]           o_wb_sel,
+output reg                  o_wb_we ,
 input       [31:0]          i_wb_dat,
-output reg  [31:0]          o_wb_dat = 'd0,
-output reg                  o_wb_cyc = 'd0,
-output reg                  o_wb_stb = 'd0,
+output reg  [31:0]          o_wb_dat,
+output reg                  o_wb_cyc,
+output reg                  o_wb_stb,
 input                       i_wb_ack,
-input                       i_wb_err
+input                       i_wb_err,
+output reg                  o_wb_tga        // address attributes
 
 );
 
@@ -113,10 +117,11 @@ reg                         wbuf_busy_r = 'd0;
 
 
 assign read_ack             = !o_wb_we && i_wb_ack;
-assign o_stall              = ( core_read_request  && !read_ack )       || 
+wire   write_ack            =  o_wb_we && i_wb_ack;
+assign o_stall              = ( core_write_request  && !write_ack )       || 
+                              ( core_read_request  && !read_ack )       || 
                               ( core_read_request  && servicing_cache ) ||
                               ( core_write_request && servicing_cache ) ||
-                              ( core_write_request && wishbone_st == WB_WAIT_ACK) ||
                               ( cache_write_request && wishbone_st == WB_WAIT_ACK) ||
                               wbuf_busy_r;
 
@@ -167,6 +172,15 @@ assign wait_write_ack = o_wb_stb && o_wb_we && !i_wb_ack;
 
 
 always @( posedge i_clk )
+   if (i_reset) begin
+      wishbone_st <= WB_IDLE;
+      o_wb_adr    <= 32'd0;
+      o_wb_sel    <= 4'd0;
+      o_wb_we     <= 1'd0;
+      o_wb_cyc    <= 1'd0;
+      o_wb_stb    <= 1'd0;
+      o_wb_tga    <= 1'b0;
+   end else
     case ( wishbone_st )
         WB_IDLE :
             begin 
@@ -176,11 +190,12 @@ always @( posedge i_clk )
                 o_wb_stb            <= 1'd1; 
                 o_wb_cyc            <= 1'd1; 
                 o_wb_sel            <= byte_enable;
+                o_wb_tga            <= i_translate;
                 end
             else if ( !wait_write_ack )
                 begin
                 o_wb_stb            <= 1'd0;
-                
+                o_wb_tga            <= 1'b0;
                 // Hold cyc high after an exclusive access
                 // to hold ownership of the wishbone bus
                 o_wb_cyc            <= exclusive_access;
@@ -234,7 +249,7 @@ always @( posedge i_clk )
                                         byte_enable == 4'b0011 ? 2'd0 :
                                         byte_enable == 4'b1100 ? 2'd2 :
                                        
-                                                                 2'd0 ;
+                                                                 i_address[1:0];
                 end
             end
                     
@@ -271,7 +286,7 @@ always @( posedge i_clk )
 
         // Wait for the wishbone ack to be asserted
         WB_WAIT_ACK:   
-            if ( i_wb_ack )
+            if ( i_wb_ack | i_wb_err)
                 begin
                 wishbone_st         <= WB_IDLE;
                 o_wb_stb            <= 1'd0; 
@@ -283,6 +298,7 @@ always @( posedge i_clk )
     endcase
         
         
+assign o_abort = i_wb_err & o_wb_cyc;
 
 // ========================================================
 // Debug Wishbone bus - not synthesizable

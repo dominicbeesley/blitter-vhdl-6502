@@ -74,8 +74,8 @@ output      [31:0]          o_pc
 
 );
 
-`include "a23_localparams.vh"
-`include "a23_functions.vh"
+`include "a23_localparams.v"
+`include "a23_functions.v"
 
 wire  [1:0]  mode_idec;
 wire  [1:0]  mode_exec;

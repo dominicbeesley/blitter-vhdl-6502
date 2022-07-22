@@ -1,13 +1,14 @@
 //////////////////////////////////////////////////////////////////
 //                                                              //
-//  Amber Configuration and Debug for the AMber 2 Core          //
+//  Memory configuration and Wishbone address decoding          //
 //                                                              //
 //  This file is part of the Amber project                      //
 //  http://www.opencores.org/project,amber                      //
 //                                                              //
 //  Description                                                 //
-//  Contains a set of defines used to configure and debug       //
-//  the Amber core                                              //
+//  This module provides a set of functions that are used to    //
+//  decode memory addresses so other modules know if an address //
+//  is for example in main memory, or boot memory, or a UART    //
 //                                                              //
 //  Author(s):                                                  //
 //      - Conor Santifort, csantifort.amber@gmail.com           //
@@ -39,43 +40,42 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-`ifndef _A23_CONFIG_DEFINES
-`define _A23_CONFIG_DEFINES
+// e.g. 24 for 32MBytes, 26 for 128MBytes
+localparam MAIN_MSB             = 26; 
 
-// Cache Ways
-// Changing this parameter is the recommended
-// way to change the Amber cache size; 2, 3, 4 and 8 ways are supported.
-//   2 ways -> 8KB  cache
-//   3 ways -> 12KB cache
-//   4 ways -> 16KB cache
-//   8 ways -> 32KB cache
-`define A23_CACHE_WAYS 4
+// e.g. 13 for 4k words
+localparam BOOT_MSB             = 13;  
 
-// Use ram-based register bank implementation
-// `define A23_RAM_REGISTER_BANK
+localparam MAIN_BASE            	= 32'h0000_0000; /*  Main Memory            */
+localparam PHYS_BASE            	= 32'h0200_0000; /*  Physical Memory        */
+localparam IO_BASE            	= 32'h0300_0000; /*  Physical Memory        */
+localparam ROM_BASE          		= 32'h0340_0000; /*  Uncachable Boot Memory */
+localparam ROM_TOP          		= 32'h0400_0000; /*  Uncachable Boot Memory */
 
-// --------------------------------------------------------------------
-// Debug switches 
-// --------------------------------------------------------------------
-
-// Enable the decompiler. The default output file is amber.dis
-`define A23_DECOMPILE
-
-// Co-processor 15 debug. Registers in here control the cache
-//`define A23_COPRO15_DEBUG
-
-// Cache debug
-//`define A23_CACHE_DEBUG
-
-// --------------------------------------------------------------------
+function in_rom_mem;
+    input [31:0] address;
+begin
+in_rom_mem  =  (address >= ROM_BASE && 
+					 address < (ROM_TOP));
+end
+endfunction
 
 
-// --------------------------------------------------------------------
-// File Names
-// --------------------------------------------------------------------
-`ifndef A23_DECOMPILE_FILE
-    `define A23_DECOMPILE_FILE    "amber.dis"
-`endif
+function in_main_mem;
+    input [31:0] address;
+begin
+in_main_mem  = (address >= MAIN_BASE   && 
+                address < (IO_BASE));
+end
+endfunction
 
-`endif
+
+// Used in fetch.v and l2cache.v to allow accesses to these addresses
+// to be cached
+function in_cachable_mem;
+    input [31:0] address;
+begin
+    in_cachable_mem = 0; 
+end
+endfunction
 

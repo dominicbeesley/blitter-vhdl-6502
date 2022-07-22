@@ -45,6 +45,7 @@
 module a23_fetch
 (
 input                       i_clk,
+input                       i_reset,
 
 input       [31:0]          i_address,
 input                       i_address_valid,
@@ -56,10 +57,12 @@ input                       i_priviledged,
 input                       i_exclusive,        // high for read part of swap access
 input       [3:0]           i_byte_enable,
 input                       i_data_access,      // high for data petch, low for instruction fetch
+input                       i_translate,
 input                       i_cache_enable,     // cache enable
 input                       i_cache_flush,      // cache flush
 input       [31:0]          i_cacheable_area,   // each bit corresponds to 2MB address space
 input                       i_system_rdy,
+output                      o_fetch_abort,
 output                      o_fetch_stall,      // when this is asserted all registers 
                                                 // in all 3 pipeline stages are held
                                                 // at their current values
@@ -72,12 +75,13 @@ input       [31:0]          i_wb_dat,
 output      [31:0]          o_wb_dat,
 output                      o_wb_cyc,
 output                      o_wb_stb,
+output                      o_wb_tga,
 input                       i_wb_ack,
 input                       i_wb_err
 
 );
 
-`include "memory_configuration.vh"
+`include "memory_configuration.v"
 
 wire                        cache_stall;
 wire                        wb_stall;
@@ -86,6 +90,8 @@ wire                        sel_cache;
 wire                        sel_wb;
 wire                        cache_wb_req;
 wire                        address_cachable;
+
+wire                        wb_abort;
 
 // ======================================
 // Memory Decode
@@ -107,13 +113,14 @@ assign o_read_data       = sel_cache  ? cache_read_data :
 // when the fetch stage needs more than 1 cycle to return the requested
 // read data
 assign o_fetch_stall     = !i_system_rdy || wb_stall || cache_stall;
-
+assign o_fetch_abort     =  wb_abort;
 
 // ======================================
 // L1 Cache (Unified Instruction and Data)
 // ======================================
 a23_cache u_cache (
     .i_clk                      ( i_clk                 ),
+    .i_reset                    ( i_reset               ),
      
     .i_select                   ( sel_cache             ),
     .i_exclusive                ( i_exclusive           ),
@@ -134,14 +141,13 @@ a23_cache u_cache (
     .i_wb_stall                 ( o_wb_stb & ~i_wb_ack  )
 );
 
-
-
 // ======================================
 //  Wishbone Master I/F
 // ======================================
 a23_wishbone u_wishbone (
     // CPU Side
     .i_clk                      ( i_clk                 ),
+    .i_reset                    ( i_reset               ),
     
     // Core Accesses to Wishbone bus
     .i_select                   ( sel_wb                ),
@@ -150,8 +156,10 @@ a23_wishbone u_wishbone (
     .i_byte_enable              ( i_byte_enable         ),
     .i_data_access              ( i_data_access         ),
     .i_exclusive                ( i_exclusive           ),
+    .i_translate                ( i_translate           ),
     .i_address                  ( i_address             ),
     .o_stall                    ( wb_stall              ),
+    .o_abort                    ( wb_abort              ),
 
     // Cache Accesses to Wishbone bus 
     // L1 Cache enable - used for hprot
@@ -165,7 +173,8 @@ a23_wishbone u_wishbone (
     .o_wb_cyc                   ( o_wb_cyc              ),
     .o_wb_stb                   ( o_wb_stb              ),
     .i_wb_ack                   ( i_wb_ack              ),
-    .i_wb_err                   ( i_wb_err              )
+    .i_wb_err                   ( i_wb_err              ),
+    .o_wb_tga                   ( o_wb_tga              )
 );
 
 

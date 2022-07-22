@@ -103,7 +103,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_phi2_o	: std_logic;
 	signal i_CPUSKT_nIRQ_o	: std_logic;
 	signal i_CPUSKT_nFIRQ_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
+	signal i_CPUSKT_RES_o	: std_logic;
 
 	signal i_CPUBRD_nBL_o	: std_logic_vector(3 downto 0);
 	signal i_CPUSKT_CPB_o	: std_logic;
@@ -149,7 +149,7 @@ begin
 		CPUSKT_phi2_i		=> i_CPUSKT_phi2_o,
 		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
 		CPUSKT_nFIRQ_i		=> i_CPUSKT_nFIRQ_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_RES_i		=> i_CPUSKT_RES_o,
 
 		CPUBRD_nBL_i		=> i_CPUBRD_nBL_o,
 		CPUSKT_CPB_i		=> i_CPUSKT_CPB_o,
@@ -176,6 +176,12 @@ begin
 	i_CPU_D_RnW_o <= 	'0' when i_CPUSKT_nRW_i = '1' else
 							'1';
 
+	i_CPUSKT_phi1_o <= r_cpu_phi1;
+	i_CPUSKT_phi2_o <= r_cpu_phi2;
+	i_CPUSKT_RES_o	<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- TODO:does this need synchronising?
+	i_CPUSKT_nFIRQ_o <= wrap_i.nmi_n;
+	i_CPUSKT_nIRQ_o <= wrap_i.irq_n;
+
 
 --	wrap_o.A_log 			<= r_A_log;
 --	wrap_o.cyc 				<= r_cyc_o;
@@ -188,7 +194,38 @@ begin
 --	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' 
 --									else '0';
 
+	p_state:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
 
+			if r_clkctdn /= 0 then
+				r_clkctdn <= r_clkctdn - 1;
+			end if;
+
+			case r_state is
+				when phi1 =>
+					if r_clkctdn = 0 then
+						r_cpu_phi1 <= '0';
+						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
+						r_state <= phi2;
+					else
+						r_cpu_phi1 <= '1';
+					end if;
+
+				when phi2 =>
+					if r_clkctdn = 0 then
+						r_cpu_phi2 <= '0';
+						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
+						r_state <= phi1;
+					else
+						r_cpu_phi2 <= '1';
+					end if;
+				when others =>
+					r_state <= phi1;
+			end case;
+		end if;
+
+	end process;
 
 
   	wrap_o.noice_debug_cpu_clken 	<= '0';

@@ -65,7 +65,7 @@ entity fb_cpu_arm2_exp_pins is
 		CPUSKT_phi2_i							: in std_logic;
 		CPUSKT_nIRQ_i							: in std_logic;
 		CPUSKT_nFIRQ_i							: in std_logic;
-		CPUSKT_nRES_i							: in std_logic;
+		CPUSKT_RES_i							: in std_logic;
 
 		CPUBRD_nBL_i							: in std_logic_vector(3 downto 0);
 		CPUSKT_CPB_i							: in std_logic;
@@ -98,7 +98,7 @@ begin
 	wrap_exp_o.exp_PORTB(3) <= CPUBRD_nBL_i(0);
 	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
 	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nFIRQ_i;
-	wrap_exp_o.exp_PORTB(6) <= CPUSKT_nRES_i;
+	wrap_exp_o.exp_PORTB(6) <= CPUSKT_RES_i;
 	wrap_exp_o.exp_PORTB(7) <= CPUBRD_nBL_i(1);
 
 

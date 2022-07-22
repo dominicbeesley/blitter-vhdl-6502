@@ -64,7 +64,7 @@ input                       i_execute,
 
 output      [31:0]          o_out,
 output      [1:0]           o_flags,        // [1] = N, [0] = Z
-output reg                  o_done = 'd0    // goes high 2 cycles before completion                                          
+output reg                  o_done
 );
 
 
@@ -195,6 +195,12 @@ always @ ( posedge i_clk )
 assign o_out   = product[32:1]; 
 assign o_flags = flags_nxt;
                      
+initial begin
+
+    o_done = 1'd0;    // goes high 2 cycles before completion
+
+end
+
 endmodule
 
 

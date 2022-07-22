@@ -39,10 +39,9 @@
 // from http://www.opencores.org/lgpl.shtml                     //
 //                                                              //
 //////////////////////////////////////////////////////////////////
+`include "global_defines.v"
+`include "a23_config_defines.v"
 
-`include "global_timescale.vh"
-`include "global_defines.vh"
-`include "a23_config_defines.vh"
 
 module a23_decompile
 (
@@ -60,8 +59,8 @@ input                       i_pc_wen
 
 );
 
-`include "a23_localparams.vh"
-        
+`include "a23_localparams.v"
+`include "a23_functions.v"        
 `ifdef A23_DECOMPILE
 
 integer i;
@@ -203,7 +202,10 @@ assign TYPE_NAME    = itype == REGOP    ? "REGOP   " :
                       itype == CORTRANS ? "CORTRANS" : 
                       itype == SWI      ? "SWI     " : 
                                          "UNKNOWN " ;
-                                           
+
+reg [63:0]  inst_count = 0   ;
+reg [63:0]  clk_count = 0    ;
+                                      
 
 always @*
     begin
@@ -257,10 +259,11 @@ always @( posedge i_clk )
     if ( execute_now )
         begin
         
+        clk_count <= clk_count + 'd1;
             // Interrupts override instructions that are just starting
         if ( interrupt_d1 == 3'd0 || interrupt_d1 == 3'd7 )
             begin
-            $fwrite(decompile_file,"%09d  ", `U_TB.clk_count);
+            $fwrite(decompile_file,"%09d  ", clk_count);
             
             // Right justify the address
             if      ( execute_address < 32'h10)        $fwrite(decompile_file,"       %01x:  ", {execute_address[ 3:1], 1'd0});
@@ -278,7 +281,7 @@ always @( posedge i_clk )
                 begin
                 $fwrite(decompile_file,"-");
                 if ( itype == SWI )
-                    $display ("Cycle %09d  SWI not taken *************", `U_TB.clk_count);
+                    $display ("Cycle %09d  SWI not taken *************", clk_count);
                 end
             else     
                 $fwrite(decompile_file," ");
@@ -286,6 +289,7 @@ always @( posedge i_clk )
             // ========================================
             // print the instruction name
             // ========================================
+            inst_count = inst_count+1;
             case (numchars( xINSTRUCTION_EXECUTE ))
                 4'd1: $fwrite(decompile_file,"%s", xINSTRUCTION_EXECUTE[39:32] );
                 4'd2: $fwrite(decompile_file,"%s", xINSTRUCTION_EXECUTE[39:24] );
@@ -299,7 +303,7 @@ always @( posedge i_clk )
             // Print the Multiple transfer itype
             if (itype   == MTRANS )
                 begin
-                w_mtrans_type;           
+                w_mtrans_itype;           
                 fchars = fchars - 2;
                 end
 
@@ -356,7 +360,7 @@ always @( posedge i_clk )
                 CORTRANS:  cortrans_args; 
                 SWI:       $fwrite(decompile_file,"#0x%06h", execute_instruction[23:0]);
                 default: begin
-                         `TB_ERROR_MESSAGE
+                         //`TB_ERROR_MESSAGE
                          $write("Unknown Instruction Type ERROR\n");
                          end                     
             endcase
@@ -367,7 +371,7 @@ always @( posedge i_clk )
         // Undefined Instruction Interrupts    
         if ( i_instruction_execute && execute_undefined )
             begin
-            $fwrite( decompile_file,"%09d              interrupt undefined instruction", `U_TB.clk_count );
+            $fwrite( decompile_file,"%09d              interrupt undefined instruction", clk_count );
             $fwrite( decompile_file,", return addr " );
             $fwrite( decompile_file,"%08x\n",  pcf(get_reg_val(5'd21)-4'd4) );
             end
@@ -375,7 +379,7 @@ always @( posedge i_clk )
         // Software Interrupt  
         if ( i_instruction_execute && itype == SWI )    
             begin
-            $fwrite( decompile_file,"%09d              interrupt swi", `U_TB.clk_count );
+            $fwrite( decompile_file,"%09d              interrupt swi", clk_count );
             $fwrite( decompile_file,", return addr " );
             $fwrite( decompile_file,"%08x\n",  pcf(get_reg_val(5'd21)-4'd4) );
             end
@@ -390,15 +394,20 @@ always @( posedge i_clk )
         // Asynchronous Interrupts    
         if ( interrupt_d1 != 3'd0 && i_interrupt_state )
             begin
-            $fwrite( decompile_file,"%09d              interrupt ", `U_TB.clk_count );
+            $fwrite( decompile_file,"%09d              interrupt ", clk_count );
             case ( interrupt_d1 )
                 3'd1:    $fwrite( decompile_file,"data abort" );
                 3'd2:    $fwrite( decompile_file,"firq" );
                 3'd3:    $fwrite( decompile_file,"irq" );
                 3'd4:    $fwrite( decompile_file,"address exception" );
                 3'd5:    $fwrite( decompile_file,"instruction abort" );
-                default: $fwrite( decompile_file,"unknown itype" );
+                default: $fwrite( decompile_file,"unknown type" );
             endcase
+            
+            $fwrite( decompile_file, "@addr ");
+            tmp_address = get_32bit_signal(2);
+            fwrite_hex_drop_zeros(decompile_file, {tmp_address[31:2], 2'd0} );
+            
             $fwrite( decompile_file,", return addr " );
             
             case ( interrupt_d1 )
@@ -428,7 +437,7 @@ always @( posedge i_clk )
              execute_address != get_32bit_signal(0)  // Don't print jump to same address
              )
             begin
-            $fwrite(decompile_file,"%09d              jump    from ", `U_TB.clk_count);
+            $fwrite(decompile_file,"%09d              jump    from ", clk_count);
             fwrite_hex_drop_zeros(decompile_file,  pcf(execute_address));
             $fwrite(decompile_file," to ");
             fwrite_hex_drop_zeros(decompile_file,  pcf(get_32bit_signal(0)) ); // u_execute.pc_nxt
@@ -448,7 +457,7 @@ always @( posedge i_clk )
     if ( get_1bit_signal(0) && !get_1bit_signal(1) )
         begin
         
-        $fwrite(decompile_file, "%09d              write   addr ", `U_TB.clk_count);
+        $fwrite(decompile_file, "%09d              write   addr ", clk_count);
         tmp_address = get_32bit_signal(2);
         fwrite_hex_drop_zeros(decompile_file, {tmp_address [31:2], 2'd0} );
                   
@@ -466,7 +475,7 @@ always @( posedge i_clk )
     else if (get_1bit_signal(3) && !get_1bit_signal(0)  && !get_1bit_signal(1))     
         begin
         
-        $fwrite(decompile_file, "%09d              read    addr ", `U_TB.clk_count);
+        $fwrite(decompile_file, "%09d              read    addr ", clk_count);
         tmp_address = get_32bit_signal(2);
         fwrite_hex_drop_zeros(decompile_file, {tmp_address[31:2], 2'd0} );    
                      
@@ -507,8 +516,8 @@ task wcond;
     end
 endtask
 
-// ldm and stm types
-task w_mtrans_type;
+// ldm and stm itypes
+task w_mtrans_itype;
     begin
     case( mtrans_itype )
         4'h0:    $fwrite(decompile_file,"da");
@@ -520,7 +529,7 @@ task w_mtrans_type;
     end
 endtask
 
-// e.g. mrc	15, 0, r9, cr0, cr0, {0}
+// e.g. mrc 15, 0, r9, cr0, cr0, {0}
 task cortrans_args;
     begin
     // Co-Processor Number
@@ -539,7 +548,7 @@ task cortrans_args;
 endtask
 
 
-// ldc	15, 0, r9, cr0, cr0, {0}
+// ldc  15, 0, r9, cr0, cr0, {0}
 task codtrans_args;
     begin
     // Co-Processor Number

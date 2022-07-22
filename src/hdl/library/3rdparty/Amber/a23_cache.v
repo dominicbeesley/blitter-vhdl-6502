@@ -42,8 +42,8 @@
 // from http://www.opencores.org/lgpl.shtml                     //
 //                                                              //
 //////////////////////////////////////////////////////////////////
-`include "global_defines.vh"
-`include "a23_config_defines.vh"
+
+`include "a23_config_defines.v"
 
 module a23_cache 
 #(
@@ -82,6 +82,7 @@ parameter WORD_SEL_LSB      =                  2                           // = 
 
 (
 input                               i_clk,
+input                               i_reset,
 
 // Read / Write requests from core
 input                               i_select,
@@ -105,8 +106,8 @@ input      [31:0]                   i_wb_read_data,    // wb bus
 input                               i_wb_stall         // wb_stb && !wb_ack
 );
 
-`include "a23_localparams.vh"
-`include "a23_functions.vh"
+`include "a23_localparams.v"
+`include "a23_functions.v"
 
 // One-hot encoded
 localparam       C_INIT   = 0,
@@ -211,14 +212,13 @@ assign o_stall          = read_stall || write_stall || cache_busy_stall || ex_re
 assign o_wb_req        = (( read_miss || write_miss ) && c_state == CS_IDLE ) || 
                           c_state == CS_WRITE_HIT1;
 
-     
 // ======================================
 // Cache State Machine
 // ======================================
 
 // Little State Machine to Flush Tag RAMS
 always @ ( posedge i_clk )
-    if ( i_cache_flush )
+    if ( i_reset || i_cache_flush )
         begin
         c_state     <= CS_INIT;
         source_sel  <= 1'd1 << C_INIT;
@@ -513,17 +513,7 @@ generate
     for ( i=0; i<WAYS;i=i+1 ) begin : rams
 
         // Tag RAMs 
-        `ifdef XILINX_SPARTAN6_FPGA
-        xs6_sram_256x21_line_en
-        `endif
-
-        `ifdef XILINX_VIRTEX6_FPGA
-        xv6_sram_256x21_line_en
-        `endif
-
-        `ifndef XILINX_FPGA
-        generic_sram_line_en 
-        `endif
+			sram_line_en 
 
             #(
             .DATA_WIDTH                 ( TAG_WIDTH             ),
@@ -539,18 +529,7 @@ generate
             );
             
         // Data RAMs 
-        `ifdef XILINX_SPARTAN6_FPGA
-        xs6_sram_256x128_byte_en
-        `endif
-
-        `ifdef XILINX_VIRTEX6_FPGA
-        xv6_sram_256x128_byte_en
-        `endif
-
-        `ifndef XILINX_FPGA
-        generic_sram_byte_en
-        `endif
-
+        sram_byte_en
             #(
             .DATA_WIDTH    ( CACHE_LINE_WIDTH) ,
             .ADDRESS_WIDTH ( CACHE_ADDR_WIDTH) )
@@ -851,7 +830,7 @@ if ( WAYS == 2 ) begin : check_hit_2ways
     always @( posedge i_clk )
         if ( (data_hit_way[0] + data_hit_way[1] ) > 4'd1 )
             begin
-            `TB_ERROR_MESSAGE
+            //`TB_ERROR_MESSAGE
             $display("Hit in more than one cache ways!");                                                  
             end
                                                       
@@ -861,7 +840,7 @@ else if ( WAYS == 3 ) begin : check_hit_3ways
     always @( posedge i_clk )
         if ( (data_hit_way[0] + data_hit_way[1] + data_hit_way[2] ) > 4'd1 )
             begin
-            `TB_ERROR_MESSAGE
+            //`TB_ERROR_MESSAGE
             $display("Hit in more than one cache ways!");                                                  
             end
                            
@@ -872,7 +851,7 @@ else if ( WAYS == 4 ) begin : check_hit_4ways
         if ( (data_hit_way[0] + data_hit_way[1] + 
               data_hit_way[2] + data_hit_way[3] ) > 4'd1 )
             begin
-            `TB_ERROR_MESSAGE
+            //`TB_ERROR_MESSAGE
             $display("Hit in more than one cache ways!");                                                  
             end
                            
@@ -885,7 +864,7 @@ else if ( WAYS == 8 )  begin : check_hit_8ways
               data_hit_way[4] + data_hit_way[5] +
               data_hit_way[6] + data_hit_way[7] ) > 4'd1 )
             begin
-            `TB_ERROR_MESSAGE
+            //`TB_ERROR_MESSAGE
             $display("Hit in more than one cache ways!");                                                  
             end
                            
@@ -894,7 +873,7 @@ else begin : check_hit_nways
 
     initial
         begin
-        `TB_ERROR_MESSAGE
+        //`TB_ERROR_MESSAGE
         $display("Unsupported number of ways %0d", WAYS);
         $display("Set A23_CACHE_WAYS in a23_config_defines.v to either 2,3,4 or 8");
         end

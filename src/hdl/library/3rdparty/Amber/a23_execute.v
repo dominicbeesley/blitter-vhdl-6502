@@ -41,11 +41,12 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-`include "a23_config_defines.vh"
+`include "a23_config_defines.v"
 
 module a23_execute (
 
 input                       i_clk,
+input                       i_reset,
 input       [31:0]          i_read_data,
 input       [4:0]           i_read_data_alignment,  // 2 LSBs of address in [4:3], appended 
                                                     // with 3 zeros
@@ -55,19 +56,20 @@ input                       i_data_access_exec,     // from Instruction Decode s
                                                     // high means the memory access is a read 
                                                     // read or write, low for instruction
 
-output reg  [31:0]          o_copro_write_data = 'd0,
-output reg  [31:0]          o_write_data = 'd0,
-output wire [31:0]          o_address,
-output reg                  o_adex = 'd0,           // Address Exception
-output reg                  o_address_valid = 'd0,  // Prevents the reset address value being a 
+output reg  [31:0]          o_copro_write_data,
+output reg  [31:0]          o_write_data,
+output reg  [31:0]          o_address,
+output reg                  o_adex,           // Address Exception
+output reg                  o_address_valid,  // Prevents the reset address value being a
                                                     // wishbone access
 output      [31:0]          o_address_nxt,          // un-registered version of address to the 
                                                     // cache rams address ports
-output reg                  o_priviledged = 'd0,    // Priviledged access
-output reg                  o_exclusive = 'd0,      // swap access
-output reg                  o_write_enable = 'd0,
-output reg  [3:0]           o_byte_enable = 'd0,
-output reg                  o_data_access = 'd0,    // To Fetch stage. high = data fetch, 
+output reg                  o_priviledged,    // Priviledged access
+output reg                  o_exclusive,      // swap access
+output reg                  o_write_enable,
+output reg                  o_translate,
+output reg  [3:0]           o_byte_enable,
+output reg                  o_data_access,    // To Fetch stage. high = data fetch,
                                                     // low = instruction fetch
 output      [31:0]          o_status_bits,          // Full PC will all status bits, but PC part zero'ed out
 output                      o_multiply_done,
@@ -77,6 +79,7 @@ output                      o_multiply_done,
 // Control signals from Instruction Decode stage
 // --------------------------------------------------
 input                       i_fetch_stall,          // stall all stages of the cpu at the same time
+input                       i_fetch_abort,          // transfer was not possible.         
 input      [1:0]            i_status_bits_mode,
 input                       i_status_bits_irq_mask,
 input                       i_status_bits_firq_mask,
@@ -101,6 +104,7 @@ input      [1:0]            i_multiply_function,
 input      [2:0]            i_interrupt_vector_sel,
 input      [3:0]            i_address_sel,
 input      [1:0]            i_pc_sel,
+input                       i_writeback_sel,
 input      [1:0]            i_byte_enable_sel,
 input      [2:0]            i_status_bits_sel,
 input      [2:0]            i_reg_write_sel,
@@ -122,8 +126,8 @@ input                       i_copro_write_data_wen
 
 );
 
-`include "a23_localparams.vh"
-`include "a23_functions.vh"
+`include "a23_localparams.v"
+`include "a23_functions.v"
 
 // ========================================================
 // Internal signals
@@ -149,7 +153,6 @@ wire [7:0]          shift_amount;
 wire [31:0]         barrel_shift_in;
 wire [31:0]         barrel_shift_out;
 wire                barrel_shift_carry;
-wire                barrel_shift_carry_alu;
 
 wire [3:0]          status_bits_flags_nxt;
 reg  [3:0]          status_bits_flags = 'd0;
@@ -173,7 +176,6 @@ wire                execute;           // high when condition execution is true
 wire [31:0]         reg_write_nxt;
 wire                pc_wen;
 wire [14:0]         reg_bank_wen;
-wire [3:0]          reg_bank_wsel;
 wire [31:0]         multiply_out;
 wire [1:0]          multiply_flags;
 reg  [31:0]         base_address = 'd0;    // Saves base address during LDM instruction in 
@@ -185,6 +187,7 @@ wire                address_update;
 wire                base_address_update;
 wire                write_data_update;
 wire                copro_write_data_update;
+wire                translate_update;
 wire                byte_enable_update;
 wire                data_access_update;
 wire                write_enable_update;
@@ -199,8 +202,6 @@ wire [31:0]         alu_out_pc_filtered;
 wire                adex_nxt;
 
 wire                carry_in;
-
-reg  [31:0]         address_r = 32'hdead_dead;
 
 
 // ========================================================
@@ -266,10 +267,9 @@ assign status_bits_firq_mask_nxt = i_status_bits_sel == 3'd0 ? i_status_bits_fir
 // ========================================================
 assign pc_plus4      = pc        + 32'd4;
 assign pc_minus4     = pc        - 32'd4;
-assign address_plus4 = address_r + 32'd4;
+assign address_plus4 = o_address + 32'd4;
 assign alu_plus4     = alu_out   + 32'd4;
 assign rn_plus4      = rn        + 32'd4;
-
 
 // ========================================================
 // Barrel Shift Amount Select
@@ -319,7 +319,7 @@ assign alu_out_pc_filtered = pc_wen && i_pc_sel == 2'd1 ? pcf(alu_out) : alu_out
 
 // if current instruction does not execute because it does not meet the condition
 // then address advances to next instruction
-assign o_address_nxt = (!execute)              ? pc_plus4              : 
+assign o_address_nxt = (!execute)              ? (i_fetch_abort ? pc : pc_plus4 )             :  
                        (i_address_sel == 4'd0) ? pc_plus4              :
                        (i_address_sel == 4'd1) ? alu_out_pc_filtered   :
                        (i_address_sel == 4'd2) ? interrupt_vector      :
@@ -338,7 +338,7 @@ assign adex_nxt      = |o_address_nxt[31:26] && !i_data_access_exec;
 // ========================================================
 // If current instruction does not execute because it does not meet the condition
 // then PC advances to next instruction
-assign pc_nxt = (!execute)       ? pc_plus4              :
+assign pc_nxt = (!execute)       ? i_fetch_abort ? pc : pc_plus4              :
                 i_pc_sel == 2'd0 ? pc_plus4              :
                 i_pc_sel == 2'd1 ? alu_out               :
                                    interrupt_vector      ;
@@ -399,8 +399,8 @@ assign write_data_nxt = i_byte_enable_sel == 2'd0 ? rd            :
 // ========================================================
 // Conditional Execution
 // ========================================================
-assign execute = conditional_execute ( i_condition, status_bits_flags );
-            
+assign execute =  conditional_execute ( i_condition, status_bits_flags );
+wire   fetch_stall = i_fetch_stall & ~i_fetch_abort;
 // allow the PC to increment to the next instruction when current
 // instruction does not execute
 assign pc_wen       = i_pc_wen || !execute;
@@ -408,7 +408,6 @@ assign pc_wen       = i_pc_wen || !execute;
 // only update register bank if current instruction executes
 assign reg_bank_wen = {{15{execute}} & i_reg_bank_wen};
 
-assign reg_bank_wsel = {{4{~execute}} | i_reg_bank_wsel};
 
 
 // ========================================================
@@ -430,21 +429,22 @@ assign write_enable_nxt = execute && i_write_data_wen;
 // Register Update
 // ========================================================
 
-assign priviledged_update              = !i_fetch_stall;       
-assign data_access_update              = !i_fetch_stall && execute;
-assign write_enable_update             = !i_fetch_stall;
-assign write_data_update               = !i_fetch_stall && execute && i_write_data_wen;
-assign exclusive_update                = !i_fetch_stall && execute;
-assign address_update                  = !i_fetch_stall;
-assign byte_enable_update              = !i_fetch_stall && execute && i_write_data_wen;
-assign copro_write_data_update         = !i_fetch_stall && execute && i_copro_write_data_wen;
+assign translate_update                = !fetch_stall && execute;
+assign priviledged_update              = !fetch_stall;       
+assign data_access_update              = !fetch_stall && execute;
+assign write_enable_update             = !fetch_stall;
+assign write_data_update               = !fetch_stall && execute && i_write_data_wen;
+assign exclusive_update                = !fetch_stall && execute;
+assign address_update                  = !fetch_stall;
+assign byte_enable_update              = !fetch_stall && execute && i_write_data_wen;
+assign copro_write_data_update         = !fetch_stall && execute && i_copro_write_data_wen;
 
-assign base_address_update             = !i_fetch_stall && execute && i_base_address_wen; 
-assign status_bits_flags_update        = !i_fetch_stall && execute && i_status_bits_flags_wen;
-assign status_bits_mode_update         = !i_fetch_stall && execute && i_status_bits_mode_wen;
-assign status_bits_mode_rds_oh_update  = !i_fetch_stall;
-assign status_bits_irq_mask_update     = !i_fetch_stall && execute && i_status_bits_irq_mask_wen;
-assign status_bits_firq_mask_update    = !i_fetch_stall && execute && i_status_bits_firq_mask_wen;
+assign base_address_update             = !fetch_stall && execute && i_base_address_wen; 
+assign status_bits_flags_update        = !fetch_stall && execute && i_status_bits_flags_wen;
+assign status_bits_mode_update         = !fetch_stall && execute && i_status_bits_mode_wen;
+assign status_bits_mode_rds_oh_update  = !fetch_stall;
+assign status_bits_irq_mask_update     = !fetch_stall && execute && i_status_bits_irq_mask_wen;
+assign status_bits_firq_mask_update    = !fetch_stall && execute && i_status_bits_firq_mask_wen;
 
 assign status_bits_mode_rds_nr         =  status_bits_mode_rds_oh_update ? status_bits_mode_rds_nxt :
                                                                            status_bits_mode_rds     ;
@@ -453,29 +453,43 @@ assign status_bits_mode_nr             =  status_bits_mode_update        ? statu
                                                                            status_bits_mode         ;
 
 always @( posedge i_clk )
-    begin                                                                                                             
-    o_priviledged           <= priviledged_update             ? priviledged_nxt              : o_priviledged;
-    o_exclusive             <= exclusive_update               ? i_exclusive_exec             : o_exclusive;
-    o_data_access           <= data_access_update             ? i_data_access_exec           : o_data_access;
-    o_write_enable          <= write_enable_update            ? write_enable_nxt             : o_write_enable;
-    o_write_data            <= write_data_update              ? write_data_nxt               : o_write_data; 
-    address_r               <= address_update                 ? o_address_nxt                : address_r;    
-    o_adex                  <= address_update                 ? adex_nxt                     : o_adex;    
-    o_address_valid         <= address_update                 ? 1'd1                         : o_address_valid;
-    o_byte_enable           <= byte_enable_update             ? byte_enable_nxt              : o_byte_enable;
-    o_copro_write_data      <= copro_write_data_update        ? write_data_nxt               : o_copro_write_data; 
-
-    base_address            <= base_address_update            ? rn                           : base_address;    
-
-    status_bits_flags       <= status_bits_flags_update       ? status_bits_flags_nxt        : status_bits_flags;
-    status_bits_mode        <=  status_bits_mode_nr;
-    status_bits_mode_rds_oh <= status_bits_mode_rds_oh_update ? status_bits_mode_rds_oh_nxt  : status_bits_mode_rds_oh;
-    status_bits_mode_rds    <= status_bits_mode_rds_nr;
-    status_bits_irq_mask    <= status_bits_irq_mask_update    ? status_bits_irq_mask_nxt     : status_bits_irq_mask;
-    status_bits_firq_mask   <= status_bits_firq_mask_update   ? status_bits_firq_mask_nxt    : status_bits_firq_mask;
+begin              
+    
+    if (i_reset) begin
+        o_copro_write_data <= 32'd0;
+        o_write_data <= 32'd0;
+        o_address <= 32'hdead_dead;
+        o_adex <= 1'd0;           // Address Exception
+        o_address_valid <= 1'd0;  // Prevents the reset address value being a
+        o_priviledged <= 1'd0;    // Priviledged access
+        o_exclusive <= 1'd0;      // swap access
+        o_write_enable <= 1'd0;
+        o_translate <= 1'd0;
+        o_byte_enable <= 4'd0;
+        o_data_access <= 1'd0;    // To Fetch stage. high = data fetch;
+    end else begin
+        o_priviledged           <= priviledged_update             ? priviledged_nxt              : o_priviledged;
+        o_exclusive             <= exclusive_update               ? i_exclusive_exec             : o_exclusive;
+        o_data_access           <= data_access_update             ? i_data_access_exec           : o_data_access;
+        o_write_enable          <= write_enable_update            ? write_enable_nxt             : o_write_enable;
+        o_write_data            <= write_data_update              ? write_data_nxt               : o_write_data; 
+        o_address               <= address_update                 ? o_address_nxt                : o_address;    
+        o_adex                  <= address_update                 ? adex_nxt                     : o_adex;    
+        o_address_valid         <= address_update                 ? 1'd1                         : o_address_valid;
+        o_translate             <= translate_update               ? ~i_writeback_sel & (status_bits_mode  != USR) : o_translate;
+        o_byte_enable           <= byte_enable_update             ? byte_enable_nxt              : o_byte_enable;
+        o_copro_write_data      <= copro_write_data_update        ? write_data_nxt               : o_copro_write_data; 
+     
+        base_address            <= base_address_update            ? rn                           : base_address;    
+     
+        status_bits_flags       <= status_bits_flags_update       ? status_bits_flags_nxt        : status_bits_flags;
+        status_bits_mode        <=  status_bits_mode_nr;
+        status_bits_mode_rds_oh <= status_bits_mode_rds_oh_update ? status_bits_mode_rds_oh_nxt  : status_bits_mode_rds_oh;
+        status_bits_mode_rds    <= status_bits_mode_rds_nr;
+        status_bits_irq_mask    <= status_bits_irq_mask_update    ? status_bits_irq_mask_nxt     : status_bits_irq_mask;
+        status_bits_firq_mask   <= status_bits_firq_mask_update   ? status_bits_firq_mask_nxt    : status_bits_firq_mask;
     end
-
-assign o_address = address_r;
+end
 
 
 // ========================================================
@@ -496,27 +510,24 @@ a23_barrel_shift_fpga u_barrel_shift  (
     .i_function       ( i_barrel_shift_function   ),
 
     .o_out            ( barrel_shift_out          ),
-    .o_carry_out      ( barrel_shift_carry        ));
+    .o_carry_out      ( barrel_shift_carry        )
+);
 
-
+wire barrel_shift_carry_real =  i_barrel_shift_data_sel == 2'd0 ? (i_imm_shift_amount[4:1] == 0 ? status_bits_flags[1] : i_imm32[31]) : barrel_shift_carry;
 
 // ========================================================
 // Instantiate ALU
 // ========================================================
-assign barrel_shift_carry_alu =  i_barrel_shift_data_sel == 2'd0 ? 
-                                  (i_imm_shift_amount[4:1] == 0 ? status_bits_flags[1] : i_imm32[31]) : 
-                                   barrel_shift_carry;
-
 a23_alu u_alu (
-    .i_a_in                 ( rn                      ),
-    .i_b_in                 ( barrel_shift_out        ),
-    .i_barrel_shift_carry   ( barrel_shift_carry_alu  ),
-    .i_status_bits_carry    ( status_bits_flags[1]    ),
-    .i_function             ( i_alu_function          ),
-  
-    .o_out                  ( alu_out                 ),
-    .o_flags                ( alu_flags               ));
+    .i_a_in                 ( rn                    ),
+    .i_b_in                 ( barrel_shift_out      ),
+    .i_barrel_shift_carry   ( barrel_shift_carry_real ),
+    .i_status_bits_carry    ( status_bits_flags[1]  ),
+    .i_function             ( i_alu_function        ),
 
+    .o_out                  ( alu_out               ),
+    .o_flags                ( alu_flags             )
+);
 
 
 // ========================================================
@@ -541,7 +552,8 @@ a23_multiply u_multiply (
 `ifndef A23_RAM_REGISTER_BANK
 a23_register_bank u_register_bank(
     .i_clk                   ( i_clk                     ),
-    .i_fetch_stall           ( i_fetch_stall             ),
+    .i_reset                 ( i_reset                   ),
+    .i_fetch_stall           ( fetch_stall               ),
     .i_rm_sel                ( i_rm_sel                  ),
     .i_rds_sel               ( i_rds_sel                 ),
     .i_rn_sel                ( i_rn_sel                  ),
@@ -572,12 +584,12 @@ a23_register_bank u_register_bank(
 `else
 a23_ram_register_bank u_register_bank(
     .i_clk                   ( i_clk                     ),
-    .i_fetch_stall           ( i_fetch_stall             ),
+    .i_fetch_stall           ( fetch_stall             ),
     .i_rm_sel                ( i_rm_sel_nxt              ),
     .i_rds_sel               ( i_rds_sel_nxt             ),
     .i_rn_sel                ( i_rn_sel_nxt              ),
     .i_pc_wen                ( pc_wen                    ),
-    .i_reg_bank_wsel         ( reg_bank_wsel             ),
+    .i_reg_bank_wsel         ( {{4{~execute}} | i_reg_bank_wsel} ),
     .i_pc                    ( pc_nxt[25:2]              ),
     .i_reg                   ( reg_write_nxt             ),
 

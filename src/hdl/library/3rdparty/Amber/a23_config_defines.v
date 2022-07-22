@@ -1,14 +1,13 @@
 //////////////////////////////////////////////////////////////////
 //                                                              //
-//  Global testbench defines                                    //
+//  Amber Configuration and Debug for the AMber 2 Core          //
 //                                                              //
 //  This file is part of the Amber project                      //
 //  http://www.opencores.org/project,amber                      //
 //                                                              //
 //  Description                                                 //
-//  Contains a set of defines for each module so if the module  //
-//  hierarchy changes, hierarchical references to signals       //
-//  will still work as long as this file is updated.            //
+//  Contains a set of defines used to configure and debug       //
+//  the Amber core                                              //
 //                                                              //
 //  Author(s):                                                  //
 //      - Conor Santifort, csantifort.amber@gmail.com           //
@@ -40,54 +39,43 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-// ---------------------------------------------------------------
-// Module hierarchy defines
-// ---------------------------------------------------------------
-`ifndef _GLOBAL_DEFINES
-`define _GLOBAL_DEFINES
+`ifndef _A23_CONFIG_DEFINES
+`define _A23_CONFIG_DEFINES
 
-`ifndef AMBER_TIMEOUT
-    `define AMBER_TIMEOUT 0
-`endif
+// Cache Ways
+// Changing this parameter is the recommended
+// way to change the Amber cache size; 2, 3, 4 and 8 ways are supported.
+//   2 ways -> 8KB  cache
+//   3 ways -> 12KB cache
+//   4 ways -> 16KB cache
+//   8 ways -> 32KB cache
+`define A23_CACHE_WAYS 4
 
-`define U_TB                    tb
-`define U_SYSTEM                `U_TB.u_system
+// Use ram-based register bank implementation
+// `define A23_RAM_REGISTER_BANK
 
-`define U_AMBER                 `U_SYSTEM.u_amber
-`define U_FETCH                 `U_AMBER.u_fetch
-`define U_MMU                   `U_FETCH.u_mmu
-`define U_CACHE                 `U_FETCH.u_cache
-`define U_COPRO15               `U_AMBER.u_coprocessor
-`define U_EXECUTE               `U_AMBER.u_execute
-`define U_WB                    `U_AMBER.u_write_back
-`define U_REGISTER_BANK         `U_EXECUTE.u_register_bank
-`define U_DECODE                `U_AMBER.u_decode
-`define U_DECOMPILE             `U_DECODE.u_decompile
-`define U_L2CACHE               `U_SYSTEM.u_l2cache
-`define U_TEST_MODULE           `U_SYSTEM.u_test_module
+// --------------------------------------------------------------------
+// Debug switches 
+// --------------------------------------------------------------------
 
-`ifdef AMBER_A25_CORE
-    `define U_MEM               `U_AMBER.u_mem
-    `define U_DCACHE            `U_MEM.u_dcache
-    `define U_WISHBONE          `U_AMBER.u_wishbone
-    `define U_BOOT_MEM          `U_SYSTEM.boot_mem128.u_boot_mem
-`else    
-    `define U_WISHBONE          `U_FETCH.u_wishbone
-    `define U_BOOT_MEM          `U_SYSTEM.boot_mem32.u_boot_mem
-`endif
-// ---------------------------------------------------------------
+// Enable the decompiler. The default output file is amber.dis
+//`define A23_DECOMPILE
 
-`define TB_DEBUG_MESSAGE        $display("\nDEBUG in %m @ tick %8d ", `U_TB.clk_count );
-`define TB_WARNING_MESSAGE      $display("\nWARNING in %m @ tick %8d", `U_TB.clk_count );
-`define TB_ERROR_MESSAGE        $display("\nFATAL ERROR in %m @ tick %8d", `U_TB.clk_count ); force `U_TB.testfail = 1'd1;
+// Co-processor 15 debug. Registers in here control the cache
+//`define A23_COPRO15_DEBUG
+
+// Cache debug
+//`define A23_CACHE_DEBUG
+
+// --------------------------------------------------------------------
 
 
-`ifdef XILINX_FPGA
-// Full DDR3 memory Model
-`define U_RAM                tb.u_ddr3_model_c3.memory
-`else
-// Simplified Main Memory Model
-`define U_RAM                tb.u_system.u_main_mem.ram
+// --------------------------------------------------------------------
+// File Names
+// --------------------------------------------------------------------
+`ifndef A23_DECOMPILE_FILE
+    `define A23_DECOMPILE_FILE    "amber.dis"
 `endif
 
 `endif
+

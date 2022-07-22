@@ -20,7 +20,6 @@ set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_S
 
 set_global_assignment -name SEARCH_PATH ../../../library/3rdparty/amber -section_id sim_arm2_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/amber/a23_decode.v -section_id sim_arm2_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/amber/a23_decompile.v -section_id sim_arm2_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/amber/a23_execute.v -section_id sim_arm2_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/amber/a23_multiply.v -section_id sim_arm2_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/amber/a23_ram_register_bank.v -section_id sim_arm2_tb
