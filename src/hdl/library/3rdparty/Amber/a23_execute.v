@@ -436,7 +436,9 @@ assign write_enable_update             = !fetch_stall;
 assign write_data_update               = !fetch_stall && execute && i_write_data_wen;
 assign exclusive_update                = !fetch_stall && execute;
 assign address_update                  = !fetch_stall;
-assign byte_enable_update              = !fetch_stall && execute && i_write_data_wen;
+//DB: make this always update for reads as well as writes - not sure if that has side-effects elsewhere?
+//assign byte_enable_update              = !fetch_stall && execute && i_write_data_wen;
+assign byte_enable_update              = !fetch_stall && execute;
 assign copro_write_data_update         = !fetch_stall && execute && i_copro_write_data_wen;
 
 assign base_address_update             = !fetch_stall && execute && i_base_address_wen; 

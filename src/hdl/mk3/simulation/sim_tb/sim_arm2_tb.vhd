@@ -129,7 +129,8 @@ architecture Behavioral of sim_arm2_tb is
 
 		o_A						: out std_logic_vector(31 downto 0);
 		o_nMREQ					: out std_logic;
-		o_nrw						: out std_logic
+		o_nRW						: out std_logic;
+		o_nBW						: out std_logic
 	);
 	end component;
 
@@ -385,7 +386,8 @@ begin
 
 		o_A			=> i_CPU_A_i,
 		o_nMREQ		=> i_CPUSKT_nMREQ_i,
-		o_nrw			=> i_CPUSKT_nRW_i
+		o_nRW			=> i_CPUSKT_nRW_i,
+		o_nBW			=> i_CPUSKT_nBW_i
 
 	);
 
