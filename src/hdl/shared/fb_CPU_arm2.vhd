@@ -90,6 +90,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_cyc_o				: std_logic_vector(1 downto 0);
 	signal i_cyc_ack_i		: std_logic;
 	signal r_wrap_cyc_dly	: std_logic;
+	signal r_D_wr_stb			: std_logic;
 
 	signal r_arm_boot			: std_logic;							-- place ROM at 0-100 from 8D3Fxx at boot
 
@@ -141,6 +142,10 @@ architecture rtl of fb_cpu_arm2 is
 		rd1,
 		rd2,
 		rd3,
+		wr0,
+		wr1,
+		wr2,
+		wr3,
 		done
 		);
 
@@ -204,7 +209,7 @@ begin
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
-	wrap_o.D_wr_stb		<= r_WR_stb;
+	wrap_o.D_wr_stb		<= r_D_wr_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
 	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' and wrap_i.cyc = '1'
 									else '0';
@@ -222,6 +227,7 @@ begin
 			r_cyc_o <= (others => '0');
 			case r_mem_ack_state is 
 				when idle =>
+					r_D_wr_stb <= '0';
 					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
 						if i_CPUSKT_nRW_i = '0' then
 							r_mem_ack_state <= rd0;
@@ -229,8 +235,52 @@ begin
 							r_cyc_o(0) <= '1';
 							r_WE <= '0';
 						else
-							r_mem_ack_state <= done;							
+							r_mem_ack_state <= wr0;
+							i_CPUBRD_nBL_o <= "1110";
+							r_A_log <= r_a_cpu(23 downto 2) & "00";
+							r_cyc_o(0) <= '1';
+							r_WE <= '1';
 						end if;
+					end if;
+				when wr0 =>
+					if r_cpu_phi2 = '1' then
+						r_D_wr_stb <= '1';
+					end if;
+					if i_cyc_ack_i then
+						r_mem_ack_state <= wr1;
+						i_CPUBRD_nBL_o <= "1101";
+						r_A_log <= r_a_cpu(23 downto 2) & "01";
+						r_cyc_o(0) <= '1';
+						r_WE <= '1';
+					end if;
+				when wr1 =>
+					if r_cpu_phi2 = '1' then
+						r_D_wr_stb <= '1';
+					end if;
+					if i_cyc_ack_i then
+						r_mem_ack_state <= wr2;
+						i_CPUBRD_nBL_o <= "1011";
+						r_A_log <= r_a_cpu(23 downto 2) & "10";
+						r_cyc_o(0) <= '1';
+						r_WE <= '1';
+					end if;
+				when wr2 =>
+					if r_cpu_phi2 = '1' then
+						r_D_wr_stb <= '1';
+					end if;
+					if i_cyc_ack_i then
+						r_mem_ack_state <= wr3;
+						i_CPUBRD_nBL_o <= "0111";
+						r_A_log <= r_a_cpu(23 downto 2) & "11";
+						r_cyc_o(0) <= '1';
+						r_WE <= '1';
+					end if;
+				when wr3 =>
+					if r_cpu_phi2 = '1' then
+						r_D_wr_stb <= '1';
+					end if;
+					if i_cyc_ack_i then
+						r_mem_ack_state <= done;
 					end if;
 				when rd0 =>
 					i_CPUBRD_nBL_o(0) <= '0';
@@ -269,6 +319,9 @@ begin
 					if r_mem_ack_reset = '1' then
 						r_mem_ack_state <= idle;
 					end if;
+				when others =>
+					r_D_wr_stb <= '0';
+					r_mem_ack_state <= idle;
 			end case;
 		end if;
 	end process;
