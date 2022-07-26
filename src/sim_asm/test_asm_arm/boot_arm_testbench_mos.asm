@@ -12,6 +12,7 @@ reset:
 	ldrb	r0,[r12,#1]
 
 	ldr	r12,c_SYSMEM
+	mov	r0,#0xAA
 	strb	r0,[r12]
 	ldrb	r0,[r12,#1]
 

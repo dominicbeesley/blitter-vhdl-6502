@@ -97,7 +97,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_rdy				: std_logic;
 
 	signal r_a_cpu				: std_logic_vector(23 downto 0);
-	signal r_A_log				: std_logic_vector(1 downto 0);
+	signal r_A_log				: unsigned(1 downto 0);
 	signal r_WE					: std_logic;
 	signal r_WR_stb			: std_logic;
 	signal r_nMREQ				: std_logic;
@@ -144,10 +144,7 @@ architecture rtl of fb_cpu_arm2 is
 		rd1,
 		rd2,
 		rd3,
-		wr0,
-		wr1,
-		wr2,
-		wr3,
+		wr,
 		done
 		);
 
@@ -207,7 +204,7 @@ begin
 	i_CPUSKT_nIRQ_o <= wrap_i.irq_n;
 	i_CPUBRD_nBL_o <= r_nBL;
 
-	wrap_o.A_log 			<= r_A_cpu(23 downto 2) & r_A_log;
+	wrap_o.A_log 			<= r_A_cpu(23 downto 2) & std_logic_vector(r_A_log);
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
@@ -238,84 +235,33 @@ begin
 							r_WE <= '0';
 						else
 							if r_nBW = '1' then
-								r_mem_ack_state <= wr0;
+								r_mem_ack_state <= wr;
 								r_nBL <= "1110";
 								r_A_log <= "00";
 							else
-								case r_a_cpu(1 downto 0) is
-									when "01" =>
-										r_mem_ack_state <= wr1;
-										r_nBL <= "1101";
-										r_A_log <= "01";
-									when "10" =>
-										r_mem_ack_state <= wr2;
-										r_nBL <= "1011";
-										r_A_log <= "10";
-									when "11" =>
-										r_mem_ack_state <= wr3;
-										r_nBL <= "0111";
-										r_A_log <= "11";										
-									when others => 
-										r_mem_ack_state <= wr0;
-										r_nBL <= "1110";
-										r_A_log <= "00";
-								end case;
+								r_mem_ack_state <= wr;
+								r_nBL <= (others => '1');
+								r_nBL(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '0';
+								r_A_log <= unsigned(r_a_cpu(1 downto 0));
 							end if;
 							r_cyc_o(0) <= '1';
 							r_WE <= '1';
 						end if;
 					end if;
-				when wr0 =>
+				when wr =>
 					if r_cpu_phi2 = '1' then
 						r_D_wr_stb <= '1';
 					end if;
 					if i_cyc_ack_i then
-						if r_nBW = '1' then
-							r_mem_ack_state <= wr1;
-							r_nBL <= "1101";
-							r_A_log <= "01";
-							r_cyc_o(0) <= '1';
-							r_WE <= '1';
-						else
+						if r_nBW = '0' or r_nBL(3) = '0' then
 							r_mem_ack_state <= done;
-						end if;
-					end if;
-				when wr1 =>
-					if r_cpu_phi2 = '1' then
-						r_D_wr_stb <= '1';
-					end if;
-					if i_cyc_ack_i then
-						if r_nBW = '1' then
-							r_mem_ack_state <= wr2;
-							r_nBL <= "1011";
-							r_A_log <= "10";
-							r_cyc_o(0) <= '1';
-							r_WE <= '1';
+							r_nBL <= (others => '1');
 						else
-							r_mem_ack_state <= done;
-						end if;
-					end if;
-				when wr2 =>
-					if r_cpu_phi2 = '1' then
-						r_D_wr_stb <= '1';
-					end if;
-					if i_cyc_ack_i then
-						if r_nBW = '1' then
-							r_mem_ack_state <= wr3;
-							r_nBL <= "0111";
-							r_A_log <= "11";
+							r_mem_ack_state <= wr;
+							r_nBL <= r_nBL(2 downto 0) & '1';
+							r_A_log <= r_A_log + 1;
 							r_cyc_o(0) <= '1';
-							r_WE <= '1';
-						else
-							r_mem_ack_state <= done;
 						end if;
-					end if;
-				when wr3 =>
-					if r_cpu_phi2 = '1' then
-						r_D_wr_stb <= '1';
-					end if;
-					if i_cyc_ack_i then
-						r_mem_ack_state <= done;
 					end if;
 				when rd0 =>
 					r_nBL(0) <= '0';

@@ -176,7 +176,7 @@ assign fetch_stall = 1'd0;
 assign fetch_abort = 1'd0;
 assign o_A = execute_address;
 assign o_nMREQ = !execute_address_valid;
-assign o_mBW = (byte_enable_sel == 4'd3)?1'd1:1'd0;
+assign o_nBW = (byte_enable_sel == 4'd3)?1'd1:1'd0;
 
 assign io_D = (write_enable & !i_phi1)?write_data:{32{1'dZ}};
 
