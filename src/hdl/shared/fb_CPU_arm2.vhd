@@ -97,11 +97,12 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_rdy				: std_logic;
 
 	signal r_a_cpu				: std_logic_vector(23 downto 0);
-	signal r_A_log				: std_logic_vector(23 downto 0);
+	signal r_A_log				: std_logic_vector(1 downto 0);
 	signal r_WE					: std_logic;
 	signal r_WR_stb			: std_logic;
 	signal r_nMREQ				: std_logic;
 	signal r_nBW				: std_logic;
+	signal r_nBL				: std_logic_vector(3 downto 0);							-- byte lane select on board i.e. which byte lane maps to PORTA
 
 	-- port B
 
@@ -204,9 +205,9 @@ begin
 	i_CPUSKT_RES_o	<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- TODO:does this need synchronising?
 	i_CPUSKT_nFIRQ_o <= wrap_i.nmi_n;
 	i_CPUSKT_nIRQ_o <= wrap_i.irq_n;
+	i_CPUBRD_nBL_o <= r_nBL;
 
-
-	wrap_o.A_log 			<= r_A_log;
+	wrap_o.A_log 			<= r_A_cpu(23 downto 2) & r_A_log;
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
@@ -232,32 +233,32 @@ begin
 					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
 						if i_CPUSKT_nRW_i = '0' then
 							r_mem_ack_state <= rd0;
-							r_A_log <= r_a_cpu(23 downto 2) & "00";
+							r_A_log <= "00";
 							r_cyc_o(0) <= '1';
 							r_WE <= '0';
 						else
 							if r_nBW = '1' then
 								r_mem_ack_state <= wr0;
-								i_CPUBRD_nBL_o <= "1110";
-								r_A_log <= r_a_cpu(23 downto 2) & "00";
+								r_nBL <= "1110";
+								r_A_log <= "00";
 							else
 								case r_a_cpu(1 downto 0) is
 									when "01" =>
 										r_mem_ack_state <= wr1;
-										i_CPUBRD_nBL_o <= "1101";
-										r_A_log <= r_a_cpu(23 downto 2) & "01";
-										when "10" =>
+										r_nBL <= "1101";
+										r_A_log <= "01";
+									when "10" =>
 										r_mem_ack_state <= wr2;
-										i_CPUBRD_nBL_o <= "1011";
-										r_A_log <= r_a_cpu(23 downto 2) & "10";
+										r_nBL <= "1011";
+										r_A_log <= "10";
 									when "11" =>
 										r_mem_ack_state <= wr3;
-										i_CPUBRD_nBL_o <= "0111";
-										r_A_log <= r_a_cpu(23 downto 2) & "11";										
+										r_nBL <= "0111";
+										r_A_log <= "11";										
 									when others => 
 										r_mem_ack_state <= wr0;
-										i_CPUBRD_nBL_o <= "1110";
-										r_A_log <= r_a_cpu(23 downto 2) & "00";
+										r_nBL <= "1110";
+										r_A_log <= "00";
 								end case;
 							end if;
 							r_cyc_o(0) <= '1';
@@ -271,8 +272,8 @@ begin
 					if i_cyc_ack_i then
 						if r_nBW = '1' then
 							r_mem_ack_state <= wr1;
-							i_CPUBRD_nBL_o <= "1101";
-							r_A_log <= r_a_cpu(23 downto 2) & "01";
+							r_nBL <= "1101";
+							r_A_log <= "01";
 							r_cyc_o(0) <= '1';
 							r_WE <= '1';
 						else
@@ -286,8 +287,8 @@ begin
 					if i_cyc_ack_i then
 						if r_nBW = '1' then
 							r_mem_ack_state <= wr2;
-							i_CPUBRD_nBL_o <= "1011";
-							r_A_log <= r_a_cpu(23 downto 2) & "10";
+							r_nBL <= "1011";
+							r_A_log <= "10";
 							r_cyc_o(0) <= '1';
 							r_WE <= '1';
 						else
@@ -301,8 +302,8 @@ begin
 					if i_cyc_ack_i then
 						if r_nBW = '1' then
 							r_mem_ack_state <= wr3;
-							i_CPUBRD_nBL_o <= "0111";
-							r_A_log <= r_a_cpu(23 downto 2) & "11";
+							r_nBL <= "0111";
+							r_A_log <= "11";
 							r_cyc_o(0) <= '1';
 							r_WE <= '1';
 						else
@@ -317,37 +318,37 @@ begin
 						r_mem_ack_state <= done;
 					end if;
 				when rd0 =>
-					i_CPUBRD_nBL_o(0) <= '0';
+					r_nBL(0) <= '0';
 					if i_cyc_ack_i then
 						r_mem_ack_state <= rd1;
-						r_A_log <= r_a_cpu(23 downto 2) & "01";
+						r_A_log <= "01";
 						r_cyc_o(0) <= '1';
 						r_WE <= '0';
-						i_CPUBRD_nBL_o <= (others => '1');
+						r_nBL <= (others => '1');
 					end if;
 				when rd1 =>
-					i_CPUBRD_nBL_o(1) <= '0';
+					r_nBL(1) <= '0';
 					if i_cyc_ack_i then
 						r_mem_ack_state <= rd2;
-						r_A_log <= r_a_cpu(23 downto 2) & "10";
+						r_A_log <= "10";
 						r_cyc_o(0) <= '1';
 						r_WE <= '0';
-						i_CPUBRD_nBL_o <= (others => '1');
+						r_nBL <= (others => '1');
 					end if;
 				when rd2 =>
-					i_CPUBRD_nBL_o(2) <= '0';
+					r_nBL(2) <= '0';
 					if i_cyc_ack_i then
 						r_mem_ack_state <= rd3;
-						r_A_log <= r_a_cpu(23 downto 2) & "11";
+						r_A_log <= "11";
 						r_cyc_o(0) <= '1';
 						r_WE <= '0';
-						i_CPUBRD_nBL_o <= (others => '1');
+						r_nBL <= (others => '1');
 					end if;
 				when rd3 =>
-					i_CPUBRD_nBL_o(3) <= '0';			
+					r_nBL(3) <= '0';			
 					if i_cyc_ack_i then
 						r_mem_ack_state <= done;
-						i_CPUBRD_nBL_o <= (others => '1');
+						r_nBL <= (others => '1');
 					end if;
 				when done =>
 					if r_mem_ack_reset = '1' then

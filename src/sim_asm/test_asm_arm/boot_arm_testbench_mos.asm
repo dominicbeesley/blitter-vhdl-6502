@@ -2,15 +2,28 @@
 
 	.text
 
+c_VIA:	.ualong	0xFFFFFE40
+c_SYSMEM:.ualong  0xFFFF0000
+
 reset:
+
+	ldr	r12,c_VIA
+	strb	r0,[r12]
+	ldrb	r0,[r12,#1]
+
+	ldr	r12,c_SYSMEM
+	strb	r0,[r12]
+	ldrb	r0,[r12,#1]
+
 	mov	r0,#23
 	mov	r2,#0x1000
-lp2:	add	r2,r2,#1
+lp2:	add	r2,r2,#4
 	mov	r1,#3
 lp:	add	r0,r0,r1
-	strb	r0,[r2,r1,lsl#3]
+	strb	r0,[r2,r1]
 	subs	r1,r1,#1
 	bpl	lp
+	ldr	r5,[r2]
 	b	lp2
 
 
