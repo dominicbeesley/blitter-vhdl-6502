@@ -139,10 +139,7 @@ architecture rtl of fb_cpu_arm2 is
 
 	type t_mem_ack_state is (
 		idle,
-		rd0,
-		rd1,
-		rd2,
-		rd3,
+		rd,
 		wr,
 		done
 		);
@@ -227,23 +224,20 @@ begin
 				when idle =>
 					r_D_wr_stb <= '0';
 					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
-						if i_CPUSKT_nRW_i = '0' then
-							r_mem_ack_state <= rd0;
+						if r_nBW = '1' then
+							r_nBL <= "1110";
 							r_A_log <= "00";
-							r_cyc_o(0) <= '1';
+						else
+							r_nBL <= (others => '1');
+							r_nBL(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '0';
+							r_A_log <= unsigned(r_a_cpu(1 downto 0));
+						end if;
+						r_cyc_o(0) <= '1';
+						if i_CPUSKT_nRW_i = '0' then
+							r_mem_ack_state <= rd;
 							r_WE <= '0';
 						else
-							if r_nBW = '1' then
-								r_mem_ack_state <= wr;
-								r_nBL <= "1110";
-								r_A_log <= "00";
-							else
-								r_mem_ack_state <= wr;
-								r_nBL <= (others => '1');
-								r_nBL(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '0';
-								r_A_log <= unsigned(r_a_cpu(1 downto 0));
-							end if;
-							r_cyc_o(0) <= '1';
+							r_mem_ack_state <= wr;
 							r_WE <= '1';
 						end if;
 					end if;
@@ -262,39 +256,18 @@ begin
 							r_cyc_o(0) <= '1';
 						end if;
 					end if;
-				when rd0 =>
-					r_nBL(0) <= '0';
+				when rd =>
 					if i_cyc_ack_i then
-						r_mem_ack_state <= rd1;
-						r_A_log <= "01";
-						r_cyc_o(0) <= '1';
-						r_WE <= '0';
-						r_nBL <= (others => '1');
-					end if;
-				when rd1 =>
-					r_nBL(1) <= '0';
-					if i_cyc_ack_i then
-						r_mem_ack_state <= rd2;
-						r_A_log <= "10";
-						r_cyc_o(0) <= '1';
-						r_WE <= '0';
-						r_nBL <= (others => '1');
-					end if;
-				when rd2 =>
-					r_nBL(2) <= '0';
-					if i_cyc_ack_i then
-						r_mem_ack_state <= rd3;
-						r_A_log <= "11";
-						r_cyc_o(0) <= '1';
-						r_WE <= '0';
-						r_nBL <= (others => '1');
-					end if;
-				when rd3 =>
-					r_nBL(3) <= '0';			
-					if i_cyc_ack_i then
-						r_mem_ack_state <= done;
-						r_nBL <= (others => '1');
-					end if;
+						if r_nBW = '0' or r_nBL(3) = '0' then
+							r_mem_ack_state <= done;
+							r_nBL <= (others => '1');
+						else
+							r_mem_ack_state <= rd;
+							r_nBL <= r_nBL(2 downto 0) & '1';
+							r_A_log <= r_A_log + 1;
+							r_cyc_o(0) <= '1';
+						end if;
+					end if;				
 				when done =>
 					if r_mem_ack_reset = '1' then
 						r_mem_ack_state <= idle;
