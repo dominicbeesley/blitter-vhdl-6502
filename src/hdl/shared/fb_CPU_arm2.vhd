@@ -99,7 +99,6 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_a_cpu				: std_logic_vector(23 downto 0);
 	signal r_A_log				: unsigned(1 downto 0);
 	signal r_WE					: std_logic;
-	signal r_WR_stb			: std_logic;
 	signal r_nMREQ				: std_logic;
 	signal r_nBW				: std_logic;
 	signal r_nBL				: std_logic_vector(3 downto 0);							-- byte lane select on board i.e. which byte lane maps to PORTA
