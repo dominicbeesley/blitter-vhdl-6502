@@ -795,9 +795,11 @@ always @*
             if ( store_op )
                 begin
                 write_data_wen_nxt = 1'd1;
-                if ( itype == TRANS && instruction[22] )
-                    byte_enable_sel_nxt = 2'd1;         // Save byte
                 end
+
+//DB: make this always update for reads as well as writes - not sure if that has side-effects elsewhere?
+            if ( itype == TRANS && instruction[22] )
+                byte_enable_sel_nxt = 2'd1;         // Save byte
                 
                 // need to update the register holding the address ?
                 // This is Rn bits [19:16]
