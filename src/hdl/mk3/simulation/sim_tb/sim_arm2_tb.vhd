@@ -354,11 +354,11 @@ begin
 	i_CPUSKT_ABRT_o 	<= i_exp_PORTB_o_cpu(0);
 	i_CPUSKT_phi1_o 	<= i_exp_PORTB_o_cpu(1);
 	i_CPUSKT_phi2_o 	<= i_exp_PORTB_o_cpu(2);
-	i_CPUBRD_nBL_o(0) <= i_exp_PORTB_o_cpu(3);
+ 	i_CPUSKT_CPA_o 	<= i_exp_PORTB_o_cpu(3);
 	i_CPUSKT_nIRQ_o 	<= i_exp_PORTB_o_cpu(4);
 	i_CPUSKT_nFIRQ_o 	<= i_exp_PORTB_o_cpu(5);
 	i_CPUSKT_RES_o 	<= i_exp_PORTB_o_cpu(6);
-	i_CPUBRD_nBL_o(1) <= i_exp_PORTB_o_cpu(7);
+	i_CPUSKT_CPB_o 	<= i_exp_PORTB_o_cpu(7);
 
 	-- wire up PORT C
 
@@ -383,8 +383,8 @@ begin
 
   	i_CPUBRD_nBL_o(2) <= i_exp_PORTD_io(7);
 	i_CPUBRD_nBL_o(3) <= i_exp_PORTD_io(8);
- 	i_CPUSKT_CPB_o 	<= i_exp_PORTD_io(10);
- 	i_CPUSKT_CPA_o 	<= i_exp_PORTD_io(11);
+ 	i_CPUBRD_nBL_o(1) <= i_exp_PORTD_io(10);
+ 	i_CPUBRD_nBL_o(0)	<= i_exp_PORTD_io(11);
 
 
  	-- wire up PORTE cpu -> fpga

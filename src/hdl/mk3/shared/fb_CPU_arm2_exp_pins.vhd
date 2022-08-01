@@ -95,11 +95,11 @@ begin
 	wrap_exp_o.exp_PORTB(0) <= CPUSKT_ABRT_i;
 	wrap_exp_o.exp_PORTB(1) <= CPUSKT_phi1_i;
 	wrap_exp_o.exp_PORTB(2) <= CPUSKT_phi2_i;
-	wrap_exp_o.exp_PORTB(3) <= CPUBRD_nBL_i(0);
+	wrap_exp_o.exp_PORTB(3) <= CPUSKT_CPA_i;
 	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
 	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nFIRQ_i;
 	wrap_exp_o.exp_PORTB(6) <= CPUSKT_RES_i;
-	wrap_exp_o.exp_PORTB(7) <= CPUBRD_nBL_i(1);
+	wrap_exp_o.exp_PORTB(7) <= CPUSKT_CPB_i;
 
 
 
@@ -118,8 +118,8 @@ begin
 	wrap_exp_o.exp_PORTD <= (
 		7 =>  CPUBRD_nBL_i(2),
 		8 => CPUBRD_nBL_i(3),
-		10 => CPUSKT_CPB_i,
-		11 => CPUSKT_CPA_i,
+		10 => CPUBRD_nBL_i(1),
+		11 => CPUBRD_nBL_i(0),
 		others => '1'
 		);
 
