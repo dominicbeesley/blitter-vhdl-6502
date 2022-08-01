@@ -60,7 +60,7 @@ entity fb_sys_clock_dll is
       NEW_EDGE_EXTRA                   : natural := 2;
       NEW_LOCK_RANGE                   : natural := 2;
 
-      G_2M_DATA_SETUP                  : natural := 2 --1 + 50*128/1000 
+      G_2M_DATA_SETUP                  : natural := 1 --1 + 50*128/1000 
                                        -- however we need to subtract cycles for phi0-phi2 and a bit for jitter
                                        -- 3 seems to work, 2 is safe!
                                        -- according to spec there should be at least 50ns (or 70?) before phi2!
