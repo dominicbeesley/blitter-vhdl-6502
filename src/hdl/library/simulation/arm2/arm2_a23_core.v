@@ -54,7 +54,7 @@ input                       i_nfirq,             // Fast Interrupt request, acti
 
 input                       i_reset,
 
-output    [31:0]            o_A,
+output    [25:0]            o_A,
 output                      o_nMREQ,
 output                      o_nRW,
 output                      o_nBW,              // requires a change to execute to update byte_sel on reads as well as writes
@@ -177,7 +177,7 @@ assign read_data = io_D;
 assign o_nRW = write_enable;
 assign fetch_stall = 1'd0;
 assign fetch_abort = 1'd0;
-assign o_A = execute_address;
+assign o_A = execute_address[25:0];
 assign o_nMREQ = !execute_address_valid;
 assign o_nBW = (byte_enable == 4'hf)?1'd1:1'd0;
 

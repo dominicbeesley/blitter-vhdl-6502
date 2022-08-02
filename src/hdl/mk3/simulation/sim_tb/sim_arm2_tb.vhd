@@ -96,8 +96,6 @@ architecture Behavioral of sim_arm2_tb is
 	signal	i_CPUSKT_RES_o						: std_logic;
 
 	signal	i_CPUBRD_nBL_o						: std_logic_vector(3 downto 0);
-	signal	i_CPUSKT_CPB_o						: std_logic;
-	signal	i_CPUSKT_CPA_o						: std_logic;
 
 	signal	i_CPUSKT_nM_i						: std_logic_vector(1 downto 0);
 	signal	i_CPUSKT_nRW_i						: std_logic;
@@ -105,9 +103,8 @@ architecture Behavioral of sim_arm2_tb is
 	signal	i_CPUSKT_nOPC_i					: std_logic;
 	signal	i_CPUSKT_nMREQ_i					: std_logic;
 	signal	i_CPUSKT_nTRAN_i					: std_logic;
-	signal	i_CPUSKT_nCPI_i					: std_logic;
 
-	signal	i_CPU_A_i							: std_logic_vector(31 downto 0);
+	signal	i_CPU_A_i							: std_logic_vector(25 downto 0);
 	signal	i_CPU_D_io							: std_logic_vector(31 downto 0);
 
 	-- latched at start of phi1 for this cycle
@@ -127,7 +124,7 @@ architecture Behavioral of sim_arm2_tb is
 
 		io_D						: inout std_logic_vector(31 downto 0);
 
-		o_A						: out std_logic_vector(31 downto 0);
+		o_A						: out std_logic_vector(25 downto 0);
 		o_nMREQ					: out std_logic;
 		o_nRW						: out std_logic;
 		o_nBW						: out std_logic
@@ -354,11 +351,11 @@ begin
 	i_CPUSKT_ABRT_o 	<= i_exp_PORTB_o_cpu(0);
 	i_CPUSKT_phi1_o 	<= i_exp_PORTB_o_cpu(1);
 	i_CPUSKT_phi2_o 	<= i_exp_PORTB_o_cpu(2);
- 	i_CPUSKT_CPA_o 	<= i_exp_PORTB_o_cpu(3);
-	i_CPUSKT_nIRQ_o 	<= i_exp_PORTB_o_cpu(4);
-	i_CPUSKT_nFIRQ_o 	<= i_exp_PORTB_o_cpu(5);
+ 	i_CPUBRD_nBL_o(3)	<= i_exp_PORTB_o_cpu(3);
+	i_CPUBRD_nBL_o(2)	<= i_exp_PORTB_o_cpu(4);
+	i_CPUBRD_nBL_o(1)	<= i_exp_PORTB_o_cpu(5);
 	i_CPUSKT_RES_o 	<= i_exp_PORTB_o_cpu(6);
-	i_CPUSKT_CPB_o 	<= i_exp_PORTB_o_cpu(7);
+	i_CPUBRD_nBL_o(0) <= i_exp_PORTB_o_cpu(7);
 
 	-- wire up PORT C
 
@@ -370,6 +367,9 @@ begin
 
 	-- wire up PORTD cpu->fpga
 
+
+
+
 	i_exp_PORTD_io(0) <= i_CPUSKT_nM_i(0);
 	i_exp_PORTD_io(1) <= i_CPUSKT_nRW_i;
 	i_exp_PORTD_io(2) <= i_CPUSKT_nBW_i;
@@ -377,14 +377,13 @@ begin
 	i_exp_PORTD_io(4) <= i_CPUSKT_nOPC_i;
 	i_exp_PORTD_io(5) <= i_CPUSKT_nMREQ_i;
 	i_exp_PORTD_io(6) <= i_CPUSKT_nTRAN_i;
-	i_exp_PORTD_io(9) <= i_CPUSKT_nCPI_i;
+	i_exp_PORTD_io(7) <=	i_CPU_A_i(24);
+	i_exp_PORTD_io(8) <= i_CPU_A_i(25);
 
 	-- wire up PORTD fpga->cpu
 
-  	i_CPUBRD_nBL_o(2) <= i_exp_PORTD_io(7);
-	i_CPUBRD_nBL_o(3) <= i_exp_PORTD_io(8);
- 	i_CPUBRD_nBL_o(1) <= i_exp_PORTD_io(10);
- 	i_CPUBRD_nBL_o(0)	<= i_exp_PORTD_io(11);
+ 	i_CPUSKT_nIRQ_o 	<= i_exp_PORTD_io(9);
+ 	i_CPUSKT_nFIRQ_o 	<= i_exp_PORTD_io(10);
 
 
  	-- wire up PORTE cpu -> fpga

@@ -113,8 +113,6 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_RES_o	: std_logic;
 
 	signal i_CPUBRD_nBL_o	: std_logic_vector(3 downto 0);
-	signal i_CPUSKT_CPB_o	: std_logic;
-	signal i_CPUSKT_CPA_o	: std_logic;
 
 	signal i_CPU_D_RnW_o		: std_logic;
 
@@ -124,11 +122,10 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_nOPC_i	: std_logic;
 	signal i_CPUSKT_nMREQ_i	: std_logic;
 	signal i_CPUSKT_nTRAN_i	: std_logic;
-	signal i_CPUSKT_nCPI_i	: std_logic;
 
 
 	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 0);
+	signal i_CPUSKT_A_i		: std_logic_vector(25 downto 0);
 
 	type t_clk_state is (
 		phi1,
@@ -170,9 +167,6 @@ begin
 		CPUSKT_RES_i		=> i_CPUSKT_RES_o,
 
 		CPUBRD_nBL_i		=> i_CPUBRD_nBL_o,
-		CPUSKT_CPB_i		=> i_CPUSKT_CPB_o,
-		CPUSKT_CPA_i		=> i_CPUSKT_CPA_o,
-
 
 		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
 
@@ -182,7 +176,6 @@ begin
 		CPUSKT_nOPC_o		=> i_CPUSKT_nOPC_i,
 		CPUSKT_nMREQ_o		=> i_CPUSKT_nMREQ_i,
 		CPUSKT_nTRAN_o		=> i_CPUSKT_nTRAN_i,
-		CPUSKT_nCPI_o		=> i_CPUSKT_nCPI_i,
 
 		CPUSKT_D_o			=> i_CPUSKT_D_i,
 		CPUSKT_A_o			=> i_CPUSKT_A_i
@@ -308,7 +301,7 @@ begin
 								r_a_cpu <= x"8D3F" & i_CPUSKT_A_i(7 downto 0); 	-- boot from Flash at 8D xxxx
 							end if;
 						else
-							r_a_cpu <= i_CPUSKT_A_i;
+							r_a_cpu <= i_CPUSKT_A_i(23 downto 0);
 						end if;
 						r_nMREQ <= i_CPUSKT_nMREQ_i;
 						r_nBW <= i_CPUSKT_nBW_i;

@@ -68,8 +68,6 @@ entity fb_cpu_arm2_exp_pins is
 		CPUSKT_RES_i							: in std_logic;
 
 		CPUBRD_nBL_i							: in std_logic_vector(3 downto 0);
-		CPUSKT_CPB_i							: in std_logic;
-		CPUSKT_CPA_i							: in std_logic;
 
 
 		CPU_D_RnW_i								: in std_logic;
@@ -80,10 +78,9 @@ entity fb_cpu_arm2_exp_pins is
 		CPUSKT_nOPC_o							: out std_logic;
 		CPUSKT_nMREQ_o							: out std_logic;
 		CPUSKT_nTRAN_o							: out std_logic;
-		CPUSKT_nCPI_o							: out std_logic;
 
 		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
-		CPUSKT_A_o								: out std_logic_vector(23 downto 0)
+		CPUSKT_A_o								: out std_logic_vector(25 downto 0)
 
 
 	);
@@ -95,13 +92,11 @@ begin
 	wrap_exp_o.exp_PORTB(0) <= CPUSKT_ABRT_i;
 	wrap_exp_o.exp_PORTB(1) <= CPUSKT_phi1_i;
 	wrap_exp_o.exp_PORTB(2) <= CPUSKT_phi2_i;
-	wrap_exp_o.exp_PORTB(3) <= CPUSKT_CPA_i;
-	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIRQ_i;
-	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nFIRQ_i;
+	wrap_exp_o.exp_PORTB(3) <= CPUBRD_nBL_i(3);
+	wrap_exp_o.exp_PORTB(4) <= CPUBRD_nBL_i(2);
+	wrap_exp_o.exp_PORTB(5) <= CPUBRD_nBL_i(1);
 	wrap_exp_o.exp_PORTB(6) <= CPUSKT_RES_i;
-	wrap_exp_o.exp_PORTB(7) <= CPUSKT_CPB_i;
-
-
+	wrap_exp_o.exp_PORTB(7) <= CPUBRD_nBL_i(0);
 
 	CPUSKT_nM_o(0)		<= wrap_exp_i.exp_PORTD(0);
 	CPUSKT_nRW_o		<= wrap_exp_i.exp_PORTD(1);
@@ -110,24 +105,22 @@ begin
 	CPUSKT_nOPC_o		<= wrap_exp_i.exp_PORTD(4);
 	CPUSKT_nMREQ_o		<= wrap_exp_i.exp_PORTD(5);
 	CPUSKT_nTRAN_o		<= wrap_exp_i.exp_PORTD(6);
-	CPUSKT_nCPI_o		<= wrap_exp_i.exp_PORTD(9);
+	CPUSKT_A_o(24)		<= wrap_exp_i.exp_PORTD(7);
+	CPUSKT_A_o(25)		<= wrap_exp_i.exp_PORTD(8);
+
 
 
 
 
 	wrap_exp_o.exp_PORTD <= (
-		7 =>  CPUBRD_nBL_i(2),
-		8 => CPUBRD_nBL_i(3),
-		10 => CPUBRD_nBL_i(1),
-		11 => CPUBRD_nBL_i(0),
+		9	=>  CPUSKT_nIRQ_i,
+		10 =>  CPUSKT_nFIRQ_i,
 		others => '1'
 		);
 
 	wrap_exp_o.exp_PORTD_o_en <= (
-		7 => '1',
-		8 => '1',
-		10 => '1',
-		11 => '1',
+		9	=> '1',
+		10	=> '1',
 		others => '0'
 		);
 
@@ -135,8 +128,8 @@ begin
 	wrap_exp_o.exp_PORTF_nOE <= '1';
 
 	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A;
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
+	CPUSKT_A_o(23 downto 0)	<= wrap_exp_i.CPUSKT_A;
+	CPUSKT_D_o 					<= wrap_exp_i.CPUSKT_D(7 downto 0);
 
 end rtl;
 
