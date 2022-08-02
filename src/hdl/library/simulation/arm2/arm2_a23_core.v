@@ -42,6 +42,7 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
+`timescale 1ns/100ps
 
 module arm2_a23_core
 (
@@ -154,6 +155,8 @@ wire     [31:0]           dabt_fault_address;
 
 wire                      adex;
 
+reg                      write_enable_dly;
+reg                      i_phi2_dly;
 
 // data abort has priority
 assign decode_fault_status  = dabt_trigger ? dabt_fault_status  : iabt_fault_status;
@@ -178,7 +181,10 @@ assign o_A = execute_address;
 assign o_nMREQ = !execute_address_valid;
 assign o_nBW = (byte_enable == 4'hf)?1'd1:1'd0;
 
-assign io_D = (write_enable & !i_phi1)?write_data:{32{1'dZ}};
+always @(write_enable) #10 write_enable_dly = write_enable;
+always @(i_phi2) #10 i_phi2_dly = i_phi2;
+
+assign io_D = (write_enable_dly & (i_phi2_dly))?write_data:{32{1'dZ}};
 
 
 a23_decode u_decode (
