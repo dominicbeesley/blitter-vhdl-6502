@@ -333,7 +333,7 @@ begin
         A => i_exp_PORTA_io_cpu,
         B => i_CPU_D_io(7+8*I downto I*8),
 
-        nOEAB => latched_CPU_nRW,
+        nOEAB => i_CPUSKT_phi1_o,
         nLEAB => i_CPUBRD_nBL_o(I),
         nCEAB => latched_CPU_nRW,
 
