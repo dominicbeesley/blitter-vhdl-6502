@@ -137,15 +137,16 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal r_clk_state		: t_clk_state;
 
-	type t_mem_ack_state is (
+	type t_mem_acc_state is (
 		idle,
 		rd,
 		wr,
 		done
 		);
 
-	signal r_mem_ack_state  : t_mem_ack_state;
-	signal r_mem_ack_reset  : std_logic;
+	signal r_mem_acc_state  : t_mem_acc_state;
+	signal r_mem_acc_reset  : std_logic;	
+	signal r_mem_acc_nBL		: std_logic_vector(3 downto 0);
 
 begin
 
@@ -220,24 +221,25 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_cyc_o <= (others => '0');
-			case r_mem_ack_state is 
+			r_nBL <= r_mem_acc_nBL;
+			case r_mem_acc_state is 
 				when idle =>
 					r_D_wr_stb <= '0';
 					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
 						if r_nBW = '1' then
-							r_nBL <= "1110";
+							r_mem_acc_nBL <= "1110";
 							r_A_log <= "00";
 						else
-							r_nBL <= (others => '1');
-							r_nBL(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '0';
+							r_mem_acc_nBL <= (others => '1');
+							r_mem_acc_nBL(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '0';
 							r_A_log <= unsigned(r_a_cpu(1 downto 0));
 						end if;
 						r_cyc_o(0) <= '1';
 						if i_CPUSKT_nRW_i = '0' then
-							r_mem_ack_state <= rd;
+							r_mem_acc_state <= rd;
 							r_WE <= '0';
 						else
-							r_mem_ack_state <= wr;
+							r_mem_acc_state <= wr;
 							r_WE <= '1';
 						end if;
 					end if;
@@ -246,35 +248,35 @@ begin
 						r_D_wr_stb <= '1';
 					end if;
 					if i_cyc_ack_i then
-						if r_nBW = '0' or r_nBL(3) = '0' then
-							r_mem_ack_state <= done;
-							r_nBL <= (others => '1');
+						if r_nBW = '0' or r_mem_acc_nBL(3) = '0' then
+							r_mem_acc_state <= done;
+							r_mem_acc_nBL <= (others => '1');
 						else
-							r_mem_ack_state <= wr;
-							r_nBL <= r_nBL(2 downto 0) & '1';
+							r_mem_acc_state <= wr;
+							r_mem_acc_nBL <= r_mem_acc_nBL(2 downto 0) & '1';
 							r_A_log <= r_A_log + 1;
 							r_cyc_o(0) <= '1';
 						end if;
 					end if;
 				when rd =>
 					if i_cyc_ack_i then
-						if r_nBW = '0' or r_nBL(3) = '0' then
-							r_mem_ack_state <= done;
-							r_nBL <= (others => '1');
+						if r_nBW = '0' or r_mem_acc_nBL(3) = '0' then
+							r_mem_acc_state <= done;
+							r_mem_acc_nBL <= (others => '1');
 						else
-							r_mem_ack_state <= rd;
-							r_nBL <= r_nBL(2 downto 0) & '1';
+							r_mem_acc_state <= rd;
+							r_mem_acc_nBL <= r_mem_acc_nBL(2 downto 0) & '1';
 							r_A_log <= r_A_log + 1;
 							r_cyc_o(0) <= '1';
 						end if;
 					end if;				
 				when done =>
-					if r_mem_ack_reset = '1' then
-						r_mem_ack_state <= idle;
+					if r_mem_acc_reset = '1' then
+						r_mem_acc_state <= idle;
 					end if;
 				when others =>
 					r_D_wr_stb <= '0';
-					r_mem_ack_state <= idle;
+					r_mem_acc_state <= idle;
 			end case;
 		end if;
 	end process;
@@ -283,7 +285,7 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 
-			r_mem_ack_reset <= '0';
+			r_mem_acc_reset <= '0';
 
 			if r_clkctdn /= 0 then
 				r_clkctdn <= r_clkctdn - 1;
@@ -313,11 +315,11 @@ begin
 					end if;
 
 				when phi2 =>
-					if r_clkctdn = 0 and (r_mem_ack_state = done or r_nMREQ /= '0') then
+					if r_clkctdn = 0 and (r_mem_acc_state = done or r_nMREQ /= '0') then
 						r_cpu_phi2 <= '0';
 						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
 						r_clk_state <= phi1;
-						r_mem_ack_reset <= '1';
+						r_mem_acc_reset <= '1';
 					else
 						r_cpu_phi2 <= '1';
 					end if;
