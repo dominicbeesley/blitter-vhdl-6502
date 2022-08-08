@@ -78,6 +78,7 @@ entity fb_cpu_arm2_exp_pins is
 		CPUSKT_nOPC_o							: out std_logic;
 		CPUSKT_nMREQ_o							: out std_logic;
 		CPUSKT_nTRAN_o							: out std_logic;
+		CPUSKT_SEQ_o							: out std_logic;
 
 		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
 		CPUSKT_A_o								: out std_logic_vector(25 downto 0)
@@ -107,6 +108,7 @@ begin
 	CPUSKT_nTRAN_o		<= wrap_exp_i.exp_PORTD(6);
 	CPUSKT_A_o(24)		<= wrap_exp_i.exp_PORTD(7);
 	CPUSKT_A_o(25)		<= wrap_exp_i.exp_PORTD(8);
+	CPUSKT_SEQ_o		<= wrap_exp_i.exp_PORTD(11);
 
 
 

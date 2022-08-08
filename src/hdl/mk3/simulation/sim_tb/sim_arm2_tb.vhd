@@ -103,15 +103,13 @@ architecture Behavioral of sim_arm2_tb is
 	signal	i_CPUSKT_nOPC_i					: std_logic;
 	signal	i_CPUSKT_nMREQ_i					: std_logic;
 	signal	i_CPUSKT_nTRAN_i					: std_logic;
+	signal	i_CPUSKT_SEQ_i						: std_logic;
 
 	signal	i_CPU_A_i							: std_logic_vector(25 downto 0);
 	signal	i_CPU_D_io							: std_logic_vector(31 downto 0);
 
 	-- latched at start of phi1 for this cycle
 	signal	latched_CPU_nRW					: std_logic;	
-
-	-- latched data from fpga byte lanes
-	signal	r_latched_CPU_D_o					: std_logic_vector(31 downto 0);						
 
 
 	component arm2_a23_core is
@@ -379,6 +377,7 @@ begin
 	i_exp_PORTD_io(6) <= i_CPUSKT_nTRAN_i;
 	i_exp_PORTD_io(7) <=	i_CPU_A_i(24);
 	i_exp_PORTD_io(8) <= i_CPU_A_i(25);
+	i_exp_PORTD_io(11)<= i_CPUSKT_SEQ_i;
 
 	-- wire up PORTD fpga->cpu
 

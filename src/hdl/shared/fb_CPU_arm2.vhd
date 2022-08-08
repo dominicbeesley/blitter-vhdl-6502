@@ -122,6 +122,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_nOPC_i	: std_logic;
 	signal i_CPUSKT_nMREQ_i	: std_logic;
 	signal i_CPUSKT_nTRAN_i	: std_logic;
+	signal i_CPUSKT_SEQ_i	: std_logic;
 
 
 	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
@@ -176,6 +177,7 @@ begin
 		CPUSKT_nOPC_o		=> i_CPUSKT_nOPC_i,
 		CPUSKT_nMREQ_o		=> i_CPUSKT_nMREQ_i,
 		CPUSKT_nTRAN_o		=> i_CPUSKT_nTRAN_i,
+		CPUSKT_SEQ_o		=> i_CPUSKT_SEQ_i,
 
 		CPUSKT_D_o			=> i_CPUSKT_D_i,
 		CPUSKT_A_o			=> i_CPUSKT_A_i
