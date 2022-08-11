@@ -139,6 +139,9 @@ entity fb_cpu is
 		boot_65816_i							: in 	std_logic;
 
 		-- temporary debug signals
+
+		debug_hog_reset_i						: in  std_logic;
+
 		debug_wrap_cyc_o						: out std_logic;
 
 		debug_65816_vma_o						: out std_logic;
@@ -193,7 +196,9 @@ architecture rtl of fb_cpu is
 
 		-- CPU expansion signals
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
-		wrap_exp_i								: in t_cpu_wrap_exp_i
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		debug_hog_reset_i						: in std_logic
 
 
 	);
@@ -768,7 +773,9 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		wrap_i									=> i_wrap_i,
 
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_6x09),
-		wrap_exp_i								=> i_wrap_exp_i
+		wrap_exp_i								=> i_wrap_exp_i,
+
+		debug_hog_reset_i						=> debug_hog_reset_i
 	);
 END GENERATE;
 

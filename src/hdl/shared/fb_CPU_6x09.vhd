@@ -42,6 +42,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -68,7 +69,9 @@ entity fb_cpu_6x09 is
 
 		-- CPU expansion signals
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
-		wrap_exp_i								: in t_cpu_wrap_exp_i
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		debug_hog_reset_i						: in std_logic
 
 
 	);
@@ -201,12 +204,20 @@ architecture rtl of fb_cpu_6x09 is
 	signal r_cfg_throttle	: std_logic;
 	signal r_had_sys_phi2	: std_logic;
 
+	signal r_debug_hog_reset : std_logic_vector(7 downto 0);
+	signal r_debug_hog_prev : std_logic;
+
+	signal i_rst				: std_logic;
+	signal r_hog_clken		: std_logic;
+
 begin
+	
+	i_rst <= or_reduce(r_debug_hog_reset) or fb_syscon_i.rst;
 
 	p_cfg:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if fb_syscon_i.rst = '1' then
+			if i_rst = '1' then
 				if cpu_speed_opt_i = CPUSPEED_6309_3_5 then
 					r_cfg_3_5_MHz <= '1';
 				else
@@ -301,7 +312,9 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 
-			if fb_syscon_i.rst = '1' then
+			r_hog_clken <= '0';
+
+			if i_rst = '1' then
 				r_cpu_res <= '1';
 			end if;
 
@@ -370,9 +383,10 @@ begin
 							r_wrap_ack <= '1';
 							r_cpu_E <= '0';
 							r_ph_ring <= (others => '0');
-							if fb_syscon_i.rst = '0' then
+							if i_rst = '0' then
 								r_cpu_res <= '0';
 							end if;
+							r_hog_clken <= '1';
 						end if;
 					end if;
 				when others =>
@@ -389,7 +403,7 @@ begin
 					r_cpu_Q <= '0';
 					r_cpu_E <= '0';
 					r_ph_ring <= (others => '0');
-					if fb_syscon_i.rst = '0' then
+					if i_rst = '0' then
 						r_cpu_res <= '0';
 					end if;
 				end case;
@@ -415,7 +429,7 @@ begin
 
   	i_CPUSKT_nHALT_o <= 	i_rdy;
 
-  	i_rdy <=								'1' when fb_syscon_i.rst = '1' else
+  	i_rdy <=								'1' when i_rst = '1' else
   											'1' when wrap_i.noice_debug_inhibit_cpu = '1' else
   											'0' when wrap_i.cpu_halt = '1' else
   											'1';						
@@ -429,6 +443,26 @@ begin
 
 	wrap_o.noice_debug_A0_tgl  	<= '0'; -- TODO: check if needed
 
+
+	p_debug_hog_reset_i:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.rst = '1' then
+				r_debug_hog_reset <= (others => '0');
+			else
+				if r_hog_clken = '1' then
+					r_debug_hog_reset <= "0" & r_debug_hog_reset(r_debug_hog_reset'high downto 1);
+				end if;
+
+				r_debug_hog_prev <= debug_hog_reset_i;
+
+				if r_debug_hog_prev = '0' and debug_hog_reset_i = '1' then
+					r_debug_hog_reset <= (others => '1');
+				end if;
+
+			end if;
+		end if;
+	end process;
 
 end rtl;
 

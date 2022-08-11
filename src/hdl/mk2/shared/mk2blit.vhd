@@ -319,6 +319,7 @@ architecture rtl of mk2blit is
 
 	signal   i_debug_sys_D_dir			: std_logic;
 
+	signal 	i_debug_hog_reset			: std_logic;
 begin
 
 	e_fb_clocks: entity work.clocks_pll
@@ -722,7 +723,9 @@ END GENERATE;
 		debug_65816_vma_o					=> i_debug_65816_vma,
 
 		JIM_en_i								=> i_JIM_en,
-		JIM_page_i							=> i_JIM_page
+		JIM_page_i							=> i_JIM_page,
+
+		debug_hog_reset_i					=> i_debug_hog_reset
 
 	);
 
@@ -892,6 +895,8 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 LED_o(1) <= not i_chipset_cpu_halt;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= i_swmos_shadow;
+
+i_debug_hog_reset <= i_debug_reg(0) and i_vsync;
 
 
 end rtl;
