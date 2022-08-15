@@ -725,7 +725,8 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_hog_reset_i					=> i_debug_hog_reset
+		debug_hog_reset_i					=> i_debug_hog_reset,
+		debug_hog_wd_en_i					=> i_debug_reg(1)
 
 	);
 

@@ -141,6 +141,7 @@ entity fb_cpu is
 		-- temporary debug signals
 
 		debug_hog_reset_i						: in  std_logic;
+		debug_hog_wd_en_i						: in  std_logic;
 
 		debug_wrap_cyc_o						: out std_logic;
 
@@ -198,7 +199,8 @@ architecture rtl of fb_cpu is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
-		debug_hog_reset_i						: in std_logic
+		debug_hog_reset_i						: in std_logic;
+		debug_hog_wd_en_i						: in std_logic
 
 
 	);
@@ -775,7 +777,8 @@ g6x09:IF G_INCL_CPU_6x09 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_6x09),
 		wrap_exp_i								=> i_wrap_exp_i,
 
-		debug_hog_reset_i						=> debug_hog_reset_i
+		debug_hog_reset_i						=> debug_hog_reset_i,
+		debug_hog_wd_en_i						=> debug_hog_wd_en_i
 	);
 END GENERATE;
 

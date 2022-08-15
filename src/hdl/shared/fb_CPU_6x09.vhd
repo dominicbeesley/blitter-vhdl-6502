@@ -49,11 +49,13 @@ use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
 use work.fb_cpu_exp_pack.all;
+use work.common.all;
 
 entity fb_cpu_6x09 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural
+		CLOCKSPEED							: natural;
+		WATCHDOG_LEN						: positive := 64								-- how many cycles with a LIC will cause a reset
 	);
 	port(
 
@@ -71,8 +73,8 @@ entity fb_cpu_6x09 is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
-		debug_hog_reset_i						: in std_logic
-
+		debug_hog_reset_i						: in std_logic;
+		debug_hog_wd_en_i						: in std_logic
 
 	);
 end fb_cpu_6x09;
@@ -206,6 +208,7 @@ architecture rtl of fb_cpu_6x09 is
 
 	signal r_debug_hog_reset : std_logic_vector(7 downto 0);
 	signal r_debug_hog_prev : std_logic;
+	signal r_debug_hog_wd	: unsigned(NUMBITS(WATCHDOG_LEN-1)-1 downto 0);
 
 	signal i_rst				: std_logic;
 	signal r_hog_clken		: std_logic;
@@ -446,19 +449,37 @@ begin
 
 	p_debug_hog_reset_i:process(fb_syscon_i)
 	begin
+
+
 		if rising_edge(fb_syscon_i.clk) then
+			
+			if i_rst = '1' then
+				r_debug_hog_wd <= to_unsigned(WATCHDOG_LEN-1, r_debug_hog_wd'length);
+			end if;
+			
 			if fb_syscon_i.rst = '1' then
 				r_debug_hog_reset <= (others => '0');
 			else
+
 				if r_hog_clken = '1' then
+
+					if i_CPUSKT_LIC_i = '1' then
+						r_debug_hog_wd <= to_unsigned(WATCHDOG_LEN-1, r_debug_hog_wd'length);
+					elsif r_debug_hog_wd /= 0 then
+						r_debug_hog_wd <= r_debug_hog_wd - 1;
+					end if;
+
 					r_debug_hog_reset <= "0" & r_debug_hog_reset(r_debug_hog_reset'high downto 1);
+				end if;
+
+
+				if (r_debug_hog_prev = '0' and debug_hog_reset_i = '1') 
+						or (r_debug_hog_wd = 0 and debug_hog_wd_en_i = '1') then
+					r_debug_hog_reset <= (others => '1');
 				end if;
 
 				r_debug_hog_prev <= debug_hog_reset_i;
 
-				if r_debug_hog_prev = '0' and debug_hog_reset_i = '1' then
-					r_debug_hog_reset <= (others => '1');
-				end if;
 
 			end if;
 		end if;
