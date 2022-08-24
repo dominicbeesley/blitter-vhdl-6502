@@ -178,7 +178,7 @@ assign o_nRW = write_enable;
 assign fetch_stall = 1'd0;
 assign fetch_abort = 1'd0;
 assign o_A = execute_address[25:0];
-assign o_nMREQ = !execute_address_valid;
+assign o_nMREQ = !execute_address_valid & !i_reset;
 assign o_nBW = (byte_enable == 4'hf)?1'd1:1'd0;
 
 always @(write_enable) #10 write_enable_dly = write_enable;

@@ -524,6 +524,7 @@ begin
 				r_cpu_en_6800 <= '0';
 				r_cpu_en_80188 <= '0';
 				r_cpu_en_65816 <= '0';
+				r_cpu_en_arm2 <= '0';
 
 				r_do_sys_via_block <= '0';	
 

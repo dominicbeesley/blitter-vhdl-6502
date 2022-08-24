@@ -101,6 +101,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_WE					: std_logic;
 	signal r_nMREQ				: std_logic;
 	signal r_nBW				: std_logic;
+	signal r_nRW				: std_logic;
 	signal r_nBL				: std_logic_vector(3 downto 0);							-- byte lane select on board i.e. which byte lane maps to PORTA
 
 	-- port B
@@ -186,7 +187,7 @@ begin
 
 
 	-- TODO: make this a register in state machine and delay?
-	i_CPU_D_RnW_o <= 	'0' when i_CPUSKT_nRW_i = '1' else
+	i_CPU_D_RnW_o <= 	'0' when r_nRW = '1' else
 							'1';
 
 	i_CPUSKT_phi1_o <= r_cpu_phi1;
@@ -214,7 +215,15 @@ begin
 
 	p_mem_acc_state:process(fb_syscon_i)
 	begin
-		if rising_edge(fb_syscon_i.clk) then
+		if fb_syscon_i.rst ='1' then
+			r_cyc_o <= (others => '0');
+			r_nBL <= r_mem_acc_nBL;
+			r_mem_acc_nBL <= (others => '1');
+			r_mem_acc_state <= done;
+			r_D_wr_stb <= '0';
+			r_WE <= '0';
+			r_A_log <= (others => '0');		
+		elsif rising_edge(fb_syscon_i.clk) then
 			r_cyc_o <= (others => '0');
 			r_nBL <= r_mem_acc_nBL;
 			case r_mem_acc_state is 
@@ -230,7 +239,7 @@ begin
 							r_A_log <= unsigned(r_a_cpu(1 downto 0));
 						end if;
 						r_cyc_o(0) <= '1';
-						if i_CPUSKT_nRW_i = '0' then
+						if r_nRW = '0' then
 							r_mem_acc_state <= rd;
 							r_WE <= '0';
 						else
@@ -296,7 +305,7 @@ begin
 						r_cpu_phi1 <= '1';
 
 
-						if r_arm_boot = '1' and i_CPUSKT_nRW_i = '0' then
+						if r_arm_boot = '1' and r_nRW = '0' then
 							if cfg_mosram_i = '1' then
 								r_a_cpu <= x"7D3F" & i_CPUSKT_A_i(7 downto 0); 	-- boot from SWRAM at 7D xxxx
 							else
@@ -305,8 +314,6 @@ begin
 						else
 							r_a_cpu <= i_CPUSKT_A_i(23 downto 0);
 						end if;
-						r_nMREQ <= i_CPUSKT_nMREQ_i;
-						r_nBW <= i_CPUSKT_nBW_i;
 					end if;
 
 				when phi2 =>
@@ -315,6 +322,9 @@ begin
 						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
 						r_clk_state <= phi1;
 						r_mem_acc_reset <= '1';
+						r_nMREQ <= i_CPUSKT_nMREQ_i or fb_syscon_i.rst;
+						r_nBW <= i_CPUSKT_nBW_i;
+						r_nRW <= i_CPUSKT_nRW_i;
 					else
 						r_cpu_phi2 <= '1';
 					end if;
