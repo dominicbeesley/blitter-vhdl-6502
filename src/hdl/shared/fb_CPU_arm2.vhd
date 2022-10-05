@@ -140,6 +140,10 @@ architecture rtl of fb_cpu_arm2 is
 		idle,
 		rd,
 		wr,
+		wr_next,
+		wr_next2,
+		wr_next3,
+		wr_next4,
 		done
 		);
 
@@ -252,16 +256,26 @@ begin
 						r_D_wr_stb <= '1';
 					end if;
 					if i_cyc_ack_i then
+						r_D_wr_stb <= '0';
 						if r_nBW = '0' or r_mem_acc_nBL(3) = '0' then
 							r_mem_acc_state <= done;
 							r_mem_acc_nBL <= (others => '1');
 						else
-							r_mem_acc_state <= wr;
+							r_mem_acc_state <= wr_next;
 							r_mem_acc_nBL <= r_mem_acc_nBL(2 downto 0) & '1';
 							r_A_log <= r_A_log + 1;
 							r_cyc_o(0) <= '1';
 						end if;
 					end if;
+				when wr_next =>
+					r_mem_acc_state <= wr_next2;
+				when wr_next2 =>
+					r_mem_acc_state <= wr_next3;
+				when wr_next3 =>
+					r_mem_acc_state <= wr_next4;
+				when wr_next4 =>
+					r_mem_acc_state <= wr;
+
 				when rd =>
 					if i_cyc_ack_i then
 						if r_nBW = '0' or r_mem_acc_nBL(3) = '0' then

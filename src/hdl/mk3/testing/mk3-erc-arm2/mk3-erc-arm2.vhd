@@ -264,17 +264,17 @@ begin
 		end case;
 	end process;
 
-	e_DD0:entity work.serialout generic map (message => "D0  ") port map (bit_clk => bit_clk, so => i_data(0));
-	e_DD1:entity work.serialout generic map (message => "D1  ") port map (bit_clk => bit_clk, so => i_data(1));
-	e_DD2:entity work.serialout generic map (message => "D2  ") port map (bit_clk => bit_clk, so => i_data(2));
-	e_DD3:entity work.serialout generic map (message => "D3  ") port map (bit_clk => bit_clk, so => i_data(3));
-	e_DD4:entity work.serialout generic map (message => "D4  ") port map (bit_clk => bit_clk, so => i_data(4));
-	e_DD5:entity work.serialout generic map (message => "D5  ") port map (bit_clk => bit_clk, so => i_data(5));
-	e_DD6:entity work.serialout generic map (message => "D6  ") port map (bit_clk => bit_clk, so => i_data(6));
-	e_DD7:entity work.serialout generic map (message => "D7  ") port map (bit_clk => bit_clk, so => i_data(7));
+	 e_DD0:entity work.serialout generic map (message => "D0  ") port map (bit_clk => bit_clk, so => i_data(0));
+	 e_DD1:entity work.serialout generic map (message => "D1  ") port map (bit_clk => bit_clk, so => i_data(1));
+	 e_DD2:entity work.serialout generic map (message => "D2  ") port map (bit_clk => bit_clk, so => i_data(2));
+	 e_DD3:entity work.serialout generic map (message => "D3  ") port map (bit_clk => bit_clk, so => i_data(3));
+	 e_DD4:entity work.serialout generic map (message => "D4  ") port map (bit_clk => bit_clk, so => i_data(4));
+	 e_DD5:entity work.serialout generic map (message => "D5  ") port map (bit_clk => bit_clk, so => i_data(5));
+	 e_DD6:entity work.serialout generic map (message => "D6  ") port map (bit_clk => bit_clk, so => i_data(6));
+	 e_DD7:entity work.serialout generic map (message => "D7  ") port map (bit_clk => bit_clk, so => i_data(7));
 
-	e_DD8:entity work.serialout generic map (message => "D8  ") port map (bit_clk => bit_clk, so => i_data(8));
-	e_DD9:entity work.serialout generic map (message => "D9  ") port map (bit_clk => bit_clk, so => i_data(9));
+	 e_DD8:entity work.serialout generic map (message => "D8  ") port map (bit_clk => bit_clk, so => i_data(8));
+	 e_DD9:entity work.serialout generic map (message => "D9  ") port map (bit_clk => bit_clk, so => i_data(9));
 	e_DD10:entity work.serialout generic map (message => "D10 ") port map (bit_clk => bit_clk, so => i_data(10));
 	e_DD11:entity work.serialout generic map (message => "D11 ") port map (bit_clk => bit_clk, so => i_data(11));
 	e_DD12:entity work.serialout generic map (message => "D12 ") port map (bit_clk => bit_clk, so => i_data(12));
