@@ -694,7 +694,8 @@ END GENERATE;
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
 		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
-		G_INCL_CPU_68008					=> G_INCL_CPU_68008
+		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
+		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
 	)
 	port map (
 
@@ -946,6 +947,9 @@ begin
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
 					r_cfg_mk2_cpubits <= "101";
+				when "0110111" =>
+					r_cfg_cpu_type <= CPU_ARM2;
+					r_cfg_mk2_cpubits <= "000";
 				when others =>
 					null;
 			end case;

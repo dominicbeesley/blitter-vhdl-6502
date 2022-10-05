@@ -1,0 +1,9 @@
+ENTRY(_reset)
+
+SECTIONS
+{
+	. = 0x8D0000;
+	.code : AT(0x0) { *(.text) }
+	. = 0x000000;
+	.romvectors : AT(0x3F00) { *(romvectors) }
+};
