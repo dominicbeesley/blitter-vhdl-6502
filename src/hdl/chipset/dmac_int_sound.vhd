@@ -345,6 +345,7 @@ begin
 	fb_con_c2p_o.we <= '0';
 	fb_con_c2p_o.D_wr <= (others => '0');
 	fb_con_c2p_o.D_wr_stb <= '0';
+	fb_con_c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
 
 	p_con_state: process(fb_syscon_i)
 	variable v_ix: unsigned(numbits(G_CHANNELS)-1 downto 0);

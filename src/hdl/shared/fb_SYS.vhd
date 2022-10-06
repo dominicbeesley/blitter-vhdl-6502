@@ -167,7 +167,6 @@ architecture rtl of fb_sys is
 	signal	r_sys_d				: std_logic_vector(7 downto 0);
 	signal	r_sys_RnW			: std_logic;
 
-	signal	i_sys_rdy_ctdn		: unsigned(RDY_CTDN_LEN-1 downto 0); -- number of cycles until phi0
 	signal	i_sys_rdy_ctdn_rd	: unsigned(RDY_CTDN_LEN-1 downto 0); -- number of cycles until data ready
 
 	--latch for D_Rd
@@ -483,7 +482,7 @@ begin
 		sys_dll_lock_o				=> sys_dll_lock_o,
 		sys_phi2_i					=> i_gen_phi2,
 		sys_slow_cyc_i				=> i_sys_slow_cyc,
-		sys_rdyctdn_o				=> i_sys_rdy_ctdn,
+		sys_rdyctdn_o				=> open,
 		sys_rdyctdn_rd_o			=> i_sys_rdy_ctdn_rd,
 		sys_cyc_start_clken_o	=> i_SYScyc_st_clken,
 		sys_cyc_end_clken_o		=> i_SYScyc_end_clken,
