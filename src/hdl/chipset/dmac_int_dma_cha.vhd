@@ -627,10 +627,8 @@ begin
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
-									 RDY_CTDN_MAX;
+	fb_per_p2c_o.rdy <= r_per_rdy;
 	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.nul <= '0';
 
 	i_next_con_addr <=
 				 		r_src_addr_bank & std_logic_vector(unsigned(r_src_addr) + 1) 
@@ -661,5 +659,6 @@ begin
 									r_data(7 downto 0) when r_dma_state = sMemAccDEST2 and (r_ctl_extend = '0' or r_ctl2_stepsize /= wordswapdest) else
 									r_data(15 downto 8);
   	fb_con_c2p_o.D_wr_stb <= r_con_cyc;
+  	fb_con_c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
 	
 end Behavioral;

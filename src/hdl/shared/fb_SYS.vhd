@@ -150,6 +150,7 @@ architecture rtl of fb_sys is
 	signal	state					: state_sys_t;
 
 	signal   r_ack					: std_logic;							-- goes to 1 for single cycle when read data ready or for writes when data strobed
+	signal   r_rdy					: std_logic;							-- goes to 1 when r_ack will occur in < r_con_rdy_ctdn cycles
 
 	-- local copy of ROMPG
 	signal	r_sys_ROMPG			: std_logic_vector(7 downto 0);	
@@ -161,6 +162,7 @@ architecture rtl of fb_sys is
 
 	signal	i_con_cyc			: std_logic;							-- cyc and a_stb = '1'
 	signal	r_con_cyc			: std_logic; 							-- goes to zero if cyc/a_stb dropped
+	signal   r_con_rdy_ctdn		: t_rdy_ctdn;
 
 	signal	r_sys_d				: std_logic_vector(7 downto 0);
 	signal	r_sys_RnW			: std_logic;
@@ -219,6 +221,8 @@ begin
 	fb_p2c_o.D_rd <= i_D_rd when state = addrlatched_rd else
 						  r_D_rd;
 
+
+
 	p_state:process(fb_syscon_i)
 	begin
 
@@ -227,6 +231,8 @@ begin
 
 			r_con_cyc <= '0';
 			r_ack <= '0';
+			r_con_rdy_ctdn <= RDY_CTDN_MAX;
+			r_rdy <= '0';
 
 			r_sys_A <= DEFAULT_SYS_ADDR;
 			r_sys_RnW <= '1';
@@ -234,7 +240,6 @@ begin
 
 			r_sys_ROMPG <= (others => '0');
 
-			fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 
 			r_JIM_en <= '0';
 			r_JIM_page <= (others => '0');
@@ -252,7 +257,6 @@ begin
 						debug_jim_hi_wr_o <= '0';
 
 						r_con_cyc <= '0';
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 
 						if i_SYScyc_st_clken = '1' then
 							-- default idle cycle, drop busses
@@ -265,6 +269,7 @@ begin
 
 								r_sys_A <= fb_c2p_i.A(15 downto 0);
 								r_con_cyc <= '1';
+								r_con_rdy_ctdn <= fb_c2p_i.rdy_ctdn; 
 
 
 								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
@@ -304,7 +309,9 @@ begin
 							end if;
 						else
 
-							fb_p2c_o.rdy_ctdn <= i_sys_rdy_ctdn_rd;
+							if i_sys_rdy_ctdn_rd <= r_con_rdy_ctdn then
+								r_rdy <= '1';
+							end if;
 							if i_sys_rdy_ctdn_rd = RDY_CTDN_MIN then
 								state <= wait_con_rel_rd;		
 								r_ack <= '1';		
@@ -351,7 +358,7 @@ begin
 							end if;
 							r_sys_D <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+							r_rdy <= '1';
 							state <= wait_sys_end_wr;
 						end if;
 
@@ -381,17 +388,17 @@ begin
 						end if;
 
 					when jim_dev_rd =>
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						r_rdy <= '1';
 						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= G_JIM_DEVNO xor x"FF";				
 					when jim_page_lo_rd =>
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						r_rdy <= '1';
 						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(7 downto 0);				
 					when jim_page_hi_rd =>
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+						r_rdy <= '1';
 						state <= wait_con_rel_rd;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(15 downto 8);				
@@ -406,7 +413,7 @@ begin
 						elsif fb_c2p_i.D_wr_stb = '1' then
 							r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+							r_rdy <= '1';
 							state <= wait_con_rel_rd;
 						end if;
 					when jim_page_hi_wr =>
@@ -419,7 +426,7 @@ begin
 						elsif fb_c2p_i.D_wr_stb = '1' then
 							r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
-							fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
+							r_rdy <= '1';
 							state <= wait_con_rel_rd;
 						end if;
 					when others =>
@@ -427,7 +434,7 @@ begin
 						state <= idle;
 						
 						r_sys_RnW <= '1';
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
+						r_rdy <= '0';
 						r_con_cyc <= '0';
 
 				end case;
@@ -445,7 +452,7 @@ begin
 				if i_con_cyc = '0' then
 					-- controller has dropped the cycle
 					r_con_cyc <= '0';
-					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
+					r_rdy <= '0';
 					r_ack <= '0';
 
 				end if;
@@ -456,8 +463,8 @@ begin
 	end process;
 
 
+	fb_p2c_o.rdy <= r_rdy;
 	fb_p2c_o.ack <= r_ack;
-	fb_p2c_o.nul <= '0';
 
 
    --TODO: see if the dll can be made to run reliably from phi0

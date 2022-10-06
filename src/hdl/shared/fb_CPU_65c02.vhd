@@ -206,6 +206,7 @@ begin
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb		<= r_D_WR_stb;
 	wrap_o.ack				<= i_ack;
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -223,7 +224,7 @@ begin
 			r_a_stb <= '0';
 			r_D_WR_stb <= '0';
 
-			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
+			if wrap_i.rdy = '1' then
 				v_ctupnext := r_rdy_ctup + 1;
 				if v_ctupnext /= 0 then
 					r_rdy_ctup <= v_ctupnext;

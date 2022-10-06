@@ -282,14 +282,8 @@ begin
 	p_per_cha_sel_o:process(fb_syscon_i, r_per_sel_ack, r_per_state, r_ovr_vol, r_cha_sel, i_cha_fb_per_s2m, 
 													fb_per_c2p_i, r_per_sel_rdy)	
 	variable v_rs:natural range 0 to 15;
-	variable v_rdy_ctdn:unsigned(RDY_CTDN_LEN-1 downto 0);
 	begin
 		v_rs := to_integer(unsigned(fb_per_c2p_i.A(3 downto 0)));
-		if r_per_sel_rdy = '1' then
-			v_rdy_ctdn := RDY_CTDN_MIN;
-		else 
-			v_rdy_ctdn := RDY_CTDN_MAX;
-		end if;
 		fb_per_p2c_o <= fb_p2c_unsel;
 		if r_per_state = child_act then
 			for I in 0 to G_CHANNELS-1 loop
@@ -301,16 +295,14 @@ begin
 			if v_rs = A_OVR_VOL then
 				fb_per_p2c_o <= (
 					D_rd => std_logic_vector(r_ovr_vol) & "00",
-					rdy_ctdn => v_rdy_ctdn,
-					ack => r_per_sel_ack,
-					nul => '0'
+					rdy => r_per_sel_rdy,
+					ack => r_per_sel_ack
 					);				
 			else
 				fb_per_p2c_o <= (
 					D_rd => PADBITS & std_logic_vector(r_cha_sel),
-					rdy_ctdn => v_rdy_ctdn,
-					ack => r_per_sel_ack,
-					nul => '0'
+					rdy => r_per_sel_rdy,
+					ack => r_per_sel_ack
 					);
 			end if;
 		end if;
@@ -330,7 +322,8 @@ begin
 						A => (others => '1'),
 						A_stb => '0',
 						D_wr => (others => '-'),
-						D_wr_stb => '0'
+						D_wr_stb => '0',
+						rdy_ctdn => RDY_CTDN_MIN
 					);
 			end if;
 		end loop;		

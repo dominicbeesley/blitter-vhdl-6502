@@ -149,6 +149,7 @@ begin
 
 	wrap_o.A_log 		<= x"FF" & r_t65_A(15 downto 0);
 	wrap_o.cyc			<= ( 0 => i_wrap_cyc, others => '0');
+	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
 	wrap_o.we	 		<= not r_t65_RnW;
 	wrap_o.D_WR 		<= r_t65_D_out;
 	wrap_o.D_WR_stb 	<= r_clken_dly(1);
@@ -157,8 +158,8 @@ begin
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
 
 
-	i_t65_clken <= '1' when r_cpu_clk(0) = '1' and (
-									(wrap_i.rdy_ctdn = RDY_CTDN_MIN) or 
+	i_t65_clken <= '1' when r_cpu_clk(0) = '1' and (		
+									wrap_i.rdy = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
 									) and i_throttle_wait = '0'

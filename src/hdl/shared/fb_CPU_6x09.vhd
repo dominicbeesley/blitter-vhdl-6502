@@ -265,6 +265,7 @@ begin
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb		<= i_D_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 
 	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_3_5_MHz = '1' else
 						r_DD_ring(T_tDD_2);
@@ -309,7 +310,7 @@ begin
 			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "0";
 			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
 
-			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
+			if wrap_i.rdy = '1' then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
 			else
 				r_DS_ring <= (others => '0');

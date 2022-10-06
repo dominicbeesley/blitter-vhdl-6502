@@ -234,6 +234,7 @@ begin
 	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_d_wr_stb;
 	wrap_o.ack				<= r_wrap_ack;
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 
 
 	i_CPU_CLK_posedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' else
@@ -307,7 +308,8 @@ begin
 					end if;
 				when ActRead =>
 					-- wait for data, place on bus then wait for data and then ack
-					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and i_CPU_CLK_posedge = '1' then
+					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
+					if wrap_i.rdy = '1' and i_CPU_CLK_posedge = '1' then
 						r_SRDY <= '1';
 						r_state <= ActRel;
 					end if;
@@ -321,7 +323,8 @@ begin
 
 				when ActWrite2 =>
 					-- wait for data, place on bus then wait for data and then ack
-					if wrap_i.rdy_ctdn = RDY_CTDN_MIN and i_CPU_CLK_posedge = '1' then
+					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
+					if wrap_i.rdy ='1' and i_CPU_CLK_posedge = '1' then
 						r_state <= ActRel;
 						r_SRDY <= '1';
 					end if;

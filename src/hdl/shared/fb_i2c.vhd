@@ -156,11 +156,8 @@ architecture rtl of fb_i2c is
 begin
 
 
-	fb_p2c_o.rdy_ctdn <= 
-		RDY_CTDN_MIN when r_con_rdy = '1' else
-		RDY_CTDN_MAX;
+	fb_p2c_o.rdy <= r_con_rdy;
 	fb_p2c_o.ack <= r_con_ack;
-	fb_p2c_o.nul <= '0';
 
 	I2C_SDA_io <= 	'0' when r_i2c_sda = '0' else
 						'Z';

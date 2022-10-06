@@ -207,8 +207,9 @@ begin
 	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
 	wrap_o.D_wr_stb		<= r_D_wr_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
-	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' and wrap_i.cyc = '1'
-									else '0';
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+
+	i_cyc_ack_i 			<= wrap_i.cyc_ack;
 
 	e_cyc_dly_e:entity work.metadelay 
 		generic map ( N => 1 ) 

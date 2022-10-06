@@ -485,6 +485,7 @@ architecture rtl of fb_cpu is
 	signal r_wrap_we					: std_logic;
 	signal r_wrap_D_WR_stb			: std_logic;
 	signal r_wrap_D_WR				: std_logic_vector(7 downto 0);
+	signal r_wrap_rdy_ctdn			: t_rdy_ctdn;
 
 	signal i_wrap_D_rd				: std_logic_vector(8*C_CPU_BYTELANES-1 downto 0);
 
@@ -671,6 +672,7 @@ begin
 			r_wrap_we <= '0';
 			r_wrap_D_WR_stb <= '0';
 			r_wrap_D_WR <= (others => '0');
+			r_wrap_rdy_ctdn <= RDY_CTDN_MAX;
 
 
 			r_acked <= (others => '0');
@@ -691,6 +693,7 @@ begin
 					if or_reduce(i_wrap_o_cur_act.cyc) = '1' then
 						r_wrap_phys_A <= i_wrap_phys_A;
 						r_wrap_we <= i_wrap_o_cur_act.we;
+						r_wrap_rdy_ctdn <= i_wrap_o_cur_act.rdy_ctdn;
 
 						if r_do_sys_via_block = '1' and i_SYS_VIA_block = '1' then
 							r_state <= s_block;
@@ -1035,11 +1038,13 @@ END GENERATE;
   	fb_c2p_o.A_stb <= r_wrap_cyc;
   	fb_c2p_o.D_wr <=  r_wrap_D_wr;
   	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
+  	fb_c2p_o.rdy_ctdn <= r_wrap_rdy_ctdn;
 
 
 
-	i_wrap_i.rdy_ctdn						<= fb_p2c_i.rdy_ctdn;
+	i_wrap_i.rdy							<= fb_p2c_i.rdy;
 	i_wrap_i.cyc 							<= r_wrap_cyc;
+	i_wrap_i.cyc_ack						<= fb_p2c_i.ack;
 
 	i_wrap_i.cpu_halt 					<= cpu_halt_i;
 

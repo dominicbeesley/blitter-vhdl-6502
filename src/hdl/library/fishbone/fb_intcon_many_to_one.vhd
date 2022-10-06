@@ -82,6 +82,7 @@ architecture rtl of fb_intcon_many_to_one is
 	signal	r_c2p_we			: std_logic;												-- registered we 
 	signal	r_D_wr			: std_logic_vector(7 downto 0);
 	signal	r_D_wr_stb		: std_logic;
+	signal	r_rdy_ctdn		: t_rdy_ctdn;
 
 	signal	r_cyc_sla		: std_logic;												-- registered cyc for peripheral
 
@@ -134,15 +135,14 @@ end generate;
 	fb_per_c2p_o.A_stb		<= r_cyc_sla;
 	fb_per_c2p_o.D_wr			<= r_D_wr;
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
+	fb_per_c2p_o.rdy_ctdn   <= r_rdy_ctdn;
 
 
 	g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 		-- TODO: check if moving data to own shared register saves space
 		fb_con_p2c_o(I).D_rd 		<= fb_per_p2c_i.D_rd;
-		fb_con_p2c_o(I).rdy_ctdn 	<= fb_per_p2c_i.rdy_ctdn when r_cyc_act_oh(I) = '1' else
-												 	RDY_CTDN_MAX;
+		fb_con_p2c_o(I).rdy 			<= fb_per_p2c_i.rdy and r_cyc_act_oh(I);
 		fb_con_p2c_o(I).ack 			<= fb_per_p2c_i.ack and r_cyc_act_oh(I);				
-		fb_con_p2c_o(I).nul 			<= fb_per_p2c_i.nul and r_cyc_act_oh(I);
 	end generate;
 
 	p_state:process(fb_syscon_i, r_state)
@@ -156,6 +156,7 @@ end generate;
 			r_cyc_act_oh <= (others => '0');
 			r_D_wr <= (others => '0');
 			r_D_wr_stb <= '0';
+			r_rdy_ctdn <= RDY_CTDN_MIN;
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 			r_cyc_ack <= '0';
@@ -173,6 +174,7 @@ end generate;
 						r_state <= act;
 						r_D_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
 						r_D_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
+						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
 					end if;
 				when act =>
 					r_D_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;

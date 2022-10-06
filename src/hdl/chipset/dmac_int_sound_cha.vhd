@@ -177,10 +177,8 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
-									 RDY_CTDN_MAX;
+	fb_per_p2c_o.rdy <= r_per_rdy;
 	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.nul <= '0';
 
 	i_samper_ctr_next <= ("0" & r_samper_ctr) - 1;
 

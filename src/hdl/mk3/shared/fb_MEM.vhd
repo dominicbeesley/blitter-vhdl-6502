@@ -86,6 +86,8 @@ architecture rtl of fb_mem is
 	signal	state			: state_mem_t;
 
 	signal	i_con_ack	:	std_logic;
+	signal	r_rdy_ctdn	:  t_rdy_ctdn;
+	signal	r_rdy			:  std_logic;
 
 begin
 
@@ -93,10 +95,12 @@ begin
 
 
 	fb_p2c_o.D_rd <= MEM_D_io;
+	fb_p2c_o.rdy <= r_rdy when fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' else
+						 '0';
 
 	p_state:process(fb_syscon_i)
 	variable v_st_first : state_mem_t;
-	variable v_rdy_first: natural;
+	variable v_rdy_ctdn: t_rdy_ctdn;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -107,11 +111,14 @@ begin
 			MEM_nWE_o <= '1';
 			MEM_RAM_nCE_o <= (others => '1');
 			MEM_ROM_nCE_o <= '1';
-			fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
 			fb_p2c_o.ack <= '0';
-			fb_p2c_o.nul <= '0';
+			v_rdy_ctdn := RDY_CTDN_MAX;
+			r_rdy <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
+
+				fb_p2c_o.ack <= '0';
+
 				case state is
 					when idle =>
 						MEM_A_o <= (others => '0');
@@ -120,10 +127,12 @@ begin
 						MEM_nWE_o <= '1';
 						MEM_RAM_nCE_o <= (others => '1');
 						MEM_ROM_nCE_o <= '1';
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
-						fb_p2c_o.ack <= '0';
-						fb_p2c_o.nul <= '0';
+						r_rdy <= '0';
+						v_rdy_ctdn := RDY_CTDN_MAX;	
+
 						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+
+							r_rdy_ctdn <= fb_c2p_i.rdy_ctdn;
 
 							if fb_c2p_i.we = '0' or fb_c2p_i.D_wr_stb = '1' then							
 								MEM_nWE_o <= not fb_c2p_i.we;
@@ -138,10 +147,10 @@ begin
 									MEM_ROM_nCE_o <= '0';
 									IF G_FLASH_IS_45 then
 										v_st_first := wait4;
-										v_rdy_first := 5;
+										v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 									else
 										v_st_first := wait2;
-										v_rdy_first := 7;
+										v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 									end if;
 								elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
 									MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
@@ -149,79 +158,82 @@ begin
 										-- slow BB RAM...how slow?
 										if G_SLOW_IS_45 then
 											v_st_first := wait4;
-											v_rdy_first := 5;
+											v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 										else
 											v_st_first := wait2;
-											v_rdy_first := 7;
+											v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 										end if;
 									elsif G_FAST_IS_10 then
 										v_st_first := wait8;
-										v_rdy_first := 1;
+										v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 									else
 										v_st_first := wait7;
-										v_rdy_first := 2;
+										v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
 									end if;
 								else
 									-- ram at 0..$5F FFFF maps
 									MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
 									if G_FAST_IS_10 then
 										v_st_first := wait8;
-										v_rdy_first := 1;
+										v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 									else
 										v_st_first := wait7;
-										v_rdy_first := 2;
+										v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
 									end if;
 
 								end if;
 
 
-								fb_p2c_o.rdy_ctdn <= to_unsigned(v_rdy_first, RDY_CTDN_LEN);			
 								state <= v_st_first;
 							end if;
 						end if;
 					when wait1 =>
 						state <= wait2;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(7, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 					when wait2 =>
 						state <= wait3;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(6, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(6, RDY_CTDN_LEN);
 					when wait3 =>
 						state <= wait4;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(5, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 					when wait4 =>
 						state <= wait5;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(4, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(4, RDY_CTDN_LEN);
 					when wait5 =>
 						state <= wait6;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(3, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(3, RDY_CTDN_LEN);
 					when wait6 =>
 						state <= wait7;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(2, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
 					when wait7 =>
 						state <= wait8;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(1, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 					when wait8 =>
 						state <= act;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
+						v_rdy_ctdn := to_unsigned(0, RDY_CTDN_LEN);
 						fb_p2c_o.ack <= '1';
 					when act =>
-						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
-						fb_p2c_o.ack <= '0';
+						v_rdy_ctdn := to_unsigned(0, RDY_CTDN_LEN);
 					when others =>
-						fb_p2c_o.nul <= '1';
 						fb_p2c_o.ack <= '1';
+						r_rdy <= '1';
+						r_rdy_ctdn <= RDY_CTDN_MAX;
 						state <= idle;
 				end case;
 				if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
 					state <= idle;
-					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
-					fb_p2c_o.ack <= '0';
-					fb_p2c_o.nul <= '0';
 					MEM_nOE_o <= '1';
 					MEM_nWE_o <= '1';
 					MEM_RAM_nCE_o <= (others => '1');
 					MEM_ROM_nCE_o <= '1';
+					r_rdy <= '0';
+					r_rdy_ctdn <= RDY_CTDN_MAX;
 				end if;
+
+				if v_rdy_ctdn <= r_rdy_ctdn then
+					r_rdy <= '1';
+				end if;
+
 			end if;
 		end if;
 

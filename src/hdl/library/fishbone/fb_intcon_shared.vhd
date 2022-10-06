@@ -88,6 +88,7 @@ architecture rtl of fb_intcon_shared is
 	-- register the muxed signals for timing
 	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
 	signal	r_c2p_we			: std_logic;												-- registered we 
+	signal	r_rdy_ctdn		: t_rdy_ctdn;
 	
 	signal	r_peripheral_sel		: unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- registered address decoded selected peripheral
 	signal	r_cyc_per		: std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);	-- registered cyc for peripherals - one hot
@@ -155,6 +156,7 @@ end generate;
 		fb_per_c2p_o(I).cyc 			<= r_cyc_per(i);
 		fb_per_c2p_o(I).we 			<= r_c2p_we;
 		fb_per_c2p_o(I).A				<= r_c2p_A;
+		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
 		fb_per_c2p_o(I).A_stb		<= r_cyc_per(I);
 		fb_per_c2p_o(I).D_wr			<= i_c2px.D_wr;
 		fb_per_c2p_o(I).D_wr_stb	<= i_c2px.D_wr_stb;
@@ -176,14 +178,9 @@ end generate;
 			if rising_edge(fb_syscon_i.clk) then
 				for I in G_CONTROLLER_COUNT-1 downto 0 loop
 					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 		<= i_p2c.D_rd;
-					if r_cyc_act_oh(I) = '1' then
-						fb_con_p2c_o(I).rdy_ctdn 	<= i_p2c.rdy_ctdn;
-					else
-						fb_con_p2c_o(I).rdy_ctdn 	<= RDY_CTDN_MAX;
-					end if;
-					fb_con_p2c_o(I).ack 			<= i_p2c.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).nul 			<= i_p2c.nul and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
+					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);				
 				end loop;
 			end if;
 		end process;
@@ -193,11 +190,9 @@ end generate;
 	G_REGISTER_CONTROLLER_P2C_OFF:IF NOT G_REGISTER_CONTROLLER_P2C GENERATE
 		g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 		<= i_p2c.D_rd;
-					fb_con_p2c_o(I).rdy_ctdn 	<= i_p2c.rdy_ctdn when r_cyc_act_oh(I) = '1' else
-														 	RDY_CTDN_MAX;
-					fb_con_p2c_o(I).ack 			<= i_p2c.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).nul 			<= i_p2c.nul and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
+					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
+					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);	
 		end generate;
 	END GENERATE;
 
@@ -211,6 +206,7 @@ end generate;
 			r_c2p_we <= '0';
 			r_cyc_grant_ix <= (others => '0');
 			r_cyc_act_oh <= (others => '0');
+			r_rdy_ctdn <= RDY_CTDN_MIN;
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 			r_cyc_ack <= '0';
@@ -226,6 +222,7 @@ end generate;
 						--register these as they shouldn't change during a cycle
 						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
 						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
+						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
 						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
 						r_state <= act;
 					end if;

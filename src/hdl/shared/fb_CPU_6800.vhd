@@ -197,6 +197,7 @@ begin
 	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_DD_ring(T_MAX_DD);
 	wrap_o.ack				<= r_wrap_ack;
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 
 
 
@@ -227,7 +228,7 @@ begin
 			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
 			r_DBE_ring <= r_DBE_ring(r_DBE_ring'high-1 downto 0) & "1";
 
-			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
+			if wrap_i.cyc_ack = '1' then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
 			else
 				r_DS_ring <= (others => '0');

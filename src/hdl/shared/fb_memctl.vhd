@@ -156,10 +156,8 @@ begin
 	noice_debug_shadow_o <= r_noice_debug_shadow;
 	noice_debug_inhibit_cpu_o <= r_noice_debug_inhibit_cpu;
 
-	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_con_rdy = '1' else
-								RDY_CTDN_MAX;
+	fb_p2c_o.rdy <= r_con_rdy;
 	fb_p2c_o.ack <= r_con_ack;
-	fb_p2c_o.nul <= '0';
 
 	fb_p2c_o.D_rd <= 		-- FE37 - lomem turbo map
 								r_turbo_lo 

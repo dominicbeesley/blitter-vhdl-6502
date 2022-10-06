@@ -167,8 +167,7 @@ begin
 
 	--TODO: mark rdy earlier!
 	--TODO: register this signal (metastable vs z80?)
-	i_rdy <= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN else 
-				'0';
+	i_rdy <= wrap_i.rdy;
 
 
 	wrap_o.cyc 				<= ( 0 => r_act, others => '0');
@@ -177,6 +176,7 @@ begin
 	wrap_o.D_wr_stb			<= r_WR_stb;
 	wrap_o.ack				<= not r_act;
 	wrap_o.A_log			<= r_A_log;
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go earlier!?
   		
 
 	-- Z80 memory map notes: TODO: move this to wiki/doc folder

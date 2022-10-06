@@ -170,20 +170,12 @@ begin
 	end generate;
 
 	p_per_cha_sel_o:process(fb_syscon_i, r_per_state, r_cha_sel, i_cha_fb_per_s2m, fb_per_c2p_i, r_sel_per_rdy, r_sel_per_ack)	
-	variable v_per_rdy_ctdn:unsigned(RDY_CTDN_LEN-1 downto 0);
 	begin		
-		if r_sel_per_rdy = '1' then
-			v_per_rdy_ctdn := RDY_CTDN_MIN;
-		else 
-			v_per_rdy_ctdn := RDY_CTDN_MAX;
-		end if;
-
 
 		fb_per_p2c_o <= (
 			D_rd => (others => '-'),
-			rdy_ctdn => RDY_CTDN_MAX,
-			ack => '0',
-			nul => '0'
+			rdy => '0',
+			ack => '0'
 			);
 		if r_per_state = child_act then
 			for I in 0 to G_CHANNELS-1 loop
@@ -194,9 +186,8 @@ begin
 		elsif r_per_state = sel_act or r_per_state = wait_cyc then
 			fb_per_p2c_o <= (
 				D_rd => PADBITS & std_logic_vector(r_cha_sel),
-				rdy_ctdn => v_per_rdy_ctdn,
-				ack => r_sel_per_ack,
-				nul => '0'
+				rdy => r_sel_per_rdy,
+				ack => r_sel_per_ack
 				);
 		end if;
 	end process;
@@ -215,7 +206,8 @@ begin
 						A => (others => '-'),
 						A_stb => '0',
 						D_wr => (others => '-'),
-						D_wr_stb => '0'
+						D_wr_stb => '0',
+						rdy_ctdn => RDY_CTDN_MIN
 					);
 			end if;
 		end loop;		

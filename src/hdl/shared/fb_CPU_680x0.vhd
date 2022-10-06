@@ -228,9 +228,9 @@ begin
 									i_CPUSKT_D_i(7 downto 0);	
 	wrap_o.D_wr_stb		<= r_WR_stb;
 	wrap_o.ack				<= i_cyc_ack_i;
+	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_20 * 2) + 3, t_rdy_ctdn'length);
 
-	i_cyc_ack_i 			<= '1' when wrap_i.rdy_ctdn = RDY_CTDN_MIN and r_wrap_cyc_dly = '1' 
-									else '0';
+	i_cyc_ack_i 			<= wrap_i.cyc_ack;
 
 	i_PORTE_nOE <= '0' when r_state_mux = port_e else '1';
 	i_PORTF_nOE <= '0' when r_state_mux = port_f else '1';
@@ -432,7 +432,7 @@ begin
 			if r_state = idle then
 				r_ndtack <= '1';
 			elsif r_wrap_cyc_dly = '1' and wrap_i.cyc = '1' and r_lastcyc = '1' then
-				if wrap_i.rdy_ctdn <= ((C_CLKD2_20 * 2)+3) then 
+				if wrap_i.rdy = '1' then 
 					r_ndtack <= '0';
 				end if;
 			end if;

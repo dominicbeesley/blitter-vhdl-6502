@@ -90,6 +90,7 @@ architecture rtl of fb_intcon_one_to_many is
 	signal	r_con_D_wr		: std_logic_vector(7 downto 0);
 	signal	r_con_D_wr_stb	: std_logic;
 	signal	r_con_A			: std_logic_vector(G_ADDRESS_WIDTH-1 downto 0);
+	signal	r_rdy_ctdn		: t_rdy_ctdn;
 	signal 	i_con_A			: std_logic_vector(23 downto 0);
 
 begin
@@ -109,6 +110,7 @@ begin
 		fb_per_c2p_o(I).A				<= i_con_A;
 		fb_per_c2p_o(I).D_wr			<= r_con_D_wr;
 		fb_per_c2p_o(I).D_wr_stb	<= r_con_D_wr_stb;
+		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
 	end generate;
 
 	-- signals back from selected peripheral to controllers
@@ -122,9 +124,8 @@ begin
 	end process;
 
 	fb_con_p2c_o.D_rd 		<= i_s2m.D_rd;
-	fb_con_p2c_o.rdy_ctdn 	<= i_s2m.rdy_ctdn;
+	fb_con_p2c_o.rdy		 	<= i_s2m.rdy;
 	fb_con_p2c_o.ack 			<= i_s2m.ack;				
-	fb_con_p2c_o.nul 			<= i_s2m.nul;
 
 	p_state:process(fb_syscon_i, r_state)
 	begin
@@ -136,6 +137,7 @@ begin
 			r_con_D_wr <= (others => '0');
 			r_con_D_wr_stb <= '0';
 			r_con_we <= '0';
+			r_rdy_ctdn <= RDY_CTDN_MIN;
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_state <= r_state;
@@ -148,6 +150,7 @@ begin
 						r_peripheral_sel_ix <= peripheral_sel_i;
 						r_con_A <= fb_con_c2p_i.A(G_ADDRESS_WIDTH-1 downto 0);
 						r_con_we <= fb_con_c2p_i.we;
+						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 					end if;
 				when act =>
 					r_con_D_wr <= fb_con_c2p_i.D_wr;

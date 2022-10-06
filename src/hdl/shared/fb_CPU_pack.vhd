@@ -63,6 +63,7 @@ package fb_CPU_pack is
 		D_WR_stb						: std_logic;
 		D_WR							: std_logic_vector(7 downto 0);
 		ack							: std_logic;
+		rdy_ctdn						: t_rdy_ctdn;
 
 		noice_debug_5c				: std_logic;						-- A 5C instruction is being fetched (qualify with clken below)
 		noice_debug_cpu_clken	: std_logic;						-- clken and cpu rdy
@@ -83,8 +84,9 @@ package fb_CPU_pack is
 		cpu_halt						: std_logic;
 
 		-- wrapper stuff
-		rdy_ctdn						: unsigned(RDY_CTDN_LEN-1 downto 0);
-		cyc							: std_logic;
+		rdy							: std_logic;		-- goes high when the current bus cycle will be complete in rdy_ctdn cycles or fewer
+		cyc							: std_logic;		-- high during an active bus cycle
+		cyc_ack						: std_logic;		-- goes high for one cycle when the current bus cycle completes
 
 
 		noice_debug_nmi_n			: std_logic;		-- debugger is forcing a cpu NMI
