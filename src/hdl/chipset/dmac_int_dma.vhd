@@ -124,7 +124,11 @@ begin
 					end if;
 				when sel_act =>
 					if fb_per_c2p_i.we = '1' and fb_per_c2p_i.D_wr_stb = '1' then
-						r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
+						if G_CHANNELS <= 1 then
+							r_cha_sel <= (others => '0');
+						else
+							r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
+						end if;
 						r_sel_per_ack <= '1';
 						r_sel_per_rdy <= '1';
 						r_per_state <= wait_cyc;
@@ -178,11 +182,15 @@ begin
 			ack => '0'
 			);
 		if r_per_state = child_act then
-			for I in 0 to G_CHANNELS-1 loop
-				if r_cha_sel = I then
-					fb_per_p2c_o <= i_cha_fb_per_s2m(I);
-				end if;
-			end loop;
+			if G_CHANNELS = 1 then
+				fb_per_p2c_o <= i_cha_fb_per_s2m(0);
+			else
+				for I in 0 to G_CHANNELS-1 loop
+					if r_cha_sel = I then
+						fb_per_p2c_o <= i_cha_fb_per_s2m(I);
+					end if;
+				end loop;
+			end if;
 		elsif r_per_state = sel_act or r_per_state = wait_cyc then
 			fb_per_p2c_o <= (
 				D_rd => PADBITS & std_logic_vector(r_cha_sel),
@@ -194,13 +202,16 @@ begin
 					
 	p_per_cha_sel_i:process(r_cha_sel, fb_per_c2p_i)
 	begin
-		for I in 0 to G_CHANNELS-1 loop
-			if r_cha_sel = I then
-				-- this assumes that the child channels will
-				-- ignore selects to register F!
-				i_cha_fb_per_m2s(I) <= fb_per_c2p_i;
-			else
-				i_cha_fb_per_m2s(I) <= (
+		if G_CHANNELS = 1 then
+			i_cha_fb_per_m2s(0) <= fb_per_c2p_i;
+		else
+			for I in 0 to G_CHANNELS-1 loop
+				if r_cha_sel = I then
+					-- this assumes that the child channels will
+					-- ignore selects to register F!
+					i_cha_fb_per_m2s(I) <= fb_per_c2p_i;
+				else
+					i_cha_fb_per_m2s(I) <= (
 						cyc => '0',
 						we => '0',
 						A => (others => '-'),
@@ -209,7 +220,8 @@ begin
 						D_wr_stb => '0',
 						rdy_ctdn => RDY_CTDN_MIN
 					);
-			end if;
-		end loop;		
+				end if;
+			end loop;		
+		end if;
 	end process;
 end Behavioral;
