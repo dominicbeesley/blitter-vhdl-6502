@@ -69,7 +69,7 @@ package board_config_pack is
 	constant G_INCL_CPU_Z80						: boolean := false;
 	constant G_INCL_CPU_68008					: boolean := false;
 	constant G_INCL_CPU_680x0					: boolean := true;
-	constant G_INCL_CPU_ARM2					: boolean := true;
+	constant G_INCL_CPU_ARM2					: boolean := false;
 
 	constant G_MEM_SWRAM_SLOT					: natural := 1;
 	constant G_MEM_FAST_IS_10					: boolean := false;
@@ -92,12 +92,12 @@ package board_config_pack is
 	constant MAS_NO_CHIPSET		: natural := 0;
 
 
-	constant PERIPHERAL_COUNT_CHIPSET	: natural := 3;
+	constant PERIPHERAL_COUNT_CHIPSET	: natural := 2;
 	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
 	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
 	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 1;--unused
 	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 1;--unused
-	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 2;--unused
+	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 1;--unused
 
 
 	constant CONTROLLER_COUNT_CHIPSET	: natural := 2;
