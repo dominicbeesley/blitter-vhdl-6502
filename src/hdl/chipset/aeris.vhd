@@ -527,8 +527,9 @@ begin
 				A => (others => '-'),
 				A_stb => '0',
 				D_wr => (others => '-'),
-				D_wr_stb => '0'
-				);
+				D_wr_stb => '0',
+				rdy_ctdn => RDY_CTDN_MIN
+			);
 		else
 			case r_state is 
 				when op_fetch | play_op_fetch | arg_0_fetch | arg_1_fetch | arg_2_fetch =>
@@ -538,7 +539,8 @@ begin
 						A => r_prog_base(23 downto 16) & r_pc,
 						A_stb => '1',
 						D_wr => (others => '-'),
-						D_wr_stb => '0'
+						D_wr_stb => '0',
+						rdy_ctdn => RDY_CTDN_MIN
 						);
 				when exec_move | exec_move16_0 | exec_move16_1 =>
 					fb_con_c2p_o <= (
@@ -547,7 +549,8 @@ begin
 						A => i_move_A,
 						A_stb => '1',
 						D_wr => i_move_D,
-						D_wr_stb => '1'
+						D_wr_stb => '1',
+						rdy_ctdn => RDY_CTDN_MIN
 						);				
 				when others =>
 					fb_con_c2p_o <= (
@@ -556,7 +559,8 @@ begin
 						A => (others => '-'),
 						A_stb => '0',
 						D_wr => (others => '-'),
-						D_wr_stb => '0'
+						D_wr_stb => '0',
+						rdy_ctdn => RDY_CTDN_MIN
 						);
 			end case;			
 		end if;
@@ -660,10 +664,8 @@ begin
 	end process;
 
 
-	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
-									 RDY_CTDN_MAX;
+	fb_per_p2c_o.rdy <= r_per_rdy;
 	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.nul <= '0';
 
 	dbg_state_o <= "0000" when r_state = idle else
 		"0001" when r_state = op_fetch else

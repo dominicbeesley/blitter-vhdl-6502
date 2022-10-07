@@ -1135,7 +1135,8 @@ begin
 				A => (others => '-'),
 				A_stb => '0',
 				D_wr => (others => '-'),
-				D_wr_stb => '0'
+				D_wr_stb => '0',
+				rdy_ctdn => RDY_CTDN_MIN
 				);
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -1151,7 +1152,8 @@ begin
 										A => std_logic_vector(r_cha_A_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccB =>
 									r_con_state <= waitack;
@@ -1161,7 +1163,8 @@ begin
 										A => std_logic_vector(r_cha_B_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccC => -- |sMemAccC_min =>
 									r_con_state <= waitack;
@@ -1171,7 +1174,8 @@ begin
 										A => std_logic_vector(r_cha_C_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccD => --|sMemAccD_min =>
 						   		if r_BLTCON_execD = '1' then
@@ -1182,7 +1186,8 @@ begin
 											A => std_logic_vector(r_cha_D_addr),
 											A_stb => '1',
 											D_wr => i_cha_D_data,
-											D_wr_stb => '1'
+											D_wr_stb => '1',
+											rdy_ctdn => RDY_CTDN_MIN
 											);
 									end if;
 						   	when sMemAccE =>
@@ -1193,7 +1198,8 @@ begin
 										A => std_logic_vector(r_cha_E_addr),
 										A_stb => '1',
 										D_wr => r_cha_C_data,
-										D_wr_stb => '1'
+										D_wr_stb => '1',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 								when others => null;
 							end case;
@@ -1243,10 +1249,8 @@ begin
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
-									 RDY_CTDN_MAX;
+	fb_per_p2c_o.rdy <= r_per_rdy;
 	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.nul <= '0';
 
 end Behavioral;
 
