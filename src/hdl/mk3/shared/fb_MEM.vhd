@@ -89,6 +89,8 @@ architecture rtl of fb_mem is
 	signal	r_rdy_ctdn	:  t_rdy_ctdn;
 	signal	r_rdy			:  std_logic;
 
+	signal   tmp_v			: t_rdy_ctdn;
+
 begin
 
 	debug_mem_a_stb_o <= fb_c2p_i.a_stb;
@@ -217,7 +219,7 @@ begin
 					when others =>
 						fb_p2c_o.ack <= '1';
 						r_rdy <= '1';
-						r_rdy_ctdn <= RDY_CTDN_MAX;
+						r_rdy_ctdn <= RDY_CTDN_MIN;
 						state <= idle;
 				end case;
 				if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
@@ -227,15 +229,20 @@ begin
 					MEM_RAM_nCE_o <= (others => '1');
 					MEM_ROM_nCE_o <= '1';
 					r_rdy <= '0';
-					r_rdy_ctdn <= RDY_CTDN_MAX;
+					r_rdy_ctdn <= RDY_CTDN_MIN;
+				else
+					if v_rdy_ctdn <= r_rdy_ctdn then
+						r_rdy <= '1';
+					else
+						r_rdy <= '0';
+					end if;
 				end if;
 
-				if v_rdy_ctdn <= r_rdy_ctdn then
-					r_rdy <= '1';
-				end if;
 
 			end if;
 		end if;
+
+		tmp_v <= v_rdy_ctdn;
 
 	end process;
 
