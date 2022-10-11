@@ -1,3 +1,15 @@
+New rules:
+
+- d_wr_stb may be asserted after a_stb
+- d_wr_stb must be asserted for every we cycle unless cyc is dropped
+- d_wr_stb for cycle n - may be asserted after a_stb for n+i - TODO: check, if not then assert stall must *should* be asserted until d_wr_stb?
+
+
+what are rules when cyc is dropped early - must all items support it?
+- must negate ack/rdy instantly?
+
+
+
 # Introduction
 
 This documentation describes the bus architecture that is used to connect the various devices and 
