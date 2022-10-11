@@ -191,7 +191,7 @@ begin
 	--TODOPIPE: separate peripheral and motherboard cycle state machines
 	--TODOPIPE: don't wait for cycle release
 	--TODOPIPE: repeat missed write - configure with generic?
-	
+
 
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
 	debug_wrap_sys_cyc_o 		<= fb_c2p_i.a_stb and fb_c2p_i.cyc;
@@ -223,8 +223,8 @@ begin
 	fb_p2c_o.D_rd <= i_D_rd when state = addrlatched_rd else
 						  r_D_rd;
 	fb_p2c_o.stall <= '0' when state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
-	fb_p2c_o.rdy <= r_rdy;
-	fb_p2c_o.ack <= r_ack;
+	fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
+	fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
 
 	p_state:process(fb_syscon_i)
 	begin

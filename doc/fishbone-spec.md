@@ -7,6 +7,11 @@ New rules:
 
 what are rules when cyc is dropped early - must all items support it?
 - must negate ack/rdy instantly?
+- ack/rdy should be qualified by cyc i.e. must be deasserted as soon as cyc dropped
+- ack will be active for exactly one cycle
+- rdy may be active for one ore more cycles before ack 
+- rdy must be asserted when ack is asserted
+- rdy must not be asserted after ack is deasserted
 
 
 
