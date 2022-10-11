@@ -81,7 +81,7 @@ end fb_mem;
 
 architecture rtl of fb_mem is
 
-	type 	 	state_mem_t is (idle, wait1, wait2, wait3, wait4, wait5, wait6, wait7, wait8, act);
+	type 	 	state_mem_t is (idle, wait_wr_stb, wait1, wait2, wait3, wait4, wait5, wait6, wait7, wait8, act);
 
 	signal	state			: state_mem_t;
 
@@ -99,10 +99,12 @@ begin
 	fb_p2c_o.D_rd <= MEM_D_io;
 	fb_p2c_o.rdy <= r_rdy when fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' else
 						 '0';
+	fb_p2c_o.stall <= '0' when state = idle else '1';
 
 	p_state:process(fb_syscon_i)
 	variable v_st_first : state_mem_t;
 	variable v_rdy_ctdn: t_rdy_ctdn;
+	variable v_start_mem_acc: boolean;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -121,6 +123,8 @@ begin
 
 				fb_p2c_o.ack <= '0';
 
+				v_start_mem_acc := false;
+
 				case state is
 					when idle =>
 						MEM_A_o <= (others => '0');
@@ -137,57 +141,14 @@ begin
 							r_rdy_ctdn <= fb_c2p_i.rdy_ctdn;
 
 							if fb_c2p_i.we = '0' or fb_c2p_i.D_wr_stb = '1' then							
-								MEM_nWE_o <= not fb_c2p_i.we;
-								MEM_nOE_o <= fb_c2p_i.we;
-								MEM_A_o <= fb_c2p_i.A(20 downto 0);
-								if fb_c2p_i.we = '1' then
-									MEM_D_io <= fb_c2p_i.D_wr;
-								end if;
-
-								-- work out which memory chip and what speed
-								if fb_c2p_i.A(23) = '1' then
-									MEM_ROM_nCE_o <= '0';
-									IF G_FLASH_IS_45 then
-										v_st_first := wait4;
-										v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
-									else
-										v_st_first := wait2;
-										v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
-									end if;
-								elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
-									MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
-									if G_SWRAM_SLOT = 0 then
-										-- slow BB RAM...how slow?
-										if G_SLOW_IS_45 then
-											v_st_first := wait4;
-											v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
-										else
-											v_st_first := wait2;
-											v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
-										end if;
-									elsif G_FAST_IS_10 then
-										v_st_first := wait8;
-										v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
-									else
-										v_st_first := wait7;
-										v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
-									end if;
-								else
-									-- ram at 0..$5F FFFF maps
-									MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
-									if G_FAST_IS_10 then
-										v_st_first := wait8;
-										v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
-									else
-										v_st_first := wait7;
-										v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
-									end if;
-
-								end if;
-
-
-								state <= v_st_first;
-							end if;
+								v_start_mem_acc := true;
+							else
+								state <= wait_wr_stb;
+							end if;							
+						end if;
+					when wait_wr_stb =>
+						if fb_c2p_i.D_wr_stb = '1' then
+							v_start_mem_acc := true;
 						end if;
 					when wait1 =>
 						state <= wait2;
@@ -222,7 +183,8 @@ begin
 						r_rdy_ctdn <= RDY_CTDN_MIN;
 						state <= idle;
 				end case;
-				if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
+
+				if fb_c2p_i.cyc = '0' then
 					state <= idle;
 					MEM_nOE_o <= '1';
 					MEM_nWE_o <= '1';
@@ -235,6 +197,59 @@ begin
 						r_rdy <= '1';
 					else
 						r_rdy <= '0';
+					end if;
+
+					if v_start_mem_acc then
+						MEM_nWE_o <= not fb_c2p_i.we;
+						MEM_nOE_o <= fb_c2p_i.we;
+						MEM_A_o <= fb_c2p_i.A(20 downto 0);
+						if fb_c2p_i.we = '1' then
+							MEM_D_io <= fb_c2p_i.D_wr;
+						end if;
+
+						-- work out which memory chip and what speed
+						if fb_c2p_i.A(23) = '1' then
+							MEM_ROM_nCE_o <= '0';
+							IF G_FLASH_IS_45 then
+								v_st_first := wait4;
+								v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+							else
+								v_st_first := wait2;
+								v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+							end if;
+						elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
+							MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
+							if G_SWRAM_SLOT = 0 then
+								-- slow BB RAM...how slow?
+								if G_SLOW_IS_45 then
+									v_st_first := wait4;
+									v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+								else
+									v_st_first := wait2;
+									v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+								end if;
+							elsif G_FAST_IS_10 then
+								v_st_first := wait8;
+								v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
+							else
+								v_st_first := wait7;
+								v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
+							end if;
+						else
+							-- ram at 0..$5F FFFF maps
+							MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
+							if G_FAST_IS_10 then
+								v_st_first := wait8;
+								v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
+							else
+								v_st_first := wait7;
+								v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
+							end if;
+
+						end if;
+
+
+						state <= v_st_first;
 					end if;
 				end if;
 

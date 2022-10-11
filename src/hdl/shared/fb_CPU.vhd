@@ -470,6 +470,7 @@ architecture rtl of fb_cpu is
 
 	type state_t is (
 		s_idle							-- waiting for address ready signal from cpu wrapper
+		, s_waitstall					-- waiting for the peripheral/intcon to be ready
 		, s_block						-- SYS via was accessed recently and we're trying to access it again
 		, s_waitack						
 		);
@@ -480,6 +481,7 @@ architecture rtl of fb_cpu is
 	signal r_acked 			: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 
 	signal r_wrap_cyc					: std_logic;
+	signal r_wrap_a_stb				: std_logic;
 	signal i_wrap_phys_A				: std_logic_vector(23 downto 0);
 	signal r_wrap_phys_A				: std_logic_vector(23 downto 0);
 	signal r_wrap_we					: std_logic;
@@ -679,6 +681,8 @@ begin
 
 			r_D_rd <= (others => '0');
 
+			r_wrap_a_stb <= '0';
+
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 			r_sys_via_block_clken <= '0';
@@ -687,6 +691,8 @@ begin
 				r_wrap_D_WR_stb <= '1';
 				r_wrap_D_WR <= i_wrap_o_cur_act.D_WR;
 			end if;
+
+			r_wrap_a_stb <= '0';
 
 			case r_state is
 				when s_idle =>
@@ -698,15 +704,32 @@ begin
 						if r_do_sys_via_block = '1' and i_SYS_VIA_block = '1' then
 							r_state <= s_block;
 						else
-							r_state <= s_waitack;
+							if fb_p2c_i.stall = '1' then
+								r_State <= s_waitstall;
+							else
+								r_state <= s_waitack;
+							end if;
+							r_wrap_a_stb <= '1';
 							r_wrap_cyc <= '1';
 						end if;
 					end if;
 				   r_acked <= not(i_wrap_o_cur_act.cyc);
 				when s_block =>
 					if i_SYS_VIA_block = '0' then
-						r_state <= s_waitack;
+						if fb_p2c_i.stall = '1' then
+							r_State <= s_waitstall;
+						else
+							r_state <= s_waitack;
+						end if;
+						r_wrap_a_stb <= '1';
 						r_wrap_cyc <= '1';
+					end if;
+				when s_waitstall =>
+					r_wrap_a_stb <= '1';
+					if fb_p2c_i.stall = '1' then
+						r_State <= s_waitstall;
+					else
+						r_state <= s_waitack;
 					end if;
 				when s_waitack =>
 					if i_wrap_o_cur_act.ack = '1' then
@@ -1035,7 +1058,7 @@ END GENERATE;
   	fb_c2p_o.cyc <= r_wrap_cyc;
   	fb_c2p_o.we <= r_wrap_we;
   	fb_c2p_o.A <= r_wrap_phys_A;
-  	fb_c2p_o.A_stb <= r_wrap_cyc;
+  	fb_c2p_o.A_stb <= r_wrap_a_stb;
   	fb_c2p_o.D_wr <=  r_wrap_D_wr;
   	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
   	fb_c2p_o.rdy_ctdn <= r_wrap_rdy_ctdn;

@@ -160,7 +160,6 @@ architecture rtl of fb_sys is
 	signal	i_SYScyc_end_clken: std_logic;							-- goes to 1 for single cycle when sys cycle ended
 	signal	i_SYScyc_st_clken	: std_logic;							-- goes to 1 for single cycle near start of sys cycle, in time for the motherboard cycle stretch logic
 
-	signal	i_con_cyc			: std_logic;							-- cyc and a_stb = '1'
 	signal	r_con_cyc			: std_logic; 							-- goes to zero if cyc/a_stb dropped
 	signal   r_con_rdy_ctdn		: t_rdy_ctdn;
 
@@ -188,10 +187,16 @@ architecture rtl of fb_sys is
 	signal	r_wr_setup_ctr		: unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
 
 begin
+
+	--TODOPIPE: separate peripheral and motherboard cycle state machines
+	--TODOPIPE: don't wait for cycle release
+	--TODOPIPE: repeat missed write - configure with generic?
+	
+
 	debug_write_cycle_repeat_o <= '1' when state = wait_sys_repeat_wr else '0';
-	debug_wrap_sys_cyc_o <= fb_c2p_i.cyc;
-	debug_wrap_sys_st_o <= i_SYScyc_st_clken;
-	debug_sys_D_dir		<= '1' when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else '0';
+	debug_wrap_sys_cyc_o 		<= fb_c2p_i.a_stb and fb_c2p_i.cyc;
+	debug_wrap_sys_st_o 			<= i_SYScyc_st_clken;
+	debug_sys_D_dir				<= '1' when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else '0';
 
 	-- used to synchronise throttled cpu
 	cpu_2MHz_phi2_clken_o <= i_SYScyc_end_clken;
@@ -202,8 +207,6 @@ begin
 	SYS_D_io <= r_sys_d when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else
 					(others => 'Z');
 	SYS_RnW_o <= r_sys_RnW;
-
-	i_con_cyc <= fb_c2p_i.cyc and fb_c2p_i.a_stb;
 
 	sys_ROMPG_o <= r_sys_ROMPG;
 
@@ -219,8 +222,9 @@ begin
 
 	fb_p2c_o.D_rd <= i_D_rd when state = addrlatched_rd else
 						  r_D_rd;
-
-
+	fb_p2c_o.stall <= '0' when state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
+	fb_p2c_o.rdy <= r_rdy;
+	fb_p2c_o.ack <= r_ack;
 
 	p_state:process(fb_syscon_i)
 	begin
@@ -256,6 +260,7 @@ begin
 						debug_jim_hi_wr_o <= '0';
 
 						r_con_cyc <= '0';
+						r_rdy <= '0';
 
 						if i_SYScyc_st_clken = '1' then
 							-- default idle cycle, drop busses
@@ -264,7 +269,7 @@ begin
 
 
 
-							if i_con_cyc = '1' then
+							if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
 
 								r_sys_A <= fb_c2p_i.A(15 downto 0);
 								r_con_cyc <= '1';
@@ -300,7 +305,7 @@ begin
 
 					when addrlatched_rd =>
 
-						if i_con_cyc = '0' or r_con_cyc = '0' then
+						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
@@ -320,7 +325,7 @@ begin
 					when wait_con_rel_rd =>
 						-- read cycle was finished, return to idle
 
-						if i_con_cyc = '0' or r_con_cyc = '0' then
+						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
 							state <= idle;
 						elsif i_SYScyc_st_clken = '1' then
 							-- catch over-run read cycle
@@ -334,7 +339,7 @@ begin
 						-- put something in to retry if not, probably will mess up
 						-- anyway if writing to a hardware reg?
 
-						if i_con_cyc = '0' or r_con_cyc = '0' then
+						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
@@ -403,7 +408,7 @@ begin
 						r_D_rd <= r_JIM_page(15 downto 8);				
 
 					when jim_page_lo_wr =>
-						if i_con_cyc = '0' or r_con_cyc = '0' then
+						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
@@ -416,7 +421,7 @@ begin
 							state <= wait_con_rel_rd;
 						end if;
 					when jim_page_hi_wr =>
-						if i_con_cyc = '0' or r_con_cyc = '0' then
+						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
 							if i_SYScyc_end_clken = '1' then
 								state <= idle;
 							else
@@ -448,7 +453,7 @@ begin
 --					r_sys_RnW <= '1';
 --				end if;
 
-				if i_con_cyc = '0' then
+				if fb_c2p_i.cyc = '0' then
 					-- controller has dropped the cycle
 					r_con_cyc <= '0';
 					r_rdy <= '0';
@@ -460,11 +465,6 @@ begin
 		end if;
 
 	end process;
-
-
-	fb_p2c_o.rdy <= r_rdy;
-	fb_p2c_o.ack <= r_ack;
-
 
    --TODO: see if the dll can be made to run reliably from phi0
    --and shift as appropriate

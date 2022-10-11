@@ -110,11 +110,11 @@ package fishbone is
 	-- signals from controllers to peripherals
 	type fb_con_o_per_i_t is record				
 		cyc					:  std_logic;							-- stays active throughout cycle
-		we						: 	std_logic;							-- write =1, read = 0, qualified by A_o_stb_o
+		we						: 	std_logic;							-- write =1, read = 0, qualified by A_stb
 		A						: 	std_logic_vector(23 downto 0);-- physical address
-		A_stb					: 	std_logic;							-- address out strobe, qualifies A_o, hold until end of cyc_o
+		A_stb					: 	std_logic;							-- address out strobe, qualifies A
 		D_wr					: 	std_logic_vector(7 downto 0);	-- data out from controller to peripheral
-		D_wr_stb				:	std_logic;							-- data out strobe, qualifies D_o, can ack writes as soon
+		D_wr_stb				:	std_logic;							-- data out strobe, qualifies D_wr, can ack writes as soon
 																			-- as this is ready or wait until end of cycle
 		rdy_ctdn				:	t_rdy_ctdn;							-- see above
 	end record fb_con_o_per_i_t;
@@ -123,6 +123,7 @@ package fishbone is
 	type fb_con_i_per_o_t is record
 
 		D_rd					: 	std_logic_vector(7 downto 0);	-- data in during a read
+		stall					:  std_logic;							-- when asserted re-try a_stb
 		ack					:	std_logic;							-- cycle complete, controller can/should terminate cycle now, data was supplied or latched
 		rdy					:  std_logic;							-- cycle will be complete in (at most) rdy_ctdn (input) bus cycles
 
@@ -146,7 +147,8 @@ package fishbone is
 	constant fb_p2c_unsel : fb_con_i_per_o_t := (
 		D_rd => (others => '1'),
 		ack => '0',
-		rdy => '0'
+		rdy => '0',
+		stall => '1'
 		);
 
 
