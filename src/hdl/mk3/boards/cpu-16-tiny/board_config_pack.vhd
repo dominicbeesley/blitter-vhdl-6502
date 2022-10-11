@@ -52,25 +52,46 @@ package board_config_pack is
 
 	constant G_INCL_HDMI		: boolean := false;
 
-	constant G_INCL_CHIPSET		: boolean := true;
-	constant G_INCL_CS_DMA		: boolean := true;
-	constant G_DMA_CHANNELS		: natural := 1;
+--	constant G_INCL_CHIPSET		: boolean := true;
+--	constant G_INCL_CS_DMA		: boolean := true;
+--	constant G_DMA_CHANNELS		: natural := 1;
+--	constant G_INCL_CS_BLIT		: boolean := false;
+--	constant G_INCL_CS_SND		: boolean := true;
+--	constant G_SND_CHANNELS		: natural := 4;
+--	constant G_INCL_CS_AERIS	: boolean := false;
+--	constant G_INCL_CS_EEPROM	: boolean := false;
+		
+	constant G_INCL_CHIPSET		: boolean := false;
+	constant G_INCL_CS_DMA		: boolean := false;
+	constant G_DMA_CHANNELS		: natural := 0;
 	constant G_INCL_CS_BLIT		: boolean := false;
-	constant G_INCL_CS_SND		: boolean := true;
-	constant G_SND_CHANNELS		: natural := 4;
+	constant G_INCL_CS_SND		: boolean := false;
+	constant G_SND_CHANNELS		: natural := 0;
 	constant G_INCL_CS_AERIS	: boolean := false;
 	constant G_INCL_CS_EEPROM	: boolean := false;
-		
+
+--	constant G_INCL_CPU_T65		: boolean := true;
+--	constant G_INCL_CPU_65C02	: boolean := false;
+--	constant G_INCL_CPU_6800	: boolean := true;
+--	constant G_INCL_CPU_80188	: boolean := true;
+--	constant G_INCL_CPU_65816	: boolean := true;
+--	constant G_INCL_CPU_6x09	: boolean := true;
+--	constant G_INCL_CPU_Z80		: boolean := false;
+--	constant G_INCL_CPU_68008	: boolean := false;
+--	constant G_INCL_CPU_680x0	: boolean := true;
+--	constant G_INCL_CPU_ARM2	: boolean := true;
+--
+
 	constant G_INCL_CPU_T65		: boolean := true;
 	constant G_INCL_CPU_65C02	: boolean := false;
-	constant G_INCL_CPU_6800	: boolean := true;
-	constant G_INCL_CPU_80188	: boolean := true;
-	constant G_INCL_CPU_65816	: boolean := true;
-	constant G_INCL_CPU_6x09	: boolean := true;
+	constant G_INCL_CPU_6800	: boolean := false;
+	constant G_INCL_CPU_80188	: boolean := false;
+	constant G_INCL_CPU_65816	: boolean := false;
+	constant G_INCL_CPU_6x09	: boolean := false;
 	constant G_INCL_CPU_Z80		: boolean := false;
 	constant G_INCL_CPU_68008	: boolean := false;
-	constant G_INCL_CPU_680x0	: boolean := true;
-	constant G_INCL_CPU_ARM2	: boolean := true;
+	constant G_INCL_CPU_680x0	: boolean := false;
+	constant G_INCL_CPU_ARM2	: boolean := false;
 
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
@@ -78,35 +99,47 @@ package board_config_pack is
 	constant G_MEM_SLOW_IS_45	: boolean := true;
 
 
-	constant PERIPHERAL_COUNT	: natural := 5;
-	constant PERIPHERAL_NO_VERSION	: natural := 0;
+--	constant PERIPHERAL_COUNT	: natural := 5;
+--	constant PERIPHERAL_NO_VERSION	: natural := 0;
+--	constant PERIPHERAL_NO_SYS	: natural := 1;
+--	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
+--	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
+--	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
+--	constant PERIPHERAL_NO_HDMI	: natural := 0;	-- not used
+
+	constant PERIPHERAL_COUNT	: natural := 4;
+	constant PERIPHERAL_NO_VERSION	: natural := 0;	-- not used
 	constant PERIPHERAL_NO_SYS	: natural := 1;
-	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
-	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
-	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
+	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;	-- not used
+	constant PERIPHERAL_NO_MEMCTL	: natural := 3;	-- not used
+	constant PERIPHERAL_NO_CHIPSET	: natural := 0;	-- not used
 	constant PERIPHERAL_NO_HDMI	: natural := 0;	-- not used
-	
 
-	constant CONTROLLER_COUNT	: natural := 2;
+
+--	constant CONTROLLER_COUNT	: natural := 2;
+--	-- not 0 is highest priority!
+--	constant MAS_NO_CPU		: natural := 1;
+--	constant MAS_NO_CHIPSET		: natural := 0;
+
+	constant CONTROLLER_COUNT	: natural := 1;
 	-- not 0 is highest priority!
-	constant MAS_NO_CPU		: natural := 1;
-	constant MAS_NO_CHIPSET		: natural := 0;
+	constant MAS_NO_CPU		: natural := 0;
+	constant MAS_NO_CHIPSET		: natural := 0; -- not used
 
+--	constant PERIPHERAL_COUNT_CHIPSET	: natural := 2;
+--	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
+--	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
+--	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 0;	-- not used
+--	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 0;	-- not used
+--	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 0;	-- not used
+--
 
-	constant PERIPHERAL_COUNT_CHIPSET	: natural := 2;
-	constant PERIPHERAL_NO_CHIPSET_DMA	: natural := 0;
-	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := 1;
-	constant PERIPHERAL_NO_CHIPSET_BLIT	: natural := 0;	-- not used
-	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := 0;	-- not used
-	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := 0;	-- not used
-
-
-	constant CONTROLLER_COUNT_CHIPSET	: natural := 2;
-	constant MAS_NO_CHIPSET_BLIT		: natural := 0;	-- not used
-	constant MAS_NO_CHIPSET_DMA_1		: natural := 0;	-- not used 
-	constant MAS_NO_CHIPSET_DMA_0		: natural := 1;	-- not used	
-	constant MAS_NO_CHIPSET_SND		: natural := 0; 
-	constant MAS_NO_CHIPSET_AERIS		: natural := 0; 	-- not used
+--	constant CONTROLLER_COUNT_CHIPSET	: natural := 2;
+--	constant MAS_NO_CHIPSET_BLIT		: natural := 0;	-- not used
+--	constant MAS_NO_CHIPSET_DMA_1		: natural := 0;	-- not used 
+--	constant MAS_NO_CHIPSET_DMA_0		: natural := 1;	-- not used	
+--	constant MAS_NO_CHIPSET_SND		: natural := 0; 
+--	constant MAS_NO_CHIPSET_AERIS		: natural := 0; 	-- not used
 
 
 

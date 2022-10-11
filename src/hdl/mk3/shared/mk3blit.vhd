@@ -54,6 +54,7 @@ use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_CPU_exp_pack.all;
 use work.fb_chipset_pack.all;
+use work.fb_intcon_pack.all;
 
 entity mk3blit is
 	generic (
@@ -405,7 +406,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 end generate;
 
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_shared
+	e_fb_intcon: fb_intcon_shared
 	generic map (
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
@@ -431,7 +432,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 
 END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_one_to_many
+	e_fb_intcon: fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
 		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
@@ -509,6 +510,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
 	);
 
+	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
 
 		e_dac_snd: entity work.dac_1bit 
