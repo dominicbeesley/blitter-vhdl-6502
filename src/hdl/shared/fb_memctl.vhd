@@ -102,7 +102,7 @@ end fb_memctl;
 
 architecture rtl of fb_memctl is
 
-	type 	 	fb_state_mem_t is (idle, wait_cyc);
+	type 	 	fb_state_mem_t is (idle, wait_write);
 	signal	fb_state								: fb_state_mem_t;
 
 	type		noice_state_t is (
@@ -115,7 +115,6 @@ architecture rtl of fb_memctl is
 		);
 
 	signal	r_con_ack						:	std_logic;
-	signal	r_con_rdy						:	std_logic;
 
 	signal	r_turbo_lo						:	std_logic_vector(7 downto 0);
 
@@ -156,8 +155,9 @@ begin
 	noice_debug_shadow_o <= r_noice_debug_shadow;
 	noice_debug_inhibit_cpu_o <= r_noice_debug_inhibit_cpu;
 
-	fb_p2c_o.rdy <= r_con_rdy;
-	fb_p2c_o.ack <= r_con_ack;
+	fb_p2c_o.rdy <= r_con_ack and fb_c2p_i.cyc;
+	fb_p2c_o.ack <= r_con_ack and fb_c2p_i.cyc;
+	fb_p2c_o.stall <= '0' when fb_state = idle else '1';
 
 	fb_p2c_o.D_rd <= 		-- FE37 - lomem turbo map
 								r_turbo_lo 
@@ -190,6 +190,7 @@ begin
 							x"A5";
 
 	p_fb_state:process(fb_syscon_i)
+	variable v_dowrite : boolean;
 	begin
 
 		if rising_edge(fb_syscon_i.clk) then
@@ -206,52 +207,61 @@ begin
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
 				end if;		
-				r_con_rdy <= '0';
 			else
+					v_dowrite := false;
+
+					r_con_ack <= '0';
+
 					case fb_state is
 					when idle =>
-						r_con_rdy <= '0';
 						if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
 							if fb_c2p_i.we = '1' then
 								if fb_c2p_i.D_wr_stb = '1' then
-									case to_integer(unsigned(fb_c2p_i.A(2 downto 0))) is
-										when 7 =>
-											r_turbo_lo <= fb_c2p_i.D_wr;
-										when 6 =>
-											r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
-										when 5 => 
-											DEBUG_REG_o <= fb_c2p_i.D_wr;
-										when 1 =>
-											r_swmos_shadow <= fb_c2p_i.D_wr(0);
-											r_noice_debug_en <= fb_c2p_i.D_wr(3);
-											r_65816_boot <= fb_c2p_i.D_wr(5);
-											r_noice_debug_written_en <= '1';
-											r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
-										when 2 => 
-											r_swmos_save_written_en <= '1';
-										when others =>
-									end case;
-									fb_state <= wait_cyc;
-									r_con_rdy <= '1';
-									r_con_ack <= '1';
+									v_dowrite := true;
+								else
+									fb_state <= wait_write;
 								end if;
 							else
-								fb_state <= wait_cyc;
-								r_con_rdy <= '1';
+								fb_state <= idle;
 								r_con_ack <= '1';
 							end if;
 						end if;
-					when wait_cyc =>
-						if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
-							fb_state <= idle;
-							r_noice_debug_written_en <= '0';
-							r_swmos_save_written_en <= '0';
+					when wait_write =>
+						if fb_c2p_i.D_wr_stb = '1' then
+							v_dowrite := true;
 						end if;
 					when others =>
 						fb_state <= idle;
 						r_noice_debug_written_en <= '0';
 						r_swmos_save_written_en <= '0';
 				end case;
+
+				if fb_c2p_i.cyc = '0' then
+					fb_state <= idle;
+				elsif v_dowrite then
+					fb_state <= idle;
+					r_con_ack <= '1';
+					case to_integer(unsigned(fb_c2p_i.A(2 downto 0))) is
+						when 7 =>
+							r_turbo_lo <= fb_c2p_i.D_wr;
+						when 6 =>
+							r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
+						when 5 => 
+							DEBUG_REG_o <= fb_c2p_i.D_wr;
+						when 1 =>
+							r_swmos_shadow <= fb_c2p_i.D_wr(0);
+							r_noice_debug_en <= fb_c2p_i.D_wr(3);
+							r_65816_boot <= fb_c2p_i.D_wr(5);
+							r_noice_debug_written_en <= '1';
+							r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
+						when 2 => 
+							r_swmos_save_written_en <= '1';
+						when others =>
+					end case;
+				end if;
+
+
+
 			end if;
 		end if;
 
@@ -291,11 +301,11 @@ begin
 						r_noice_state <= start5C;
 						r_noice_debug_inhibit_cpu <= '1';
 					elsif r_swmos_save_written_en = '1' 
-							and r_con_rdy = '1'
+							and r_con_ack = '1'
 							and r_noice_debug_en = '1' then								-- restore state
 						r_noice_state <= restore;
 					elsif r_noice_debug_written_en = '1'
-							and r_con_rdy = '1'
+							and r_con_ack = '1'
 							and r_noice_debug_en = '1'		
 							and r_noice_debug_written_val /= r_noice_debug_shadow							
 							then 															-- write to SWMOS_DEBUG _after_ next instruction
