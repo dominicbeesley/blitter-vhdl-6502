@@ -85,7 +85,6 @@ architecture rtl of fb_mem is
 
 	signal	state			: state_mem_t;
 
-	signal	i_con_ack	:	std_logic;
 	signal	r_rdy_ctdn	:  t_rdy_ctdn;
 	signal	r_rdy			:  std_logic;
 
@@ -97,7 +96,7 @@ begin
 
 
 	fb_p2c_o.D_rd <= MEM_D_io;
-	fb_p2c_o.rdy <= r_rdy when fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' else
+	fb_p2c_o.rdy <= r_rdy when fb_c2p_i.cyc = '1' else
 						 '0';
 	fb_p2c_o.stall <= '0' when state = idle else '1';
 
@@ -117,6 +116,7 @@ begin
 			MEM_ROM_nCE_o <= '1';
 			fb_p2c_o.ack <= '0';
 			v_rdy_ctdn := RDY_CTDN_MAX;
+			r_rdy_ctdn <= RDY_CTDN_MIN;
 			r_rdy <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -172,11 +172,9 @@ begin
 						state <= wait8;
 						v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 					when wait8 =>
-						state <= act;
+						state <= idle;
 						v_rdy_ctdn := to_unsigned(0, RDY_CTDN_LEN);
 						fb_p2c_o.ack <= '1';
-					when act =>
-						v_rdy_ctdn := to_unsigned(0, RDY_CTDN_LEN);
 					when others =>
 						fb_p2c_o.ack <= '1';
 						r_rdy <= '1';
@@ -184,75 +182,64 @@ begin
 						state <= idle;
 				end case;
 
-				if fb_c2p_i.cyc = '0' then
-					state <= idle;
-					MEM_nOE_o <= '1';
-					MEM_nWE_o <= '1';
-					MEM_RAM_nCE_o <= (others => '1');
-					MEM_ROM_nCE_o <= '1';
-					r_rdy <= '0';
-					r_rdy_ctdn <= RDY_CTDN_MIN;
+				if v_rdy_ctdn <= r_rdy_ctdn then
+					r_rdy <= '1';
 				else
-					if v_rdy_ctdn <= r_rdy_ctdn then
-						r_rdy <= '1';
-					else
-						r_rdy <= '0';
+					r_rdy <= '0';
+				end if;
+
+				if v_start_mem_acc then
+					MEM_nWE_o <= not fb_c2p_i.we;
+					MEM_nOE_o <= fb_c2p_i.we;
+					MEM_A_o <= fb_c2p_i.A(20 downto 0);
+					if fb_c2p_i.we = '1' then
+						MEM_D_io <= fb_c2p_i.D_wr;
 					end if;
 
-					if v_start_mem_acc then
-						MEM_nWE_o <= not fb_c2p_i.we;
-						MEM_nOE_o <= fb_c2p_i.we;
-						MEM_A_o <= fb_c2p_i.A(20 downto 0);
-						if fb_c2p_i.we = '1' then
-							MEM_D_io <= fb_c2p_i.D_wr;
+					-- work out which memory chip and what speed
+					if fb_c2p_i.A(23) = '1' then
+						MEM_ROM_nCE_o <= '0';
+						IF G_FLASH_IS_45 then
+							v_st_first := wait4;
+							v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+						else
+							v_st_first := wait2;
+							v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 						end if;
-
-						-- work out which memory chip and what speed
-						if fb_c2p_i.A(23) = '1' then
-							MEM_ROM_nCE_o <= '0';
-							IF G_FLASH_IS_45 then
+					elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
+						MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
+						if G_SWRAM_SLOT = 0 then
+							-- slow BB RAM...how slow?
+							if G_SLOW_IS_45 then
 								v_st_first := wait4;
 								v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 							else
 								v_st_first := wait2;
 								v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 							end if;
-						elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
-							MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
-							if G_SWRAM_SLOT = 0 then
-								-- slow BB RAM...how slow?
-								if G_SLOW_IS_45 then
-									v_st_first := wait4;
-									v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
-								else
-									v_st_first := wait2;
-									v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
-								end if;
-							elsif G_FAST_IS_10 then
-								v_st_first := wait8;
-								v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
-							else
-								v_st_first := wait7;
-								v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
-							end if;
+						elsif G_FAST_IS_10 then
+							v_st_first := wait8;
+							v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 						else
-							-- ram at 0..$5F FFFF maps
-							MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
-							if G_FAST_IS_10 then
-								v_st_first := wait8;
-								v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
-							else
-								v_st_first := wait7;
-								v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
-							end if;
-
+							v_st_first := wait7;
+							v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
+						end if;
+					else
+						-- ram at 0..$5F FFFF maps
+						MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
+						if G_FAST_IS_10 then
+							v_st_first := wait8;
+							v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
+						else
+							v_st_first := wait7;
+							v_rdy_ctdn := to_unsigned(2, RDY_CTDN_LEN);
 						end if;
 
-
-						state <= v_st_first;
 					end if;
-				end if;
 
+
+					state <= v_st_first;
+				end if;
 
 			end if;
 		end if;
