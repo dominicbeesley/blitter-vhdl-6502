@@ -291,7 +291,14 @@ begin
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram1.bin",
 		tco => 10 ns,
-		taa => 10 ns
+		taa => 10 ns,
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),
@@ -309,7 +316,15 @@ begin
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram2.bin",
 		tco => 10 ns,
-		taa => 10 ns
+		taa => 10 ns,
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns
+
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),
@@ -327,7 +342,14 @@ begin
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram3.bin",
 		tco => 10 ns,
-		taa => 10 ns
+		taa => 10 ns,
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),
