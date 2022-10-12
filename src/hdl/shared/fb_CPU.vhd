@@ -481,6 +481,8 @@ architecture rtl of fb_cpu is
 	signal r_acked 			: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 
 	signal r_wrap_cyc					: std_logic;
+	signal r_wrap_ack					: std_logic;
+	signal r_wrap_rdy					: std_logic;
 	signal r_wrap_a_stb				: std_logic;
 	signal i_wrap_phys_A				: std_logic_vector(23 downto 0);
 	signal r_wrap_phys_A				: std_logic_vector(23 downto 0);
@@ -648,8 +650,9 @@ begin
 
 
 	G_BL_RD:FOR I in C_CPU_BYTELANES-1 downto 0 GENERATE
-		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
-															r_D_rd(7+I*8 downto I*8);
+
+		-- TODOPIPE: there used to be a latch here letting through early data, reinstate? bad?
+		i_wrap_D_rd(7+I*8 downto I*8) <= r_D_rd(7+I*8 downto I*8);
 	END GENERATE;
 
 	cpuskt_D_o <= i_wrap_D_rd;	-- send data out to socket, socket assignment handled at top level
@@ -682,8 +685,15 @@ begin
 			r_D_rd <= (others => '0');
 
 			r_wrap_a_stb <= '0';
+			r_wrap_ack <= '0';
+			r_wrap_rdy <= '0';
 
 		elsif rising_edge(fb_syscon_i.clk) then
+
+			-- delay ack/rdy by one cycle as data is registered
+			r_wrap_ack <= fb_p2c_i.ack;
+			r_wrap_rdy <= fb_p2c_i.rdy;
+
 			r_state <= r_state;
 			r_sys_via_block_clken <= '0';
 
@@ -737,16 +747,19 @@ begin
 						r_state <= s_idle;
 						r_wrap_cyc <= '0';
 						r_wrap_D_WR_stb <= '0';
+					end if;
+				when others =>
+					r_state <= s_idle;
+			end case;
+
+			if fb_p2c_i.ack = '1' then
 						for I in C_CPU_BYTELANES-1 downto 0 loop
 							if r_acked(I) = '0' then
 								r_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd;
 								r_acked(I) <= '1';
 						end if;
 						end loop;
-					end if;
-				when others =>
-					r_state <= s_idle;
-			end case;
+			end if;
 
 
 		end if;
@@ -1065,9 +1078,9 @@ END GENERATE;
 
 
 
-	i_wrap_i.rdy							<= fb_p2c_i.rdy;
+	i_wrap_i.rdy							<= r_wrap_rdy;
+	i_wrap_i.cyc_ack						<= r_wrap_ack;
 	i_wrap_i.cyc 							<= r_wrap_cyc;
-	i_wrap_i.cyc_ack						<= fb_p2c_i.ack;
 
 	i_wrap_i.cpu_halt 					<= cpu_halt_i;
 

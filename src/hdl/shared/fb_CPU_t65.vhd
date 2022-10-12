@@ -105,6 +105,9 @@ architecture rtl of fb_cpu_t65 is
 
 	signal i_wrap_cyc 		: std_logic;
 
+	signal i_wrap_ack 		: std_logic;
+	signal r_wrap_acked		: std_logic;
+
 	--TODO: throttle only works on SYS_BBC, on Elk it repeats cycles!
 
 begin
@@ -147,7 +150,7 @@ begin
 	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_clken_dly(1) = '1' else
 								'0';
 
-	wrap_o.A_log 		<= x"FF" & r_t65_A(15 downto 0);
+	wrap_o.A_log 		<= x"FF" & i_t65_A(15 downto 0);
 	wrap_o.cyc			<= ( 0 => i_wrap_cyc, others => '0');
 	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
 	wrap_o.we	 		<= not r_t65_RnW;
@@ -159,7 +162,7 @@ begin
 
 
 	i_t65_clken <= '1' when r_cpu_clk(0) = '1' and (		
-									wrap_i.rdy = '1' or 
+									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
 									) and i_throttle_wait = '0'
@@ -178,12 +181,20 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_cpu_halt <= '0';
+			r_wrap_acked <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_t65_clken = '1' then
 				r_cpu_halt <= wrap_i.cpu_halt;
+				r_wrap_acked <= '0';
+			else
+				if wrap_i.cyc_ack = '1' then
+					r_wrap_acked <= '1';
+				end if;
 			end if;
 		end if;			
 	end process;
+
+	i_wrap_ack <= r_wrap_acked or wrap_i.cyc_ack;
 
 	e_cpu: entity work.T65 
   	port map (
