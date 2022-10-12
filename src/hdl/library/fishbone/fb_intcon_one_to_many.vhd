@@ -169,8 +169,6 @@ begin
 					end if;
 
 				when act =>
-					r_con_D_wr <= fb_con_c2p_i.D_wr;
-					r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
 					if i_s2m.ack = '1' then
 						r_state <= idle; -- do nowt
 					end if;
@@ -189,6 +187,11 @@ begin
 				r_cyc_per_oh <= (others => '0');
 				r_a_stb <= '0';
 			end if;
+
+			r_con_D_wr <= fb_con_c2p_i.D_wr;
+			r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
+
+
 		end if;
 	end process;
 
