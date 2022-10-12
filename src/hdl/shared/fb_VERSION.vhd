@@ -105,8 +105,9 @@ begin
 	i_cap_bits(14)				<= to_std(G_INCL_CPU_68008);
 	i_cap_bits(15)				<= to_std(G_INCL_CPU_680x0);
 
-	fb_p2c_o.rdy <= '1' when state = wrel else '0';
+	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.ack <= r_ack;
+	fb_p2c_o.stall <= '0' when state = idle else '0';
 	fb_p2c_o.D_rd <= r_Q;
 
 	e_version:entity work.version_rom port map (
@@ -159,9 +160,6 @@ begin
 							r_Q <= i_Q;
 						end if;
 						r_ack <= '1';
-						state <= wrel;
-					when wrel => 
-						state <= wrel;
 					when others =>
 						state <= idle;
 				end case;
