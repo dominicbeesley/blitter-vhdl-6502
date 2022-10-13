@@ -125,14 +125,13 @@ architecture rtl of fb_i2c is
 	signal	r_4ph_phase			: std_logic_vector(3 downto 0) := "0100";
 	signal	r_4ph_run			: std_logic;
 
-	type 	 	state_cyc_t 		is (idle, wait_cyc);
+	type 	 	state_cyc_t 		is (idle, wait_wr);
 
 	type 		state_i2c_t 		is (idle, start, shift, reg, stop);
 
 	signal	r_state_cyc			: state_cyc_t;	
 
 	signal	r_con_ack			:	std_logic;
-	signal	r_con_rdy			:	std_logic;
 
 	signal	r_dat_wr				: 	std_logic_vector(7 downto 0);		-- write data latch
 	signal	r_ctl_busy			:	std_logic;								-- busy written to status register
@@ -156,8 +155,9 @@ architecture rtl of fb_i2c is
 begin
 
 
-	fb_p2c_o.rdy <= r_con_rdy;
-	fb_p2c_o.ack <= r_con_ack;
+	fb_p2c_o.rdy <= r_con_ack and fb_c2p_i.cyc;
+	fb_p2c_o.ack <= r_con_ack and fb_c2p_i.cyc;
+	fb_p2c_o.stall <= '0' when r_state_cyc = idle else '1';
 
 	I2C_SDA_io <= 	'0' when r_i2c_sda = '0' else
 						'Z';
@@ -279,12 +279,12 @@ begin
 
 	-- fishbone register access
 	p_state_cyc:process(fb_syscon_i)
+	variable v_dowrite: boolean;
 	begin
 
 		if fb_syscon_i.rst = '1' then
 			r_state_cyc <= idle;
 			r_con_ack <= '0';
-			r_con_rdy <= '0';
 			r_ctl_written <= '0';
 			r_dat_wr <= (others => '0');
 			r_ctl_busy <= '0';
@@ -295,28 +295,20 @@ begin
 			r_ctl_written <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
+				v_dowrite := false;
+
 				r_con_ack <= '0';
 
 				case r_state_cyc is
 					when idle =>
-						r_con_rdy <= '0';
 						if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
-							if fb_c2p_i.we = '1' and fb_c2p_i.D_wr_stb = '1' then
-								if (fb_c2p_i.A(0) = '0') then
-									r_ctl_busy <= fb_c2p_i.D_wr(7);
-									r_ctl_ack <= fb_c2p_i.D_wr(6);
-									r_ctl_stop <= fb_c2p_i.D_wr(2);
-									r_ctl_start <= fb_c2p_i.D_wr(1);
-									r_ctl_rnw <= fb_c2p_i.D_wr(0);
-
-									r_ctl_written <= not r_ctl_written_ack;
+							if fb_c2p_i.we = '1' then
+								if fb_c2p_i.D_wr_stb = '1' then
+									v_dowrite := true;
 								else
-									r_dat_wr <= fb_c2p_i.D_wr;
+									r_state_cyc <= wait_wr;
 								end if;
-								r_state_cyc <= wait_cyc;
-								r_con_rdy <= '1';
-								r_con_ack <= '1';
-							elsif fb_c2p_i.we = '0' then
+							else
 								if (fb_c2p_i.A(0) = '0') then
 									if r_state_i2c = idle and r_ctl_written = r_ctl_written_ack then
 										fb_p2c_o.D_rd(7) <= '0';
@@ -328,18 +320,36 @@ begin
 								else
 									fb_p2c_o.D_rd <= r_dat_rd;
 								end if;
-								r_state_cyc <= wait_cyc;
-								r_con_rdy <= '1';
+								r_state_cyc <= idle;
 								r_con_ack <= '1';
 							end if;
 						end if;
-					when wait_cyc =>
-						if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
-							r_state_cyc <= idle;
+					when wait_wr =>
+						if fb_c2p_i.D_wr_stb = '1' then
+							v_dowrite := true;
 						end if;
 					when others =>
 						r_state_cyc <= idle;
 				end case;
+
+				if fb_c2p_i.cyc = '0' then
+					r_con_ack <= '0';
+					r_state_cyc <= idle;
+				elsif v_dowrite then
+					if (fb_c2p_i.A(0) = '0') then
+						r_ctl_busy <= fb_c2p_i.D_wr(7);
+						r_ctl_ack <= fb_c2p_i.D_wr(6);
+						r_ctl_stop <= fb_c2p_i.D_wr(2);
+						r_ctl_start <= fb_c2p_i.D_wr(1);
+						r_ctl_rnw <= fb_c2p_i.D_wr(0);
+
+						r_ctl_written <= not r_ctl_written_ack;
+					else
+						r_dat_wr <= fb_c2p_i.D_wr;
+					end if;
+					r_state_cyc <= idle;
+					r_con_ack <= '1';
+				end if;
 			end if;
 		end if;
 
