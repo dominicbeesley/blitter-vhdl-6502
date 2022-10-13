@@ -76,11 +76,23 @@ end fb_intcon_shared;
 
 
 architecture rtl of fb_intcon_shared is
-	signal	i_cyc_req			: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);	-- cyc requests in from controllers grouped
+
+	function b2s(i:boolean) return std_logic is
+	begin
+		if i = true then
+			return '1';
+		else
+			return '0';
+		end if;
+	end function;
+
+
+	signal	i_cyc_a_stb			: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);	-- a_stb (qualified) requests in from controllers grouped
+	signal	i_cyc					: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);	-- cyc requests in from controllers grouped
 	signal	i_cyc_grant_ix		: unsigned(numbits(G_CONTROLLER_COUNT)-1 downto 0); -- grant signal from arbitrator
 	signal	r_cyc_grant_ix		: unsigned(numbits(G_CONTROLLER_COUNT)-1 downto 0); -- indexed which controller is active
 	signal	r_cyc_act_oh		: unsigned(G_CONTROLLER_COUNT-1 downto 0);				-- one hot for which controller is active 
-	signal	i_comcyc				: std_logic;												-- '1' when any controller is active
+	signal	i_a_stb_any			: std_logic;												-- '1' when any controller is active
 	signal	r_cyc_ack			: std_logic;												-- signal that cycle is being serviced
 
 	signal	i_c2px				: fb_con_o_per_i_t := fb_c2p_unsel;					-- the i_c2px that has been granted muxed
@@ -89,6 +101,7 @@ architecture rtl of fb_intcon_shared is
 	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
 	signal	r_c2p_we			: std_logic;												-- registered we 
 	signal	r_rdy_ctdn		: t_rdy_ctdn;
+	signal   r_a_stb			: std_logic;
 	
 	signal	r_peripheral_sel		: unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- registered address decoded selected peripheral
 	signal	r_cyc_per		: std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);	-- registered cyc for peripherals - one hot
@@ -96,7 +109,7 @@ architecture rtl of fb_intcon_shared is
 	signal	i_p2c				: fb_con_i_per_o_t;										-- data returned from selected peripheral
 
 	--r_state machine
-	type		state_t	is	(idle, act);
+	type		state_t	is	(idle, waitstall, act);
 	signal	r_state				: state_t;
 
 begin
@@ -108,7 +121,8 @@ end generate;
 
 
 g_cyc:for I in G_CONTROLLER_COUNT-1 downto 0 generate
-	i_cyc_req(I) <= fb_con_c2p_i(i).cyc and fb_con_c2p_i(i).a_stb;
+	i_cyc_a_stb(I) <= fb_con_c2p_i(i).cyc and fb_con_c2p_i(i).a_stb;
+	i_cyc(I) <= fb_con_c2p_i(i).cyc;
 end generate;
 
 
@@ -122,7 +136,7 @@ end generate;
 		port map (
 			clk_i 		=> fb_syscon_i.clk,
 			rst_i 		=> fb_syscon_i.rst,
-			req_i 		=> i_cyc_req,
+			req_i 		=> i_cyc,
 			ack_i			=> r_cyc_ack,
 			grant_ix_o	=> i_cyc_grant_ix
 			);
@@ -135,16 +149,16 @@ end generate;
 		port map (
 			clk_i 		=> fb_syscon_i.clk,
 			rst_i 		=> fb_syscon_i.rst,
-			req_i 		=> i_cyc_req,
+			req_i 		=> i_cyc,
 			ack_i			=> r_cyc_ack,
 			grant_ix_o	=> i_cyc_grant_ix
 			);		
 	end generate;
 
-	i_comcyc <= or_reduce(i_cyc_req);
+	i_a_stb_any <= or_reduce(i_cyc_a_stb);
 
 	-- multiplex i_c2px inputs
-	p_mux_m2s:process(r_state, r_cyc_grant_ix, fb_con_c2p_i, i_comcyc)
+	p_mux_m2s:process(r_state, r_cyc_grant_ix, fb_con_c2p_i)
 	begin
 		i_c2px <= fb_c2p_unsel;
 		if r_state = act then
@@ -157,20 +171,13 @@ end generate;
 		fb_per_c2p_o(I).we 			<= r_c2p_we;
 		fb_per_c2p_o(I).A				<= r_c2p_A;
 		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
-		fb_per_c2p_o(I).A_stb		<= r_cyc_per(I);
+		fb_per_c2p_o(I).A_stb		<= r_A_stb;
 		fb_per_c2p_o(I).D_wr			<= i_c2px.D_wr;
 		fb_per_c2p_o(I).D_wr_stb	<= i_c2px.D_wr_stb;
 	end generate;
 
 	-- signals back from selected peripheral to controllers
-	p_p2c_shared:process(r_peripheral_sel, fb_per_p2c_i, r_state)
-	begin
-		if r_state = act then
-			i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
-		else
-			i_p2c <= fb_p2c_unsel;
-		end if;
-	end process;
+	i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
 
 	G_REGISTER_CONTROLLER_P2C_ON:IF G_REGISTER_CONTROLLER_P2C GENERATE
 		p_reg_con_s2m:process(fb_syscon_i.clk)
@@ -181,6 +188,7 @@ end generate;
 					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
 					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
 					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);				
+					fb_con_p2c_o(I).stall	<= not b2s(r_state = idle);				
 				end loop;
 			end if;
 		end process;
@@ -193,6 +201,7 @@ end generate;
 					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
 					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
 					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);	
+					fb_con_p2c_o(I).stall	<= not b2s(r_state = idle);	
 		end generate;
 	END GENERATE;
 
@@ -207,14 +216,14 @@ end generate;
 			r_cyc_grant_ix <= (others => '0');
 			r_cyc_act_oh <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MIN;
+			r_a_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 			r_cyc_ack <= '0';
 
 			case r_state is
 				when idle =>
-					if i_comcyc = '1' then
-						r_state <= act;
+					if i_a_stb_any = '1' then
 						r_cyc_grant_ix <= i_cyc_grant_ix;
 						r_cyc_ack <= '1';
 						r_cyc_per <= peripheral_sel_oh_i(to_integer(i_cyc_grant_ix));
@@ -224,14 +233,20 @@ end generate;
 						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
 						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
 						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
+						r_state <= waitstall;
+						r_a_stb <= '1';
+					end if;
+				when waitstall =>
+					if i_p2c.stall = '0' then
 						r_state <= act;
+						r_a_stb <= '0';
 					end if;
 				when others =>  
 					r_state <= r_state; -- do nowt
 			end case;
 
 			-- catch all for ended cycle
-			if r_state /= idle and i_cyc_req(to_integer(r_cyc_grant_ix)) = '0' then
+			if r_state /= idle and i_cyc(to_integer(r_cyc_grant_ix)) = '0' then
 				r_state <= idle;
 				r_peripheral_sel <= (others => '0');
 				r_cyc_per <= (G_PERIPHERAL_COUNT-1 downto 0 => '0');
