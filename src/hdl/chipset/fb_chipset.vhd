@@ -47,6 +47,7 @@ use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
+use work.fb_intcon_pack.all;
 use work.common.all;
 use work.board_config_pack.all;
 
@@ -90,6 +91,38 @@ entity fb_chipset is
 end fb_chipset;
 
 architecture rtl of fb_chipset is
+
+	function B2OZ(b:boolean) return natural is 
+	begin
+		if b then
+			return 1;
+		else
+			return 0;
+		end if;
+	end function;
+
+	-----------------------------------------------------------------------------
+	-- work out number / order of controllers 
+	-----------------------------------------------------------------------------
+
+	constant MAS_NO_CHIPSET_BLIT			: natural := 0;
+	constant MAS_NO_CHIPSET_DMA_1			: natural := MAS_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
+	constant MAS_NO_CHIPSET_DMA_0			: natural := MAS_NO_CHIPSET_DMA_1 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 2);
+	constant MAS_NO_CHIPSET_SND			: natural := MAS_NO_CHIPSET_DMA_0 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 1);
+	constant MAS_NO_CHIPSET_AERIS			: natural := MAS_NO_CHIPSET_SND + B2OZ(G_INCL_CS_SND);
+	constant CONTROLLER_COUNT_CHIPSET	: natural := MAS_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
+
+	-----------------------------------------------------------------------------
+	-- work out number / order of peripherals 
+	-----------------------------------------------------------------------------
+
+
+	constant PERIPHERAL_NO_CHIPSET_DMA		: natural := 0;
+	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := PERIPHERAL_NO_CHIPSET_DMA + B2OZ(G_INCL_CS_DMA);
+	constant PERIPHERAL_NO_CHIPSET_BLIT		: natural := PERIPHERAL_NO_CHIPSET_SOUND + B2OZ(G_INCL_CS_SND);
+	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := PERIPHERAL_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
+	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := PERIPHERAL_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
+	constant PERIPHERAL_COUNT_CHIPSET		: natural := PERIPHERAL_NO_CHIPSET_EEPROM + B2OZ(G_INCL_CS_EEPROM);
 
 
 	-----------------------------------------------------------------------------
@@ -306,31 +339,49 @@ begin
 --                                 
 
 
-	-- multiplex all the chipset controller ports down to a single 
-	-- controller out to the top level resources
-	e_chipset_con:entity work.fb_intcon_many_to_one
-	generic map (
-		SIM => SIM,
-		G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
-	)
-	port map (
+	G_NO_CONTROLLERS:IF CONTROLLER_COUNT_CHIPSET = 0 GENERATE
+		fb_con_c2p_o <= fb_c2p_unsel;
+	END GENERATE;
+	G_ONE_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET = 1 GENERATE
+		fb_con_c2p_o <= i_con_c2p_chipset(0);
+		i_con_p2c_chipset(0) <= fb_con_p2c_i;
+	END GENERATE;
+	G_MANY_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET >1 GENERATE
 
-		fb_syscon_i						=> fb_syscon_i,
+		-- multiplex all the chipset controller ports down to a single 
+		-- controller out to the top level resources
+		e_chipset_con:fb_intcon_many_to_one
+		generic map (
+			SIM => SIM,
+			G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
+		)
+		port map (
 
-		-- peripheral port connect to controllers
-		fb_con_c2p_i => i_con_c2p_chipset,
-		fb_con_p2c_o => i_con_p2c_chipset,
+			fb_syscon_i						=> fb_syscon_i,
 
-		-- controller port connect to peripherals
-		fb_per_c2p_o					=> fb_con_c2p_o,
-		fb_per_p2c_i					=> fb_con_p2c_i
+			-- peripheral port connect to controllers
+			fb_con_c2p_i => i_con_c2p_chipset,
+			fb_con_p2c_o => i_con_p2c_chipset,
 
-	);
+			-- controller port connect to peripherals
+			fb_per_c2p_o					=> fb_con_c2p_o,
+			fb_per_p2c_i					=> fb_con_p2c_i
+
+		);
+	END GENERATE;
+
+	--TODO: have a default chipset peripheral that returns FF?
 
 	-- address decode to select peripheral
 	e_addr2s_chipset:entity work.address_decode_chipset
 	generic map (
-		SIM							=> SIM
+		SIM							=> SIM,
+		G_PERIPHERAL_NO_CHIPSET_DMA		=> PERIPHERAL_NO_CHIPSET_DMA,
+		G_PERIPHERAL_NO_CHIPSET_SOUND		=> PERIPHERAL_NO_CHIPSET_SOUND,
+		G_PERIPHERAL_NO_CHIPSET_BLIT		=> PERIPHERAL_NO_CHIPSET_BLIT,
+		G_PERIPHERAL_NO_CHIPSET_AERIS		=> PERIPHERAL_NO_CHIPSET_AERIS,
+		G_PERIPHERAL_NO_CHIPSET_EEPROM 	=> PERIPHERAL_NO_CHIPSET_EEPROM,
+		G_PERIPHERAL_COUNT_CHIPSET 		=> PERIPHERAL_COUNT_CHIPSET
 	)
 	port map (
 		addr_i						=> i_chipset_intcon_peripheral_sel_addr,
