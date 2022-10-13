@@ -117,7 +117,7 @@ set_global_assignment -name VHDL_FILE ../../../library/common.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to_many.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
-# set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd
 set_global_assignment -name VHDL_FILE ../../../library/clockreg.vhd
 set_global_assignment -name VHDL_FILE ../../../library/bbc/bbc_slow_cyc.vhd
@@ -125,7 +125,6 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_Pack.v
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_MCode.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
-# set_global_assignment -name VHDL_FILE ../../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
@@ -155,12 +154,13 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
-# set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
-# set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
 # set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound.vhd
 # set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound_cha.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd
