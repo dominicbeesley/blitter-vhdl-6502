@@ -735,8 +735,8 @@ begin
 						r_wrap_cyc <= '1';
 					end if;
 				when s_waitstall =>
-					r_wrap_a_stb <= '1';
 					if fb_p2c_i.stall = '1' then
+						r_wrap_a_stb <= '1';
 						r_State <= s_waitstall;
 					else
 						r_state <= s_waitack;
