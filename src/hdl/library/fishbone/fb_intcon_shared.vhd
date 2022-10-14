@@ -108,6 +108,14 @@ architecture rtl of fb_intcon_shared is
 
 	signal	i_p2c				: fb_con_i_per_o_t;										-- data returned from selected peripheral
 
+	-- these signals might or might not be registered when fed back from peripheral 
+	-- dependant upon G_REGISTER_CONTROLLER_P2C
+	
+	signal   ir_p2c_D_rd		: std_logic_vector(7 downto 0);
+	signal   ir_p2c_rdy		: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
+	signal   ir_p2c_ack		: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
+	signal   ir_p2c_stall	: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
+
 	--r_state machine
 	type		state_t	is	(idle, waitstall, act);
 	signal	r_state				: state_t;
@@ -183,12 +191,11 @@ end generate;
 		p_reg_con_s2m:process(fb_syscon_i.clk)
 		begin
 			if rising_edge(fb_syscon_i.clk) then
+				ir_p2c_D_rd	<= i_p2c.D_rd;
+
 				for I in G_CONTROLLER_COUNT-1 downto 0 loop
-					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
-					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
-					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);				
-					fb_con_p2c_o(I).stall	<= not b2s(r_state = idle);				
+					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
 				end loop;
 			end if;
 		end process;
@@ -198,12 +205,30 @@ end generate;
 	G_REGISTER_CONTROLLER_P2C_OFF:IF NOT G_REGISTER_CONTROLLER_P2C GENERATE
 		g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 					-- TODO: check if moving data to own shared register saves space
-					fb_con_p2c_o(I).D_rd 	<= i_p2c.D_rd;
-					fb_con_p2c_o(I).rdy 		<= i_p2c.rdy and r_cyc_act_oh(I);
-					fb_con_p2c_o(I).ack 		<= i_p2c.ack and r_cyc_act_oh(I);	
-					fb_con_p2c_o(I).stall	<= not b2s(r_state = idle);	
+				ir_p2c_D_rd	<= i_p2c.D_rd;
+				gra:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
+				end generate;
 		end generate;
 	END GENERATE;
+
+	-- stall is always async
+	g_stall:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+		ir_p2c_stall(I) <= '0' when r_state = idle and i_cyc_grant_ix = I else '1';
+	end generate;
+
+	-- had to separate this out into separate step as modelsim goes daft if different parts of
+	-- a record are assigned in different processes or part in process part as continuous
+	g_p2c:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+		fb_con_p2c_o(I).D_rd <= ir_p2c_D_rd;
+		fb_con_p2c_o(I).rdy <= ir_p2c_rdy(I);
+		fb_con_p2c_o(I).ack <= ir_p2c_ack(I);
+		fb_con_p2c_o(I).stall <= ir_p2c_stall(I);
+	end generate;
+
+
+
 
 	p_state:process(fb_syscon_i, r_state)
 	begin
