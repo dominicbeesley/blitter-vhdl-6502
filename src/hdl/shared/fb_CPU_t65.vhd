@@ -53,7 +53,7 @@ entity fb_cpu_t65 is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
 		CLKEN_DLY_MAX						: natural 	:= 2;								-- used to time latching of address etc signals			
-		MAXSPEED								: natural := 16
+		MAXSPEED								: natural := 32
 	);
 	port(
 		-- configuration
