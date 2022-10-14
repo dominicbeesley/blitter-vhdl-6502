@@ -73,7 +73,8 @@ entity fb_cpu is
 		G_INCL_CPU_Z80						: boolean := false;
 		G_INCL_CPU_680x0					: boolean := false;
 		G_INCL_CPU_68008					: boolean := false;
-		G_INCL_CPU_ARM2						: boolean := false
+		G_INCL_CPU_ARM2					: boolean := false;
+		G_MK3									: boolean := false
 	);
 	port(
 
@@ -772,7 +773,8 @@ begin
 
 	e_log2phys: entity work.log2phys
 	generic map (
-		SIM									=> SIM
+		SIM									=> SIM,
+		G_MK3									=> G_MK3
 	)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,	

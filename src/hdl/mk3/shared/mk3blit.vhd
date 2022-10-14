@@ -687,6 +687,7 @@ END GENERATE;
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
+		G_MK3 => true,
 
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
