@@ -79,12 +79,6 @@ architecture rtl of fb_cpu_t65 is
 	signal i_t65_res_n		: std_logic;
 
 
-	signal r_t65_RnW			: std_logic;
-	signal r_t65_SYNC			: std_logic;
-	signal r_t65_A	 			: std_logic_vector(23 downto 0);
-	signal r_t65_D_out		: std_logic_vector(7 downto 0);
-
-
 	signal i_cpu65_nmi_n		: std_logic;
 
 	signal r_prev_A0			: std_logic;
@@ -115,18 +109,6 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	p_reg_A:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			if r_clken_dly(0) = '1' then
-				r_t65_SYNC <= i_t65_SYNC;
-				r_t65_A <= i_t65_A;
-				r_t65_RnW <= i_t65_RnW;
-				r_t65_D_out <= i_t65_D_out;
-			end if;
-		end if;
-
-	end process;
 
 	p_throttle:process(fb_syscon_i)
 	begin
@@ -254,23 +236,23 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if i_t65_clken = '1' then
-  				r_prev_A0 <= r_t65_A(0);
+  				r_prev_A0 <= i_t65_A(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor r_t65_A(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_t65_A(0);
 
   	wrap_o.noice_debug_cpu_clken <= i_t65_clken_h;
   	
   	wrap_o.noice_debug_5c	 <=
   								'1' when 
-  										r_t65_SYNC = '1' 
+  										i_t65_SYNC = '1' 
   										and i_t65_D_in = x"5C" else
   								'0';
 
-  	wrap_o.noice_debug_opfetch <= r_t65_SYNC;
+  	wrap_o.noice_debug_opfetch <= i_t65_SYNC;
 
 
 
