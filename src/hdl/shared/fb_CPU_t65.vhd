@@ -138,7 +138,7 @@ begin
 	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
 	wrap_o.we	 		<= not i_t65_RnW;
 	wrap_o.D_WR 		<= i_t65_D_out;
-	wrap_o.D_WR_stb 	<= r_clken_dly(0);
+	wrap_o.D_WR_stb 	<= r_clken_dly(2);								-- TEST late Data strobe TODOPIPE: put this back to (0)
 	wrap_o.ack	 		<= i_t65_clken;
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
