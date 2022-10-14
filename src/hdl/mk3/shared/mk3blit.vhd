@@ -394,7 +394,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
+		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI
 	)

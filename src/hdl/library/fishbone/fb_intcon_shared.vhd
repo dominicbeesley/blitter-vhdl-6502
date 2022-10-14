@@ -169,7 +169,7 @@ end generate;
 	p_mux_m2s:process(r_state, r_cyc_grant_ix, fb_con_c2p_i)
 	begin
 		i_c2px <= fb_c2p_unsel;
-		if r_state = act then
+		if r_state /= idle then
 			i_c2px <= fb_con_c2p_i(to_integer(r_cyc_grant_ix));
 		end if;
 	end process;

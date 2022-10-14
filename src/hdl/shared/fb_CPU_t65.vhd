@@ -52,7 +52,8 @@ entity fb_cpu_t65 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		CLKEN_DLY_MAX						: natural 	:= 2								-- used to time latching of address etc signals			
+		CLKEN_DLY_MAX						: natural 	:= 2;								-- used to time latching of address etc signals			
+		MAXSPEED								: natural := 16
 	);
 	port(
 		-- configuration
@@ -89,7 +90,7 @@ architecture rtl of fb_cpu_t65 is
 	signal r_prev_A0			: std_logic;
 
 	-- count down to next cycle - when all 1's can proceed
-	signal r_cpu_clk			: std_logic_vector(CLKEN_DLY_MAX downto 0);
+	signal r_cpu_clk			: std_logic_vector((CLOCKSPEED/MAXSPEED)-2 downto 0);
 
 	-- i_t65_clken '1' for one cycle to complete a cycle/start another
 	signal i_t65_clken		: std_logic;
@@ -147,15 +148,15 @@ begin
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_clken_dly(1) = '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_clken_dly(0) = '1' else
 								'0';
 
 	wrap_o.A_log 		<= x"FF" & i_t65_A(15 downto 0);
 	wrap_o.cyc			<= ( 0 => i_wrap_cyc, others => '0');
 	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
-	wrap_o.we	 		<= not r_t65_RnW;
-	wrap_o.D_WR 		<= r_t65_D_out;
-	wrap_o.D_WR_stb 	<= r_clken_dly(1);
+	wrap_o.we	 		<= not i_t65_RnW;
+	wrap_o.D_WR 		<= i_t65_D_out;
+	wrap_o.D_WR_stb 	<= r_clken_dly(0);
 	wrap_o.ack	 		<= i_t65_clken;
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
