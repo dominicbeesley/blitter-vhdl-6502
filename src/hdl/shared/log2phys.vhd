@@ -4,7 +4,9 @@
 --  #  # # # # # #         ##  ###  #   #       #  ### ##  ### ###     # #  #       #  # #     # # # # # # # #
 --  #  # # # # # #  #      #   # #   #  #        # ### # # # # # #     ###  ##      #  # #     # # # # # # # #
 --  #   #  ##   #          #   # # ##   #      ##  # # # # # # # #                 ### ##      ### ### ### ###
-
+-- Oct/22 - part done, just for ROM E on mk3
+-- Suggest adding turbo mask registers that indicates which roms to run from ChipRAM and a ChipRAM base register
+-- Add CMOS support to allow configure of Fast/Turbo/Throttled ROMS
 
 
 -- MIT License
@@ -59,7 +61,8 @@ use work.fb_sys_pack.all;
 
 entity log2phys is
 	generic (
-		SIM									: boolean := false							-- skip some stuff, i.e. slow sdram start up
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		G_MK3									: boolean := false
 	);
 	port(
 
@@ -107,7 +110,9 @@ begin
 			r_pagrom_A <= x"FF" & "10";
 			if cfg_swram_enable_i = '1' then
 				if map0n1 then
-					if (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
+					if sys_ROMPG_i(3 downto 0) = x"E" and G_MK3 then -- special turbo ROM
+						r_pagrom_A <= x"1F" & "00";
+					elsif (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
 						if sys_ROMPG_i(0) = '0' then
 							r_pagrom_A <= x"7" & "111" & sys_ROMPG_i(3 downto 1);
 						else
