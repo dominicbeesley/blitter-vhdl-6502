@@ -119,7 +119,7 @@ begin
 	-- signals back from selected peripheral to controllers
 	p_p2c_shared:process(r_peripheral_sel_ix, fb_per_p2c_i, r_state)
 	begin
-		if r_state = act then
+		if r_state /= idle then
 			i_s2m <= fb_per_p2c_i(to_integer(r_peripheral_sel_ix));
 		else
 			i_s2m <= fb_p2c_unsel;
