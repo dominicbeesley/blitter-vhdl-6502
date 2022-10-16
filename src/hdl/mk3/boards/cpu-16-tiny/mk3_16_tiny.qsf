@@ -118,6 +118,7 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_null.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd
 set_global_assignment -name VHDL_FILE ../../../library/clockreg.vhd
 set_global_assignment -name VHDL_FILE ../../../library/bbc/bbc_slow_cyc.vhd
@@ -164,8 +165,8 @@ set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
 # set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound.vhd
 # set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound_cha.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd
-# set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma.vhd
-# set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"

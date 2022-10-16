@@ -79,7 +79,7 @@ architecture Behavioral of fb_DMAC_int_dma is
 
 	constant PADBITS				: std_logic_vector(7-NUMBITS(G_CHANNELS) downto 0) := (others => '0');
 
-	type		sla_state_t	is (idle, child_act, sel_act, wait_cyc);
+	type		sla_state_t	is (idle, child_act, sel_wr_wait);
 
 	signal	r_per_state 		: sla_state_t;
 
@@ -87,60 +87,77 @@ architecture Behavioral of fb_DMAC_int_dma is
 	signal	i_cha_fb_per_s2m	: fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
 
 	signal	r_cha_sel			: unsigned(numbits(G_CHANNELS)-1 downto 0);
+	signal	i_cha_sel_sel		: std_logic;											-- 1 when current register access is for "F"
+	signal   i_cha_sel_ack		: std_logic; -- 1 when cha_sel is being ack'd
+	signal   i_cyc_start			: std_logic;
+	signal   i_sel_per_p2c		: fb_con_i_per_o_t;
+	signal	i_cha_sel_rd		: std_logic_vector(7 downto 0);
 
 	signal	i_child_int			: std_logic_vector(G_CHANNELS-1 downto 0);
 	signal	i_child_cpu_halt	: std_logic_vector(G_CHANNELS-1 downto 0);
 
-	signal	r_sel_per_rdy		: std_logic;
-	signal	r_sel_per_ack		: std_logic;
 
 begin
 
 	int_o <= or_reduce(i_child_int);
 	cpu_halt_o <= or_reduce(i_child_cpu_halt);
 
+	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
+	i_cha_sel_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = x"F" 
+					else '0';
+	i_cha_sel_ack <= '1' when (r_per_state = idle and i_cyc_start = '1' and i_cha_sel_sel = '1' and (fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1')) -- can ack on idle
+								  or (r_per_state = sel_wr_wait and fb_per_c2p_i.D_wr_stb = '1') 
+					else '0';
+
 	p_per_state:process(fb_syscon_i)
+	variable v_do_write_sel_reg:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
 			r_cha_sel <= (others => '0');
-			r_sel_per_rdy <= '0';
-			r_sel_per_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
-			r_sel_per_ack <= '0';
+			v_do_write_sel_reg := false;
+
 			case r_per_state is
 				when idle =>
-					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
-						if unsigned(fb_per_c2p_i.A(3 downto 0)) = x"F" then
-							r_per_state <= sel_act;
-							if fb_per_c2p_i.we = '0' then
-								r_sel_per_ack <= '1';
-								r_sel_per_rdy <= '1';
+					if i_cyc_start = '1' then
+						if i_cha_sel_sel = '1' then
+							if fb_per_c2p_i.we = '1' then
+								if fb_per_c2p_i.D_wr_stb = '1' then
+									v_do_write_sel_reg := true;
+								else
+									r_per_state <= sel_wr_wait;
+								end if;
 							end if;
 						else
 							r_per_state <= child_act;
-						end if;
+						end if;					
 					end if;
-				when sel_act =>
-					if fb_per_c2p_i.we = '1' and fb_per_c2p_i.D_wr_stb = '1' then
-						if G_CHANNELS <= 1 then
-							r_cha_sel <= (others => '0');
-						else
-							r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
-						end if;
-						r_sel_per_ack <= '1';
-						r_sel_per_rdy <= '1';
-						r_per_state <= wait_cyc;
+				when sel_wr_wait => 
+					if fb_per_c2p_i.D_wr_stb = '1' then
+						v_do_write_sel_reg := true;
 					end if;
-				when wait_cyc =>
-				   -- already ack'd wait for cyc/a_stb to go low
-				when others => null;
+				when child_act =>
+					if i_sel_per_p2c.ack = '1' then
+						r_per_state <= idle;
+					end if;
+				when others =>
+					r_per_state <= idle;
 			end case;
-			if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.A_stb = '0' then
-				r_per_state <= idle;
-				r_sel_per_rdy <= '0';
+
+
+			if v_do_write_sel_reg then
+				if G_CHANNELS > 1 then
+					r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
+				end if;
+				r_per_state <= idle;				
 			end if;
+
+			if fb_per_c2p_i.cyc = '0' then
+				r_per_state <= idle;
+			end if;
+
 
 		end if;
 	end process;
@@ -173,32 +190,32 @@ begin
 
 	end generate;
 
-	p_per_cha_sel_o:process(fb_syscon_i, r_per_state, r_cha_sel, i_cha_fb_per_s2m, fb_per_c2p_i, r_sel_per_rdy, r_sel_per_ack)	
-	begin		
 
-		fb_per_p2c_o <= (
-			D_rd => (others => '-'),
-			rdy => '0',
-			ack => '0'
-			);
-		if r_per_state = child_act then
+	p_child_p2c:process(i_cha_fb_per_s2m, r_cha_sel)
+	begin
 			if G_CHANNELS = 1 then
-				fb_per_p2c_o <= i_cha_fb_per_s2m(0);
+				i_sel_per_p2c <= i_cha_fb_per_s2m(0);
 			else
+				i_sel_per_p2c <= (
+					D_rd => (others => '1'),
+					ack => '1',
+					rdy => '1',
+					stall => '0'
+					);
 				for I in 0 to G_CHANNELS-1 loop
 					if r_cha_sel = I then
-						fb_per_p2c_o <= i_cha_fb_per_s2m(I);
+						i_sel_per_p2c <= i_cha_fb_per_s2m(I);
 					end if;
 				end loop;
 			end if;
-		elsif r_per_state = sel_act or r_per_state = wait_cyc then
-			fb_per_p2c_o <= (
-				D_rd => PADBITS & std_logic_vector(r_cha_sel),
-				rdy => r_sel_per_rdy,
-				ack => r_sel_per_ack
-				);
-		end if;
 	end process;
+
+	i_cha_sel_rd <= PADBITS & std_logic_vector(r_cha_sel) when G_CHANNELS > 1 else (others => '0');
+
+	fb_per_p2c_o.D_rd <= i_cha_sel_rd when r_per_state = idle else i_sel_per_p2c.D_rd;
+	fb_per_p2c_o.rdy <= i_cha_sel_ack when r_per_state = idle else i_sel_per_p2c.rdy;
+	fb_per_p2c_o.ack <= i_cha_sel_ack when r_per_state = idle else i_sel_per_p2c.ack;
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
 					
 	p_per_cha_sel_i:process(r_cha_sel, fb_per_c2p_i)
 	begin
@@ -206,21 +223,15 @@ begin
 			i_cha_fb_per_m2s(0) <= fb_per_c2p_i;
 		else
 			for I in 0 to G_CHANNELS-1 loop
-				if r_cha_sel = I then
-					-- this assumes that the child channels will
-					-- ignore selects to register F!
-					i_cha_fb_per_m2s(I) <= fb_per_c2p_i;
-				else
-					i_cha_fb_per_m2s(I) <= (
-						cyc => '0',
-						we => '0',
-						A => (others => '-'),
-						A_stb => '0',
-						D_wr => (others => '-'),
-						D_wr_stb => '0',
-						rdy_ctdn => RDY_CTDN_MIN
-					);
-				end if;
+				i_cha_fb_per_m2s(I) <= (
+					cyc => 		fb_per_c2p_i.cyc and b2s(I = r_cha_sel),
+					we => 		fb_per_c2p_i.we,
+					A => 			fb_per_c2p_i.A,
+					A_stb => 	fb_per_c2p_i.A_stb,
+					D_wr => 		fb_per_c2p_i.D_wr,
+					D_wr_stb => fb_per_c2p_i.D_wr_stb,
+					rdy_ctdn => fb_per_c2p_i.rdy_ctdn
+				);
 			end loop;		
 		end if;
 	end process;

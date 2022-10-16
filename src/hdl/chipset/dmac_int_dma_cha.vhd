@@ -197,7 +197,6 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	signal	r_con_state				: mas_state_type;
 	signal	r_con_cyc				: std_logic;
 
-	signal	r_per_rdy				: std_logic;
 	signal 	r_per_ack				: std_logic;
 
 	signal	i_state_change_clken	: std_logic;
@@ -596,7 +595,6 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_rdy <= '0';
 			r_per_ack <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -615,20 +613,17 @@ begin
 							r_per_state <= wait_cyc;
 						end if;
 					when wait_cyc =>
-						r_per_rdy <= '1';
 						r_per_ack <= '1';
-						if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
-							r_per_state <= idle;
-							r_per_rdy <= '0';
-						end if;
+						r_per_state <= idle;
 					when others => null;
 				end case;
 			end if;
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy <= r_per_rdy;
+	fb_per_p2c_o.rdy <= r_per_ack;
 	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '0';
 
 	i_next_con_addr <=
 				 		r_src_addr_bank & std_logic_vector(unsigned(r_src_addr) + 1) 
