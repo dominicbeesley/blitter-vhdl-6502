@@ -288,12 +288,16 @@ architecture rtl of fb_chipset is
 	signal i_c2p_eeprom_per		: fb_con_o_per_i_t;
 	signal i_p2c_eeprom_per		: fb_con_i_per_o_t;
 
+	-- null peripheral for out-of range addresses
+	signal i_c2p_null_per		: fb_con_o_per_i_t;
+	signal i_p2c_null_per		: fb_con_i_per_o_t;
+
 	-- chipset controller->peripheral
 	signal i_con_c2p_chipset	: fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
 	signal i_con_p2c_chipset	: fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	-- chipset peripheral->controller
-	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
-	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET-1 downto 0);
+	-- chipset peripheral->controller - note+1 for unsel
+	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
+	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
 
 
 	-----------------------------------------------------------------------------
@@ -302,8 +306,9 @@ architecture rtl of fb_chipset is
 
 	-- chipset c2p intcon to peripheral sel
 	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
-	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET)-1 downto 0);  -- address decoded selected peripheral
-	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET-1 downto 0);	-- address decoded selected peripherals as one-hot		
+		-- NOTE: plus 1 for dummy channel for "no peripheral"
+	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);  -- address decoded selected peripheral
+	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET downto 0);	-- address decoded selected peripherals as one-hot		
 
 
 	signal i_dma_cpu_int					: std_logic;							-- interrupt out from dma
@@ -392,7 +397,7 @@ begin
 	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
 	generic map (
 		SIM => SIM,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET,
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1, -- NOTE: +1 for unsel
 		G_ADDRESS_WIDTH => 8
 	)
 	port map (
@@ -409,6 +414,26 @@ begin
 		peripheral_sel_oh_i						=> i_chipset_intcon_peripheral_sel_oh
 
 	);
+
+
+	e_fb_null:entity work.fb_null
+	 generic map (
+		SIM									=> SIM,
+		G_READ_VAL							=> x"FF"
+	 )
+    Port map (
+
+		-- fishbone signals		
+		fb_syscon_i							=> fb_syscon_i,
+
+		-- peripheral interface (control registers)
+		fb_c2p_i								=> i_c2p_null_per,
+		fb_p2c_o								=> i_p2c_null_per
+	);
+
+	i_per_p2c_chipset(PERIPHERAL_COUNT_CHIPSET)	<=	i_p2c_null_per;
+	i_c2p_null_per 		<= i_per_c2p_chipset(PERIPHERAL_COUNT_CHIPSET);
+
 
 GDMA:IF G_INCL_CS_DMA GENERATE
 
