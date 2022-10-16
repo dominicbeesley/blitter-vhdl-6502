@@ -143,14 +143,13 @@ package fishbone is
 		rdy_ctdn => RDY_CTDN_MIN
 		);
 
-	-- this constant contains the nul peripheral to controller signal
+	-- this constant contains the nul peripheral to controller signal which will wait forever
 	constant fb_p2c_unsel : fb_con_i_per_o_t := (
 		D_rd => (others => '1'),
 		ack => '0',
 		rdy => '0',
 		stall => '1'
 		);
-
 
 	type fb_arr_std_logic_vector is array (integer range <>) of std_logic_vector;
 	type fb_arr_unsigned is array (integer range <>) of unsigned;
