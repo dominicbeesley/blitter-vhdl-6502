@@ -13,6 +13,7 @@ what are rules when cyc is dropped early - must all items support it?
 - rdy must be asserted when ack is asserted
 - rdy must not be asserted after ack is deasserted
 
+Masters must handle slaves that ack a write cycle *before* d_wr_stb has been asserted (where a write is inappropriate for example)
 
 
 # Introduction
