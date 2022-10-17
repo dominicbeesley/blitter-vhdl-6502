@@ -102,6 +102,8 @@ architecture rtl of fb_intcon_shared is
 	signal	r_c2p_we			: std_logic;												-- registered we 
 	signal	r_rdy_ctdn		: t_rdy_ctdn;
 	signal   r_a_stb			: std_logic;
+	signal	r_d_wr			: std_logic_vector(7 downto 0);
+	signal	r_d_wr_stb		: std_logic;
 	
 	signal	r_peripheral_sel		: unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- registered address decoded selected peripheral
 	signal	r_cyc_per		: std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);	-- registered cyc for peripherals - one hot
@@ -180,8 +182,8 @@ end generate;
 		fb_per_c2p_o(I).A				<= r_c2p_A;
 		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
 		fb_per_c2p_o(I).A_stb		<= r_A_stb;
-		fb_per_c2p_o(I).D_wr			<= i_c2px.D_wr;
-		fb_per_c2p_o(I).D_wr_stb	<= i_c2px.D_wr_stb;
+		fb_per_c2p_o(I).D_wr			<= r_D_wr;
+		fb_per_c2p_o(I).D_wr_stb	<= r_D_wr_stb;
 	end generate;
 
 	-- signals back from selected peripheral to controllers
@@ -242,6 +244,8 @@ end generate;
 			r_cyc_act_oh <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MIN;
 			r_a_stb <= '0';
+			r_d_wr_stb <= '0';
+			r_d_wr <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_state <= r_state;
 			r_cyc_ack <= '0';
@@ -258,17 +262,35 @@ end generate;
 						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
 						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
 						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
+						r_d_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
+						r_d_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
 						r_state <= waitstall;
 						r_a_stb <= '1';
 					end if;
 				when waitstall =>
+
+					-- while stalled latch 
+					if i_p2c.stall = '1' then
+						if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' then
+							r_d_wr_stb <= '1';
+							r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+						end if;
+					else
+						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+					end if;
+
 					if i_p2c.stall = '0' then
 						r_state <= act;
 						r_a_stb <= '0';
 					end if;
+				when act => 
+						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
 				when others =>  
 					r_state <= r_state; -- do nowt
 			end case;
+
 
 			-- catch all for ended cycle
 			if r_state /= idle and i_cyc(to_integer(r_cyc_grant_ix)) = '0' then
