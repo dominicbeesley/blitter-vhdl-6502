@@ -104,7 +104,6 @@ entity fb_sys is
 
 		cpu_2MHz_phi2_clken_o				: out		std_logic;
 
-		debug_jim_hi_wr_o						: out		std_logic;
 		debug_write_cycle_repeat_o			: out		std_logic;
 
 		debug_wrap_sys_cyc_o					: out		std_logic;
@@ -186,6 +185,10 @@ architecture rtl of fb_sys is
 																 -- shortened
 	signal	r_wr_setup_ctr		: unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
 
+	signal	r_had_d_stb			: std_logic;
+	signal	r_d_wr				: std_logic_vector(7 downto 0);
+
+
 begin
 
 	--TODOPIPE: separate peripheral and motherboard cycle state machines
@@ -247,7 +250,8 @@ begin
 			r_JIM_en <= '0';
 			r_JIM_page <= (others => '0');
 
-			debug_jim_hi_wr_o <= '0';
+			r_had_d_stb <= '0';
+			r_d_wr <= (others => '0');
 
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -257,10 +261,10 @@ begin
 				case state is
 					when idle =>
 
-						debug_jim_hi_wr_o <= '0';
-
 						r_con_cyc <= '0';
 						r_rdy <= '0';
+
+						r_had_d_stb <= '0';
 
 						if i_SYScyc_st_clken = '1' then
 							-- default idle cycle, drop busses
@@ -279,18 +283,32 @@ begin
 								if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_dev_rd;
 								elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-									state <= jim_page_lo_wr;
+									if fb_c2p_i.D_wr_stb = '1' then
+										r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
+										r_ack <= '1';
+										r_rdy <= '1';
+										state <= wait_con_rel_rd;
+									else
+										state <= jim_page_lo_wr;
+									end if;
 								elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-									state <= jim_page_hi_wr;
-									debug_jim_hi_wr_o <= '1';
+									if fb_c2p_i.D_wr_stb = '1' then
+										r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
+										r_ack <= '1';
+										r_rdy <= '1';
+										state <= wait_con_rel_rd;
+									else
+										state <= jim_page_hi_wr;
+									end if;
 								elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_page_lo_rd;
 								elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
 									state <= jim_page_hi_rd;
-									debug_jim_hi_wr_o <= '1';
 								else
 
 									if fb_c2p_i.we = '1' then
+										r_had_d_stb <= fb_c2p_i.D_wr_stb;
+										r_d_wr <= fb_c2p_i.d_wr;
 										r_sys_RnW <= '0';							
 										state <= addrlatched_wr;
 										r_wr_setup_ctr <= (others => '0');
@@ -345,25 +363,31 @@ begin
 							else
 								state <= wait_sys_end;
 							end if;
-						elsif fb_c2p_i.D_wr_stb = '1' then
-                     if r_sys_A(15 downto 0) = x"FE05" and cfg_sys_type_i = SYS_ELK then
-                        -- TODO: fix this properly, for now just munge the number to match
-                        -- the mappings from the BBC, this will not allow any external ROMs!
-                        r_sys_ROMPG <= fb_c2p_i.D_wr xor "00001100";       -- write to both shadow register and SYS
-							elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
-								r_sys_ROMPG <= fb_c2p_i.D_wr;			-- write to both shadow register and SYS
+						else
+							if fb_c2p_i.D_wr_stb = '1' then
+								r_had_d_stb <= '1';
+								r_d_wr <= fb_c2p_i.d_wr;
 							end if;
-							if r_sys_A(15 downto 0) = x"FCFF" then
-								if fb_c2p_i.D_wr = G_JIM_DEVNO then
-									r_JIM_en <= '1';
-								else
-									r_JIM_en <= '0';
+							if r_had_d_stb = '1' then
+	                     if r_sys_A(15 downto 0) = x"FE05" and cfg_sys_type_i = SYS_ELK then
+	                        -- TODO: fix this properly, for now just munge the number to match
+	                        -- the mappings from the BBC, this will not allow any external ROMs!
+	                        r_sys_ROMPG <= r_D_wr xor "00001100";       -- write to both shadow register and SYS
+								elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
+									r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
 								end if;
+								if r_sys_A(15 downto 0) = x"FCFF" then
+									if r_D_wr = G_JIM_DEVNO then
+										r_JIM_en <= '1';
+									else
+										r_JIM_en <= '0';
+									end if;
+								end if;
+								r_sys_D <= r_D_wr;
+								r_ack <= '1';
+								r_rdy <= '1';
+								state <= wait_sys_end_wr;
 							end if;
-							r_sys_D <= fb_c2p_i.D_wr;
-							r_ack <= '1';
-							r_rdy <= '1';
-							state <= wait_sys_end_wr;
 						end if;
 
 					when wait_sys_end_wr =>
