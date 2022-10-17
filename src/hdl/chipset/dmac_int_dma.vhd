@@ -213,8 +213,8 @@ begin
 	i_cha_sel_rd <= PADBITS & std_logic_vector(r_cha_sel) when G_CHANNELS > 1 else (others => '0');
 
 	fb_per_p2c_o.D_rd <= i_cha_sel_rd when r_per_state = idle else i_sel_per_p2c.D_rd;
-	fb_per_p2c_o.rdy <= i_cha_sel_ack when r_per_state = idle else i_sel_per_p2c.rdy;
-	fb_per_p2c_o.ack <= i_cha_sel_ack when r_per_state = idle else i_sel_per_p2c.ack;
+	fb_per_p2c_o.rdy <= i_cha_sel_ack when r_per_state = idle or r_per_state = sel_wr_wait else i_sel_per_p2c.rdy;
+	fb_per_p2c_o.ack <= i_cha_sel_ack when r_per_state = idle or r_per_state = sel_wr_wait else i_sel_per_p2c.ack;
 	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
 					
 	p_per_cha_sel_i:process(r_cha_sel, fb_per_c2p_i)
