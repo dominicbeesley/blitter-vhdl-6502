@@ -196,6 +196,7 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 
 	signal	r_con_state				: mas_state_type;
 	signal	r_con_cyc				: std_logic;
+	signal	r_con_stb				: std_logic;
 
 	signal 	r_per_ack				: std_logic;
 
@@ -250,6 +251,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_con_state <= idle;
 			r_con_cyc <= '0';
+			r_con_stb <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
 				case r_con_state is
@@ -259,17 +261,22 @@ begin
 								when sMemAccSRC|sMemAccSRC2 =>
 									if r_ctl_step_src /= nop then
 										r_con_cyc <= '1';
+										r_con_stb <= '1';
 										r_con_state <= waitack;
 									end if;
 								when sMemAccDEST|sMemAccDEST2 =>
 									if r_ctl_step_dest /= nop then
 										r_con_cyc <= '1';
+										r_con_stb <= '1';
 										r_con_state <= waitack;
 									end if;
 								when others => null;						
 							end case;
 						end if;
 					when waitack =>
+						if fb_con_p2c_i.stall = '0' then
+							r_con_stb <= '0';
+						end if;
 						if fb_con_p2c_i.ack = '1' then
 							r_con_cyc <= '0';
 							r_con_state <= idle;
@@ -649,11 +656,11 @@ begin
   	fb_con_c2p_o.we <= '1' when r_dma_state = sMemAccDEST or r_dma_state = sMemAccDEST2 else
   							 '0';
   	fb_con_c2p_o.A <= r_con_addr;
-  	fb_con_c2p_o.A_stb <= r_con_cyc;
+  	fb_con_c2p_o.A_stb <= r_con_stb;
 	fb_con_c2p_o.D_wr	 <=	r_data(7 downto 0) when r_dma_state = sMemAccDEST and (r_ctl_extend = '1' and r_ctl2_stepsize = wordswapdest) else
 									r_data(7 downto 0) when r_dma_state = sMemAccDEST2 and (r_ctl_extend = '0' or r_ctl2_stepsize /= wordswapdest) else
 									r_data(15 downto 8);
-  	fb_con_c2p_o.D_wr_stb <= r_con_cyc;
+  	fb_con_c2p_o.D_wr_stb <= r_con_stb;
   	fb_con_c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
 	
 end Behavioral;
