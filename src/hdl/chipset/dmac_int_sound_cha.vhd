@@ -110,12 +110,13 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 	signal i_next_act					: std_logic;											-- next value for enable, set to 0 when sample finished
 
 	-- peripheral state machine
-	type		per_state_t		is (idle, data, wait_cyc);
+	type		per_state_t		is (idle, wr, rd);
 	signal	r_per_state				: per_state_t;
 	signal	r_per_addr				: std_logic_vector(3 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
-	signal	r_per_rdy				: std_logic;
 	signal	r_per_ack				: std_logic;
+	signal	r_per_had_d_wr_stb	: std_logic;
+	signal   r_per_d_wr				: std_logic_vector(7 downto 0);
 
 	signal	r_snd_dat				: signed(7 downto 0);
 	signal   r_snd_dat_mag			: unsigned(6 downto 0);
@@ -145,10 +146,10 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 	end process;
 
 	p_per_state:process(fb_syscon_i)
+	variable v_do_Write:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_rdy <= '0';
 			r_per_ack <= '0';
 			r_per_addr <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
@@ -156,29 +157,42 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 
 			case r_per_state is
 				when idle =>
+					r_per_had_d_wr_stb <= '0';
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
 						r_per_addr <= fb_per_c2p_i.A(3 downto 0);
-						r_per_state <= data;
+						if fb_per_c2p_i.we = '1' then
+							r_per_state <= wr;
+							if fb_per_c2p_i.D_wr_stb = '1' then
+								r_per_had_d_wr_stb <= '1';
+								r_per_d_wr <= fb_per_c2p_i.D_wr;
+							end if;
+						else
+							r_per_state <= rd;
+						end if;
 					end if;
-				when data =>
-					fb_per_p2c_o.D_rd <= i_per_D_rd;
-					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-						r_per_state <= wait_cyc;
-						r_per_rdy <= '1';
+				when rd =>
+					r_per_ack <= '1';
+					r_per_state <= idle;
+				when wr =>
+					if fb_per_c2p_i.D_wr_stb = '1' then
+						r_per_had_d_wr_stb <= '1';
+						r_per_d_wr <= fb_per_c2p_i.D_wr;
+					end if;
+					if r_per_had_d_wr_stb = '1' then
 						r_per_ack <= '1';
-					end if;
-				when wait_cyc =>
-					if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
 						r_per_state <= idle;
-						r_per_rdy <= '0';
 					end if;
-				when others => null;
+				when others =>
+					r_per_state <= idle;
+
 			end case;
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy <= r_per_rdy;
+	fb_per_p2c_o.D_rd <= i_per_D_rd;
+	fb_per_p2c_o.rdy <= r_per_ack;
 	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
 	i_samper_ctr_next <= ("0" & r_samper_ctr) - 1;
 
@@ -200,6 +214,7 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 			r_snd_dat_change_clken <= '1';
 			r_samper_ctr <= (others => '0');
 			r_con_data_req <= '0';
+			r_period_h_latch <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_snd_dat_change_clken <= '0';
@@ -240,41 +255,36 @@ architecture Behavioral of fb_DMAC_int_sound_cha is
 			end if;
 
 
-			if fb_per_c2p_i.cyc = '1' 
-				and fb_per_c2p_i.A_stb = '1' 
-				and fb_per_c2p_i.D_wr_stb = '1' 
-				and fb_per_c2p_i.we = '1' 
-				and r_per_ack = '1' 
-				then
+			if r_per_state = wr and r_per_had_d_wr_stb = '1' then
 
 				case to_integer(unsigned(r_per_addr)) is
 					when A_DATA =>
-						r_data <= SIGNED(fb_per_c2p_i.D_wr);
+						r_data <= SIGNED(r_per_d_wr);
 						r_snd_dat_change_clken <= '1';
 					when A_ADDR =>
-						r_addr(23 downto 16) <= unsigned(fb_per_c2p_i.D_wr);
+						r_addr(23 downto 16) <= unsigned(r_per_d_wr);
 					when A_ADDR + 1 =>
-						r_addr(15 downto 8) <= unsigned(fb_per_c2p_i.D_wr);
+						r_addr(15 downto 8) <= unsigned(r_per_d_wr);
 					when A_ADDR + 2 =>
-						r_addr(7 downto 0) <= unsigned(fb_per_c2p_i.D_wr);
+						r_addr(7 downto 0) <= unsigned(r_per_d_wr);
 					when A_PERIOD =>
-						r_period_h_latch <= fb_per_c2p_i.D_wr;
+						r_period_h_latch <= r_per_d_wr;
 					when A_PERIOD + 1 =>
-						r_period <= UNSIGNED(std_logic_vector'(r_period_h_latch & fb_per_c2p_i.D_wr));
+						r_period <= UNSIGNED(std_logic_vector'(r_period_h_latch & r_per_d_wr));
 					when A_LEN =>
-						r_len(15 downto 8) <= UNSIGNED(fb_per_c2p_i.D_wr);
+						r_len(15 downto 8) <= UNSIGNED(r_per_d_wr);
 					when A_LEN + 1 =>
-						r_len(7 downto 0) <= UNSIGNED(fb_per_c2p_i.D_wr);
+						r_len(7 downto 0) <= UNSIGNED(r_per_d_wr);
 					when A_REPOFF =>
-						r_repoff(15 downto 8) <= UNSIGNED(fb_per_c2p_i.D_wr);
+						r_repoff(15 downto 8) <= UNSIGNED(r_per_d_wr);
 					when A_REPOFF + 1 =>
-						r_repoff(7 downto 0) <= UNSIGNED(fb_per_c2p_i.D_wr);
+						r_repoff(7 downto 0) <= UNSIGNED(r_per_d_wr);
 					when A_STATUS =>
-						r_repeat <= fb_per_c2p_i.D_wr(0);
-						r_act <= fb_per_c2p_i.D_wr(7);
+						r_repeat <= r_per_d_wr(0);
+						r_act <= r_per_d_wr(7);
 						r_sam_ctr <= (others => '0');
 					when A_VOL =>
-						r_vol <= UNSIGNED(fb_per_c2p_i.D_wr(7 downto 2));
+						r_vol <= UNSIGNED(r_per_d_wr(7 downto 2));
 					when A_PEAK =>
 						r_peak <= (others => '0');
 					when others => null;

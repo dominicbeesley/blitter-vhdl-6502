@@ -222,8 +222,6 @@ architecture rtl of fb_chipset is
 			fb_con_c2p_o						: out		fb_con_o_per_i_t;
 			fb_con_p2c_i						: in		fb_con_i_per_o_t;
 
-			cpu_halt_o							: out		STD_LOGIC;
-
 			-- sound specific
 			snd_clk_i							: in		std_logic;
 			snd_dat_o							: out		signed(9 downto 0);
@@ -315,7 +313,6 @@ architecture rtl of fb_chipset is
 	signal i_dma_cpu_halt				: std_logic;							-- cpu halt request out from dma
 	signal i_blit_cpu_halt				: std_logic;							-- cpu halt request out from blit
 	signal i_aeris_cpu_halt				: std_logic;							-- cpu halt request out from aeris
-	signal i_snd_cpu_halt				: std_logic;							-- cpu halt request out from snd
 
 
 begin
@@ -575,15 +572,8 @@ GSND:IF G_INCL_CS_SND GENERATE
 
 		snd_clk_i							=> clk_snd_i,
 		snd_dat_o							=> snd_dat_o,
-		snd_dat_change_clken_o			=> snd_dat_change_clken_o,
-
-		cpu_halt_o							=> i_snd_cpu_halt
-
+		snd_dat_change_clken_o			=> snd_dat_change_clken_o
 	 );
-
-END GENERATE;
-GNOTSND:IF NOT G_INCL_CS_SND GENERATE
-	i_snd_cpu_halt <= '0';
 
 END GENERATE;
 
@@ -618,7 +608,7 @@ END GENERATE;
 
 
 
-	cpu_halt_o <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;-- or i_snd_cpu_halt;
+	cpu_halt_o <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;
 	cpu_int_o <= i_dma_cpu_int;
 
 end rtl;

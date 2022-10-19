@@ -200,6 +200,41 @@ _CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
 			.byte	$72				; 10 Cursor Start Line	  =&72	Blink=On, Speed=1/32, Line=18
 			.byte	$13				; 11 Cursor End Line	  =19
 
+sin_samp:
+	.byte	$0
+	.byte	$18
+	.byte	$30
+	.byte	$46
+	.byte	$59
+	.byte	$69
+	.byte	$75
+	.byte	$7C
+	.byte	$7F
+	.byte	$7C
+	.byte	$75
+	.byte	$69
+	.byte	$59
+	.byte	$46
+	.byte	$30
+	.byte	$18
+	.byte	$0
+	.byte	$E7
+	.byte	$CF
+	.byte	$B9
+	.byte	$A6
+	.byte	$96
+	.byte	$8A
+	.byte	$83
+	.byte	$81
+	.byte	$83
+	.byte	$8A
+	.byte	$96
+	.byte	$A6
+	.byte	$B9
+	.byte	$CF
+	.byte	$E7
+
+
 
 sprite:
 		.INCBIN "SPRIT2"
@@ -503,6 +538,14 @@ mos_handle_res:
 	lda	#17
 	sta	$8000
 	lda	$8000
+
+
+	; SOUND test
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	jsr	jimDMACPAGE
+	jsr	QUICK_SOUNDTEST
+
 
 	; simple DMA test
 	lda	#$D1
@@ -899,7 +942,6 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 
 
 
-	jsr	SOUNDTEST
 
 	jsr	AERTEST
 
@@ -1159,6 +1201,45 @@ jimChipRAMPAGE:
 	sta	fred_JIM_PAGE_HI
 	pla
 	rts
+
+QUICK_SOUNDTEST:
+	jsr	jimDMACPAGE
+	; sound read test
+	lda	#3
+	sta	jim_DMAC_SND_SEL
+	lda	#$ff
+	sta	jim_DMAC_SND_SEL
+	lda	jim_DMAC_SND_SEL
+	lda	#$F0
+	sta	jim_DMAC_SND_MA_VOL
+
+
+	ldy	#0
+	sty	jim_DMAC_SND_SEL
+	; play samples
+
+	ldx	#$FF
+	stx	jim_DMAC_SND_ADDR
+	ldx	#>sin_samp
+	stx	jim_DMAC_SND_ADDR + 1
+	ldx	#<sin_samp
+	stx	jim_DMAC_SND_ADDR + 2
+	ldx	#0
+	stx	jim_DMAC_SND_PERIOD
+	stx	jim_DMAC_SND_LEN
+	lda	#20
+	sta	jim_DMAC_SND_PERIOD + 1
+	ldx	#31
+	stx	jim_DMAC_SND_LEN + 1
+	ldx	#$81
+	stx	jim_DMAC_SND_STATUS
+
+
+
+
+
+	rts
+
 
 
 SOUNDTEST:
