@@ -216,9 +216,18 @@ end generate;
 	END GENERATE;
 
 	-- stall is always async
-	g_stall:for I in G_CONTROLLER_COUNT-1 downto 0 generate
-		ir_p2c_stall(I) <= '0' when r_state = idle and i_cyc_grant_ix = I else '1';
-	end generate;
+	p_stall:process(i_cyc, i_cyc_grant_ix, r_state)
+	variable I:natural;
+	begin
+		ir_p2c_stall <= (others => '1');
+		for I in G_CONTROLLER_COUNT-1 downto 0 loop
+			if or_reduce(i_cyc) = '1' then
+				if r_state = idle and i_cyc_grant_ix = I then
+					ir_p2c_stall(I) <= '0';
+				end if;
+			end if;
+		end loop;
+	end process;
 
 	-- had to separate this out into separate step as modelsim goes daft if different parts of
 	-- a record are assigned in different processes or part in process part as continuous

@@ -546,6 +546,11 @@ mos_handle_res:
 	jsr	jimDMACPAGE
 	jsr	QUICK_SOUNDTEST
 
+@lp:	inc	$8000
+	inc 	$0
+	inc	sheila_SYSVIA_orb
+	jmp	@lp
+
 
 	; simple DMA test
 	lda	#$D1
@@ -1218,7 +1223,8 @@ QUICK_SOUNDTEST:
 	sty	jim_DMAC_SND_SEL
 	; play samples
 
-	ldx	#$FF
+;	ldx	#$FF
+	ldx	#0
 	stx	jim_DMAC_SND_ADDR
 	ldx	#>sin_samp
 	stx	jim_DMAC_SND_ADDR + 1
@@ -1227,7 +1233,7 @@ QUICK_SOUNDTEST:
 	ldx	#0
 	stx	jim_DMAC_SND_PERIOD
 	stx	jim_DMAC_SND_LEN
-	lda	#20
+	lda	#10
 	sta	jim_DMAC_SND_PERIOD + 1
 	ldx	#31
 	stx	jim_DMAC_SND_LEN + 1
