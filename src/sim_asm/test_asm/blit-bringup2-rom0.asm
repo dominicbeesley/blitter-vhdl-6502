@@ -546,11 +546,6 @@ mos_handle_res:
 	jsr	jimDMACPAGE
 	jsr	QUICK_SOUNDTEST
 
-@lp:	inc	$8000
-	inc 	$0
-	inc	sheila_SYSVIA_orb
-	jmp	@lp
-
 
 	; simple DMA test
 	lda	#$D1
