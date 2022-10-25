@@ -44,7 +44,6 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-use work.fb_CPU_exp_pack.all;
 
 entity sim_fb_per_mem is
 generic (
@@ -54,8 +53,8 @@ port (
 
 		fb_syscon_i								: in	fb_syscon_t;
 
-		fb_con_c2p_i							: in fb_con_o_per_i_t;
-		fb_con_p2c_o							: out	fb_con_i_per_o_t
+		fb_c2p_i									: in fb_con_o_per_i_t;
+		fb_p2c_o									: out	fb_con_i_per_o_t
 	);
 
 end sim_fb_per_mem;
@@ -64,7 +63,7 @@ architecture rtl of sim_fb_per_mem is
 	
 	type t_mem is array (0 to G_SIZE-1) of std_logic_vector(7 downto 0);
 
-	r_mem : t_mem;
+	signal r_mem : t_mem;
 
 begin
 
@@ -76,6 +75,34 @@ begin
 		end loop;
 		wait;
 	end process;
+
+	p_per:process
+	variable v_a: std_logic_vector(23 downto 0);
+	begin
+
+		fb_p2c_o <= (
+				stall => '0',
+				ack => '0',
+				rdy => '0',
+				D_rd => (others => '-')
+			);
+
+		wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
+
+		v_a := fb_c2p_i.A;
+
+		fb_p2c_o.stall <= '1';
+		wait until rising_edge(fb_syscon_i.clk);
+		wait until rising_edge(fb_syscon_i.clk);
+		wait until rising_edge(fb_syscon_i.clk);
+		fb_p2c_o.D_Rd <= r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
+		fb_p2c_o.rdy <= '1';
+		fb_p2c_o.ack <= '1';
+		wait until rising_edge(fb_syscon_i.clk);
+
+	end process;
+
+
 
 
 end rtl;

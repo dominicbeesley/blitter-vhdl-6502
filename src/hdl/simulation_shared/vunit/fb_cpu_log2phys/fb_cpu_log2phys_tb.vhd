@@ -129,31 +129,16 @@ begin
 		test_runner_cleanup(runner); -- Simulation ends here
 	end process;
 
-	p_per:process
-	variable v_a: std_logic_vector(23 downto 0);
-	begin
 
-		i_fb_per_p2c <= (
-				stall => '0',
-				ack => '0',
-				rdy => '0',
-				D_rd => (others => '-')
-			);
-
-		wait until i_fb_per_c2p.cyc = '1' and i_fb_per_c2p.A_stb = '1' and rising_edge(i_fb_syscon.clk);
-
-		v_a := i_fb_per_c2p.A;
-
-		i_fb_per_p2c.stall <= '1';
-		wait until rising_edge(i_fb_syscon.clk);
-		wait until rising_edge(i_fb_syscon.clk);
-		wait until rising_edge(i_fb_syscon.clk);
-		i_fb_per_p2c.D_Rd <= v_a(7 downto 0) xor x"FF";
-		i_fb_per_p2c.rdy <= '1';
-		i_fb_per_p2c.ack <= '1';
-		wait until rising_edge(i_fb_syscon.clk);
-
-	end process;
+	e_sim_per:entity work.sim_fb_per_mem
+	generic map (
+		G_SIZE => 8
+		)
+	port map (
+		fb_syscon_i => i_fb_syscon,
+		fb_c2p_i => i_fb_per_c2p,
+		fb_p2c_o => i_fb_per_p2c
+	);
 
 
 	e_dut:entity work.fb_cpu_log2phys
