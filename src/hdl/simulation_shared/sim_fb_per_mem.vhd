@@ -67,38 +67,54 @@ architecture rtl of sim_fb_per_mem is
 
 begin
 
-	p_init:process
-	variable i:natural;
-	begin
-		for i in 0 to G_SIZE-1 loop
-			r_mem(i) <= std_logic_vector(to_unsigned(i mod 255 ,8)) xor x"FF";
-		end loop;
-		wait;
-	end process;
 
 	p_per:process
+	variable init:boolean := true;
 	variable v_a: std_logic_vector(23 downto 0);
 	begin
 
-		fb_p2c_o <= (
-				stall => '0',
-				ack => '0',
-				rdy => '0',
-				D_rd => (others => '-')
-			);
+		if (init) then
+			init := false;
+			for i in 0 to G_SIZE-1 loop
+				r_mem(i) <= std_logic_vector(to_unsigned(i mod 255 ,8)) xor x"FF";
+			end loop;
+		else
 
-		wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
+			fb_p2c_o <= (
+					stall => '0',
+					ack => '0',
+					rdy => '0',
+					D_rd => (others => '-')
+				);
 
-		v_a := fb_c2p_i.A;
+			wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
 
-		fb_p2c_o.stall <= '1';
-		wait until rising_edge(fb_syscon_i.clk);
-		wait until rising_edge(fb_syscon_i.clk);
-		wait until rising_edge(fb_syscon_i.clk);
-		fb_p2c_o.D_Rd <= r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
-		fb_p2c_o.rdy <= '1';
-		fb_p2c_o.ack <= '1';
-		wait until rising_edge(fb_syscon_i.clk);
+			v_a := fb_c2p_i.A;
+
+			fb_p2c_o.stall <= '1';
+
+			if fb_c2p_i.we = '1' then
+				while fb_c2p_i.D_wr_stb /= '1' loop
+					report "wait wr stb" severity note;
+					wait until rising_edge(fb_syscon_i.clk);
+				end loop;			
+				r_mem(to_integer(unsigned(v_a)) mod G_SIZE) <= fb_c2p_i.D_wr;
+				report "Written " & to_hex_string(fb_c2p_i.D_wr) & " to " & to_hex_string(v_a) severity note;
+
+				wait until rising_edge(fb_syscon_i.clk);
+			else
+				wait until rising_edge(fb_syscon_i.clk);
+				wait until rising_edge(fb_syscon_i.clk);
+				wait until rising_edge(fb_syscon_i.clk);
+				fb_p2c_o.D_Rd <= r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
+				report "read " & to_hex_string(fb_p2c_o.D_Rd) & " from " & to_hex_string(v_a) severity note;
+			end if;
+
+			fb_p2c_o.rdy <= '1';
+			fb_p2c_o.ack <= '1';
+			wait until rising_edge(fb_syscon_i.clk);
+
+		end if;
 
 	end process;
 

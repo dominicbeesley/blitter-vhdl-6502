@@ -29,9 +29,14 @@ architecture rtl of test_tb is
 	signal i_fb_per_c2p : fb_con_o_per_i_t;
 	signal i_fb_per_p2c : fb_con_i_per_o_t;
 
-	procedure sim_wait_reset is
+	procedure sim_wait_reset 
+	(
+		signal c2p 	: out	fb_con_o_per_i_t
+	) is
 	variable i:natural;
 	begin
+
+		c2p <= fb_c2p_unsel;
 
 		if i_fb_syscon.rst /= '1' then
 			wait until i_fb_syscon.rst = '1';
@@ -44,6 +49,153 @@ architecture rtl of test_tb is
 		end loop;
 
 	end sim_wait_reset;
+
+	procedure single_read(
+			A			: in 	std_logic_vector(23 downto 0);
+		signal c2p	: out	fb_con_o_per_i_t;
+			D    		: out std_logic_vector(7 downto 0)
+	) is
+	variable v_iter: natural;
+	variable v_ret : std_logic_vector(7 downto 0);
+	begin
+
+		wait until rising_edge(i_fb_syscon.clk);
+
+		c2p <= (
+			cyc			=> '1',
+			we				=> '0',
+			A				=> A,
+			A_stb			=> '1',
+			D_wr			=> x"00",
+			D_wr_stb		=> '0',
+			rdy_ctdn		=> RDY_CTDN_MIN
+		);
+
+		wait until rising_edge(i_fb_syscon.clk);
+
+		-- wait for stall
+
+		v_iter := 0;
+		while i_fb_con_p2c.stall /= '0' loop
+			wait until rising_edge(i_fb_syscon.clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for stall" severity error;
+			end if;
+		end loop;
+
+		c2p.a_stb <= '0';
+
+		wait until rising_edge(i_fb_syscon.clk);
+		-- wait for ack
+
+		v_iter := 0;
+		while i_fb_con_p2c.ack /= '1' loop
+			wait until rising_edge(i_fb_syscon.clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for ack" severity error;
+			end if;
+		end loop;
+
+		D := i_fb_con_p2c.D_rd;
+
+		wait until rising_edge(i_fb_syscon.clk);
+
+		c2p <= fb_c2p_unsel;
+
+		wait until rising_edge(i_fb_syscon.clk);
+		
+
+	end single_read;
+
+	procedure single_write(
+			A			: in 	std_logic_vector(23 downto 0);
+		signal c2p	: out	fb_con_o_per_i_t;
+			D    		: in  std_logic_vector(7 downto 0)
+	) is
+	variable v_iter: natural;
+	begin
+
+		wait until rising_edge(i_fb_syscon.clk);
+
+		c2p <= (
+			cyc			=> '1',
+			we				=> '1',
+			A				=> A,
+			A_stb			=> '1',
+			D_wr			=> D,
+			D_wr_stb		=> '1',
+			rdy_ctdn		=> RDY_CTDN_MIN
+		);
+
+		wait until rising_edge(i_fb_syscon.clk);
+
+		-- wait for stall
+
+		v_iter := 0;
+		while i_fb_con_p2c.stall /= '0' loop
+			wait until rising_edge(i_fb_syscon.clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for stall" severity error;
+			end if;
+		end loop;
+
+		c2p.A_stb <= '0';
+		c2p.D_wr_stb <= '0';
+		c2p.we <= '0';
+
+		wait until rising_edge(i_fb_syscon.clk);
+		-- wait for ack
+
+		v_iter := 0;
+		while i_fb_con_p2c.ack /= '1' loop
+			wait until rising_edge(i_fb_syscon.clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for ack" severity error;
+			end if;
+		end loop;
+
+		c2p <= fb_c2p_unsel;
+
+		wait until rising_edge(i_fb_syscon.clk);
+		
+
+	end single_write;
+
+
+	procedure test_simple_mem_read(
+		signal c2p 	: out	fb_con_o_per_i_t
+	)  is
+	variable v_read: std_logic_vector(7 downto 0);
+	begin
+
+		sim_wait_reset(c2p);
+
+		single_read(x"FF8023", c2p, v_read);
+
+		assert v_read = x"DC" report "returned " & to_hex_string(v_read) & " expecting DC" severity error;
+
+	end test_simple_mem_read;
+
+	procedure test_simple_mem_write_then_read(
+		signal c2p 	: out	fb_con_o_per_i_t
+	)  is
+	variable v_read: std_logic_vector(7 downto 0);
+	begin
+
+		sim_wait_reset(c2p);
+
+		single_write(x"000000", c2p, x"12");
+
+		single_read(x"000000", c2p, v_read);
+
+		assert v_read = x"12" report "returned " & to_hex_string(v_read) & " expecting 12" severity error;
+
+	end test_simple_mem_write_then_read;
+
 
 begin
 	p_syscon_clk:process
@@ -69,58 +221,19 @@ begin
 
 
 	p_main:process
-	variable v_iter:natural;
 	begin
 
 		test_runner_setup(runner, runner_cfg);
 
 		while test_suite loop
 
-			if run("simple mem read") then
+			if run("simple_mem_read") then
 
-				i_fb_con_c2p <= fb_c2p_unsel;
+				test_simple_mem_read(i_fb_con_c2p);
 
-				sim_wait_reset;
+			elsif run("simple_mem_write_then_read") then
 
-				i_fb_con_c2p <= (
-					cyc			=> '1',
-					we				=> '0',
-					A				=> x"FF8023",
-					A_stb			=> '1',
-					D_wr			=> x"00",
-					D_wr_stb		=> '0',
-					rdy_ctdn		=> RDY_CTDN_MIN
-				);
-
-				wait until rising_edge(i_fb_syscon.clk);
-
-				-- wait for stall
-
-				v_iter := 0;
-				while i_fb_con_p2c.stall /= '0' loop
-					wait until rising_edge(i_fb_syscon.clk);
-					v_iter := v_iter + 1;
-					if v_iter > 1000 then
-						report "Failed waiting for stall" severity error;
-					end if;
-				end loop;
-
-				i_fb_con_c2p.a_stb <= '0';
-
-				wait until rising_edge(i_fb_syscon.clk);
-				-- wait for ack
-
-				v_iter := 0;
-				while i_fb_con_p2c.ack /= '1' loop
-					wait until rising_edge(i_fb_syscon.clk);
-					v_iter := v_iter + 1;
-					if v_iter > 1000 then
-						report "Failed waiting for ack" severity error;
-					end if;
-				end loop;
-
-				report to_hex_string(i_fb_con_p2c.D_rd) severity note;
-
+				test_simple_mem_write_then_read(i_fb_con_c2p);
 
 			end if;
 
@@ -132,7 +245,7 @@ begin
 
 	e_sim_per:entity work.sim_fb_per_mem
 	generic map (
-		G_SIZE => 8
+		G_SIZE => 256
 		)
 	port map (
 		fb_syscon_i => i_fb_syscon,
