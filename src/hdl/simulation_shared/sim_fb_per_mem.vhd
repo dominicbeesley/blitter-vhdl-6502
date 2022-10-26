@@ -71,6 +71,7 @@ begin
 	p_per:process
 	variable init:boolean := true;
 	variable v_a: std_logic_vector(23 downto 0);
+	variable v_d: std_logic_vector(7 downto 0);
 	begin
 
 		if (init) then
@@ -106,8 +107,9 @@ begin
 				wait until rising_edge(fb_syscon_i.clk);
 				wait until rising_edge(fb_syscon_i.clk);
 				wait until rising_edge(fb_syscon_i.clk);
-				fb_p2c_o.D_Rd <= r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
-				report "read " & to_hex_string(fb_p2c_o.D_Rd) & " from " & to_hex_string(v_a) severity note;
+				v_d := r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
+				fb_p2c_o.D_Rd <= v_d;
+				report "read " & to_hex_string(v_d) & " from " & to_hex_string(v_a) severity note;
 			end if;
 
 			fb_p2c_o.rdy <= '1';
