@@ -109,6 +109,7 @@ architecture rtl of fb_cpu_log2phys is
 	signal r_sys_via_block_clken 	: std_logic;
 
 	signal i_SYS_VIA_block			: std_logic;
+	signal r_done_r_d_wr_stb		: std_logic;
 
 begin
 
@@ -144,7 +145,7 @@ begin
 			r_rdy_ctdn <= RDY_CTDN_MAX;
 			r_a_stb <= '0';
 			r_sys_via_block_clken <= '0';
-
+			r_done_r_d_wr_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_sys_via_block_clken <= '0';
@@ -198,13 +199,15 @@ begin
 					r_state <= idle;
 			end case;
 
-			if v_accept_wr_stb then
+			if v_accept_wr_stb and r_done_r_d_wr_stb = '0' then
 				if r_D_wr_stb = '0' and fb_con_c2p_i.D_wr_stb = '1' then
 					r_D_wr_stb <= '1';
 					r_D_wr <= fb_con_c2p_i.D_WR;
+					r_done_r_d_wr_stb <= '1';
 				end if;
 			else
 				r_D_wr_stb <= '0';
+				r_we <= '0';
 			end if;
 
 			if fb_con_c2p_i.cyc = '0' then
@@ -212,7 +215,10 @@ begin
 				r_cyc <= '0';
 				r_state <= idle;
 				r_D_wr_stb <= '0';
-				r_sys_via_block_clken <= '1';
+				if r_cyc = '1' then
+					r_sys_via_block_clken <= '1';
+					r_done_r_d_wr_stb <= '0';
+				end if;
 			end if;
 
 		end if;
