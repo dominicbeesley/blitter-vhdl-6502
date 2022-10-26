@@ -53,7 +53,9 @@ architecture rtl of test_tb is
 	procedure single_read(
 			A			: in 	std_logic_vector(23 downto 0);
 		signal c2p	: out	fb_con_o_per_i_t;
-			D    		: out std_logic_vector(7 downto 0)
+			D    		: out std_logic_vector(7 downto 0);
+
+			A_stb_dl : natural := 0	-- no of cycles to delay a_stb after cyc
 	) is
 	variable v_iter: natural;
 	variable v_ret : std_logic_vector(7 downto 0);
@@ -61,15 +63,33 @@ architecture rtl of test_tb is
 
 		wait until rising_edge(i_fb_syscon.clk);
 
-		c2p <= (
-			cyc			=> '1',
-			we				=> '0',
-			A				=> A,
-			A_stb			=> '1',
-			D_wr			=> x"00",
-			D_wr_stb		=> '0',
-			rdy_ctdn		=> RDY_CTDN_MIN
-		);
+		if (A_stb_dl = 0) then
+			c2p <= (
+				cyc			=> '1',
+				we				=> '0',
+				A				=> A,
+				A_stb			=> '1',
+				D_wr			=> x"00",
+				D_wr_stb		=> '0',
+				rdy_ctdn		=> RDY_CTDN_MIN
+			);
+		else
+			c2p <= (
+				cyc			=> '1',
+				we				=> '0',
+				A				=> (others => '-'),
+				A_stb			=> '0',
+				D_wr			=> x"00",
+				D_wr_stb		=> '0',
+				rdy_ctdn		=> RDY_CTDN_MIN
+			);
+			for i in 1 to A_stb_dl loop
+				wait until rising_edge(i_fb_syscon.clk);
+			end loop;
+
+			c2p.A_stb <= '1';
+			c2p.A <= A;
+		end if;
 
 		wait until rising_edge(i_fb_syscon.clk);
 
@@ -112,41 +132,69 @@ architecture rtl of test_tb is
 	procedure single_write(
 			A			: in 	std_logic_vector(23 downto 0);
 		signal c2p	: out	fb_con_o_per_i_t;
-			D    		: in  std_logic_vector(7 downto 0)
+			D    		: in  std_logic_vector(7 downto 0);
+
+			A_stb_dl : natural := 0;	-- no of cycles to delay a_stb after cyc
+			D_stb_dl : natural := 0	-- no of cycles to delay d_stb after a_stb
 	) is
 	variable v_iter: natural;
 	begin
 
-		wait until rising_edge(i_fb_syscon.clk);
-
-		c2p <= (
-			cyc			=> '1',
-			we				=> '1',
-			A				=> A,
-			A_stb			=> '1',
-			D_wr			=> D,
-			D_wr_stb		=> '1',
-			rdy_ctdn		=> RDY_CTDN_MIN
-		);
+		c2p <= fb_c2p_unsel;
 
 		wait until rising_edge(i_fb_syscon.clk);
 
-		-- wait for stall
+		c2p.cyc <= '1';
+		c2p.rdy_ctdn <= RDY_CTDN_MIN;
 
 		v_iter := 0;
-		while i_fb_con_p2c.stall /= '0' loop
+		while v_iter < A_stb_dl loop
 			wait until rising_edge(i_fb_syscon.clk);
+			v_iter := v_iter + 1;
+		end loop;
+
+		c2p.we <= '1';
+		c2p.A <= A;
+		c2p.A_stb <= '1';
+
+		if D_stb_dl = 0 then
+			c2p.D_wr <= D;
+			c2p.D_wr_stb <= '1';
+		end if;
+
+		v_iter := 0;
+		loop
+			wait until rising_edge(i_fb_syscon.clk);
+			if i_fb_con_p2c.stall = '0' then
+				exit;
+			end if;
 			v_iter := v_iter + 1;
 			if v_iter > 1000 then
 				report "Failed waiting for stall" severity error;
 			end if;
 		end loop;
 
-		c2p.A_stb <= '0';
-		c2p.D_wr_stb <= '0';
-		c2p.we <= '0';
 
-		wait until rising_edge(i_fb_syscon.clk);
+		c2p.we <= '0';
+		c2p.A <= (others => '-');
+		c2p.A_stb <= '0';
+		c2p.D_wr <= (others => '-');
+		c2p.D_wr_stb <= '0';
+
+		if D_stb_dl /= 0 then
+			v_iter := 1;
+			while v_iter < D_stb_dl loop
+				wait until rising_edge(i_fb_syscon.clk);
+				v_iter := v_iter + 1;
+			end loop;
+			c2p.D_wr <= D;
+			c2p.D_wr_stb <= '1';		
+			wait until rising_edge(i_fb_syscon.clk);
+		end if;
+
+		c2p.D_wr <= (others => '-');
+		c2p.D_wr_stb <= '0';
+
 		-- wait for ack
 
 		v_iter := 0;
@@ -167,32 +215,42 @@ architecture rtl of test_tb is
 
 
 	procedure test_simple_mem_read(
-		signal c2p 	: out	fb_con_o_per_i_t
+		A				: in std_logic_vector(23 downto 0);
+		signal c2p 	: out	fb_con_o_per_i_t;
+		A_stb_dl		: in natural := 0		-- number of cycles to delay A_stb for reads		
 	)  is
 	variable v_read: std_logic_vector(7 downto 0);
+	variable v_exp : std_logic_vector(7 downto 0);
 	begin
 
 		sim_wait_reset(c2p);
 
-		single_read(x"FF8023", c2p, v_read);
+		single_read(A, c2p, v_read, 0);
 
-		assert v_read = x"DC" report "returned " & to_hex_string(v_read) & " expecting DC" severity error;
+		v_exp := A(7 downto 0) xor x"FF";
+
+		assert v_read = v_exp report "returned " & to_hex_string(v_read) & " expecting " & to_hex_string(v_exp) severity error;
 
 	end test_simple_mem_read;
 
+
 	procedure test_simple_mem_write_then_read(
-		signal c2p 	: out	fb_con_o_per_i_t
+		A				: in std_logic_vector(23 downto 0);
+		D				: in std_logic_vector(7 downto 0);
+		signal c2p 	: out	fb_con_o_per_i_t;
+		A_stb_dl		: in natural := 0;		-- number of cycles to delay A_stb for reads/writes
+		D_stb_dl		: in natural := 0
 	)  is
 	variable v_read: std_logic_vector(7 downto 0);
 	begin
 
 		sim_wait_reset(c2p);
 
-		single_write(x"000000", c2p, x"12");
+		single_write(A, c2p, D, A_stb_dl, D_stb_dl);
 
-		single_read(x"000000", c2p, v_read);
+		single_read(A, c2p, v_read, A_stb_dl);
 
-		assert v_read = x"12" report "returned " & to_hex_string(v_read) & " expecting 12" severity error;
+		assert v_read = D report "returned " & to_hex_string(v_read) & " expecting " & to_hex_string(D) severity error;
 
 	end test_simple_mem_write_then_read;
 
@@ -229,11 +287,27 @@ begin
 
 			if run("simple_mem_read") then
 
-				test_simple_mem_read(i_fb_con_c2p);
+				-- simple single read, with no a_stb delay
+
+				test_simple_mem_read(x"000000", i_fb_con_c2p, 0);
+
+			elsif run("simple_mem_read2") then
+
+				-- simple single read, with 2 cycle a_stb delay
+
+				test_simple_mem_read(x"0001A5", i_fb_con_c2p, 2);
 
 			elsif run("simple_mem_write_then_read") then
 
-				test_simple_mem_write_then_read(i_fb_con_c2p);
+				-- simple single write followed by read, with no a_stb/d_stb delay
+
+				test_simple_mem_write_then_read(x"000000", x"12", i_fb_con_c2p);
+
+			elsif run("simple_mem_write_then_read2") then
+
+				-- simple single write followed by read, with no a_stb = 2, d_stb = 3 delay
+
+				test_simple_mem_write_then_read(x"0001A5", x"BE", i_fb_con_c2p, 2, 3);
 
 			end if;
 
