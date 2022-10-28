@@ -195,6 +195,14 @@ begin
 				when act =>
 					v_accept_wr_stb := true;
 					-- this gets cancelled in if below
+					if fb_per_p2c_i.ack = '1' then
+						r_A_stb <= '0';
+						r_state <= idle;
+						r_D_wr_stb <= '0';
+						if r_cyc = '1' then
+							r_done_r_d_wr_stb <= '0';
+						end if;						
+					end if;
 				when others =>
 					r_state <= idle;
 			end case;
@@ -216,7 +224,6 @@ begin
 				r_state <= idle;
 				r_D_wr_stb <= '0';
 				if r_cyc = '1' then
-					r_sys_via_block_clken <= '1';
 					r_done_r_d_wr_stb <= '0';
 				end if;
 			end if;
@@ -239,9 +246,9 @@ begin
 	port map (
 		fb_syscon_i => fb_syscon_i,
 		cfg_sys_type_i => cfg_sys_type_i,
-		clken => r_sys_via_block_clken,
-		A_i => fb_con_c2p_i.A,
-		RnW_i => not fb_con_c2p_i.we,
+		clken => r_a_stb,
+		A_i => r_phys_A,
+		RnW_i => not r_we,
 		SYS_VIA_block_o => i_SYS_VIA_block
 		);
 
