@@ -151,10 +151,14 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_t65.vhd
 # set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6800.vhd
 # set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
 # set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_80188.vhd
+
+
+set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_log2phys.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_con_burst.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd

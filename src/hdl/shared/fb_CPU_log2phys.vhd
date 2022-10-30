@@ -85,7 +85,10 @@ entity fb_cpu_log2phys is
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
 
 		-- noice signals
-		noice_debug_shadow_i					: in std_logic
+		noice_debug_shadow_i					: in std_logic;
+
+		-- debug signals
+		debug_SYS_VIA_block_o				: out std_logic
 
 	);
 end fb_cpu_log2phys;
@@ -284,6 +287,6 @@ begin
 		A_o									=> i_phys_A
 	);
 
-
+	debug_SYS_VIA_block_o <= i_SYS_VIA_block;
 
 end rtl;

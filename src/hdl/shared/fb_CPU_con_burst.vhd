@@ -70,6 +70,7 @@ port (
 	-- return to wrappers
 
 	rdy_o					: out std_logic;												-- unlike fishbone D_rd, rdy, ack_lane and ack will latch until end of cycle
+	act_lane_o			: out std_logic_vector(G_BYTELANES-1 downto 0);
 	ack_lane_o			: out std_logic_vector(G_BYTELANES-1 downto 0);
 	ack_o					: out std_logic;
 	D_rd_o				: out std_logic_vector((8 * G_BYTELANES)-1 downto 0);
@@ -87,19 +88,20 @@ end fb_cpu_con_burst;
 
 architecture rtl of fb_cpu_con_burst is
 
-	signal r_cyc		: std_logic;
+	signal r_cyc			: std_logic;
 
-	signal r_tx_mas	: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal r_rx_mas	: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_tx_mas		: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_rx_mas		: std_logic_vector(G_BYTELANES-1 downto 0);
 
-	signal i_tx_cur	: std_logic_vector(G_BYTELANES-1 downto 0);
-	signal i_rx_cur	: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal i_tx_cur		: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal i_rx_cur		: std_logic_vector(G_BYTELANES-1 downto 0);
 
-	signal r_A			: std_logic_vector(23 downto 0);
-	signal r_D_rd		: std_logic_vector((8 * G_BYTELANES)-1 downto 0);
-	signal r_rdy		: std_logic;
-	signal r_ack		: std_logic;
-	signal r_ack_lane	: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_A				: std_logic_vector(23 downto 0);
+	signal r_D_rd			: std_logic_vector((8 * G_BYTELANES)-1 downto 0);
+	signal r_rdy			: std_logic;
+	signal r_ack			: std_logic;
+	signal r_ack_lane		: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_wait_d_stb	: std_logic;
 
 	function priority_endian(
 		BE		: std_logic;
@@ -160,19 +162,27 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_tx_mas <= (others => '1');
-			r_A <= (others => '0');
+			r_A <= (others => '0');	
+			r_wait_d_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			if r_cyc = '0' and cyc_i = '1' then
 				r_tx_mas <= (others => '1');
 				r_A <= A_i;
+				r_wait_d_stb <= '0';
 			elsif r_cyc = '1' then
-				if fb_con_p2c_i.stall = '0' and or_reduce(i_tx_cur) = '1' then
-					r_tx_mas <= r_tx_mas and not i_tx_cur;
-					r_A <= std_logic_vector(unsigned(r_A) + 1);
+				if (fb_con_p2c_i.stall = '0' and or_reduce(i_tx_cur) = '1') or r_wait_d_stb = '1' then
+					if we_i = '0' or or_reduce(i_tx_cur and D_wr_stb_i) = '1' then
+						r_tx_mas <= r_tx_mas and not i_tx_cur;
+						r_A <= std_logic_vector(unsigned(r_A) + 1);
+						r_wait_d_stb <= '0';
+					else
+						r_wait_d_stb <= '1';
+					end if;
 				end if;
 			else
 				r_tx_mas <= (others => '0');
+				r_wait_d_stb <= '0';
 			end if;
 		end if;
 	end process;
@@ -192,7 +202,7 @@ begin
 				r_rdy <= '0';
 				r_ack <= '0';
 				r_ack_lane <= (others => '0');
-			elsif r_cyc = '1' then
+			elsif r_cyc = '1' and cyc_i = '1' then
 				if fb_con_p2c_i.ack then
 					for i in 0 to G_BYTELANES-1 loop
 						if i_rx_cur(i) = '1' then
@@ -223,12 +233,24 @@ begin
 	fb_con_c2p_o.A <= r_A;
 	fb_con_c2p_o.we <= we_i;
 	fb_con_c2p_o.rdy_ctdn <= rdy_ctdn_i;
+	fb_con_c2p_o.D_wr_stb <= or_reduce(i_tx_cur and D_wr_stb_i);
+
+	p_d_wr_mux:process(D_wr_i, i_tx_cur)
+	variable i:natural;
+	begin
+		fb_con_c2p_o.D_Wr <= (others => '-');
+		for i in 0 to G_BYTELANES -1 loop
+			if i_tx_cur(i) = '1' then
+				fb_con_c2p_o.D_Wr <= D_wr_i((8*(i+1))-1 downto 8*i);
+			end if;
+		end loop;
+	end process;
 
 	rdy_o			<= r_rdy;
 	ack_lane_o	<= r_ack_lane;
 	ack_o			<= r_ack;
 	D_rd_o		<= r_d_Rd;
 
-
+	act_lane_o  <= i_tx_cur;
 
 end rtl;

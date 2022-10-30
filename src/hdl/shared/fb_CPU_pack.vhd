@@ -57,12 +57,15 @@ package fb_CPU_pack is
 	);
 
 	type t_cpu_wrap_o is record
-		cyc							: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
-		A_log							: std_logic_vector(23 downto 0);
+
+		-- signals passed to fb_CPU_con_burst
+		be								: std_logic;
+		cyc							: std_logic; 
+		A								: std_logic_vector(23 downto 0);
 		we								: std_logic;
-		D_WR_stb						: std_logic;
-		D_WR							: std_logic_vector(7 downto 0);
-		ack							: std_logic;
+		lane_req						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
+		D_wr							: std_logic_vector((8 * C_CPU_BYTELANES)-1 downto 0);
+		D_wr_stb						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 		rdy_ctdn						: t_rdy_ctdn;
 
 		noice_debug_5c				: std_logic;						-- A 5C instruction is being fetched (qualify with clken below)
@@ -83,11 +86,12 @@ package fb_CPU_pack is
 		-- chipset control signals
 		cpu_halt						: std_logic;
 
-		-- wrapper stuff
-		rdy							: std_logic;		-- goes high when the current bus cycle will be complete in rdy_ctdn cycles or fewer
-		cyc							: std_logic;		-- high during an active bus cycle
-		cyc_ack						: std_logic;		-- goes high for one cycle when the current bus cycle completes
-
+		-- signals passed back from fb_CPU_con_burst
+		rdy							: std_logic;
+		act_lane						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
+		ack_lane						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
+		ack							: std_logic;
+		D_rd							: std_logic_vector((8 * C_CPU_BYTELANES)-1 downto 0);
 
 		noice_debug_nmi_n			: std_logic;		-- debugger is forcing a cpu NMI
 		noice_debug_shadow		: std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)

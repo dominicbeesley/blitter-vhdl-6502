@@ -173,8 +173,176 @@ begin
 
 				assert ib_D_rd(7 downto 0) = x"F7" report "Expected F7 got " & to_hex_string(ib_D_rd(7 downto 0));
 
+			elsif run("little endian write simple") then
+
+				-- simple single write d_stb asserted singly at start of cycle
+
+				sim_wait_reset;
+
+				ib_BE <= '0';
+				ib_A <= x"001200";
+				ib_we <= '1';
+				ib_lane_req <= "1111";
+				ib_cyc <= '1';
+				ib_d_wr <= x"12345678";
+				ib_d_Wr_stb <= (others => '1');
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+				ib_cyc <= '0';
+
+				wait until rising_edge(i_fb_syscon.clk);					
+
+				ib_BE <= '0';
+				ib_A <= x"001200";
+				ib_we <= '0';
+				ib_lane_req <= "1111";
+				ib_cyc <= '1';
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+
+				assert ib_D_rd = x"12345678" report "Expected 12345678 got " & to_hex_string(ib_D_rd);
+
+			elsif run("big endian write simple") then
+
+				-- simple single write d_stb asserted singly at start of cycle
+
+				sim_wait_reset;
+
+				ib_BE <= '1';
+				ib_A <= x"001200";
+				ib_we <= '1';
+				ib_lane_req <= "1111";
+				ib_cyc <= '1';
+				ib_d_wr <= x"12345678";
+				ib_d_Wr_stb <= (others => '1');
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+				ib_cyc <= '0';
+
+				wait until rising_edge(i_fb_syscon.clk);					
+
+				ib_BE <= '1';
+				ib_A <= x"001200";
+				ib_we <= '0';
+				ib_lane_req <= "1111";
+				ib_cyc <= '1';
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+
+				assert ib_D_rd = x"12345678" report "Expected 12345678 got " & to_hex_string(ib_D_rd);
+
+			elsif run("little endian write simple 16bit") then
+
+				-- simple single write d_stb asserted singly at start of cycle
+
+				sim_wait_reset;
+
+				ib_BE <= '0';
+				ib_A <= x"001200";
+				ib_we <= '1';
+				ib_lane_req <= "0011";
+				ib_cyc <= '1';
+				ib_d_wr <= x"----1234";
+				ib_d_Wr_stb <= (others => '1');
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+				ib_cyc <= '0';
+
+				wait until rising_edge(i_fb_syscon.clk);					
+
+				ib_BE <= '0';
+				ib_A <= x"001200";
+				ib_we <= '0';
+				ib_lane_req <= "0011";
+				ib_cyc <= '1';
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+
+				assert ib_D_rd(15 downto 0) = x"1234" report "Expected 1234 got " & to_hex_string(ib_D_rd(15 downto 0));
+
+			elsif run("big endian write simple 16bit") then
+
+				-- simple single write d_stb asserted singly at start of cycle
+
+				sim_wait_reset;
+
+				ib_BE <= '1';
+				ib_A <= x"001200";
+				ib_we <= '1';
+				ib_lane_req <= "0011";
+				ib_cyc <= '1';
+				ib_d_wr <= x"----1234";
+				ib_d_Wr_stb <= (others => '1');
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+				ib_cyc <= '0';
+
+				wait until rising_edge(i_fb_syscon.clk);					
+
+				ib_BE <= '1';
+				ib_A <= x"001200";
+				ib_we <= '0';
+				ib_lane_req <= "0011";
+				ib_cyc <= '1';
+
+				loop
+					wait until rising_edge(i_fb_syscon.clk);					
+					if ib_ack = '1' then
+						exit;
+					end if;
+				end loop;
+
+
+				assert ib_D_rd(15 downto 0) = x"1234" report "Expected 1234 got " & to_hex_string(ib_D_rd(15 downto 0));
 
 			end if;
+
 
 		end loop;
 

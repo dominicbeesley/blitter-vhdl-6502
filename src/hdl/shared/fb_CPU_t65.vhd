@@ -47,6 +47,7 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_t65 is
 	generic (
@@ -130,16 +131,20 @@ begin
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_clken_dly(0) = '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and i_t65_clken /= '1' else
 								'0';
 
-	wrap_o.A_log 		<= x"FF" & i_t65_A(15 downto 0);
-	wrap_o.cyc			<= ( 0 => i_wrap_cyc, others => '0');
+	wrap_o.BE			<= '0';
+	wrap_o.A 			<= x"FF" & i_t65_A(15 downto 0);
+	wrap_o.cyc			<= i_wrap_cyc;
+	wrap_o.lane_req   <= (0 => '1', others => '0');
 	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
 	wrap_o.we	 		<= not i_t65_RnW;
-	wrap_o.D_WR 		<= i_t65_D_out;
-	wrap_o.D_WR_stb 	<= r_clken_dly(2);								-- TEST late Data strobe TODOPIPE: put this back to (0)
-	wrap_o.ack	 		<= i_t65_clken;
+	wrap_o.D_WR(7 downto 0) <= i_t65_D_out;
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;
+	wrap_o.D_WR_stb 	<= (0 => r_clken_dly(2), others => '0');								-- TEST late Data strobe TODOPIPE: put this back to (0)
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
 
@@ -170,14 +175,14 @@ begin
 				r_cpu_halt <= wrap_i.cpu_halt;
 				r_wrap_acked <= '0';
 			else
-				if wrap_i.cyc_ack = '1' then
+				if wrap_i.ack = '1' then
 					r_wrap_acked <= '1';
 				end if;
 			end if;
 		end if;			
 	end process;
 
-	i_wrap_ack <= r_wrap_acked or wrap_i.cyc_ack;
+	i_wrap_ack <= r_wrap_acked or wrap_i.ack;
 
 	e_cpu: entity work.T65 
   	port map (
