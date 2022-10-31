@@ -54,7 +54,9 @@ port (
 		fb_syscon_i								: in	fb_syscon_t;
 
 		fb_c2p_i									: in fb_con_o_per_i_t;
-		fb_p2c_o									: out	fb_con_i_per_o_t
+		fb_p2c_o									: out	fb_con_i_per_o_t;
+
+		stall_i									: in std_logic
 	);
 
 end sim_fb_per_mem;
@@ -65,7 +67,19 @@ architecture rtl of sim_fb_per_mem is
 
 	signal r_mem : t_mem;
 
+	signal r_stall   	: std_logic;
+	signal r_ack	 	: std_logic;
+	signal r_d_rd		: std_logic_vector(7 downto 0);
+
 begin
+
+			fb_p2c_o <= (
+					stall => stall_i or r_stall,
+					ack => r_ack,
+					rdy => r_ack,
+					D_rd => r_d_rd
+				);
+	
 
 
 	p_per:process
@@ -81,18 +95,15 @@ begin
 			end loop;
 		else
 
-			fb_p2c_o <= (
-					stall => '0',
-					ack => '0',
-					rdy => '0',
-					D_rd => (others => '-')
-				);
+			r_ack <= '0';
+			r_stall <= '0';
+			r_d_rd <= (others => '-');
 
-			wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
+			wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk) and stall_i = '0';
 
 			v_a := fb_c2p_i.A;
 
-			fb_p2c_o.stall <= '1';
+			r_stall <= '1';
 
 			if fb_c2p_i.we = '1' then
 				while fb_c2p_i.D_wr_stb /= '1' loop
@@ -108,12 +119,11 @@ begin
 				wait until rising_edge(fb_syscon_i.clk);
 				wait until rising_edge(fb_syscon_i.clk);
 				v_d := r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
-				fb_p2c_o.D_Rd <= v_d;
+				r_D_Rd <= v_d;
 				report "read " & to_hex_string(v_d) & " from " & to_hex_string(v_a) severity note;
 			end if;
 
-			fb_p2c_o.rdy <= '1';
-			fb_p2c_o.ack <= '1';
+			r_ack <= '1';
 			wait until rising_edge(fb_syscon_i.clk);
 
 		end if;

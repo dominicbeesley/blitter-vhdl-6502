@@ -31,6 +31,8 @@ architecture rtl of test_tb is
 	signal i_fb_per_c2p : fb_con_o_per_i_t;
 	signal i_fb_per_p2c : fb_con_i_per_o_t;
 
+	signal i_per_stall : std_logic := '0';
+
 	procedure sim_wait_reset 
 	(
 		signal c2p 	: out	fb_con_o_per_i_t
@@ -193,15 +195,26 @@ architecture rtl of test_tb is
 	procedure single_write(
 			A			: in 	std_logic_vector(23 downto 0);
 		signal c2p	: out	fb_con_o_per_i_t;
+		signal stall: out std_logic;
 			D    		: in  std_logic_vector(7 downto 0);
 
 			A_stb_dl : natural := 0;	-- no of cycles to delay a_stb after cyc
-			D_stb_dl : natural := 0	-- no of cycles to delay d_stb after a_stb
+			D_stb_dl : natural := 0;	-- no of cycles to delay d_stb after a_stb
+			stall_dl : natural := 0		-- no of cycles that the peripheral will stall at the start
 	) is
 	variable v_iter: natural;
+	variable v_stall_ctdn: natural;
 	begin
 
 		c2p <= fb_c2p_unsel;
+		v_stall_ctdn := stall_dl;
+
+
+		if v_stall_ctdn > 0 then
+			stall <= '1';
+		else
+			stall <= '0';
+		end if;
 
 		wait until rising_edge(i_fb_syscon.clk);
 
@@ -212,6 +225,14 @@ architecture rtl of test_tb is
 		while v_iter < A_stb_dl loop
 			wait until rising_edge(i_fb_syscon.clk);
 			v_iter := v_iter + 1;
+
+			report natural'image(v_stall_ctdn) severity note;
+			if v_stall_ctdn > 0 then
+				v_stall_ctdn := v_stall_ctdn - 1;
+				if v_stall_ctdn = 0 then
+					stall <= '0';
+				end if;
+			end if;
 		end loop;
 
 		c2p.we <= '1';
@@ -233,6 +254,14 @@ architecture rtl of test_tb is
 			if v_iter > 100000 then
 				report "Failed waiting for stall" severity error;
 			end if;
+
+			report natural'image(v_stall_ctdn) severity note;
+			if v_stall_ctdn > 0 then
+				v_stall_ctdn := v_stall_ctdn - 1;
+				if v_stall_ctdn = 0 then
+					stall <= '0';
+				end if;
+			end if;
 		end loop;
 
 
@@ -247,10 +276,29 @@ architecture rtl of test_tb is
 			while v_iter < D_stb_dl loop
 				wait until rising_edge(i_fb_syscon.clk);
 				v_iter := v_iter + 1;
+
+				report natural'image(v_stall_ctdn) severity note;
+				if v_stall_ctdn > 0 then
+					v_stall_ctdn := v_stall_ctdn - 1;
+					if v_stall_ctdn = 0 then
+						stall <= '0';
+					end if;
+				end if;
+
+
 			end loop;
 			c2p.D_wr <= D;
 			c2p.D_wr_stb <= '1';		
 			wait until rising_edge(i_fb_syscon.clk);
+
+			report natural'image(v_stall_ctdn) severity note;
+			if v_stall_ctdn > 0 then
+				v_stall_ctdn := v_stall_ctdn - 1;
+				if v_stall_ctdn = 0 then
+					stall <= '0';
+				end if;
+			end if;
+
 		end if;
 
 		c2p.D_wr <= (others => '-');
@@ -265,12 +313,22 @@ architecture rtl of test_tb is
 			if v_iter > 100000 then
 				report "Failed waiting for ack" severity error;
 			end if;
+
+			report natural'image(v_stall_ctdn) severity note;
+			if v_stall_ctdn > 0 then
+				v_stall_ctdn := v_stall_ctdn - 1;
+				if v_stall_ctdn = 0 then
+					stall <= '0';
+				end if;
+			end if;
+
 		end loop;
 
 		c2p <= fb_c2p_unsel;
 
 		wait until rising_edge(i_fb_syscon.clk);
 		
+		stall <= '0';
 
 	end single_write;
 
@@ -319,14 +377,16 @@ architecture rtl of test_tb is
 		A				: in std_logic_vector(23 downto 0);
 		D				: in std_logic_vector(7 downto 0);
 		signal c2p 	: out	fb_con_o_per_i_t;
+		signal stall: out std_logic;
 		A_stb_dl		: in natural := 0;		-- number of cycles to delay A_stb for reads/writes
-		D_stb_dl		: in natural := 0
+		D_stb_dl		: in natural := 0;
+		stall_dl		: in natural := 0
 	)  is
 	variable v_read: std_logic_vector(7 downto 0);
 	begin
 
 
-		single_write(A, c2p, D, A_stb_dl, D_stb_dl);
+		single_write(A, c2p, stall, D, A_stb_dl, D_stb_dl, stall_dl);
 
 		single_read(A, c2p, v_read, A_stb_dl);
 
@@ -385,14 +445,21 @@ begin
 				-- simple single write followed by read, with no a_stb/d_stb delay
 
 				sim_wait_reset(i_fb_con_c2p);
-				test_simple_mem_write_then_read(x"000000", x"12", i_fb_con_c2p);
+				test_simple_mem_write_then_read(x"000000", x"12", i_fb_con_c2p, i_per_stall);
 
 			elsif run("simple_mem_write_then_read2") then
 
 				-- simple single write followed by read, with no a_stb = 2, d_stb = 3 delay
 
 				sim_wait_reset(i_fb_con_c2p);
-				test_simple_mem_write_then_read(x"0001A5", x"BE", i_fb_con_c2p, 2, 3);
+				test_simple_mem_write_then_read(x"0001A5", x"BE", i_fb_con_c2p, i_per_stall, 2, 3);
+
+			elsif run("simple_mem_write_then_read3") then
+
+				-- simple single write followed by read, with no a_stb = 2, d_stb = 3 delay
+
+				sim_wait_reset(i_fb_con_c2p);
+				test_simple_mem_write_then_read(x"0001A5", x"BE", i_fb_con_c2p, i_per_stall, 0, 1, 5);
 
 			elsif run("ORB") then
 
@@ -402,8 +469,8 @@ begin
 
 				v_time := now;
 
-				test_simple_mem_write_then_read(x"FFFE40", x"BE", i_fb_con_c2p);
-				test_simple_mem_write_then_read(x"FFFE40", x"DD", i_fb_con_c2p);
+				test_simple_mem_write_then_read(x"FFFE40", x"BE", i_fb_con_c2p, i_per_stall);
+				test_simple_mem_write_then_read(x"FFFE40", x"DD", i_fb_con_c2p, i_per_stall);
 
 				v_time := now - v_time;
 
@@ -428,7 +495,6 @@ begin
 		test_runner_cleanup(runner); -- Simulation ends here
 	end process;
 
-
 	e_sim_per:entity work.sim_fb_per_mem
 	generic map (
 		G_SIZE => 256
@@ -436,7 +502,9 @@ begin
 	port map (
 		fb_syscon_i => i_fb_syscon,
 		fb_c2p_i => i_fb_per_c2p,
-		fb_p2c_o => i_fb_per_p2c
+		fb_p2c_o => i_fb_per_p2c,
+
+		stall_i  => i_per_stall
 	);
 
 
@@ -478,5 +546,6 @@ begin
 		noice_debug_shadow_i				=> '0'
 
 	);
+
 
 end rtl;
