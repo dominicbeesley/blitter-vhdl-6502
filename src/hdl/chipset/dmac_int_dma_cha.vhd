@@ -89,7 +89,7 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	type 		dma_state_type	is (sIdle, sStart, sMemAccSRC, sMemAccSRC2, sMemAccPAUSE, sMemAccDEST, sMemAccDEST2, sFinish);
 	type		step_type		is (none, up, down, nop);
 	type		stepsize_type	is (byte, word, wordswapdest, wordswapsrc);
-	type		sla_state_t		is (idle, addr, wait_cyc);
+	type		per_State_t		is (idle, wr, rd);
 
 	function bits2stepsize(bits : STD_LOGIC_VECTOR(1 downto 0)) return stepsize_type is
 	variable v_ret : stepsize_type;
@@ -155,9 +155,12 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 		return ret;
 	end;
 
-	signal	r_per_state				: sla_state_t;
+	signal	r_per_state				: per_State_t;
 	signal	r_per_addr				: std_logic_vector(3 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
+	signal 	r_per_ack				: std_logic;
+	signal	r_per_had_d_wr_stb	: std_logic;
+	signal   r_per_d_wr				: std_logic_vector(7 downto 0);
 
 	signal	r_dma_state				: dma_state_type;
 	signal	i_dma_state_next		: dma_state_type;
@@ -198,7 +201,6 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	signal	r_con_cyc				: std_logic;
 	signal	r_con_stb				: std_logic;
 
-	signal 	r_per_ack				: std_logic;
 
 	signal	i_state_change_clken	: std_logic;
 begin
@@ -399,6 +401,57 @@ begin
 		end case;		
 	end process;
 
+	p_per_state:process(fb_syscon_i)
+	variable v_do_Write:boolean;
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_per_state <= idle;
+			r_per_ack <= '0';
+			r_per_addr <= (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_per_ack <= '0';
+
+			case r_per_state is
+				when idle =>
+					r_per_had_d_wr_stb <= '0';
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
+						r_per_addr <= fb_per_c2p_i.A(3 downto 0);
+						if fb_per_c2p_i.we = '1' then
+							r_per_state <= wr;
+							if fb_per_c2p_i.D_wr_stb = '1' then
+								r_per_had_d_wr_stb <= '1';
+								r_per_d_wr <= fb_per_c2p_i.D_wr;
+							end if;
+						else
+							r_per_state <= rd;
+						end if;
+					end if;
+				when rd =>
+					r_per_ack <= '1';
+					r_per_state <= idle;
+				when wr =>
+					if fb_per_c2p_i.D_wr_stb = '1' then
+						r_per_had_d_wr_stb <= '1';
+						r_per_d_wr <= fb_per_c2p_i.D_wr;
+					end if;
+					if r_per_had_d_wr_stb = '1' then
+						r_per_ack <= '1';
+						r_per_state <= idle;
+					end if;
+				when others =>
+					r_per_state <= idle;
+
+			end case;
+		end if;
+	end process;
+
+
+	fb_per_p2c_o.D_rd <= i_per_D_rd;
+	fb_per_p2c_o.rdy <= r_per_ack;
+	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '0';
+
+
 	p_regs_wr : process(fb_syscon_i, fb_per_c2p_i)
 	begin
 
@@ -485,11 +538,7 @@ begin
 				end if;
 			end if;
 
-			if fb_per_c2p_i.cyc = '1' 
-				and fb_per_c2p_i.D_wr_stb = '1' 
-				and fb_per_c2p_i.we = '1' 
-				and r_per_ack = '1' 
-				then
+			if r_per_state = wr and r_per_had_d_wr_stb = '1' then
 
 				case to_integer(unsigned(r_per_addr)) is
 					when A_CTL =>
@@ -598,39 +647,6 @@ begin
 	int_o <=			r_ctl2_if when r_ctl2_ie = '1' else
 						'0';
 
-	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_per_state <= idle;
-			r_per_ack <= '0';
-		else
-			if rising_edge(fb_syscon_i.clk) then
-				r_per_ack <= '0';
-				case r_per_state is
-					when idle =>
-						-- idle, wait for a new request
-						if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-							r_per_addr <= fb_per_c2p_i.A(3 downto 0);
-							r_per_state <= addr;
-						end if;
-					when addr =>
-						-- address has had time to settle, read regs
-						fb_per_p2c_o.D_rd <= i_per_D_rd;
-						if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-							r_per_state <= wait_cyc;
-						end if;
-					when wait_cyc =>
-						r_per_ack <= '1';
-						r_per_state <= idle;
-					when others => null;
-				end case;
-			end if;
-		end if;
-	end process;
-
-	fb_per_p2c_o.rdy <= r_per_ack;
-	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '0';
 
 	i_next_con_addr <=
 				 		r_src_addr_bank & std_logic_vector(unsigned(r_src_addr) + 1) 
