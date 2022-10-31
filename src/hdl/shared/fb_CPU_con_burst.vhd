@@ -64,7 +64,7 @@ port (
 	we_i					: in std_logic;
 	lane_req_i			: in std_logic_vector(G_BYTELANES-1 downto 0);			-- this is a mask of byte lanes to be read/written and must all be set when cyc goes active
 	D_wr_i				: in std_logic_vector((8 * G_BYTELANES)-1 downto 0);
-	D_wr_stb_i			: in std_logic_vector(G_BYTELANES-1 downto 0);
+	D_wr_stb_i			: in std_logic_vector(G_BYTELANES-1 downto 0);			-- unlike fishbone this must stay asserted until the end of the cycle!
 	rdy_ctdn_i			: in t_rdy_ctdn;
 
 	-- return to wrappers
@@ -101,6 +101,7 @@ architecture rtl of fb_cpu_con_burst is
 	signal r_rdy			: std_logic;
 	signal r_ack			: std_logic;
 	signal r_ack_lane		: std_logic_vector(G_BYTELANES-1 downto 0);
+	signal r_D_wr_stb		: std_logic_vector(G_BYTELANES-1 downto 0);
 	signal r_wait_d_stb	: std_logic;
 
 	function priority_endian(
@@ -170,9 +171,10 @@ begin
 				r_tx_mas <= (others => '1');
 				r_A <= A_i;
 				r_wait_d_stb <= '0';
+				r_D_wr_stb <= D_wr_stb_i;
 			elsif r_cyc = '1' then
 				if (fb_con_p2c_i.stall = '0' and or_reduce(i_tx_cur) = '1') or r_wait_d_stb = '1' then
-					if we_i = '0' or or_reduce(i_tx_cur and D_wr_stb_i) = '1' then
+					if we_i = '0' or or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb)) = '1' then
 						r_tx_mas <= r_tx_mas and not i_tx_cur;
 						r_A <= std_logic_vector(unsigned(r_A) + 1);
 						r_wait_d_stb <= '0';
@@ -180,8 +182,10 @@ begin
 						r_wait_d_stb <= '1';
 					end if;
 				end if;
+				r_D_wr_stb <= r_D_wr_stb or D_wr_stb_i;
 			else
 				r_tx_mas <= (others => '0');
+				r_D_wr_stb <= (others => '0');
 				r_wait_d_stb <= '0';
 			end if;
 		end if;
@@ -229,11 +233,11 @@ begin
 	end process;
 
 	fb_con_c2p_o.cyc <= r_cyc;
-	fb_con_c2p_o.A_stb <= or_reduce(i_tx_cur);
+	fb_con_c2p_o.A_stb <= or_reduce(i_tx_cur) and not r_wait_d_stb;
 	fb_con_c2p_o.A <= r_A;
 	fb_con_c2p_o.we <= we_i;
 	fb_con_c2p_o.rdy_ctdn <= rdy_ctdn_i;
-	fb_con_c2p_o.D_wr_stb <= or_reduce(i_tx_cur and D_wr_stb_i);
+	fb_con_c2p_o.D_wr_stb <= or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb));
 
 	p_d_wr_mux:process(D_wr_i, i_tx_cur)
 	variable i:natural;
