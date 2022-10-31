@@ -194,9 +194,11 @@ begin
 						r_State <= waitstall;
 					else
 						r_state <= act;
+						r_D_wr_stb <= '0';
 					end if;
 				when act =>
 					v_accept_wr_stb := true;
+					r_D_wr_stb <= '0';
 					-- this gets cancelled in if below
 					if fb_per_p2c_i.ack = '1' then
 						r_A_stb <= '0';
@@ -210,15 +212,14 @@ begin
 					r_state <= idle;
 			end case;
 
-			if v_accept_wr_stb and r_done_r_d_wr_stb = '0' then
-				if r_D_wr_stb = '0' and fb_con_c2p_i.D_wr_stb = '1' then
-					r_D_wr_stb <= '1';
-					r_D_wr <= fb_con_c2p_i.D_WR;
-					r_done_r_d_wr_stb <= '1';
+			if v_accept_wr_stb then
+				if r_done_r_d_wr_stb = '0' then
+					if r_D_wr_stb = '0' and fb_con_c2p_i.D_wr_stb = '1' then
+						r_D_wr_stb <= '1';
+						r_D_wr <= fb_con_c2p_i.D_WR;
+						r_done_r_d_wr_stb <= '1';
+					end if;
 				end if;
-			else
-				r_D_wr_stb <= '0';
-				r_we <= '0';
 			end if;
 
 			if fb_con_c2p_i.cyc = '0' then

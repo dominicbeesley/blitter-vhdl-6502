@@ -547,6 +547,24 @@ mos_handle_res:
 	jsr	QUICK_SOUNDTEST
 
 
+;;	; mem write test lp
+;;	ldx	#0
+;;@tlt:	ldy	#32
+;;	txa
+;;@tlt1:	sta	$2000,y
+;;	dey
+;;	bpl	@tlt1
+;;	ldy	#32
+;;@tlt2:	cmp	$2000,y
+;;	bne	@tlsk
+;;	dey
+;;	bpl	@tlt2
+;;	inx
+;;	jmp	@tlt
+;;
+;;@tlsk:	jmp	@tlsk
+
+
 	; simple DMA test
 	lda	#$D1
 	sta	fred_JIM_DEVNO
