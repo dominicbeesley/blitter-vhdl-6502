@@ -51,15 +51,6 @@ package board_config_pack is
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
 
 	constant G_INCL_HDMI		: boolean := false;
-
---	constant G_INCL_CHIPSET		: boolean := true;
---	constant G_INCL_CS_DMA		: boolean := true;
---	constant G_DMA_CHANNELS		: natural := 1;
---	constant G_INCL_CS_BLIT		: boolean := false;
---	constant G_INCL_CS_SND		: boolean := true;
---	constant G_SND_CHANNELS		: natural := 4;
---	constant G_INCL_CS_AERIS	: boolean := false;
---	constant G_INCL_CS_EEPROM	: boolean := false;
 		
 	constant G_INCL_CHIPSET		: boolean := true;
 	constant G_INCL_CS_DMA		: boolean := true;
@@ -90,7 +81,7 @@ package board_config_pack is
 	constant G_INCL_CPU_6x09	: boolean := false;
 	constant G_INCL_CPU_Z80		: boolean := false;
 	constant G_INCL_CPU_68008	: boolean := false;
-	constant G_INCL_CPU_680x0	: boolean := false;
+	constant G_INCL_CPU_680x0	: boolean := true;
 	constant G_INCL_CPU_ARM2	: boolean := false;
 
 

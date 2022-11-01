@@ -92,21 +92,17 @@ architecture rtl of fb_cpu_680x0 is
 
 	signal r_m68k_boot		: std_logic;
 
-	signal r_cyc_o				: std_logic_vector(1 downto 0);
-
+	signal r_cyc				: std_logic;
+	signal r_lane_req_o		: std_logic_vector(1 downto 0);
 	signal i_rdy				: std_logic;
-
 	signal r_A_log				: std_logic_vector(23 downto 0);
 	signal i_A_log				: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
 	signal r_WR_stb			: std_logic;
+	signal i_cyc_ack_i		: std_logic;
 
 	-- signal to cpu that cycle is about to finish
 	signal r_ndtack			: std_logic;
-	signal r_ndtack2			: std_logic;
-
-	-- enable dtack to be signalled in this byte lane's cycle
-	signal r_lastcyc			: std_logic;
 
 	signal r_noice_clken		: std_logic;
 
@@ -146,10 +142,8 @@ architecture rtl of fb_cpu_680x0 is
 	type	t_state is (
 		idle 			-- waiting for a cpu cycle to start
 	,	idle_wr_ds	-- waiting for U/LDS to be ready on a 16 bit write cycle
-	,	wr_l			-- write cycle 16 bit low
-	,	wr_u			-- write cycle 16 bit upper
-	,	rd_l			-- read cycle 8 bit/16 bit low
-	,	rd_u			-- read cycle 16 bit upper
+	,	wr				-- write
+	,	rd				-- read
 	,	wait_as_de	-- cycle done, wait for AS to go high
 	,  reset0		-- reset buffers and wait
 	,  reset1		-- reset buffers and wait
@@ -167,8 +161,6 @@ architecture rtl of fb_cpu_680x0 is
 	signal i_PORTF_nOE		: std_logic;
 	signal r_state				: t_state;
 
-	signal i_cyc_ack_i		: std_logic;
-	signal r_wrap_cyc_dly	: std_logic;
 
 begin
 
@@ -221,17 +213,23 @@ begin
 							'1';
 
 
-	wrap_o.A_log 			<= r_A_log;
-	wrap_o.cyc 				<= r_cyc_o;
+	wrap_o.be				<= '1';
+	wrap_o.cyc				<= r_cyc;
+	wrap_o.A		 			<= r_A_log;	
+	wrap_o.lane_req		<= (
+			0 => r_lane_req_o(0),
+			1 => r_lane_req_o(1),
+			others => '0');
 	wrap_o.we	  			<= r_WE;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(15 downto 8) when r_state = wr_u else
-									i_CPUSKT_D_i(7 downto 0);	
-	wrap_o.D_wr_stb		<= r_WR_stb;
-	wrap_o.ack				<= i_cyc_ack_i;
+	wrap_o.D_wr(15 downto 0)
+								<=	i_CPUSKT_D_i(15 downto 0);	
+	G_D_WR_EXT:if C_CPU_BYTELANES > 2 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 16) <= (others => '-');
+	END GENERATE;
+	wrap_o.D_wr_stb		<= (others => r_WR_stb);
 	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_20 * 2) + 3, t_rdy_ctdn'length);
 
-	i_cyc_ack_i 			<= wrap_i.cyc_ack;
-
+	i_cyc_ack_i 			<= wrap_i.ack;
 	i_PORTE_nOE <= '0' when r_state_mux = port_e else '1';
 	i_PORTF_nOE <= '0' when r_state_mux = port_f else '1';
 
@@ -250,10 +248,6 @@ begin
 	e_m_RnW_e:entity work.metadelay 
 		generic map ( N => 1 ) 
 		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_RnW_i, o => i_RnW_m);
-
-	e_cyc_dly_e:entity work.metadelay 
-		generic map ( N => 1 ) 
-		port map (clk => fb_syscon_i.clk, i => wrap_i.cyc, o => r_wrap_cyc_dly);
 
 	-- register and fiddle cpu socket address, bodge for upper/lower byte
 	p_reg_cpu_A:process(fb_syscon_i)
@@ -309,7 +303,7 @@ begin
 	p_act:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_cyc_o <= (others => '0');
+			r_lane_req_o <= (others => '0');
 			r_noice_clken <= '0';
 			r_WR_stb <= '0';
 			r_WE <= '0';
@@ -317,12 +311,10 @@ begin
 			r_noice_clken <= '0';
 			r_state <= reset0;
 			r_A_log <= (others => '0');			
-			r_lastcyc <= '0';
 			r_state_mux <= port_e;
+			r_cyc <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_noice_clken <= '0';
-			r_WR_stb <= '0';
-			r_cyc_o <= (others => '0');
 
 			if r_state_mux = port_e_next then
 				r_state_mux <= port_e;
@@ -335,21 +327,11 @@ begin
 					if i_nAS_m = '0' then
 						-- start of cycle
 						if i_RnW_m = '1' then
-							if i_CPUSKT_nUDS_i = '0' then
-								-- upper first
-								r_state <= rd_u;
-								r_cyc_o(1) <= '1';
-								r_WE <= '0';
-								r_A_log <= i_A_log;
-								-- only allow dtack if the lower isn't needed
-								r_lastcyc <= i_CPUSKT_nLDS_i;
-							else
-								r_state <= rd_l;
-								r_cyc_o(0) <= '1';
-								r_WE <= '0';
-								r_A_log <= i_A_log(23 downto 1) & '1';
-								r_lastcyc <= '1';
-							end if;
+							r_cyc <= '1';
+							r_state <= rd;
+							r_lane_req_o <= not(i_CPUSKT_nUDS_i & i_CPUSKT_nLDS_i);
+							r_we <= '0';
+							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_i;
 						else
 							r_state <= idle_wr_ds;
 						end if;
@@ -357,55 +339,22 @@ begin
 					end if;
 				when idle_wr_ds =>
 					if i_nDS_either_m = '0' then
-						if i_CPUSKT_nUDS_i = '0' then
-							r_state <= wr_u;
-							r_cyc_o(1) <= '1';
-							r_WE <= '1';
-							r_lastcyc <= i_CPUSKT_nLDS_i;
-							r_A_log <= i_A_log;
+							r_cyc <= '1';
+							r_state <= wr;
+							r_lane_req_o <= not(i_CPUSKT_nUDS_i & i_CPUSKT_nLDS_i);
+							r_we <= '1';
+							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_i;
 							r_WR_stb <= '1';
-						else
-							r_state <= wr_l;
-							r_cyc_o(0) <= '1';
-							r_WE <= '1';
-							r_lastcyc <= '1';
-							r_A_log <= i_A_log(23 downto 1) & '1';
-							r_WR_stb <= '1';
-						end if;
 					end if;
-				when rd_u =>
-					if i_cyc_ack_i = '1' then
-						if i_CPUSKT_nLDS_i = '1' then
-							r_state <= wait_as_de;
-						else
-							r_A_log(0) <= '1';
-							r_cyc_o(0) <= '1';
-							r_state <= rd_l;
-							r_lastcyc <= '1';
-						end if;
-					end if;
-				when rd_l =>
+				when rd =>
 					if i_cyc_ack_i = '1' then
 						r_state <= wait_as_de;
+						r_cyc <= '0';
 					end if;
-				when wr_u =>
-					if i_CPUSKT_nUDS_i = '0' then
-						r_WR_stb <= '1';
-					end if;
-					if i_cyc_ack_i = '1' then
-						if i_CPUSKT_nLDS_i = '1' then
-							r_state <= wait_as_de;
-						else
-							r_A_log(0) <= '1';
-							r_cyc_o(0) <= '1';
-							r_state <= wr_l;							
-							r_lastcyc <= '1';
-							r_WR_stb <= '1';
-						end if;
-					end if;
-				when wr_l =>
+				when wr =>
 					if i_cyc_ack_i = '1' then
 						r_state <= wait_as_de;
+						r_cyc <= '0';
 					end if;
 				when wait_as_de =>
 					if i_nAS_m = '1' then
@@ -416,8 +365,7 @@ begin
 				when others => 			-- or reset0
 					r_state <= reset1;
 					r_state_mux <= port_e_next;
-					r_lastcyc <= '0';
-
+					r_cyc <= '0';
 			end case;
 
 		end if;
@@ -431,7 +379,7 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_state = idle then
 				r_ndtack <= '1';
-			elsif r_wrap_cyc_dly = '1' and wrap_i.cyc = '1' and r_lastcyc = '1' then
+			elsif r_cyc = '1' then
 				if wrap_i.rdy = '1' then 
 					r_ndtack <= '0';
 				end if;
@@ -440,18 +388,6 @@ begin
 
 	end process;
 
-	p_dtack2:process(fb_syscon_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_ndtack2 <= '1';
-		elsif rising_edge(fb_syscon_i.clk) then
-			if r_cpu_clk = '0' then
-				r_ndtack2 <= r_ndtack;
-			end if;
-		end if;
-	end process;
-
-
 	-- assert vpa during interrupt for autovectoring
 	i_CPUSKT_VPA_o					<= '0' when  i_CPUSKT_FC0_i = '1' 
 													and i_CPUSKT_FC1_i = '1' 
@@ -459,7 +395,7 @@ begin
 								 			'1';
 
 	i_CPUSKT_CLK_o 				<= r_cpu_clk;
-	i_CPUSKT_nDTACK_o				<= r_ndtack2;
+	i_CPUSKT_nDTACK_o				<= r_ndtack;
 
 
 
