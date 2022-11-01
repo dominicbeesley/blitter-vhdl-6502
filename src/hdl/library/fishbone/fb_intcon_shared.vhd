@@ -302,7 +302,10 @@ end generate;
 
 
 			-- catch all for ended cycle
-			if r_state /= idle and i_cyc(to_integer(r_cyc_grant_ix)) = '0' then
+			if r_state /= idle and (
+					i_cyc(to_integer(r_cyc_grant_ix)) = '0' or
+					i_p2c.ack = '1'
+					) then
 				r_state <= idle;
 				r_peripheral_sel <= (others => '0');
 				r_cyc_per <= (G_PERIPHERAL_COUNT-1 downto 0 => '0');
