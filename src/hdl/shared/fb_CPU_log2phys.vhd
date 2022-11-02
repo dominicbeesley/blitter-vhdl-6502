@@ -169,9 +169,9 @@ begin
 							r_state <= viablock;
 						else
 							r_state <= waitstall;
+							r_a_stb <= '1';
 						end if;
 
-						r_a_stb <= '1';
 						r_cyc <= '1';
 					end if;
 				when viablock =>
