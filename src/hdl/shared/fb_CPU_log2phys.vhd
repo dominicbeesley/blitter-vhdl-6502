@@ -168,31 +168,16 @@ begin
 						if cfg_sys_via_block_i = '1' and i_SYS_VIA_block = '1' then
 							r_state <= viablock;
 						else
-							if fb_per_p2c_i.stall = '1' then
-								r_State <= waitstall;
-							else
-								if fb_con_c2p_i.D_wr_stb = '1' or fb_con_c2p_i.we = '0' then
-									r_state <= idle;
-								else
-									r_state <= wait_d_stb;
-								end if;
-							end if;
-							r_a_stb <= '1';
-							r_cyc <= '1';
+							r_state <= waitstall;
 						end if;
+
+						r_a_stb <= '1';
+						r_cyc <= '1';
 					end if;
 				when viablock =>
 					v_accept_wr_stb := true;
 					if i_SYS_VIA_block = '0' then
-						if fb_per_p2c_i.stall = '1' then
-							r_State <= waitstall;
-						else
-							if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
-								r_state <= idle;
-							else
-								r_state <= wait_d_stb;
-							end if;
-						end if;
+						r_state <= waitstall;
 						r_a_stb <= '1';
 						r_cyc <= '1';
 					end if;
