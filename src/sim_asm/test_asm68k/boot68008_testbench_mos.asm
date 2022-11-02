@@ -26,6 +26,10 @@ handle_res:
 		move.l	D0,(A0)
 		move.l  (A0),D2
 
+		; quick load store test to sys
+		lea.l	-$D000, A0
+		move.l	D0,(A0)
+		move.l  (A0),D2
 
 		; quick TAS check
 		tas	(A0)

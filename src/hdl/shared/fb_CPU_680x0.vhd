@@ -227,7 +227,8 @@ begin
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 16) <= (others => '-');
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (others => r_WR_stb);
-	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_20 * 2) + 3, t_rdy_ctdn'length);
+--	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_20 * 2) + 3, t_rdy_ctdn'length);
+	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_20 * 2), t_rdy_ctdn'length);
 
 	i_cyc_ack_i 			<= wrap_i.ack;
 	i_PORTE_nOE <= '0' when r_state_mux = port_e else '1';
