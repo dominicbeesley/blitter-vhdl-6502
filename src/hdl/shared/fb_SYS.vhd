@@ -131,8 +131,6 @@ architecture rtl of fb_sys is
 		wait_sys_repeat_wr,
 		-- controller has dropped cycle wait for end of sys cycle
 		wait_sys_end, 
-		-- sys cycle ended wait for controller to drop
-		wait_con_rel_rd,
 		--jim_dev_wr, -- this needs to be in parallel with a normal write to pass thru to SYS
 		jim_dev_rd,
 		jim_page_lo_wr,
@@ -287,7 +285,7 @@ begin
 										r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
 										r_ack <= '1';
 										r_rdy <= '1';
-										state <= wait_con_rel_rd;
+										state <= idle;
 									else
 										state <= jim_page_lo_wr;
 									end if;
@@ -296,7 +294,7 @@ begin
 										r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
 										r_ack <= '1';
 										r_rdy <= '1';
-										state <= wait_con_rel_rd;
+										state <= idle;
 									else
 										state <= jim_page_hi_wr;
 									end if;
@@ -335,23 +333,11 @@ begin
 								r_rdy <= '1';
 							end if;
 							if i_sys_rdy_ctdn_rd = RDY_CTDN_MIN then
-								state <= wait_con_rel_rd;		
+								state <= idle;		
 								r_ack <= '1';		
 								r_D_rd <= i_D_rd;				
 							end if;
 						end if;
-					when wait_con_rel_rd =>
-						-- read cycle was finished, return to idle
-
-						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
-							state <= idle;
-						elsif i_SYScyc_st_clken = '1' then
-							-- catch over-run read cycle
-							-- default idle cycle, drop busses
-							r_sys_A <= DEFAULT_SYS_ADDR;
-							r_sys_RnW <= '1';
-						end if;					
-
 					when addrlatched_wr =>
 						-- TODO: This assumes that the data will be ready in this cycle							
 						-- put something in to retry if not, probably will mess up
@@ -417,17 +403,17 @@ begin
 
 					when jim_dev_rd =>
 						r_rdy <= '1';
-						state <= wait_con_rel_rd;		
+						state <= idle;		
 						r_ack <= '1';		
 						r_D_rd <= G_JIM_DEVNO xor x"FF";				
 					when jim_page_lo_rd =>
 						r_rdy <= '1';
-						state <= wait_con_rel_rd;		
+						state <= idle;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(7 downto 0);				
 					when jim_page_hi_rd =>
 						r_rdy <= '1';
-						state <= wait_con_rel_rd;		
+						state <= idle;		
 						r_ack <= '1';		
 						r_D_rd <= r_JIM_page(15 downto 8);				
 
@@ -442,7 +428,7 @@ begin
 							r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
 							r_rdy <= '1';
-							state <= wait_con_rel_rd;
+							state <= idle;
 						end if;
 					when jim_page_hi_wr =>
 						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
@@ -455,7 +441,7 @@ begin
 							r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
 							r_ack <= '1';
 							r_rdy <= '1';
-							state <= wait_con_rel_rd;
+							state <= idle;
 						end if;
 					when others =>
 						-- catch all
