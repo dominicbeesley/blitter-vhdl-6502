@@ -278,14 +278,8 @@ end generate;
 					end if;
 				when waitstall =>
 
-					-- while stalled latch 
-					if i_p2c.stall = '1' then
-						if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' then
-							r_d_wr_stb <= '1';
-							r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
-						end if;
-					else
-						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+					if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' and r_d_wr_stb = '0' then
+						r_d_wr_stb <= '1';
 						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
 					end if;
 
@@ -294,8 +288,10 @@ end generate;
 						r_a_stb <= '0';
 					end if;
 				when act => 
-						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+					if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' and r_d_wr_stb = '0' then
+						r_d_wr_stb <= '1';
 						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+					end if;
 				when others =>  
 					r_state <= r_state; -- do nowt
 			end case;
@@ -311,6 +307,7 @@ end generate;
 				r_cyc_per <= (G_PERIPHERAL_COUNT-1 downto 0 => '0');
 				r_cyc_grant_ix <= (others => '0');
 				r_cyc_act_oh <= (others => '0');
+				r_d_wr_stb <= '0';
 			end if;
 		end if;
 	end process;
