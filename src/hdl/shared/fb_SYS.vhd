@@ -350,7 +350,7 @@ begin
 								state <= wait_sys_end;
 							end if;
 						else
-							if fb_c2p_i.D_wr_stb = '1' then
+							if fb_c2p_i.D_wr_stb = '1' and r_had_d_stb = '0' then
 								r_had_d_stb <= '1';
 								r_d_wr <= fb_c2p_i.d_wr;
 							end if;
