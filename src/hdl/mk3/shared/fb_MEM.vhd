@@ -181,12 +181,6 @@ begin
 						state <= idle;
 				end case;
 
-				if v_rdy_ctdn <= r_rdy_ctdn then
-					r_rdy <= '1';
-				else
-					r_rdy <= '0';
-				end if;
-
 				if v_start_mem_acc then
 					MEM_nWE_o <= not fb_c2p_i.we;
 					MEM_nOE_o <= fb_c2p_i.we;
@@ -238,6 +232,12 @@ begin
 
 
 					state <= v_st_first;
+				end if;
+
+				if v_rdy_ctdn <= r_rdy_ctdn then
+					r_rdy <= '1';
+				else
+					r_rdy <= '0';
 				end if;
 
 			end if;
