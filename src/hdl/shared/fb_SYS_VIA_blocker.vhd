@@ -97,7 +97,6 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_iorb_block <= '0';
 			r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
-			r_iorb_cs <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_iorb_cs = '1' and clken = '1' and RnW_i = '0' then
 				r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
