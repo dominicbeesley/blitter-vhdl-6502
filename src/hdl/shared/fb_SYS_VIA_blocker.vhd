@@ -77,6 +77,7 @@ architecture rtl of fb_sys_via_blocker is
 	signal r_iorb_block 			: std_logic;
 	signal r_iorb_block_ctdn 	: unsigned(NUMBITS(C_IORB_BODGE_MAX) downto 0);
 	signal i_iorb_cs				: std_logic;
+	signal r_iorb_cs				: std_logic;
 
 begin
 
@@ -86,13 +87,17 @@ begin
 		) and cfg_sys_type_i /= SYS_ELK else
 			'0';
 
-	SYS_VIA_block_o <= r_iorb_block and i_iorb_cs;
+			-- hold block throughout a cycle where selected and timeout active
+	SYS_VIA_block_o <= r_iorb_block and (
+			(i_iorb_cs and clken) or (r_iorb_cs and not clken)
+			);
 
 	piorbctdn:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_iorb_block <= '0';
 			r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
+			r_iorb_cs <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_iorb_cs = '1' and clken = '1' and RnW_i = '0' then
 				r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
@@ -104,6 +109,18 @@ begin
 				end if;
 			end if;
 		end if;
+	end process;
+
+	p_reg_cs:process(fb_syscon_i)
+	begin	
+		if fb_syscon_i.rst = '1' then
+			r_iorb_cs <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if clken = '1' then
+				r_iorb_cs <= i_iorb_cs;
+			end if;
+		end if;
+
 	end process;
 
 end rtl;

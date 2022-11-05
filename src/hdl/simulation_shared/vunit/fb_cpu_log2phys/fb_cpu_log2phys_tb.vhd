@@ -109,6 +109,7 @@ architecture rtl of test_tb is
 		end loop;
 
 		c2p.a_stb <= '0';
+		c2p.a <= (others => '-');
 
 		wait until rising_edge(i_fb_syscon.clk);
 		-- wait for ack
@@ -387,6 +388,8 @@ architecture rtl of test_tb is
 
 
 		single_write(A, c2p, stall, D, A_stb_dl, D_stb_dl, stall_dl);
+
+		single_read(x"000000", c2p, v_read, A_stb_dl); -- do a dummy read to clear any registered addresses!
 
 		single_read(A, c2p, v_read, A_stb_dl);
 

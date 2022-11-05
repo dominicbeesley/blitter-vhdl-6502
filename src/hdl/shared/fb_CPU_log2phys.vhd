@@ -114,6 +114,8 @@ architecture rtl of fb_cpu_log2phys is
 	signal i_SYS_VIA_block			: std_logic;
 	signal r_done_r_d_wr_stb		: std_logic;
 
+	signal i_sysvia_clken			: std_logic;
+
 begin
 
 
@@ -241,12 +243,14 @@ begin
 	port map (
 		fb_syscon_i => fb_syscon_i,
 		cfg_sys_type_i => cfg_sys_type_i,
-		clken => r_a_stb,
-		A_i => r_phys_A,
-		RnW_i => not r_we,
+		clken => i_sysvia_clken,
+		A_i => i_phys_A,
+		RnW_i => not fb_con_c2p_i.we,
 		SYS_VIA_block_o => i_SYS_VIA_block
 		);
 
+	i_sysvia_clken <= '1' when r_state = idle and fb_con_c2p_i.a_stb = '1' else
+							'0';
 
 
 	-- ================================================================================================ --

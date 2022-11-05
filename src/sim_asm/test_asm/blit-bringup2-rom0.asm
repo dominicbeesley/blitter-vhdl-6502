@@ -527,6 +527,12 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	; test BBC slow bus bodge
+	sta	sheila_SYSVIA_orb
+	lda	sheila_SYSVIA_ora
+	sta	sheila_SYSVIA_orb
+	sta	sheila_SYSVIA_orb
+
 	; quick memory read/write test
 	lda	#100
 	sta	$200
@@ -646,12 +652,6 @@ DMA_TEST1_COUNT    := 10
 	bne	@lp00
 
 
-
-	; test BBC slow bus bodge
-	sta	sheila_SYSVIA_orb
-	lda	sheila_SYSVIA_ora
-	sta	sheila_SYSVIA_orb
-	sta	sheila_SYSVIA_orb
 
 	; turn off throttle
 	lda	#0
