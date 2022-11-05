@@ -117,7 +117,7 @@ architecture rtl of fb_cpu_65816 is
 															-- this should be before A/CYC
 
 	signal i_vma				: std_logic;		-- '1' if VPA or VDA
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
+	signal r_cyc				: std_logic;		-- '1' for entirety of cycle
 	signal r_D_WR_stb			: std_logic;
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
@@ -194,18 +194,24 @@ begin
 
 	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 						-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
-										and r_PHI0_dly(1) = '1' 					-- board doesn't crash into the bank
+										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
 										else												-- bank address so hold is short
 																							-- and setup late														
 							'0';
 
-	wrap_o.A_log 			<= r_log_A;
-	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
-	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
-	wrap_o.D_wr_stb		<= r_D_WR_stb;
-	wrap_o.ack				<= i_ack;
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.BE 					<= '0';
+	wrap_o.A 					<= r_log_A;
+	wrap_o.cyc					<= r_cyc;
+	wrap_o.lane_req 			<= ( 0 => '1', others => '0');
+	wrap_o.we	  				<= not(i_CPUSKT_RnW_i);
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;
+
+	wrap_o.D_wr_stb			<= ( 0 => r_D_WR_stb, others => '0');
+	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -220,9 +226,6 @@ begin
 	variable v_ctupnext : t_substate;	
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
-			r_D_WR_stb <= '0';
-
 			if wrap_i.rdy = '1' then
 				v_ctupnext := r_rdy_ctup + 1;
 				if v_ctupnext /= 0 then
@@ -263,7 +266,7 @@ begin
 						 	fb_syscon_i.rst = '0' and
 						 	wrap_i.cpu_halt = '0' and
 						 	i_vma = '1' then
-							r_a_stb <= '1';
+								r_cyc <= '1';
 								r_D_WR_stb <= '0';
 								r_rdy_ctup <= (others => '0');
 							r_inihib <= '0';
@@ -305,6 +308,8 @@ begin
 							r_state <= phi1;
 							r_PHI0 <= '0';
 							r_substate <= SUBSTATEMAX_8;
+							r_cyc <= '0';
+							r_D_WR_stb <= '0';
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -314,6 +319,8 @@ begin
 					r_state <= phi1;
 					r_substate <= SUBSTATEMAX_8;
 					r_PHI0 <= '0';
+					r_cyc <= '0';
+					r_D_WR_stb <= '0';
 			end case;
 
 
