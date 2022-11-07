@@ -527,9 +527,12 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	lda	#$A5
+
 	; test BBC slow bus bodge
 	sta	sheila_SYSVIA_orb
 	lda	sheila_SYSVIA_ora
+	lda	#$5A
 	sta	sheila_SYSVIA_orb
 	sta	sheila_SYSVIA_orb
 

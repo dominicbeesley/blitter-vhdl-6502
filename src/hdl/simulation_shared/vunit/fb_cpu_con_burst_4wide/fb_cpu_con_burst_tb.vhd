@@ -43,6 +43,7 @@ architecture rtl of test_tb is
 	signal 	ib_ack					: std_logic;
 	signal 	ib_D_rd					: std_logic_vector((8 * G_BYTELANES)-1 downto 0);
 
+	signal 	i_per_stall 			: std_logic := '0'; -- TODO: test this?
 
 
 	procedure sim_wait_reset 
@@ -359,7 +360,8 @@ begin
 	port map (
 		fb_syscon_i => i_fb_syscon,
 		fb_c2p_i => i_fb_con_c2p,
-		fb_p2c_o => i_fb_con_p2c
+		fb_p2c_o => i_fb_con_p2c,
+		stall_i  => i_per_stall
 	);
 
 

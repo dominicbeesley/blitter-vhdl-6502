@@ -98,13 +98,13 @@ architecture rtl of fb_cpu_65c02 is
 	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
 
 	-- address latch state:
-	constant SUBSTATE_A_4	: t_substate := SUBSTATEMAX_4 - to_unsigned(9, t_substate'length);		-- TODO: this is a touch fast (should be 11/12)
+	constant SUBSTATE_A_4	: t_substate := SUBSTATEMAX_4 - to_unsigned(12, t_substate'length);
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
 
 	constant SUBSTATE_D_4	: t_substate := to_unsigned(2, t_substate'length);
 	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
 
-	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(5, t_substate'length);		
+	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(10, t_substate'length);	-- faster than spec but measures less than this on a real r65c02	
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
 
@@ -113,7 +113,7 @@ architecture rtl of fb_cpu_65c02 is
 	signal r_cpu_res			: std_logic;
 
 	signal r_boot_65816_dly	: std_logic_vector(2 downto 0) := (others => '1');
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
+	signal r_cyc				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
 	signal r_D_WR_stb			: std_logic;
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
@@ -194,19 +194,21 @@ begin
 
 
 	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
-										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
-										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
 										else												-- bank address so hold is short
 																							-- and setup late														
 							'0';
 
-	wrap_o.A_log 			<= r_log_A;
-	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
-	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
-	wrap_o.D_wr_stb		<= r_D_WR_stb;
-	wrap_o.ack				<= i_ack;
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.BE					<= '0';
+	wrap_o.A 					<= r_log_A;
+	wrap_o.cyc	 				<= r_cyc;
+	wrap_o.lane_req			<= ( 0 => '1', others => '0');
+	wrap_o.we	  				<= not(i_CPUSKT_RnW_i);
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;	
+	wrap_o.D_wr_stb			<= ( 0 => r_D_WR_stb, others => '0');
+	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -221,8 +223,6 @@ begin
 	variable v_ctupnext : t_substate;	
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
-			r_D_WR_stb <= '0';
 
 			if wrap_i.rdy = '1' then
 				v_ctupnext := r_rdy_ctup + 1;
@@ -249,7 +249,7 @@ begin
 						if  wrap_i.noice_debug_inhibit_cpu = '0' and
 							 fb_syscon_i.rst = '0' and
 							 wrap_i.cpu_halt = '0' then
-							r_a_stb <= '1';
+							r_cyc <= '1';
 							r_D_WR_stb <= '0';
 							r_rdy_ctup <= (others => '0');
 							r_inihib <= '0';
@@ -300,6 +300,8 @@ begin
 							else
 								r_substate <= SUBSTATEMAX_8;
 							end if;
+							r_cyc <= '0';
+							r_D_WR_stb <= '0';
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -309,6 +311,8 @@ begin
 					r_state <= phi1;
 					r_substate <= SUBSTATEMAX_4;
 					r_PHI0 <= '0';
+					r_cyc <= '0';
+					r_D_WR_stb <= '0';
 			end case;
 
 
@@ -331,6 +335,7 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
+			(i_CPUSKT_RnW_i = '0' and wrap_i.rdy = '1') or
 			(r_rdy_ctup >= SUBSTATE_D_4 and r_cfg_8MHz = '0') or
 			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and

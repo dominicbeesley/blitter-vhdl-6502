@@ -341,8 +341,8 @@ g_cpu_4:IF not G_CPU_8MHz GENERATE
 			dly_phi0c => 5 ns,
 			dly_phi0d => 5 ns,
 			dly_addr  => 70 ns, 
-			dly_dwrite=> 55 ns,	-- dwrite must be > dhold
-			dly_dhold => 30 ns
+			dly_dwrite=> 25 ns,	-- dwrite must be > dhold -- faster than spec but closer to measured
+			dly_dhold => 20 ns
 		)
 	PORT MAP (
 		A => i_CPU_A(15 downto 0),
