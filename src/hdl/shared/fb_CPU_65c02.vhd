@@ -104,7 +104,7 @@ architecture rtl of fb_cpu_65c02 is
 	constant SUBSTATE_D_4	: t_substate := to_unsigned(2, t_substate'length);
 	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
 
-	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(10, t_substate'length);	-- faster than spec but measures less than this on a real r65c02	
+	constant SUBSTATE_D_WR_4: t_substate := SUBSTATEMAX_4 - to_unsigned(10, t_substate'length);	-- faster than spec but measures much better than this on a real r65c02	
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
 
