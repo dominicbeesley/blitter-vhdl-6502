@@ -145,7 +145,9 @@ entity fb_cpu is
 		debug_SYS_VIA_block_o				: out std_logic;
 
 		debug_80188_state_o					: out std_logic_vector(2 downto 0);
-		debug_80188_ale_o						: out std_logic
+		debug_80188_ale_o						: out std_logic;
+
+		debug_65816_addr_meta_o				: out std_logic
 
 	);
 end fb_cpu;
@@ -301,7 +303,9 @@ architecture rtl of fb_cpu is
 
 		boot_65816_i							: in		std_logic;
 
-		debug_vma_o								: out		std_logic
+		debug_vma_o								: out		std_logic;
+
+		debug_addr_meta_o						: out		std_logic
 
 	);
 	end component;
@@ -956,7 +960,8 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 
 		boot_65816_i							=> boot_65816_i,
 
-		debug_vma_o								=> debug_65816_vma_o
+		debug_vma_o								=> debug_65816_vma_o,
+		debug_addr_meta_o						=> debug_65816_addr_meta_o
 	);
 END GENERATE;
 

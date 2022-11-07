@@ -342,6 +342,7 @@ architecture rtl of mk3blit is
 	signal	i_debug_wrap_sys_st		: std_logic;
 
 	signal	i_debug_65816_vma			: std_logic;
+	signal	i_debug_65816_addr_meta : std_logic;
 
 	signal	i_debug_SYS_VIA_block		: std_logic;
 
@@ -763,7 +764,8 @@ END GENERATE;
 
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_80188_state_o				=> i_debug_80188_state,
-		debug_80188_ale_o					=> i_debug_80188_ale
+		debug_80188_ale_o					=> i_debug_80188_ale,
+		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta
 
 	);
 
@@ -983,10 +985,10 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= not i_chipset_cpu_halt;
 
-
-SYS_AUX_o(2 downto 0)	<= i_debug_80188_state;
-
-SYS_AUX_o(3)				<= i_debug_80188_ale;
+SYS_AUX_o(0)	<= '0';
+SYS_AUX_o(1)	<= '0';
+SYS_AUX_o(2)	<= i_debug_65816_vma;
+SYS_AUX_o(3)	<= i_debug_65816_addr_meta;
 
 SYS_AUX_io(0) <= i_debug_wrap_sys_st;
 SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
