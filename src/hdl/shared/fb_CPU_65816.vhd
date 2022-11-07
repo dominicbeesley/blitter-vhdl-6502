@@ -38,6 +38,18 @@
 --
 ----------------------------------------------------------------------------------
 
+-- Speed up notes 7/11/22 - it seems SUBSTATE_A_8 could be shaved to 3 for the 14MHz part at 5V except
+-- that the i_VMA signal then seems to cause problems with possible metastability - look at either 
+-- timing constraints on ports to improve this or ignore VMA altogether?
+
+-- The following cycles were tested and found ok 7/11/22 on 14MHz part, returned values to those
+-- for the 3.3V/8MHz part
+--	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
+--	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(4, t_substate'length);
+--	constant SUBSTATE_D_8	: t_substate := to_unsigned(2, t_substate'length);
+--	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -71,7 +83,8 @@ entity fb_cpu_65816 is
 
 		boot_65816_i							: in		std_logic;
 
-		debug_vma_o								: out		std_logic
+		debug_vma_o								: out		std_logic;
+		debug_addr_meta_o						: out		std_logic
 
 );
 end fb_cpu_65816;
@@ -103,7 +116,10 @@ architecture rtl of fb_cpu_65816 is
 	-- address latch state:
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
 
-	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
+	constant SUBSTATE_A_META: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
+
+
+	constant SUBSTATE_D_8	: t_substate := to_unsigned(2, t_substate'length);
 
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
@@ -122,6 +138,7 @@ architecture rtl of fb_cpu_65816 is
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
+	signal r_A_meta			: std_logic_vector(23 downto 0);
 
 	signal i_ack				: std_logic;
 
@@ -194,7 +211,7 @@ begin
 
 	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 						-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
-										and r_PHI0_dly(0) = '1' 					-- board doesn't crash into the bank
+										and r_PHI0 = '1' 								-- board doesn't crash into the bank
 										else												-- bank address so hold is short
 																							-- and setup late														
 							'0';
@@ -239,6 +256,11 @@ begin
 
 			case r_state is
 				when phi1 =>
+
+					if r_substate = SUBSTATE_A_META then
+						r_A_meta <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;
+					end if;
+
 					if r_substate = SUBSTATE_A_8 then
 
 						if r_cpu_hlt = '0' then
@@ -259,6 +281,12 @@ begin
 								-- not boot mode map direct
 								r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;
 							end if;
+						end if;
+
+						if r_A_meta = i_CPUSKT_D_i & i_CPUSKT_A_i then
+							debug_addr_meta_o <= '0';
+						else
+							debug_addr_meta_o <= '1';
 						end if;
 
 
@@ -343,7 +371,8 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
-				(r_rdy_ctup >= SUBSTATE_D_8) 
+				(	(i_CPUSKT_RnW_i = '0' and wrap_i.rdy = '1') or 
+					r_rdy_ctup >= SUBSTATE_D_8) 
 		) and
 		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
 
