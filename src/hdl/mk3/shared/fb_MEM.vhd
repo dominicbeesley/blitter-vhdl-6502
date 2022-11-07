@@ -89,7 +89,6 @@ architecture rtl of fb_mem is
 	signal	r_ack			:  std_logic;
 	signal	i_wr_ack		:  std_logic; -- fast ack for writes on same cycle to make 8MHz on 65816
 
-	signal   tmp_v			: t_rdy_ctdn;
 
 begin
 
@@ -125,7 +124,7 @@ begin
 			if rising_edge(fb_syscon_i.clk) then
 
 				r_ack <= '0';
-				
+
 				case state is
 					when idle =>
 						MEM_A_o <= (others => '0');
@@ -226,9 +225,6 @@ begin
 
 			end if;
 		end if;
-
-		tmp_v <= v_rdy_ctdn;
-
 	end process;
 
 

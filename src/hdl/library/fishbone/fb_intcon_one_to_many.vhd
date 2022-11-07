@@ -92,9 +92,6 @@ architecture rtl of fb_intcon_one_to_many is
 	signal	r_con_A			: std_logic_vector(G_ADDRESS_WIDTH-1 downto 0);
 	signal	r_rdy_ctdn		: t_rdy_ctdn;
 	signal 	i_con_A			: std_logic_vector(23 downto 0);
-
-	signal	i_stall_np		: std_logic; -- '1' when the peripheral pointed to by peripheral_sel_i is stalled
-
 begin
 
 	peripheral_sel_addr_o <= fb_con_c2p_i.A(G_ADDRESS_WIDTH-1 downto 0);
@@ -130,9 +127,6 @@ begin
 	fb_con_p2c_o.rdy		 	<= i_s2m.rdy;
 	fb_con_p2c_o.ack 			<= i_s2m.ack;	
 	fb_con_p2c_o.stall		<= '0' when r_state = idle else '1';		
-
-
-	i_stall_np <= fb_per_p2c_i(to_integer(peripheral_sel_i)).stall; -- TODO_PIPE: which gives best timing one hot or mux?	
 
 	p_state:process(fb_syscon_i, r_state)
 	begin

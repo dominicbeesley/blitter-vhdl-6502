@@ -80,7 +80,6 @@ architecture rtl of fb_intcon_many_to_one is
 	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
 	signal	r_c2p_we			: std_logic;												-- registered we 
 	signal	r_rdy_ctdn		: t_rdy_ctdn;
-	signal	r_a_stb			: std_logic;
 	signal	r_D_wr			: std_logic_vector(7 downto 0);
 	signal	r_D_wr_stb		: std_logic;
 
@@ -168,7 +167,6 @@ end generate;
 			r_c2p_we <= '0';
 			r_cyc_grant_ix <= (others => '0');
 			r_cyc_act_oh <= (others => '0');
-			r_a_stb <= '0';
 			r_D_wr <= (others => '0');
 			r_D_wr_stb <= '0';
 			r_rdy_ctdn <= RDY_CTDN_MIN;
@@ -190,7 +188,6 @@ end generate;
 						r_D_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
 						r_D_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
 						r_state <= waitstall;
-						r_a_stb <= '1';
 					end if;
 				when waitstall =>
 					-- while stalled latch 
@@ -206,7 +203,6 @@ end generate;
 
 					if fb_per_p2c_i.stall = '0' then
 						r_state <= act;
-						r_a_stb <= '0';
 					end if;
 				when act => 
 						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
