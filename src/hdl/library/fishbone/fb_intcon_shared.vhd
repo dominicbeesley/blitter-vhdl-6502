@@ -95,8 +95,6 @@ architecture rtl of fb_intcon_shared is
 	signal	i_a_stb_any			: std_logic;												-- '1' when any controller is active
 	signal	r_cyc_ack			: std_logic;												-- signal that cycle is being serviced
 
-	signal	i_c2px				: fb_con_o_per_i_t := fb_c2p_unsel;					-- the i_c2px that has been granted muxed
-
 	-- register the muxed signals for timing
 	signal	r_c2p_A			: std_logic_vector(23 downto 0);						-- registered address of selected controller
 	signal	r_c2p_we			: std_logic;												-- registered we 
@@ -166,15 +164,6 @@ end generate;
 	end generate;
 
 	i_a_stb_any <= or_reduce(i_cyc_a_stb);
-
-	-- multiplex i_c2px inputs
-	p_mux_m2s:process(r_state, r_cyc_grant_ix, fb_con_c2p_i)
-	begin
-		i_c2px <= fb_c2p_unsel;
-		if r_state /= idle then
-			i_c2px <= fb_con_c2p_i(to_integer(r_cyc_grant_ix));
-		end if;
-	end process;
 
 	g_c2p_shared:for I in G_PERIPHERAL_COUNT-1 downto 0 generate
 		fb_per_c2p_o(I).cyc 			<= r_cyc_per(i);
