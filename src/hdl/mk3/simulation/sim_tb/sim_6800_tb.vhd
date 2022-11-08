@@ -139,7 +139,7 @@ begin
 	i_exp_PORTG <= (
 		2 downto 0 => "111" -- Model B
 	,	3 => '1' -- not t65
-	,	4 => '1' -- swromx off
+	,	4 => '0' -- swromx off
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
