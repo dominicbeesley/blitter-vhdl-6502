@@ -170,7 +170,7 @@ architecture rtl of fb_cpu_6x09 is
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 	signal r_we					: std_logic;
-	signal r_a_stb				: std_logic;
+	signal r_cyc				: std_logic;
 	signal i_D_wr_stb			: std_logic;
 	signal r_cpu_E				: std_logic;
 	signal r_cpu_Q				: std_logic;
@@ -257,15 +257,18 @@ begin
 							'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
 							'0';
 
-	wrap_o.A_log 			<= r_log_A;
-																		
-	-- note: don't start CYC until AS is settled
-	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
-	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
-	wrap_o.D_wr_stb		<= i_D_wr_stb;
-	wrap_o.ack				<= r_wrap_ack;
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.BE		 			<= '1';
+	wrap_o.A		 				<= r_log_A;
+	wrap_o.cyc					<= r_cyc;
+
+	wrap_o.lane_req			<= (0 => '1', others => '0');
+	wrap_o.we	  				<= r_we;
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+	wrap_o.D_wr_stb			<= (0 => i_D_wr_stb, others => '0');
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;		
+	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_3_5_MHz = '1' else
 						r_DD_ring(T_tDD_2);
@@ -274,16 +277,15 @@ begin
 	p_address_latch:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
 			if r_cpu_res = '0' and 
 				r_cpu_6x09_VMA = '1' and (
 				(r_cfg_3_5_MHz = '1' and r_AD_ring(T_tAD_3) = '1') or (r_AD_ring(T_tAD_2) = '1') 
 				) then
 
 				if wrap_i.noice_debug_inhibit_cpu = '1' then
-					r_a_stb <= '0';
+					r_cyc <= '0';
 				else
-					r_a_stb <= '1';
+					r_cyc <= '1';
 					if i_CPUSKT_BS_i = '1' and i_CPUSKT_BA_i = '0' then
 						-- toggle A(11) on vector pull to avoid MOS jump table
 						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 12) & not(i_CPUSKT_A_i(11)) & i_CPUSKT_A_i(10 downto 0) ;
@@ -291,8 +293,10 @@ begin
 						r_log_A <= x"FF" & i_CPUSKT_A_i;
 					end if;
 					r_we <= not(i_CPUSKT_RnW_i);
-				end if;
 
+				end if;
+			elsif r_cyc = '1' and r_wrap_ack = '1' then
+				r_cyc <= '0';
 			end if;
 		end if;
 	end process;
@@ -307,8 +311,8 @@ begin
 			end if;
 
 			r_PH_ring <= r_PH_ring(r_PH_ring'high-1 downto 0) & "1";
-			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "0";
-			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
+			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "1";
+			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "1";
 
 			if wrap_i.rdy = '1' then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
