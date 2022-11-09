@@ -150,6 +150,8 @@ begin
 			if v_do_write_sel_reg then
 				if G_CHANNELS > 1 then
 					r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
+				else
+					r_cha_sel <= (others => '0');
 				end if;
 				r_per_state <= idle;				
 			end if;

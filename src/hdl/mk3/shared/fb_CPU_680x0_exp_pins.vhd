@@ -105,6 +105,7 @@ begin
 	wrap_exp_o.exp_PORTB(7) <= CPUSKT_nDTACK_i;
 
 
+	CPUSKT_E_o		<= wrap_exp_i.exp_PORTD(0);	
 	CPUSKT_RnW_o		<= wrap_exp_i.exp_PORTD(1);
 	CPUSKT_nUDS_o		<= wrap_exp_i.exp_PORTD(2);
 	CPUSKT_FC0_o		<= wrap_exp_i.exp_PORTD(3);

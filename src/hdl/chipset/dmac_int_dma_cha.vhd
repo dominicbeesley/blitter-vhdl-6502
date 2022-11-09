@@ -160,7 +160,6 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal 	r_per_ack				: std_logic;
 	signal	r_per_had_d_wr_stb	: std_logic;
-	signal   r_per_d_wr				: std_logic_vector(7 downto 0);
 
 	signal	r_dma_state				: dma_state_type;
 	signal	i_dma_state_next		: dma_state_type;
@@ -420,7 +419,6 @@ begin
 							r_per_state <= wr;
 							if fb_per_c2p_i.D_wr_stb = '1' then
 								r_per_had_d_wr_stb <= '1';
-								r_per_d_wr <= fb_per_c2p_i.D_wr;
 							end if;
 						else
 							r_per_state <= rd;
@@ -432,7 +430,6 @@ begin
 				when wr =>
 					if fb_per_c2p_i.D_wr_stb = '1' then
 						r_per_had_d_wr_stb <= '1';
-						r_per_d_wr <= fb_per_c2p_i.D_wr;
 					end if;
 					if r_per_had_d_wr_stb = '1' then
 						r_per_ack <= '1';
