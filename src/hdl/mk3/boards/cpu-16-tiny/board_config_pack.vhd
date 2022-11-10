@@ -76,7 +76,7 @@ package board_config_pack is
 	constant G_INCL_CPU_T65		: boolean := true;
 	constant G_INCL_CPU_65C02	: boolean := true;
 	constant G_INCL_CPU_6800	: boolean := true;
-	constant G_INCL_CPU_80188	: boolean := false;
+	constant G_INCL_CPU_80188	: boolean := true;
 	constant G_INCL_CPU_65816	: boolean := true;
 	constant G_INCL_CPU_6x09	: boolean := true;
 	constant G_INCL_CPU_Z80		: boolean := false;

@@ -96,7 +96,7 @@ architecture rtl of fb_cpu_80188 is
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 	signal r_we					: std_logic;
-	signal r_a_stb				: std_logic;
+	signal r_cyc				: std_logic;
 	signal r_wrap_ack			: std_logic;
 	signal r_d_wr_stb			: std_logic;
 
@@ -216,7 +216,7 @@ begin
 	i_CPUSKT_ARDY_o	<= '0';
 	i_CPUSKT_SRDY_o	<= r_SRDY;
 	i_CPUSKT_INT0_o	<= not wrap_i.irq_n;
-	i_CPUSKT_nNMI_o	<= '0';
+	i_CPUSKT_nNMI_o	<= wrap_i.noice_debug_nmi_n;
 	i_CPUSKT_nRES_o	<= (not fb_syscon_i.rst) when cpu_en_i = '1' else '0';		-- TODO:does this need synchronising?
 	i_CPUSKT_INT1_o	<= '0';
 	i_CPUSKT_INT2_o	<= '0';
@@ -228,13 +228,17 @@ begin
 	i_CPU_D_RnW_o 	<= 	'1' 	when i_CPUSKT_DTnR_i = '0' and i_CPUSKT_nDEN_i = '0' else
 								'0';
 
-	wrap_o.A_log 			<= r_log_A;
-	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
-	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
-	wrap_o.D_wr_stb		<= r_d_wr_stb;
-	wrap_o.ack				<= r_wrap_ack;
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.BE					<= '0';
+	wrap_o.cyc					<= r_cyc;
+	wrap_o.A		 				<= r_log_A;
+	wrap_o.lane_req			<= (0 => '1', others => '0');
+	wrap_o.we	  				<= r_we;
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;		
+	wrap_o.D_wr_stb			<= (0 => r_d_wr_stb, others => '0');
+	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 
 	i_CPU_CLK_posedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' else
@@ -257,15 +261,13 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_log_A <= (others => '0');
-			r_a_stb <= '0';
+			r_cyc <= '0';
 			r_d_wr_stb <= '0';
 			r_we <= '0';
 			r_wrap_ack <= '0';
 			r_state <= idle;
 			r_SRDY <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
-			r_d_wr_stb <= '0';
 			r_wrap_ack <= '0';
 			case r_state is
 				when idle =>
@@ -278,13 +280,13 @@ begin
 								r_state <= ActRead;
 								r_we <= '0';
 								r_log_A <= i_io_addr;
-								r_a_stb <= '1';
+								r_cyc <= '1';
 								r_SRDY <= '0';
 							when "010" =>
 								r_state <= ActWrite;
 								r_we <= '1';
 								r_log_A <= i_io_addr;
-								r_a_stb <= '1';
+								r_cyc <= '1';
 								r_SRDY <= '0';
 							when "011" =>
 								r_state <= ActHalt;
@@ -293,13 +295,13 @@ begin
 								r_state <= ActRead;
 								r_we <= '0';
 								r_log_A <=  i_mem_addr;
-								r_a_stb <= '1';
+								r_cyc <= '1';
 								r_SRDY <= '0';
 							when "110" =>
 								r_state <= ActWrite;
 								r_we <= '1';
 								r_log_A <= i_mem_addr;
-								r_a_stb <= '1';
+								r_cyc <= '1';
 								r_SRDY <= '0';
 							when others =>
 								r_state <= Idle; -- passive?
@@ -335,10 +337,12 @@ begin
 						r_wrap_ack <= '1';
 						r_state <= idle;
 						r_SRDY <= '0';
+						r_cyc <= '0';
+						r_d_wr_stb <= '0';
 					end if;
 				when others =>
 					r_log_A <= (others => '0');
-					r_a_stb <= '0';
+					r_cyc <= '0';
 					r_we <= '0';
 					r_wrap_ack <= '0';
 					r_state <= idle;
