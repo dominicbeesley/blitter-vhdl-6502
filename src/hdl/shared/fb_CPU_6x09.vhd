@@ -177,25 +177,25 @@ architecture rtl of fb_cpu_6x09 is
 	signal r_cpu_res			: std_logic;
 	signal r_wrap_ack			: std_logic;
 
-	signal i_CPUSKT_TSC_o	: std_logic;
-	signal i_CPUSKT_CLK_Q_o	: std_logic;
-	signal i_CPUSKT_CLK_E_o	: std_logic;
-	signal i_CPUSKT_nHALT_o	: std_logic;
-	signal i_CPUSKT_nIRQ_o	: std_logic;
-	signal i_CPUSKT_nNMI_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPUSKT_nFIRQ_o	: std_logic;
+	signal i_CPUSKT_TSC_b2c	: std_logic;
+	signal i_CPUSKT_CLK_Q_b2c	: std_logic;
+	signal i_CPUSKT_CLK_E_b2c	: std_logic;
+	signal i_CPUSKT_nHALT_b2c	: std_logic;
+	signal i_CPUSKT_nIRQ_b2c	: std_logic;
+	signal i_CPUSKT_nNMI_b2c	: std_logic;
+	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_CPUSKT_nFIRQ_b2c	: std_logic;
 	
-	signal i_CPU_D_RnW_o		: std_logic;
+	signal i_BUF_D_RnW_b2c		: std_logic;
 
-	signal i_CPUSKT_RnW_i	: std_logic;
-	signal i_CPUSKT_BS_i		: std_logic;
-	signal i_CPUSKT_LIC_i	: std_logic;
-	signal i_CPUSKT_BA_i		: std_logic;
-	signal i_CPUSKT_AVMA_i	: std_logic;
+	signal i_CPUSKT_RnW_c2b	: std_logic;
+	signal i_CPUSKT_BS_c2b		: std_logic;
+	signal i_CPUSKT_LIC_c2b	: std_logic;
+	signal i_CPUSKT_BA_c2b		: std_logic;
+	signal i_CPUSKT_AVMA_c2b	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_c2b		: std_logic_vector(15 downto 0);
 
 	signal r_cfg_3_5_MHz		: std_logic;
 	signal r_cfg_throttle	: std_logic;
@@ -229,32 +229,35 @@ begin
 
 		-- local 6x09 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
-		CPUSKT_CLK_Q_i		=> i_CPUSKT_CLK_Q_o,
-		CPUSKT_CLK_E_i		=> i_CPUSKT_CLK_E_o,
-		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
-		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
-		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
-		CPUSKT_nFIRQ_i		=> i_CPUSKT_nFIRQ_o,
+		CPUSKT_TSC_b2c		=> i_CPUSKT_TSC_b2c,
+		CPUSKT_CLK_Q_b2c	=> i_CPUSKT_CLK_Q_b2c,
+		CPUSKT_CLK_E_b2c	=> i_CPUSKT_CLK_E_b2c,
+		CPUSKT_nHALT_b2c	=> i_CPUSKT_nHALT_b2c,
+		CPUSKT_nIRQ_b2c	=> i_CPUSKT_nIRQ_b2c,
+		CPUSKT_nNMI_b2c	=> i_CPUSKT_nNMI_b2c,
+		CPUSKT_nRES_b2c	=> i_CPUSKT_nRES_b2c,
+		CPUSKT_nFIRQ_b2c	=> i_CPUSKT_nFIRQ_b2c,
+		CPUSKT_D_b2c		=> wrap_i.D_rd(7 downto 0),
 
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_BS_o			=> i_CPUSKT_BS_i,
-		CPUSKT_LIC_o		=> i_CPUSKT_LIC_i,
-		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
-		CPUSKT_AVMA_o		=> i_CPUSKT_AVMA_i,
+		BUF_D_RnW_b2c		=> i_BUF_D_RnW_b2c,
+
+
+		CPUSKT_RnW_c2b		=> i_CPUSKT_RnW_c2b,
+		CPUSKT_BS_c2b		=> i_CPUSKT_BS_c2b,
+		CPUSKT_LIC_c2b		=> i_CPUSKT_LIC_c2b,
+		CPUSKT_BA_c2b		=> i_CPUSKT_BA_c2b,
+		CPUSKT_AVMA_c2b	=> i_CPUSKT_AVMA_c2b,
 
 		-- shared per CPU signals
-		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
 
-		CPUSKT_A_o			=> i_CPUSKT_A_i,
-		CPUSKT_D_o			=> i_CPUSKT_D_i
+		CPUSKT_A_c2b		=> i_CPUSKT_A_c2b,
+		CPUSKT_D_c2b		=> i_CPUSKT_D_c2b
 
 	);
 
 
-	i_CPU_D_RnW_o <= 	'0'	when i_CPUSKT_BA_i = '1' else
-							'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
+	i_BUF_D_RnW_b2c <= 	'0'	when i_CPUSKT_BA_c2b = '1' else
+							'1' 	when i_CPUSKT_RnW_c2b = '1' and r_DH_ring(T_MAX_DH) = '1' else
 							'0';
 
 	wrap_o.BE		 			<= '1';
@@ -263,7 +266,7 @@ begin
 
 	wrap_o.lane_req			<= (0 => '1', others => '0');
 	wrap_o.we	  				<= r_we;
-	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
 	wrap_o.D_wr_stb			<= (0 => i_D_wr_stb, others => '0');
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
@@ -286,13 +289,13 @@ begin
 					r_cyc <= '0';
 				else
 					r_cyc <= '1';
-					if i_CPUSKT_BS_i = '1' and i_CPUSKT_BA_i = '0' then
+					if i_CPUSKT_BS_c2b = '1' and i_CPUSKT_BA_c2b = '0' then
 						-- toggle A(11) on vector pull to avoid MOS jump table
-						r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 12) & not(i_CPUSKT_A_i(11)) & i_CPUSKT_A_i(10 downto 0) ;
+						r_log_A <= x"FF" & i_CPUSKT_A_c2b(15 downto 12) & not(i_CPUSKT_A_c2b(11)) & i_CPUSKT_A_c2b(10 downto 0) ;
 					else 
-						r_log_A <= x"FF" & i_CPUSKT_A_i;
+						r_log_A <= x"FF" & i_CPUSKT_A_c2b;
 					end if;
-					r_we <= not(i_CPUSKT_RnW_i);
+					r_we <= not(i_CPUSKT_RnW_c2b);
 
 				end if;
 			elsif r_cyc = '1' and r_wrap_ack = '1' then
@@ -364,12 +367,12 @@ begin
 							or wrap_i.noice_debug_inhibit_cpu = '1'
 							or r_DS_ring(T_tDS_2) = '1' then
 							r_state <= phA;
-							r_cpu_6x09_FIC <= i_CPUSKT_LIC_i;
+							r_cpu_6x09_FIC <= i_CPUSKT_LIC_c2b;
 							if SIM then
 								-- horrible bodge - our cpu model doesn't do AVMA correctly!
 								r_cpu_6x09_VMA <= '1';
 							else
-								r_cpu_6x09_VMA <= i_CPUSKT_AVMA_i;
+								r_cpu_6x09_VMA <= i_CPUSKT_AVMA_c2b;
 							end if;
 							r_AD_ring <= (0 => '1', others => '0');
 							r_wrap_ack <= '1';
@@ -382,12 +385,12 @@ begin
 					end if;
 				when others =>
 					r_state <= phA;
-					r_cpu_6x09_FIC <= i_CPUSKT_LIC_i;
+					r_cpu_6x09_FIC <= i_CPUSKT_LIC_c2b;
 					if SIM then
 						-- horrible bodge - our cpu model doesn't do AVMA correctly!
 						r_cpu_6x09_VMA <= '1';
 					else
-						r_cpu_6x09_VMA <= i_CPUSKT_AVMA_i;
+						r_cpu_6x09_VMA <= i_CPUSKT_AVMA_c2b;
 					end if;
 					r_AD_ring <= (0 => '1', others => '0');
 					r_wrap_ack <= '1';
@@ -401,24 +404,24 @@ begin
 		end if;
 	end process;
 
-	i_CPUSKT_TSC_o <= not cpu_en_i;
+	i_CPUSKT_TSC_b2c <= not cpu_en_i;
 
-	i_CPUSKT_CLK_E_o <= r_cpu_E;
+	i_CPUSKT_CLK_E_b2c <= r_cpu_E;
 	
-	i_CPUSKT_CLK_Q_o <= r_cpu_Q;
+	i_CPUSKT_CLK_Q_b2c <= r_cpu_Q;
 
-	i_CPUSKT_nRES_o <= (not r_cpu_res) when cpu_en_i = '1' else '0';
+	i_CPUSKT_nRES_b2c <= (not r_cpu_res) when cpu_en_i = '1' else '0';
 	
-	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n;
 	
-	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
   	
-  	i_CPUSKT_nFIRQ_o <=  wrap_i.nmi_n;
+  	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n;
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
 
-  	i_CPUSKT_nHALT_o <= 	i_rdy;
+  	i_CPUSKT_nHALT_b2c <= 	i_rdy;
 
   	i_rdy <=								'1' when fb_syscon_i.rst = '1' else
   											'1' when wrap_i.noice_debug_inhibit_cpu = '1' else

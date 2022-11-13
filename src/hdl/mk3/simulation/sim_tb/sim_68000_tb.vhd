@@ -105,6 +105,7 @@ architecture Behavioral of sim_68000_tb is
 	signal	i_cpu_E								: std_logic;
 
 	signal	i_CPU_D_out							: std_logic_vector(15 downto 0);
+	signal	i_CPU_D_in							: std_logic_vector(15 downto 0);
 	signal	i_CPU_drive_data					: std_logic;
 
 begin
@@ -287,8 +288,7 @@ begin
       ipl           		=> i_cpu_IPL,
       addr          		=> i_cpu_A,
 --      fc						=> i_cpu_FC,
-      data_in(15 downto 8)	=> i_exp_PORTEFG_io(11 downto 4),
-      data_in(7 downto 0)	=> i_exp_PORTA_io_cpu,     
+      data_in	=> i_CPU_D_in,
       data_out				=> i_CPU_D_out,
       drive_data			=> i_CPU_drive_data,
       as            		=> i_cpu_AS,
@@ -300,6 +300,8 @@ begin
 --      VPA					=> i_cpu_nVPA,
 --      VMA					=> i_cpu_nVMA
    );
+
+	i_CPU_D_in <= i_exp_PORTEFG_io(11 downto 4) & i_exp_PORTA_io_cpu;     
 
    i_exp_PORTF(11 downto 4) <= i_CPU_D_out(15 downto 8) when i_CPU_drive_data = '1' else (others => 'Z');
    i_exp_PORTA_io_cpu <= i_CPU_D_out(7 downto 0) when i_CPU_drive_data = '1' else (others => 'Z');

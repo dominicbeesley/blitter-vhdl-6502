@@ -99,8 +99,6 @@ entity fb_cpu is
 
 		hard_cpu_en_o							: out std_logic;
 
-		cpuskt_D_o								: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
 		JIM_page_i								: in  	std_logic_vector(15 downto 0);
@@ -168,10 +166,8 @@ architecture rtl of fb_cpu is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i;
+		wrap_i									: in t_cpu_wrap_i
 
-		-- special 
-		D_Rd_i						: in std_logic_vector(7 downto 0)
 	);
 	end component;
 
@@ -523,76 +519,70 @@ begin
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
 				else
-					case cfg_cpu_type_i is
-						when CPU_65816 =>
-							r_cpu_run_ix_act <= C_IX_CPU_65816;
+					if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+						r_cpu_run_ix_act <= C_IX_CPU_65816;
+						r_do_sys_via_block <= '1';	
+						r_cpu_en_65816 <= '1';
+					elsif cfg_cpu_type_i = CPU_680x0 and G_INCL_CPU_680x0 then
+						r_cpu_run_ix_act <= C_IX_CPU_680x0;
+						r_cpu_en_680x0 <= '1';
+					elsif cfg_cpu_type_i = CPU_68008 and G_INCL_CPU_68008 then
+						r_cpu_run_ix_act <= C_IX_CPU_68008;
+						r_cpu_en_68008 <= '1';
+					elsif cfg_cpu_type_i = CPU_6800 and G_INCL_CPU_6800 then
+						r_cpu_run_ix_act <= C_IX_CPU_6800;
+						r_cpu_en_6800 <= '1';
+					elsif cfg_cpu_type_i = CPU_6x09 and G_INCL_CPU_6x09 then
+						r_cpu_run_ix_act <= C_IX_CPU_6x09;
+						if cfg_cpu_speed_opt_i = CPUSPEED_6309_3_5 then
 							r_do_sys_via_block <= '1';	
-							r_cpu_en_65816 <= '1';
-						when CPU_680x0 =>
-							r_cpu_run_ix_act <= C_IX_CPU_680x0;
-							r_cpu_en_680x0 <= '1';
-						when CPU_68008 =>
-							r_cpu_run_ix_act <= C_IX_CPU_68008;
-							r_cpu_en_68008 <= '1';
-						when CPU_6800 =>
-							r_cpu_run_ix_act <= C_IX_CPU_6800;
-							r_cpu_en_6800 <= '1';
-						when CPU_6x09 =>
-							r_cpu_run_ix_act <= C_IX_CPU_6x09;
-							if cfg_cpu_speed_opt_i = CPUSPEED_6309_3_5 then
-								r_do_sys_via_block <= '1';	
-							end if;
-							r_cpu_en_6x09 <= '1';
-						when CPU_65C02 =>
-							r_cpu_run_ix_act <= C_IX_CPU_65C02;
-							r_do_sys_via_block <= '1';	
-							r_cpu_en_65c02 <= '1';
-						when CPU_80188 =>
-							r_cpu_run_ix_act <= C_IX_CPU_80188;
-							r_cpu_en_80188 <= '1';
-						when CPU_Z80 =>
-							r_cpu_run_ix_act <= C_IX_CPU_Z80;
-							r_cpu_en_z80 <= '1';						
-						when CPU_ARM2 =>
-							r_cpu_run_ix_act <= C_IX_CPU_ARM2;
-							r_cpu_en_arm2 <= '1';						
-						when others => 
-							null;
-					end case;
+						end if;
+						r_cpu_en_6x09 <= '1';
+					elsif cfg_cpu_type_i = CPU_65C02 and G_INCL_CPU_65C02 then
+						r_cpu_run_ix_act <= C_IX_CPU_65C02;
+						r_do_sys_via_block <= '1';	
+						r_cpu_en_65c02 <= '1';
+					elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
+						r_cpu_run_ix_act <= C_IX_CPU_80188;
+						r_cpu_en_80188 <= '1';
+					elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
+						r_cpu_run_ix_act <= C_IX_CPU_Z80;
+						r_cpu_en_z80 <= '1';						
+					elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
+						r_cpu_run_ix_act <= C_IX_CPU_ARM2;
+						r_cpu_en_arm2 <= '1';						
+					end if;
 				end if;
 
 				-- multiplex/enable current hard cpu expansion out
-				case cfg_cpu_type_i is
-					when CPU_65816 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_65816;
-						r_hard_cpu_en <= '1';
-					when CPU_680x0 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_680x0;
-						r_hard_cpu_en <= '1';
-					when CPU_68008 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_68008;
-						r_hard_cpu_en <= '1';
-					when CPU_6800 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_6800;
-						r_hard_cpu_en <= '1';
-					when CPU_6x09 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_6x09;
-						r_hard_cpu_en <= '1';
-					when CPU_65C02 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_65C02;
-						r_hard_cpu_en <= '1';
-					when CPU_80188 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_80188;
-						r_hard_cpu_en <= '1';
-					when CPU_Z80 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_Z80;
-						r_hard_cpu_en <= '1';
-					when CPU_ARM2 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
-						r_hard_cpu_en <= '1';
-					when others => 
-						null;
-				end case;
+				if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+					r_cpu_run_ix_hard <= C_IX_CPU_65816;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_680x0 and G_INCL_CPU_680x0 then
+					r_cpu_run_ix_hard <= C_IX_CPU_680x0;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_68008 and G_INCL_CPU_68008 then
+					r_cpu_run_ix_hard <= C_IX_CPU_68008;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_6800 and G_INCL_CPU_6800 then
+					r_cpu_run_ix_hard <= C_IX_CPU_6800;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_6x09 and G_INCL_CPU_6x09 then
+					r_cpu_run_ix_hard <= C_IX_CPU_6x09;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_65C02 and G_INCL_CPU_65C02 then
+					r_cpu_run_ix_hard <= C_IX_CPU_65C02;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
+					r_cpu_run_ix_hard <= C_IX_CPU_80188;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
+					r_cpu_run_ix_hard <= C_IX_CPU_Z80;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
+					r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
+					r_hard_cpu_en <= '1';
+				end if;
 
 
 
@@ -625,12 +615,6 @@ begin
 
 
 	debug_wrap_cyc_o <= i_wrap_o_cur_act.cyc;
-
-	-- ================================================================================================ --
-	-- BYTE lanes 
-	-- ================================================================================================ --
-
-	cpuskt_D_o <= i_wrap_D_rd;	-- send data out to socket, socket assignment handled at top level
 	
 	-- ================================================================================================ --
 	-- Multibyte burst controller
@@ -659,7 +643,7 @@ begin
 		act_lane_o			=> i_wrap_i.act_lane,
 		ack_lane_o			=> i_wrap_i.ack_lane,
 		ack_o					=> i_wrap_i.ack,
-		D_rd_o				=> i_wrap_D_rd,
+		D_rd_o				=> i_wrap_i.D_rd,
 	
 		-- fishbone byte wide controller interface
 	
@@ -740,10 +724,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_T65),
-		wrap_i									=> i_wrap_i,
-
-		D_rd_i									=> i_wrap_D_rd(7 downto 0)
-
+		wrap_i									=> i_wrap_i
 
 	);
 
@@ -965,6 +946,23 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 	);
 END GENERATE;
 
+
+	-- ================================================================================================ --
+	-- Dummy exp out for when no external CPU is selected
+	-- ================================================================================================ --
+
+	G_DEF_EXP:IF G_INCL_CPU_T65 GENERATE
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA_nOE <= '1';
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA_DIR <= '1';
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA <= (others => '-');
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTB <= (others => 'Z');
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTD <= (others => '-');
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTD_o_en <= (others => '0');
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTE_i_nOE <= '1';
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF_i_nOE <= '1';
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF_o_nOE <= '1';
+		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF <= (others => '-');
+	END GENERATE;
 
 	-- ================================================================================================ --
 	-- multiplex wrapper signals

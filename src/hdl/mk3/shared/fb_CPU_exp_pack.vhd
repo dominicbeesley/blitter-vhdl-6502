@@ -51,24 +51,26 @@ package fb_CPU_exp_pack is
 
 
 	type t_cpu_wrap_exp_o is record
-		exp_PORTB					: std_logic_vector(7 downto 0);
-		exp_PORTD					: std_logic_vector(11 downto 0);
-		exp_PORTD_o_en				: std_logic_vector(11 downto 0);
-		exp_PORTE_nOE				: std_logic;	
-		exp_PORTF_nOE				: std_logic;	
-
-		CPU_D_RnW					: std_logic;
+		PORTA_nOE			: std_logic;
+		PORTA_DIR			: std_logic;										-- DIR is '1' for CPU to Blitter, '0' for Blitter to CPU
+		PORTA					: std_logic_vector(7 downto 0);
+		PORTB					: std_logic_vector(7 downto 0);
+		PORTD					: std_logic_vector(11 downto 0);
+		PORTD_o_en			: std_logic_vector(11 downto 0);
+		PORTE_i_nOE			: std_logic;	
+		PORTF_i_nOE			: std_logic;	
+		PORTF_o_nOE			: std_logic;	
+		PORTF					: std_logic_vector(11 downto 4);
 	end record;
 
 	type t_cpu_wrap_exp_o_arr is array(natural range<>) of t_cpu_wrap_exp_o;
 
 	type t_cpu_wrap_exp_i is record
 
-		-- cpu socket signals
-		CPUSKT_D						: std_logic_vector(15 downto 0);
-		CPUSKT_A						: std_logic_vector(23 downto 0);
-
-		exp_PORTD					: std_logic_vector(11 downto 0);
+		PORTA					: std_logic_vector(7 downto 0);
+		PORTC					: std_logic_vector(11 downto 0);
+		PORTD					: std_logic_vector(11 downto 0);
+		PORTEFG				: std_logic_vector(11 downto 0);
 
 	end record;
 

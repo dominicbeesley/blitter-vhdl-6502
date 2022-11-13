@@ -107,29 +107,29 @@ architecture rtl of fb_cpu_680x0 is
 	signal r_noice_clken		: std_logic;
 
 	-- port B
-	signal i_CPUSKT_VPA_o	: std_logic;
-	signal i_CPUSKT_CLK_o	: std_logic;
-	signal i_CPUSKT_nIPL2_o	: std_logic;
-	signal i_CPUSKT_nIPL0_o	: std_logic;
-	signal i_CPUSKT_nIPL1_o	: std_logic;
-	signal i_CPUSKT_nDTACK_o: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPUSKT_nHALT_o	: std_logic;
+	signal i_CPUSKT_VPA_b2c	: std_logic;
+	signal i_CPUSKT_CLK_b2c	: std_logic;
+	signal i_CPUSKT_nIPL2_b2c	: std_logic;
+	signal i_CPUSKT_nIPL0_b2c	: std_logic;
+	signal i_CPUSKT_nIPL1_b2c	: std_logic;
+	signal i_CPUSKT_nDTACK_b2c: std_logic;
+	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_CPUSKT_nHALT_b2c	: std_logic;
 
-	signal i_CPU_D_RnW_o		: std_logic;
+	signal i_BUF_D_RnW_b2c		: std_logic;
 
-	signal i_CPUSKT_nBG_i	: std_logic;
-	signal i_CPUSKT_RnW_i	: std_logic;
-	signal i_CPUSKT_nUDS_i	: std_logic;
-	signal i_CPUSKT_nLDS_i	: std_logic;
-	signal i_CPUSKT_FC0_i	: std_logic;
-	signal i_CPUSKT_FC2_i	: std_logic;
-	signal i_CPUSKT_nAS_i	: std_logic;
-	signal i_CPUSKT_FC1_i	: std_logic;
-	signal i_CPUSKT_E_i		: std_logic;
+	signal i_CPUSKT_nBG_c2b	: std_logic;
+	signal i_CPUSKT_RnW_c2b	: std_logic;
+	signal i_CPUSKT_nUDS_c2b	: std_logic;
+	signal i_CPUSKT_nLDS_c2b	: std_logic;
+	signal i_CPUSKT_FC0_c2b	: std_logic;
+	signal i_CPUSKT_FC2_c2b	: std_logic;
+	signal i_CPUSKT_nAS_c2b	: std_logic;
+	signal i_CPUSKT_FC1_c2b	: std_logic;
+	signal i_CPUSKT_E_c2b		: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector(15 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(23 downto 1);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_A_c2b		: std_logic_vector(23 downto 1);
 
 	signal i_nDS_either		: std_logic; -- either of the LDS/UDS is low or 8 bit DS is low
 	signal r_cpuskt_A_vector: std_logic; -- the registered cpu address was at 00 00xx
@@ -176,30 +176,32 @@ begin
 
 		-- local 6x09 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_VPA_i		=> i_CPUSKT_VPA_o,
-		CPUSKT_CLK_i		=> i_CPUSKT_CLK_o,
-		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
-		CPUSKT_nIPL0_i		=> i_CPUSKT_nIPL0_o,
-		CPUSKT_nIPL1_i		=> i_CPUSKT_nIPL1_o,
-		CPUSKT_nIPL2_i		=> i_CPUSKT_nIPL2_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
-		CPUSKT_nDTACK_i	=> i_CPUSKT_nDTACK_o,
+		CPUSKT_VPA_b2c		=> i_CPUSKT_VPA_b2c,
+		CPUSKT_CLK_b2c		=> i_CPUSKT_CLK_b2c,
+		CPUSKT_nHALT_b2c	=> i_CPUSKT_nHALT_b2c,
+		CPUSKT_nIPL0_b2c	=> i_CPUSKT_nIPL0_b2c,
+		CPUSKT_nIPL1_b2c	=> i_CPUSKT_nIPL1_b2c,
+		CPUSKT_nIPL2_b2c	=> i_CPUSKT_nIPL2_b2c,
+		CPUSKT_nRES_b2c	=> i_CPUSKT_nRES_b2c,
+		CPUSKT_nDTACK_b2c	=> i_CPUSKT_nDTACK_b2c,
+		CPUSKT_D_b2c		=> wrap_i.D_rd(15 downto 0),
 
-		CPUSKT_E_o			=> i_CPUSKT_E_i,
-		CPUSKT_nBG_o		=> i_CPUSKT_nBG_i,
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_nUDS_o		=> i_CPUSKT_nUDS_i,
-		CPUSKT_nLDS_o		=> i_CPUSKT_nLDS_i,
-		CPUSKT_FC0_o		=> i_CPUSKT_FC0_i,
-		CPUSKT_FC2_o		=> i_CPUSKT_FC2_i,
-		CPUSKT_nAS_o		=> i_CPUSKT_nAS_i,
-		CPUSKT_FC1_o		=> i_CPUSKT_FC1_i,
+		BUF_D_RnW_b2c		=> i_BUF_D_RnW_b2c,
+
+		CPUSKT_E_c2b		=> i_CPUSKT_E_c2b,
+		CPUSKT_nBG_c2b		=> i_CPUSKT_nBG_c2b,
+		CPUSKT_RnW_c2b		=> i_CPUSKT_RnW_c2b,
+		CPUSKT_nUDS_c2b		=> i_CPUSKT_nUDS_c2b,
+		CPUSKT_nLDS_c2b		=> i_CPUSKT_nLDS_c2b,
+		CPUSKT_FC0_c2b		=> i_CPUSKT_FC0_c2b,
+		CPUSKT_FC2_c2b		=> i_CPUSKT_FC2_c2b,
+		CPUSKT_nAS_c2b		=> i_CPUSKT_nAS_c2b,
+		CPUSKT_FC1_c2b		=> i_CPUSKT_FC1_c2b,
 
 		-- shared per CPU signals
-		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
 
-		CPUSKT_A_o			=> i_CPUSKT_A_i,
-		CPUSKT_D_o			=> i_CPUSKT_D_i,
+		CPUSKT_A_c2b			=> i_CPUSKT_A_c2b,
+		CPUSKT_D_c2b			=> i_CPUSKT_D_c2b,
 
 		-- socket muxing for extra 16 bit plug
 		MUX_PORTE_nOE_i		=> i_PORTE_nOE,
@@ -209,7 +211,7 @@ begin
 
 
 	-- TODO: make this a register in state machine and delay?
-	i_CPU_D_RnW_o <= 	'0' when i_CPUSKT_RnW_i = '0' else
+	i_BUF_D_RnW_b2c <= 	'0' when i_CPUSKT_RnW_c2b = '0' else
 							'1';
 
 
@@ -222,7 +224,7 @@ begin
 			others => '0');
 	wrap_o.we	  			<= r_WE;
 	wrap_o.D_wr(15 downto 0)
-								<=	i_CPUSKT_D_i(15 downto 0);	
+								<=	i_CPUSKT_D_c2b(15 downto 0);	
 	G_D_WR_EXT:if C_CPU_BYTELANES > 2 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 16) <= (others => '-');
 	END GENERATE;
@@ -235,7 +237,7 @@ begin
 	i_PORTF_nOE <= '0' when r_state_mux = port_f else '1';
 
 	-- either DS is low or 8 bit
-	i_nDS_either <= i_CPUSKT_nUDS_i and i_CPUSKT_nLDS_i;
+	i_nDS_either <= i_CPUSKT_nUDS_c2b and i_CPUSKT_nLDS_c2b;
 
 	-- register async signals for meta stability and to delay relative to each other
 --	e_m_DS_e:entity work.metadelay 
@@ -245,12 +247,12 @@ i_nDS_either_m <= i_nDS_either;
 
 	e_m_AS_e:entity work.metadelay 
 		generic map ( N => 1 ) 
-		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nAS_i, o => i_nAS_m);
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nAS_c2b, o => i_nAS_m);
 
 --	e_m_RnW_e:entity work.metadelay 
 --		generic map ( N => 0 ) 
---		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_RnW_i, o => i_RnW_m);
-i_RnW_m <= i_CPUSKT_RnW_i;
+--		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_RnW_c2b, o => i_RnW_m);
+i_RnW_m <= i_CPUSKT_RnW_c2b;
 
 	-- register and fiddle cpu socket address, bodge for upper/lower byte
 	p_reg_cpu_A:process(fb_syscon_i)
@@ -261,8 +263,8 @@ i_RnW_m <= i_CPUSKT_RnW_i;
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_state = idle or r_state = reset1 then
 				r_cpuskt_A_vector <= '0';
-				r_cpuskt_A_m(23 downto 1) <= i_CPUSKT_A_i(23 downto 1);
-				if i_CPUSKT_A_i(23 downto 8) = x"0000" then
+				r_cpuskt_A_m(23 downto 1) <= i_CPUSKT_A_c2b(23 downto 1);
+				if i_CPUSKT_A_c2b(23 downto 8) = x"0000" then
 					r_cpuskt_A_vector <= '1';
 				end if;
 
@@ -332,9 +334,9 @@ i_RnW_m <= i_CPUSKT_RnW_i;
 						if i_RnW_m = '1' then
 							r_cyc <= '1';
 							r_state <= rd;
-							r_lane_req_o <= not(i_CPUSKT_nUDS_i & i_CPUSKT_nLDS_i);
+							r_lane_req_o <= not(i_CPUSKT_nUDS_c2b & i_CPUSKT_nLDS_c2b);
 							r_we <= '0';
-							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_i;
+							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_c2b;
 						else
 							r_state <= idle_wr_ds;
 						end if;
@@ -344,9 +346,9 @@ i_RnW_m <= i_CPUSKT_RnW_i;
 					if i_nDS_either_m = '0' then
 							r_cyc <= '1';
 							r_state <= wr;
-							r_lane_req_o <= not(i_CPUSKT_nUDS_i & i_CPUSKT_nLDS_i);
+							r_lane_req_o <= not(i_CPUSKT_nUDS_c2b & i_CPUSKT_nLDS_c2b);
 							r_we <= '1';
-							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_i;
+							r_A_log <= i_A_log(23 downto 1) & i_CPUSKT_nUDS_c2b;
 							r_WR_stb <= '1';
 					end if;
 				when rd =>
@@ -392,23 +394,23 @@ i_RnW_m <= i_CPUSKT_RnW_i;
 	end process;
 
 	-- assert vpa during interrupt for autovectoring
-	i_CPUSKT_VPA_o					<= '0' when  i_CPUSKT_FC0_i = '1' 
-													and i_CPUSKT_FC1_i = '1' 
-													and i_CPUSKT_FC2_i = '1' else
+	i_CPUSKT_VPA_b2c					<= '0' when  i_CPUSKT_FC0_c2b = '1' 
+													and i_CPUSKT_FC1_c2b = '1' 
+													and i_CPUSKT_FC2_c2b = '1' else
 								 			'1';
 
-	i_CPUSKT_CLK_o 				<= r_cpu_clk;
-	i_CPUSKT_nDTACK_o				<= r_ndtack;
+	i_CPUSKT_CLK_b2c 				<= r_cpu_clk;
+	i_CPUSKT_nDTACK_b2c				<= r_ndtack;
 
 
 
-	i_CPUSKT_nIPL2_o 				<= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
-	i_CPUSKT_nIPL0_o	 			<= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
-	i_CPUSKT_nIPL1_o 				<= wrap_i.irq_n and wrap_i.noice_debug_nmi_n;
+	i_CPUSKT_nIPL2_b2c 				<= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
+	i_CPUSKT_nIPL0_b2c	 			<= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
+	i_CPUSKT_nIPL1_b2c 				<= wrap_i.irq_n and wrap_i.noice_debug_nmi_n;
 
-	i_CPUSKT_nRES_o				<= not fb_syscon_i.rst;
+	i_CPUSKT_nRES_b2c					<= not fb_syscon_i.rst when cpu_en_i = '1' else '0';
 
-  	i_CPUSKT_nHALT_o				<= '0' when fb_syscon_i.rst = '1' else
+  	i_CPUSKT_nHALT_b2c				<= '0' when fb_syscon_i.rst = '1' else
   											'1' when wrap_i.noice_debug_inhibit_cpu = '1' else
   											not wrap_i.cpu_halt;
 
@@ -429,7 +431,7 @@ i_RnW_m <= i_CPUSKT_RnW_i;
   	
   	wrap_o.noice_debug_5c	 	 	<=	'0';
 
-  	wrap_o.noice_debug_opfetch 	<= '1' when i_CPUSKT_FC1_i = '1' and i_CPUSKT_FC0_i = '0' else
+  	wrap_o.noice_debug_opfetch 	<= '1' when i_CPUSKT_FC1_c2b = '1' and i_CPUSKT_FC0_c2b = '0' else
   										'0';
 
 	wrap_o.noice_debug_A0_tgl  	<= '0';

@@ -128,22 +128,22 @@ architecture rtl of fb_cpu_65c02 is
 
 
 	-- port b
-	signal i_CPUSKT_BE_o		: std_logic;		-- note only for the WDC 's' parts
-	signal i_CPUSKT_PHI0_o	: std_logic;
-	signal i_CPUSKT_RDY_o	: std_logic;
-	signal i_CPUSKT_nIRQ_o	: std_logic;
-	signal i_CPUSKT_nNMI_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPU_D_RnW_o		: std_logic;
+	signal i_CPUSKT_BE_b2c		: std_logic;		-- note only for the WDC 's' parts
+	signal i_CPUSKT_PHI0_b2c	: std_logic;
+	signal i_CPUSKT_RDY_b2c	: std_logic;
+	signal i_CPUSKT_nIRQ_b2c	: std_logic;
+	signal i_CPUSKT_nNMI_b2c	: std_logic;
+	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_BUF_D_RnW_b2c		: std_logic;
 
 	-- port d
 
-	signal i_CPUSKT_RnW_i	: std_logic;
-	signal i_CPUSKT_SYNC_i	: std_logic;
-	signal i_CPUSKT_VPB_i	: std_logic;		-- note only for the WDC 's' parts
+	signal i_CPUSKT_RnW_c2b	: std_logic;
+	signal i_CPUSKT_SYNC_c2b	: std_logic;
+	signal i_CPUSKT_VPB_c2b	: std_logic;		-- note only for the WDC 's' parts
 
-	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_c2b		: std_logic_vector(15 downto 0);
 
 
 	signal r_cfg_8Mhz			: std_logic;
@@ -171,39 +171,35 @@ begin
 		wrap_exp_i => wrap_exp_i,
 
 		-- local 65c02 wrapper signals to/from CPU expansion port 
-		CPUSKT_BE_i			=> i_CPUSKT_BE_o,
-		CPUSKT_PHI0_i		=> i_CPUSKT_PHI0_o,
-		CPUSKT_RDY_i		=> i_CPUSKT_RDY_o,
-		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
-		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_BE_b2c		=> i_CPUSKT_BE_b2c,
+		CPUSKT_PHI0_b2c	=> i_CPUSKT_PHI0_b2c,
+		CPUSKT_RDY_b2c		=> i_CPUSKT_RDY_b2c,
+		CPUSKT_nIRQ_b2c	=> i_CPUSKT_nIRQ_b2c,
+		CPUSKT_nNMI_b2c	=> i_CPUSKT_nNMI_b2c,
+		CPUSKT_nRES_b2c	=> i_CPUSKT_nRES_b2c,
 
-		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+		BUF_D_RnW_b2c		=> i_BUF_D_RnW_b2c,
 
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_SYNC_o		=> i_CPUSKT_SYNC_i,
-		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i,
+		CPUSKT_RnW_c2b		=> i_CPUSKT_RnW_c2b,
+		CPUSKT_SYNC_c2b	=> i_CPUSKT_SYNC_c2b,
+		CPUSKT_VPB_c2b		=> i_CPUSKT_VPB_c2b,
 
-		CPUSKT_D_o			=> i_CPUSKT_D_i,
-		CPUSKT_A_o			=> i_CPUSKT_A_i
+		CPUSKT_D_b2c		=> wrap_i.D_rd(7 downto 0),
+		CPUSKT_D_c2b		=> i_CPUSKT_D_c2b,
+		CPUSKT_A_c2b		=> i_CPUSKT_A_c2b
 
 
 	);
 
 
-
-
-	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 					-- we need to make sure that
-										else												-- bank address so hold is short
-																							-- and setup late														
-							'0';
+	i_BUF_D_RnW_b2c <= 	i_CPUSKT_RnW_c2b;
 
 	wrap_o.BE					<= '0';
 	wrap_o.A 					<= r_log_A;
 	wrap_o.cyc	 				<= r_cyc;
 	wrap_o.lane_req			<= ( 0 => '1', others => '0');
-	wrap_o.we	  				<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_i;	
+	wrap_o.we	  				<= not(i_CPUSKT_RnW_c2b);
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;	
@@ -242,7 +238,7 @@ begin
 	
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
-							r_log_A <= x"FF" & i_CPUSKT_A_i;
+							r_log_A <= x"FF" & i_CPUSKT_A_c2b;
 						end if;
 
 
@@ -335,7 +331,7 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
-			(i_CPUSKT_RnW_i = '0' and wrap_i.rdy = '1') or
+			(i_CPUSKT_RnW_c2b = '0' and wrap_i.rdy = '1') or
 			(r_rdy_ctup >= SUBSTATE_D_4 and r_cfg_8MHz = '0') or
 			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and
@@ -346,17 +342,17 @@ begin
 
 
 
-	i_CPUSKT_BE_o <= cpu_en_i;
+	i_CPUSKT_BE_b2c <= cpu_en_i;
 	
-	i_CPUSKT_PHI0_o <= r_PHI0;
+	i_CPUSKT_PHI0_b2c <= r_PHI0;
 	
-	i_CPUSKT_nRES_o <= not r_cpu_res;
+	i_CPUSKT_nRES_b2c <= not r_cpu_res;
 	
-	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
 	
-	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
 	
-  	i_CPUSKT_RDY_o <= 	'0' when r_cpu_hlt = '1' else
+  	i_CPUSKT_RDY_b2c <= 	'0' when r_cpu_hlt = '1' else
   											'1';						
 
 --=======================================================================================
@@ -369,22 +365,22 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if r_state = phi2 and r_substate = 0 then
-  				r_prev_A0 <= i_CPUSKT_A_i(0);
+  				r_prev_A0 <= i_CPUSKT_A_c2b(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_i(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_c2b(0);
 
   	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2 and r_substate = 0 and i_ack = '1' else '0';
 
   	wrap_o.noice_debug_5c	 <= '1' when 
-  										i_CPUSKT_SYNC_i = '1' 
-  										and i_CPUSKT_D_i = x"5C" else
+  										i_CPUSKT_SYNC_c2b = '1' 
+  										and i_CPUSKT_D_c2b = x"5C" else
   								'0';
 
-  	wrap_o.noice_debug_opfetch <= i_CPUSKT_SYNC_i and not r_cpu_hlt;
+  	wrap_o.noice_debug_opfetch <= i_CPUSKT_SYNC_c2b and not r_cpu_hlt;
 
 
 

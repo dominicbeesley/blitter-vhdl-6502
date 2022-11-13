@@ -63,10 +63,8 @@ entity fb_cpu_t65 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i;
+		wrap_i									: in t_cpu_wrap_i
 
-		-- special 
-		D_Rd_i						: in std_logic_vector(7 downto 0)
 	);
 end fb_cpu_t65;
 
@@ -162,7 +160,7 @@ begin
 	i_t65_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
 						'0';
 
-	i_t65_D_in <= D_rd_i when i_t65_RnW = '1' else
+	i_t65_D_in <= wrap_i.D_rd(7 downto 0) when i_t65_RnW = '1' else
 					  i_t65_D_out;
 	
 	p_rdy:process(fb_syscon_i)
