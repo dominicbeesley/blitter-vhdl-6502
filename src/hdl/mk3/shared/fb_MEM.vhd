@@ -100,7 +100,7 @@ begin
 	fb_p2c_o.ack <= r_ack or i_wr_ack;
 	fb_p2c_o.stall <= '0' when state = idle else '1';
 
-	i_wr_ack <= '1' when state = idle and fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and fb_c2p_i.D_wr_stb = '1' else
+	i_wr_ack <= '1' when state = idle and fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and fb_c2p_i.D_wr_stb = '1' and fb_c2p_i.we = '1' else
 					'1' when state = wait_wr_stb and fb_c2p_i.D_wr_stb = '1' else
 					'0';
 
