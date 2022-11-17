@@ -14,7 +14,7 @@ Developed by [John E Kent](http://members.optushome.com.au/jekent/system09/index
 
 Copy the file cpu09l.vhd to a directory "JohnKent"
 
-# System09 6809 core
+# System68 6800 core
 
 Developed by [John E Kent](http://members.optushome.com.au/jekent/system68/index.htm)
 
