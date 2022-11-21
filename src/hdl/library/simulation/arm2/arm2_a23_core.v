@@ -69,12 +69,14 @@ wire                      execute_address_valid;
 wire      [31:0]          execute_address_nxt;  // un-registered version of execute_address to the cache rams
 wire      [31:0]          write_data;
 wire                      write_enable;
+wire                      write_enable_next;
 wire      [31:0]          read_data;
 wire                      priviledged;
 wire                      exclusive_exec;
 wire                      data_access_exec;
 wire                      translate;
 wire      [3:0]           byte_enable;
+wire      [3:0]           byte_enable_next;
 wire                      data_access;          // high for data petch, low for instruction fetch
 wire                      exclusive;            // swap access
 wire                      cache_enable;         // Enabel the cache
@@ -156,7 +158,7 @@ wire     [31:0]           dabt_fault_address;
 wire                      adex;
 
 reg                      write_enable_dly;
-reg                      i_phi2_dly;
+reg                      write_enable_dly_h;
 
 // data abort has priority
 assign decode_fault_status  = dabt_trigger ? dabt_fault_status  : iabt_fault_status;
@@ -170,21 +172,39 @@ wire                      i_clk;
 wire                      i_irq;
 wire                      i_firq;
 
+//register reset until end of phi2...DB - otherwise we get a glitch on mreq
+reg                         reset_reg;
+reg[25:0]                   r_A;
+reg                         r_nBW;
+reg                         r_nRW;
+
+
 assign i_clk = !i_phi2;
 assign i_irq = !i_nirq;
 assign i_firq = !i_nfirq;
 assign read_data = io_D;
-assign o_nRW = write_enable;
+assign o_nRW = r_nRW;
 assign fetch_stall = 1'd0;
 assign fetch_abort = 1'd0;
-assign o_A = execute_address[25:0];
-assign o_nMREQ = !execute_address_valid & !i_reset;
-assign o_nBW = (byte_enable == 4'hf)?1'd1:1'd0;
+assign o_A = r_A;
+assign o_nMREQ = 1'd0;
+assign o_nBW = r_nBW;
 
-always @(write_enable) #10 write_enable_dly = write_enable;
-always @(i_phi2) #10 i_phi2_dly = i_phi2;
+always @(write_enable) #60 write_enable_dly = write_enable;
+always @(write_enable) #10 write_enable_dly_h = write_enable;
 
-assign io_D = (write_enable_dly & (i_phi2_dly))?write_data:{32{1'dZ}};
+assign io_D = (write_enable_dly & write_enable_dly_h)?write_data:{32{1'dZ}};
+
+
+always @(posedge i_clk) begin
+    reset_reg <= i_reset;
+end
+
+always @(negedge i_phi1) begin
+    r_A <= execute_address_nxt;
+    r_nBW <= (byte_enable_next == 4'hf)?1'd1:1'd0;
+    r_nRW <= write_enable_next;
+end
 
 
 a23_decode u_decode (
@@ -284,8 +304,10 @@ a23_execute u_execute (
 
     .o_translate                        ( translate                         ),
     .o_byte_enable                      ( byte_enable                       ),
+    .o_byte_enable_next                 ( byte_enable_next                  ),
     .o_data_access                      ( data_access                       ),
     .o_write_enable                     ( write_enable                      ),
+    .o_write_enable_next                ( write_enable_next                 ),
     .o_exclusive                        ( exclusive                         ),
     .o_priviledged                      ( priviledged                       ),
     .o_status_bits                      ( execute_status_bits               ),
