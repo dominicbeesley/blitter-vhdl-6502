@@ -47,9 +47,6 @@ use work.fishbone.all;
 
 package fb_CPU_exp_pack is
 
-	constant	C_CPU_BYTELANES	: positive := 4;									-- number of data byte lanes
-
-
 	type t_cpu_wrap_exp_o is record
 		PORTA_nOE			: std_logic;
 		PORTA_DIR			: std_logic;										-- DIR is '1' for CPU to Blitter, '0' for Blitter to CPU

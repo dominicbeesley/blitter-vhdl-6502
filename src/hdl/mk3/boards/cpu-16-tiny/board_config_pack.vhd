@@ -61,10 +61,11 @@ package board_config_pack is
 	constant G_INCL_CS_AERIS	: boolean := false;
 	constant G_INCL_CS_EEPROM	: boolean := true;
 
+	constant C_CPU_BYTELANES	: positive := 4;
 	constant G_INCL_CPU_T65		: boolean := true;
 	constant G_INCL_CPU_65C02	: boolean := true;
-	constant G_INCL_CPU_6800	: boolean := true;
-	constant G_INCL_CPU_80188	: boolean := true;
+	constant G_INCL_CPU_6800	: boolean := false;
+	constant G_INCL_CPU_80188	: boolean := false;
 	constant G_INCL_CPU_65816	: boolean := true;
 	constant G_INCL_CPU_6x09	: boolean := true;
 	constant G_INCL_CPU_Z80		: boolean := false;
@@ -87,7 +88,7 @@ package board_config_pack is
 
 
 	constant CONTROLLER_COUNT	: natural := 2;
---	-- not 0 is highest priority!
+-- note 0 is highest priority!
 	constant MAS_NO_CPU		: natural := 1;
 	constant MAS_NO_CHIPSET		: natural := 0;
 
