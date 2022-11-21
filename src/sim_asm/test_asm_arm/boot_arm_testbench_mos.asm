@@ -6,6 +6,9 @@ c_VIA:	.ualong	0xFFFFFE40
 c_SYSMEM:.ualong  0xFFFF0000
 
 reset:
+	mov	r12,#0
+	ldr	r0,[r12]
+
 
 	ldr	r12,c_VIA
 	strb	r0,[r12]
@@ -40,7 +43,7 @@ lp:	add	r0,r0,r1
 	subs	pc,lr,#4			; firq
 
 
-reset1:	mov	r0,#16
+reset1:	mov	r0,#2
 	mov	r1,#0
 rlp:	ldmia	r1,{r2,r3,r4,r5}
 	stmia	r1!,{r2,r3,r4,r5}
