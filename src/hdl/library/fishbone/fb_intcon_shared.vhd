@@ -211,7 +211,7 @@ end generate;
 		ir_p2c_stall <= (others => '1');
 		for I in G_CONTROLLER_COUNT-1 downto 0 loop
 			if or_reduce(i_cyc) = '1' then
-				if r_state = idle and i_cyc_grant_ix = I then
+				if (r_state = idle or r_state = act) and i_cyc_grant_ix = I then
 					ir_p2c_stall(I) <= '0';
 				end if;
 			end if;
@@ -255,11 +255,12 @@ end generate;
 						r_cyc_ack <= '1';
 						r_cyc_per <= peripheral_sel_oh_i(to_integer(i_cyc_grant_ix));
 						r_peripheral_sel <= peripheral_sel_i(to_integer(i_cyc_grant_ix));
-						--register these as they shouldn't change during a cycle
+						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
+
+						-- register the request 
 						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
 						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
 						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
-						r_cyc_act_oh(to_integer(i_cyc_grant_ix)) <= '1';
 						r_d_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
 						r_d_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
 						r_state <= waitstall;
@@ -277,9 +278,21 @@ end generate;
 						r_a_stb <= '0';
 					end if;
 				when act => 
-					if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' and r_d_wr_stb = '0' then
-						r_d_wr_stb <= '1';
-						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+					-- pass on d_wr_stbs blind if we haven't already...
+					r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+					r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+
+					r_a_stb <= '0'; -- we've sent our request
+
+					if i_a_stb_any = '1' then
+						--register these as they shouldn't change during a cycle
+						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
+						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
+						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
+						r_d_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
+						r_d_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
+						r_state <= waitstall;
+						r_a_stb <= '1';
 					end if;
 				when others =>  
 					r_state <= r_state; -- do nowt
@@ -288,8 +301,7 @@ end generate;
 
 			-- catch all for ended cycle
 			if r_state /= idle and (
-					i_cyc(to_integer(r_cyc_grant_ix)) = '0' or
-					i_p2c.ack = '1'
+					i_cyc(to_integer(r_cyc_grant_ix)) = '0'
 					) then
 				r_state <= idle;
 				r_peripheral_sel <= (others => '0');
