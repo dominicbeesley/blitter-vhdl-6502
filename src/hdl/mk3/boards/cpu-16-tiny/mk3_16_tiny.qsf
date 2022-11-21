@@ -143,8 +143,8 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_65C02_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_65C02.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_680x0_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_680x0.vhd
-# set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_arm2_exp_pins.vhd
-# set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_arm2.vhd
+set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_arm2_exp_pins.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_arm2.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6800_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6800.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
@@ -173,7 +173,7 @@ set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_68000_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_arm2_tb -section_id eda_simulation
 
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"

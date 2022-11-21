@@ -47,7 +47,7 @@ use work.fishbone.all;
 
 package fb_CPU_exp_pack is
 
-	constant	C_CPU_BYTELANES	: positive := 2;									-- number of data byte lanes
+	constant	C_CPU_BYTELANES	: positive := 4;									-- number of data byte lanes
 
 
 	type t_cpu_wrap_exp_o is record

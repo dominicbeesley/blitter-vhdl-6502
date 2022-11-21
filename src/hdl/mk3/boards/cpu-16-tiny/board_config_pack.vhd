@@ -82,7 +82,7 @@ package board_config_pack is
 	constant G_INCL_CPU_Z80		: boolean := false;
 	constant G_INCL_CPU_68008	: boolean := false;
 	constant G_INCL_CPU_680x0	: boolean := true;
-	constant G_INCL_CPU_ARM2	: boolean := false;
+	constant G_INCL_CPU_ARM2	: boolean := true;
 
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
