@@ -37,7 +37,7 @@
 
 
 set_global_assignment -name FAMILY "MAX 10"
-set_global_assignment -name DEVICE 10M04DCF256C8G
+set_global_assignment -name DEVICE 10M16DCF256C8G
 set_global_assignment -name TOP_LEVEL_ENTITY mk3_erc_arm2
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "16:28:45  AUGUST 25, 2021"
