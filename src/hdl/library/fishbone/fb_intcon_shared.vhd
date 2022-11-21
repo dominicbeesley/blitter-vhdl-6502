@@ -211,7 +211,9 @@ end generate;
 		ir_p2c_stall <= (others => '1');
 		for I in G_CONTROLLER_COUNT-1 downto 0 loop
 			if or_reduce(i_cyc) = '1' then
-				if (r_state = idle or r_state = act) and i_cyc_grant_ix = I then
+				if r_state = act and r_cyc_grant_ix = I then
+					ir_p2c_stall(I) <= '0';
+				elsif r_state = idle and i_cyc_grant_ix = I then
 					ir_p2c_stall(I) <= '0';
 				end if;
 			end if;
