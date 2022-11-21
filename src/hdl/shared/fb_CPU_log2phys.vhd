@@ -157,6 +157,7 @@ begin
 			case r_state is
 				when idle =>
 					r_done_r_d_wr_stb <= '0';
+					r_D_wr_stb <= '0';
 					if fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' then
 						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
@@ -187,6 +188,8 @@ begin
 					else
 						if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
 							r_state <= idle;
+							r_done_r_d_wr_stb <= '0';
+							r_D_wr_stb <= '0';
 						else
 							r_state <= wait_d_stb;
 						end if;
@@ -198,6 +201,8 @@ begin
 					-- this gets cancelled in if below
 					if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
 						r_state <= idle;
+						r_done_r_d_wr_stb <= '0';
+						r_D_wr_stb <= '0';
 					end if;
 				when others =>
 					r_state <= idle;
