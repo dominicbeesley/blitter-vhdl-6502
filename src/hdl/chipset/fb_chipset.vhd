@@ -106,9 +106,9 @@ architecture rtl of fb_chipset is
 	-----------------------------------------------------------------------------
 
 	constant MAS_NO_CHIPSET_BLIT			: natural := 0;
-	constant MAS_NO_CHIPSET_DMA_1			: natural := MAS_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
-	constant MAS_NO_CHIPSET_DMA_0			: natural := MAS_NO_CHIPSET_DMA_1 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 2);
-	constant MAS_NO_CHIPSET_SND			: natural := MAS_NO_CHIPSET_DMA_0 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 1);
+	constant MAS_NO_CHIPSET_DMA_0			: natural := MAS_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
+	constant MAS_NO_CHIPSET_DMA_1			: natural := MAS_NO_CHIPSET_DMA_0 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 1);
+	constant MAS_NO_CHIPSET_SND			: natural := MAS_NO_CHIPSET_DMA_1 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 2);
 	constant MAS_NO_CHIPSET_AERIS			: natural := MAS_NO_CHIPSET_SND + B2OZ(G_INCL_CS_SND);
 	constant CONTROLLER_COUNT_CHIPSET	: natural := MAS_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
 
