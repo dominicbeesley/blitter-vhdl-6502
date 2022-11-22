@@ -166,12 +166,13 @@ architecture Behavioral of fb_dmac_blit is
 	TYPE 		state_cha_A 		IS (sMemAccA, sShiftA1, sShiftA2, sShiftA3, sShiftA4, sShiftA5, sShiftA6, sShiftA7);
 
 	-- peripheral interface sigs
-	type		per_state_t		is (idle, addr, wait_cyc);
+	type		per_state_t			is (idle, wait_d_stb, rd);
 
 	signal	r_per_state				: per_state_t;
 	signal	r_per_addr				: std_logic_vector(6 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
-	signal	r_per_rdy				: std_logic;
+	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
+	signal	r_per_D_wr_stb			: std_logic;
 	signal 	r_per_ack				: std_logic;
 
 	-- controller cycle sigs
@@ -908,12 +909,7 @@ begin
 				r_BLTCON_collision <= '0';
 			end if;
 
-			if fb_per_c2p_i.cyc = '1' 
-				and fb_per_c2p_i.A_stb = '1'
-				and fb_per_c2p_i.D_wr_stb = '1' 
-				and fb_per_c2p_i.we = '1' 
-				and r_per_ack = '1' 
-				then 
+			if r_per_D_wr_stb = '1' then -- register write from peripheral port
 				case to_integer(unsigned(r_per_addr)) is
 					when A_BLTCON =>
 						if fb_per_c2p_i.D_wr(7) = '1' then
@@ -1205,6 +1201,10 @@ begin
 							end case;
 						end if;
 					when waitack =>
+						if fb_con_p2c_i.stall = '0' then
+							fb_con_c2p_o.a_stb <= '0';
+							fb_con_c2p_o.d_wr_stb <= '0';
+						end if;
 						if fb_con_p2c_i.ack = '1' then
 							r_con_state <= idle;
 							fb_con_c2p_o.cyc <= '0';
@@ -1217,40 +1217,60 @@ begin
 
 
 	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
+	variable v_write:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_rdy <= '0';
 			r_per_ack <= '0';
 			r_per_addr <= (others => '0');
+			r_per_D_wr <= (others => '0');
+			r_per_D_wr_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_per_ack <= '0';
+			r_per_D_wr_stb <= '0';
+			v_write := false;
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
 						r_per_addr <= not fb_per_c2p_i.A(6) & "0" & fb_per_c2p_i.A(4 downto 0);
-						r_per_state <= addr;
+						if fb_per_c2p_i.we = '0' then
+							r_per_state <= rd;
+						else
+							v_write := true;
+						end if;
 					end if;
-				when addr =>
+				when wait_d_stb =>
+					v_write := true;
+				when rd =>
 					fb_per_p2c_o.D_rd <= i_per_D_rd;
 					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-						r_per_state <= wait_cyc;
-						r_per_rdy <= '1';
+						r_per_state <= idle;
 						r_per_ack <= '1';
 					end if;
-				when wait_cyc => 
-					if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
-						r_per_state <= idle;
-						r_per_rdy <= '0';
-					end if;				
 				when others => null;
 			end case;
+
+			if v_write then
+				if fb_per_c2p_i.D_wr_stb = '1' then
+					r_per_D_wr <= fb_per_c2p_i.D_wr;
+					r_per_D_wr_stb <= '1';
+					r_per_state <= idle;
+					r_per_ack <= '1';
+				else
+					r_per_state <= wait_d_stb;
+				end if;
+			end if;
+
+			if fb_per_c2p_i.cyc = '0' then
+				r_per_state <= idle;
+			end if;
 
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy <= r_per_rdy;
+	fb_per_p2c_o.rdy <= r_per_ack;
 	fb_per_p2c_o.ack <= r_per_ack;
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
 end Behavioral;
 
