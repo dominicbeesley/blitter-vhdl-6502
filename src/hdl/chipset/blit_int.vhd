@@ -1209,7 +1209,17 @@ begin
 							r_con_state <= idle;
 							fb_con_c2p_o.cyc <= '0';
 						end if;
-					when others => null;
+					when others => 
+						r_con_state <= idle;
+						fb_con_c2p_o <= (
+							cyc => '0',
+							we => '0',
+							A => (others => '-'),
+							A_stb => '0',
+							D_wr => (others => '-'),
+							D_wr_stb => '0',
+							rdy_ctdn => RDY_CTDN_MIN
+							);
 				end case;
 			end if;
 		end if;
