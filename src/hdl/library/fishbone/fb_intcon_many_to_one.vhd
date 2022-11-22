@@ -84,6 +84,7 @@ architecture rtl of fb_intcon_many_to_one is
 	signal	r_D_wr_stb		: std_logic;
 
 	signal	r_cyc_per		: std_logic;												-- registered cyc for peripheral
+	signal	r_a_stb_per		: std_logic;												-- registered a_stb for peripheral
 
 	signal   ir_p2c_stall	: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
 
@@ -132,7 +133,7 @@ end generate;
 	fb_per_c2p_o.cyc 			<= r_cyc_per;
 	fb_per_c2p_o.we 			<= r_c2p_we;
 	fb_per_c2p_o.A				<= r_c2p_A;
-	fb_per_c2p_o.A_stb		<= r_cyc_per;
+	fb_per_c2p_o.A_stb		<= r_a_stb_per;
 	fb_per_c2p_o.D_wr			<= r_D_wr;
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn   <= r_rdy_ctdn;
@@ -163,6 +164,7 @@ end generate;
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
 			r_cyc_per <= '0';
+			r_a_stb_per <= '0';
 			r_c2p_A <= (others => '0');
 			r_c2p_we <= '0';
 			r_cyc_grant_ix <= (others => '0');
@@ -181,6 +183,7 @@ end generate;
 						r_cyc_grant_ix <= i_cyc_grant_ix;
 						r_cyc_ack <= '1';
 						r_cyc_per <= '1';
+						r_a_stb_per <= '1';
 						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
 						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
 						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
@@ -203,6 +206,7 @@ end generate;
 
 					if fb_per_p2c_i.stall = '0' then
 						r_state <= act;
+						r_a_stb_per <= '0';
 					end if;
 				when act => 
 						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
