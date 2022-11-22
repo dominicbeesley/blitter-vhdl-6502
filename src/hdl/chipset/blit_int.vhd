@@ -1205,10 +1205,6 @@ begin
 							fb_con_c2p_o.a_stb <= '0';
 							fb_con_c2p_o.d_wr_stb <= '0';
 						end if;
-						if fb_con_p2c_i.ack = '1' then
-							r_con_state <= idle;
-							fb_con_c2p_o.cyc <= '0';
-						end if;
 					when others => 
 						r_con_state <= idle;
 						fb_con_c2p_o <= (
@@ -1221,6 +1217,13 @@ begin
 							rdy_ctdn => RDY_CTDN_MIN
 							);
 				end case;
+
+				if fb_con_p2c_i.ack = '1' then
+					r_con_state <= idle;
+					fb_con_c2p_o.cyc <= '0';
+				end if;
+
+
 			end if;
 		end if;
 	end process;
