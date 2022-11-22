@@ -125,7 +125,7 @@ begin
 
 	end process;
 
-	i_throttle_wait <= r_throttle_wait and not wrap_i.cpu_2MHz_phi2_clken;
+	i_throttle_wait <= r_throttle_wait and not wrap_i.cpu_2MHz_phi2_clken; -- TODO: break this can we? it makes for a big comb-loop
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
