@@ -40,8 +40,11 @@ entity fb_HDMI_vidproc is
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 
 		
+		CLK_48M_i							: in 		std_logic;
+
 		-- Clock enable output to CRTC
 		CLKEN_CRTC_o						:	out	std_logic;
+		CLKEN_CRTC_ADR_o					:	out	std_logic;
 		
 		-- Display RAM data bus (for display data fetch)
 		RAM_D_i								:	in	std_logic_vector(7 downto 0);
@@ -51,15 +54,18 @@ entity fb_HDMI_vidproc is
 		DISEN_i								:	in	std_logic;
 		CURSOR_i								:	in	std_logic;
 		
+		-- Teletext enabled
+		TTX_o									:  out std_logic;
+
 		-- Video in (teletext mode)
 		R_TTX_i								:	in	std_logic;
 		G_TTX_i								:	in	std_logic;
 		B_TTX_i								:	in	std_logic;
 		
 		-- Video out
-		R_o									:	out	std_logic_vector(7 downto 0);
-		G_o									:	out	std_logic_vector(7 downto 0);
-		B_o									:	out	std_logic_vector(7 downto 0)
+		R_o									:	out	std_logic_vector(3 downto 0);
+		G_o									:	out	std_logic_vector(3 downto 0);
+		B_o									:	out	std_logic_vector(3 downto 0)
 
 	);
 end fb_HDMI_vidproc;
@@ -75,36 +81,50 @@ architecture rtl of fb_HDMI_vidproc is
 	signal	r_CLKEN16_DIV	: std_logic_vector(2 downto 0);
 	signal	r_CLKEN16		: std_logic;
 
-	signal 	i_R_TTL			: std_logic;
-	signal 	i_G_TTL			: std_logic;
-	signal 	i_B_TTL			: std_logic;
+	signal 	i_R				: std_logic_vector(3 downto 0);
+	signal 	i_G				: std_logic_vector(3 downto 0);
+	signal 	i_B				: std_logic_vector(3 downto 0);
+
+	signal	i_CPU_WR_EN		: std_logic;
 
 begin
 	
-	R_o <= (others => i_R_TTL);
-	G_o <= (others => i_G_TTL);
-	B_o <= (others => i_B_TTL);
+	R_o <= i_R;
+	G_o <= i_G;
+	B_o <= i_B;
 
 
 	e_vidproc:entity work.vidproc
 	port map(
-		CLOCK			=> fb_syscon_i.clk,
-		CLKEN			=> r_CLKEN16,
-		nRESET		=> not fb_syscon_i.rst,
-		CLKEN_CRTC	=> CLKEN_CRTC_o,
-		ENABLE		=> i_fb_wrcyc_stb,
-		A0				=> fb_c2p_i.A(0),
-		DI_CPU		=> fb_c2p_i.D_wr,
-		DI_RAM		=> RAM_D_i,
-		nINVERT		=> nINVERT_i,
-		DISEN			=> DISEN_i,
-		CURSOR		=> CURSOR_i,
-		R_IN			=> R_TTX_i,
-		G_IN			=> G_TTX_i,
-		B_IN			=> B_TTX_i,
-		R				=> i_R_TTL,
-		G				=> i_G_TTL,
-		B				=> i_B_TTL
+		PIXCLK			=> CLK_48M_i,
+
+
+		CLOCK				=> fb_syscon_i.clk,
+		CLKEN				=> r_CLKEN16,				-- TODO? 2MHz?
+
+		nRESET			=> not fb_syscon_i.rst,
+		
+		CLKEN_CRTC		=> CLKEN_CRTC_o,
+		CLKEN_CRTC_ADR	=> CLKEN_CRTC_ADR_o,
+		
+		CPUCLKEN			=> '1',
+		ENABLE			=> i_CPU_WR_EN,
+		A					=> fb_c2p_i.A(1 downto 0),
+		DI_CPU			=> fb_c2p_i.D_wr,
+		DI_RAM			=> RAM_D_i,
+		nINVERT			=> nINVERT_i,
+		DISEN				=> DISEN_i,
+		CURSOR			=> CURSOR_i,
+		R_IN				=> R_TTX_i,
+		G_IN				=> G_TTX_i,
+		B_IN				=> B_TTX_i,
+		R					=> i_R,
+		G					=> i_G,
+		B					=> i_B,
+
+		VGA				=> '0',
+
+		TTXT				=> TTX_o
 	);
 
 
@@ -129,6 +149,19 @@ begin
 
 	i_fb_wrcyc_stb <= fb_c2p_i.cyc and fb_c2p_i.A_stb and fb_c2p_i.we and fb_c2p_i.D_wr_stb;
 	i_fb_rdcyc		<=  fb_c2p_i.cyc and fb_c2p_i.A_stb and not fb_c2p_i.we;
+
+	p_CPU_WR_EN:process(fb_syscon_i)
+	variable v_prev_wrcyc: std_logic;
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			i_CPU_WR_EN <= '0';
+			if v_prev_wrcyc = '0' and i_fb_wrcyc_stb = '1' then
+				i_CPU_WR_EN <= '1';
+			end if;
+			v_prev_wrcyc := i_fb_wrcyc_stb;
+		end if;
+
+	end process;
 
 	fb_p2c_o.nul <= '0';
 	fb_p2c_o.ack <= r_ack;

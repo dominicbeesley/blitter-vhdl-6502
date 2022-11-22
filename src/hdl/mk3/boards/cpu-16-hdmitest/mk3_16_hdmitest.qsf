@@ -103,21 +103,38 @@ set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
+
+
 set_global_assignment -name SDC_FILE mk3_16_hdmitest.sdc
 
-set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/TDMS_Encoder.vhd
-set_global_assignment -name VHDL_FILE ../../../library/3rdparty/HamsterWorks/dvid.vhd
+
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/encoder.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spirkov/hdmi_out_altera_max10.vhd
+
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
+
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_enabled.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
+
 set_global_assignment -name VHDL_FILE ../../../shared/firmware_info_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
+
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ctl.vhd
+set_global_assignment -name SDC_FILE mk3_16_hdmitest.sdc
+set_global_assignment -name VHDL_FILE mk3blit_pack.vhd
+set_global_assignment -name VHDL_FILE mk3blit_top.vhd
+
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_syscon.vhd
@@ -186,6 +203,7 @@ set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name QIP_FILE ../../shared/hdmi/hdmi_blockram.qip
 set_global_assignment -name QIP_FILE pll_hdmi.qip
+
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
@@ -198,5 +216,10 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING ON
+
+
+
+
+set_global_assignment -name QIP_FILE ../../shared/hdmi/linebuffer.qip
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

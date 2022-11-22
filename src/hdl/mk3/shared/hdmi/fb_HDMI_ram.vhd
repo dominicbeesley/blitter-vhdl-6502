@@ -66,12 +66,15 @@ begin
 								to_unsigned(1, RDY_CTDN_LEN) when i_fb_rdcyc = '1' else
 								RDY_CTDN_MAX;
 
-	p_ack:process(fb_syscon_i.clk, fb_syscon_i.rst)
+	p_ack:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1' then
+
+			if fb_c2p_i.cyc = '0' or fb_c2p_i.A_stb = '0' then
+				r_ack <= '0';
+			elsif i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1' then
 				r_ack <= '1';
 			else
 				r_ack <= '0';

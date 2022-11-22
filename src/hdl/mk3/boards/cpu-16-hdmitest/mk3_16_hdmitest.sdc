@@ -110,6 +110,9 @@ set_output_delay -source_latency_included -clock [get_clocks {main_pll}] -min 0.
 # Set Clock Groups
 #**************************************************************
 
+set_clock_groups -asynchronous -group [get_clocks {main_pll}] -group [get_clocks {CLK_48M}] 
+set_clock_groups -asynchronous -group [get_clocks {main_pll}] -group [get_clocks {hdmi_pixel}] 
+set_clock_groups -asynchronous -group [get_clocks {CLK_48M}] -group [get_clocks {hdmi_pixel}] 
 
 
 #**************************************************************
@@ -135,6 +138,7 @@ set_false_path -from [get_registers {r_cfg_cpu_speed_opt.*} ]
 
 set_false_path -from [get_registers {e_fb_cpu|r_cpu_en_*} ]
 set_false_path -from [get_registers {e_fb_cpu|r_cpu_run_ix*} ]
+
 
 #**************************************************************
 # Set Multicycle Path
@@ -162,6 +166,7 @@ set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
 set aeris_src_regs [get_registers "$aeris|r_op*"] 
 set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
 set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
+
 
 set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
 set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1

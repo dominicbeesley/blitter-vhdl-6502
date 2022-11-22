@@ -84,7 +84,7 @@ package board_config_pack is
 	constant PERIPHERAL_NO_HDMI		: natural := 0;		-- not on mk2 board!
 
 	constant CONTROLLER_COUNT		: natural := 2;
-	-- not 0 is highest priority!
+	-- note 0 is highest priority!
 	constant MAS_NO_CPU		: natural := 1;
 	constant MAS_NO_CHIPSET		: natural := 0;
 

@@ -321,6 +321,10 @@ architecture rtl of mk3blit is
 	signal i_vga_debug_vs				: std_logic;
 	signal i_vga_debug_blank			: std_logic;
 
+	signal i_debug_hsync_det			: std_logic;
+	signal i_debug_vsync_det			: std_logic;
+	signal i_debug_hsync_crtc			: std_logic;
+
 
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
@@ -974,18 +978,19 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= not i_chipset_cpu_halt;
 
-SYS_AUX_o(0)	<= '0';
-SYS_AUX_o(1)	<= '0';
-SYS_AUX_o(2)	<= i_debug_65816_vma;
-SYS_AUX_o(3)	<= i_debug_65816_addr_meta;
+SYS_AUX_o			<= (
+	0 => i_vga_debug_r,
+	1 => i_debug_vsync_det,
+	2 => i_debug_hsync_det,
+	3 => i_debug_hsync_crtc
+);
 
-SYS_AUX_io(0) <= i_debug_wrap_sys_st;
-SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
-SYS_AUX_io(2) <= '0';
+SYS_AUX_io(0) <= i_vga_debug_hs;
+SYS_AUX_io(1) <= i_vga_debug_vs;
+SYS_AUX_io(2) <= i_vga_debug_blank;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');
-
 
 
 SD_CS_o <= '1';
@@ -1031,7 +1036,14 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_B_o				=> i_vga_debug_b,
 		VGA_HS_o				=> i_vga_debug_hs,
 		VGA_VS_o				=> i_vga_debug_vs,
-		VGA_BLANK_o			=> i_vga_debug_blank
+		VGA_BLANK_o			=> i_vga_debug_blank,
+
+		PCM_L_i				=> i_snd_dat_o,
+
+		debug_hsync_det_o => i_debug_hsync_det,
+		debug_vsync_det_o => i_debug_vsync_det,
+		debug_hsync_crtc_o => i_debug_hsync_crtc
+
 	);
 END GENERATE;
 

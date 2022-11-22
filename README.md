@@ -42,9 +42,10 @@ As well as replacing the CPU the boards provide a set of enhancements to the mac
 	      simulation
 	    mk3 (or mk2)				Projects and files relevant to the Mk.3/2 board
 	      boards					contains individual builds
+	        cpu-04-min				MAX10 4000LE build with minimal options
 	      	cpu-16-max				MAX10 16000LE build with all options except HDMI
-	      	...
-	      shared					HDL shared between all mk.3/2 builds
+	      	cpu-16-hdmi				MAX10 16000LE build with all options including HDMI
+	      shared					HDL shared between all mk.3 builds
 	      testing					Projects for board testing and production
 	        mk3-board-erc				A simple Project to perform board ERC  
 	        mk3-erc-68000				Perform ERC on a 68000 plug-in cpu board

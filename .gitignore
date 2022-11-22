@@ -10,3 +10,4 @@ src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.lst
 
 src/hdl/mk3/shared/hdmi/greybox_tmp/cbx_args.txt
 src/hdl/mk3/boards/cpu-16-tiny/cr_ie_info.json
+src/hdl/mk3/boards/cpu-16-hdmitest/pll_hdmi.cnx
