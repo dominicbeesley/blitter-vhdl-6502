@@ -326,9 +326,9 @@ begin
 		fb_per_c2p_o						=> i_per_c2p_intcon,
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
-		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
+		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_i					=> i_intcon_peripheral_sel,
+		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh
 	);
 
 	p_sel:process(i_intcon_peripheral_sel_addr)
