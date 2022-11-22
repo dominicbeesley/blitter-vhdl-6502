@@ -133,14 +133,11 @@ set_false_path -from [get_registers {e_fb_cpu|r_cpu_run_ix*} ]
 #**************************************************************
 
 #cpu multi-cycles
-#set t65paths [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 set t65regs  [ get_registers {e_fb_cpu|\gt65:e_t65|e_cpu|*} ]
 
 set_multicycle_path -setup -end -from  $t65regs  -to  $t65regs 2
 set_multicycle_path -hold -end -from  $t65regs   -to  $t65regs 1
 
-#set_multicycle_path -setup -end -from  $t65regs 2
-#set_multicycle_path -hold -end -from  $t65regs 1
 
 
 
