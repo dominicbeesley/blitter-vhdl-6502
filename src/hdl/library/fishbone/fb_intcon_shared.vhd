@@ -286,13 +286,13 @@ end generate;
 
 					r_a_stb <= '0'; -- we've sent our request
 
-					if i_a_stb_any = '1' then
+					if i_cyc_a_stb(to_integer(r_cyc_grant_ix)) = '1' then
 						--register these as they shouldn't change during a cycle
-						r_c2p_A <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).A;					
-						r_c2p_we <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).we;
-						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
-						r_d_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
-						r_d_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
+						r_c2p_A <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).A;					
+						r_c2p_we <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).we;
+						r_rdy_ctdn <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).rdy_ctdn;
+						r_d_wr_stb <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb;
+						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
 						r_state <= waitstall;
 						r_a_stb <= '1';
 					end if;
