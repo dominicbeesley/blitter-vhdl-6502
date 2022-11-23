@@ -221,7 +221,8 @@ begin
 					when others =>
 						DO <= (others => '0');
 					end case;
-                elsif CLKEN = '1' then
+                		-- DB: do we really need this here?elsif CLKEN = '1' then
+                		else
 					-- Write
 					if RS = '0' then
 						addr_reg <= DI(4 downto 0);

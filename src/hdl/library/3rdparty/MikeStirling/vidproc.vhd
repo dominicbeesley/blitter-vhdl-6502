@@ -383,7 +383,9 @@ begin
 
     process(CLOCK)
     begin
-        if rising_edge(CLOCK) then
+        if nRESET = '0' then
+            clken_counter <= (others => '0');
+        elsif rising_edge(CLOCK) then
             if CLKEN = '1' then
                 -- Increment internal cycle counter during each video clock
                 clken_counter <= clken_counter + 1;
@@ -486,6 +488,7 @@ begin
             shiftreg <= (others => '0');
             -- there must be a better way of syncing this, but this seems to work
             first_byte <= '0';
+            attr_bits <= (others => '0');
         elsif rising_edge(PIXCLK) then
             if clken_load = '1' then
                 -- Fetch next byte from RAM into shift register.  This always occurs in
