@@ -611,14 +611,14 @@ begin
 			if r_per_D_wr_stb = '1' then 
 				case to_integer(unsigned(r_per_addr)) is
 					when A_CONTROL =>
-						r_ctl_wait_cyc <= fb_per_c2p_i.D_wr(7);
-						r_ctl_feedback <= fb_per_c2p_i.D_wr(3 downto 0);
+						r_ctl_wait_cyc <= r_per_D_wr(7);
+						r_ctl_feedback <= r_per_D_wr(3 downto 0);
 					when A_PROGSTART =>
-						r_prog_base(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_prog_base(23 downto 16) <= r_per_D_wr;
 					when A_PROGSTART + 1 =>
-						r_prog_base(15 downto 8) <= fb_per_c2p_i.D_wr;
+						r_prog_base(15 downto 8) <= r_per_D_wr;
 					when A_PROGSTART + 2 =>
-						r_prog_base(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_prog_base(7 downto 0) <= r_per_D_wr;
 					when others =>
 						null;
 				end case;
