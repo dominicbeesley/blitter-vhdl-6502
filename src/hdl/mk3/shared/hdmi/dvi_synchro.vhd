@@ -194,9 +194,12 @@ begin
 								 '0';
 			
 
-	p_reg_pix_ula:process(CLK_48M_i)
+	p_reg_pix_ula:process(CLK_48M_i, fb_syscon_i)
 	begin
-		if rising_edge(CLK_48M_i) then
+		if fb_syscon_i.rst = '1' then
+			r_linebuf_ctr_ula <= (others => '0');
+			r_linebuf_ctr_ula_max <= (others => '0');
+		elsif rising_edge(CLK_48M_i) then
 
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
 				r_ula_read_wait <= '1';
@@ -264,6 +267,7 @@ begin
 			r_hsync_lead_pulse <= '0';
 			r_vsync_lead_ack <= '0';
 			r_vsync_lead_pulse <= '0';
+			r_linebuf_ctr_dvi <= (others => '0');
 		elsif rising_edge(clk_pixel_dvi) then
 
 			r_hsync_lead_pulse <= '0';

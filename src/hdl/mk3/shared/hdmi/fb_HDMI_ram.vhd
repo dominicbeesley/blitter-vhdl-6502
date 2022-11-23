@@ -50,45 +50,77 @@ end fb_HDMI_ram;
 
 architecture rtl of fb_HDMI_ram is
 
-	signal	i_fb_wrcyc_stb : std_logic;
-	signal	i_fb_rdcyc		: std_logic;
-	signal	r_ack				: std_logic;
+	type	 per_state_t is (idle, rd, wait_d_stb);
+	signal r_per_state 					: per_state_t;
+
+	signal r_A								: std_logic_vector(G_MEM_ADDR_WIDTH-1 downto 0);
+	signal r_d_wr							: std_logic_vector(7 downto 0);
+	signal r_d_wr_stb						: std_logic;
+	signal r_ack							: std_logic;
 
 begin
 
-	i_fb_wrcyc_stb <= fb_c2p_i.cyc and fb_c2p_i.A_stb and fb_c2p_i.we and fb_c2p_i.D_wr_stb;
-	i_fb_rdcyc		<=  fb_c2p_i.cyc and fb_c2p_i.A_stb and not fb_c2p_i.we;
-
-	fb_p2c_o.nul <= '0';
+	-- FISHBONE wrapper for CPU/DMA access
 	fb_p2c_o.ack <= r_ack;
-	fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
-								to_unsigned(1, RDY_CTDN_LEN) when i_fb_wrcyc_stb = '1' else
-								to_unsigned(1, RDY_CTDN_LEN) when i_fb_rdcyc = '1' else
-								RDY_CTDN_MAX;
+	fb_p2c_o.rdy <= r_ack;
+	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
-	p_ack:process(fb_syscon_i)
+
+	p_per_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
+			r_per_state <= idle;
 			r_ack <= '0';
+			r_d_wr_stb <= '0';
+			r_d_wr <= (others => '0');
+			r_A <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-
-			if fb_c2p_i.cyc = '0' or fb_c2p_i.A_stb = '0' then
-				r_ack <= '0';
-			elsif i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1' then
-				r_ack <= '1';
-			else
-				r_ack <= '0';
-			end if;
+			r_ack <= '0';
+			r_d_wr_stb <= '0';
+			case r_per_state is
+				when idle =>
+					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
+						r_A <= fb_c2p_i.A(G_MEM_ADDR_WIDTH-1 downto 0);
+						if fb_c2p_i.we = '1' then
+							if fb_c2p_i.D_wr_stb = '1' then
+								r_d_wr_stb <= '1';
+								r_d_wr <= fb_c2p_i.d_wr;
+								r_ack <= '1';
+								r_per_state <= idle;
+							else
+								r_per_state <= wait_d_stb;
+							end if;
+						else
+							r_per_state <= rd;
+						end if;
+					end if;
+				when wait_d_stb =>
+					if fb_c2p_i.D_wr_stb = '1' then
+						r_d_wr_stb <= '1';
+						r_d_wr <= fb_c2p_i.d_wr;
+						r_ack <= '1';
+						r_per_state <= idle;
+					else
+						r_per_state <= wait_d_stb;
+					end if;
+				when rd =>
+					r_ack <= '1';
+					r_per_state <= idle;	
+				when others =>
+					r_per_state <= idle;
+					r_ack <= '1';
+			end case;
 		end if;
 	end process;
+
 
 	e_ram: entity work.hdmi_blockram
 	port map
 	(
-		address_a => 	fb_c2p_i.A(G_MEM_ADDR_WIDTH-1 downto 0),
+		address_a => 	r_A,
 		clock_a => 		fb_syscon_i.clk,
-		data_a => 		fb_c2p_i.D_wr,
-		wren_a => 		i_fb_wrcyc_stb,
+		data_a => 		r_d_wr,
+		wren_a => 		r_d_wr_stb,
 		q_a => 			fb_p2c_o.D_rd,
 
 		address_b => 	hdmi_ram_addr_i(G_MEM_ADDR_WIDTH-1 downto 0),

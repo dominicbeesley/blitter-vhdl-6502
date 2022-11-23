@@ -63,7 +63,7 @@ end fb_HDMI;
 
 architecture rtl of fb_hdmi is
 begin
-	-- this is included if HDMI is not configured at top leve
+	-- this is included if HDMI is not configured at top level
 
 	HDMI_SCL_io		<= 'Z';
 	HDMI_SDA_io		<= 'Z';
@@ -80,9 +80,8 @@ begin
 	VGA_VS_o			<= '1';
 	VGA_BLANK_o		<= '1';
 
-	fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
-	fb_p2c_o.nul <= '1';
-	fb_p2c_o.ack <= '1';
+	fb_p2c_o.ack <= fb_c2p_i.cyc and fb_c2p_i.a_stb;
+	fb_p2c_o.stall <= '0';
 	fb_p2c_o.D_Rd <= (others => '0');
 
 end rtl;

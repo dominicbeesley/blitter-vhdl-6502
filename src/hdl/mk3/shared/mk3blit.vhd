@@ -1038,7 +1038,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank,
 
-		PCM_L_i				=> i_snd_dat_o,
+		PCM_L_i				=> i_dac_sample,
 
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,
