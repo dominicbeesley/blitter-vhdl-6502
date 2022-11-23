@@ -286,8 +286,6 @@ begin
 			r_A_log <= (others => '0');			
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_noice_clken <= '0';
-			r_D_wr_stb <= '0';
-			r_cyc <= '0';
 			
 			case r_state is 
 				when idle =>
@@ -313,11 +311,13 @@ begin
 				when rd =>
 					if i_cyc_ack_i = '1' then
 						r_state <= wait_as_de;
+						r_cyc <= '0';
 					end if;
 				when wr =>
 					r_D_wr_stb <= '1';
 					if i_cyc_ack_i = '1' then
 						r_state <= wait_as_de;
+						r_cyc <= '0';
 					end if;
 				when wait_as_de =>
 					if i_nAS_m = '1' then
@@ -327,6 +327,7 @@ begin
 					r_state <= idle;
 				when others => 			-- or reset0
 					r_state <= reset1;
+					r_cyc <= '0';
 
 			end case;
 
