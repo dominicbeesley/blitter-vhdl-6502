@@ -60,6 +60,19 @@ package fb_CPU_exp_pack is
 		PORTF					: std_logic_vector(11 downto 4);
 	end record;
 
+	constant C_EXP_O_DUMMY : t_cpu_wrap_exp_o := (
+		PORTA_nOE 	=> '1',
+		PORTA_DIR 	=> '1',
+		PORTA 		=> (others => '-'),
+		PORTB 		=> (others => 'Z'),
+		PORTD 		=> (others => '-'),
+		PORTD_o_en 	=> (others => '0'),
+		PORTE_i_nOE 	=> '1',
+		PORTF_i_nOE 	=> '1',
+		PORTF_o_nOE 	=> '1',
+		PORTF 		=> (others => '-')
+	);
+
 	type t_cpu_wrap_exp_o_arr is array(natural range<>) of t_cpu_wrap_exp_o;
 
 	type t_cpu_wrap_exp_i is record

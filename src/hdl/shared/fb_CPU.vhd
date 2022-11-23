@@ -952,16 +952,7 @@ END GENERATE;
 	-- ================================================================================================ --
 
 	G_DEF_EXP:IF G_INCL_CPU_T65 GENERATE
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA_nOE <= '1';
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA_DIR <= '1';
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTA <= (others => '-');
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTB <= (others => 'Z');
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTD <= (others => '-');
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTD_o_en <= (others => '0');
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTE_i_nOE <= '1';
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF_i_nOE <= '1';
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF_o_nOE <= '1';
-		i_wrap_exp_o_all(C_IX_CPU_T65).PORTF <= (others => '-');
+		i_wrap_exp_o_all(C_IX_CPU_T65) <= C_EXP_O_DUMMY;
 	END GENERATE;
 
 	-- ================================================================================================ --

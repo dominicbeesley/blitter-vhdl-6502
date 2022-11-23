@@ -38,7 +38,6 @@
 --
 ----------------------------------------------------------------------------------
 
---TODO: lose latched D - not really much point?
 
 
 library ieee;
@@ -79,11 +78,14 @@ end fb_mem;
 
 architecture rtl of fb_mem is
 
-	type 	 	state_mem_t is (idle, wait1, wait2, wait3, wait4, wait5, wait6, wait7, wait8, act);
+	type 	 	state_mem_t is (idle, wait_wr_stb, wait_rd, wait_wr, act);
 
 	signal	state			: state_mem_t;
 
-	signal	i_mas_ack	:	std_logic;
+	signal	r_rdy_ctdn	:  t_rdy_ctdn;
+	signal	r_rdy			:  std_logic;
+	signal	r_ack			:  std_logic;
+	signal	i_wr_ack		:  std_logic; -- fast ack for writes on same cycle to make 8MHz on 65816
 
 begin
 
@@ -91,10 +93,16 @@ begin
 
 
 	fb_p2c_o.D_rd <= MEM_D_io;
+	fb_p2c_o.rdy <= r_rdy or i_wr_ack;
+	fb_p2c_o.ack <= r_ack or i_wr_ack;
+	fb_p2c_o.stall <= '0' when state = idle else '1';
+
+	i_wr_ack <= '1' when state = idle and fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and fb_c2p_i.D_wr_stb = '1' and fb_c2p_i.we = '1' else
+					'1' when state = wait_wr_stb and fb_c2p_i.D_wr_stb = '1' else
+					'0';
 
 	p_state:process(fb_syscon_i)
-	variable v_st_first : state_mem_t;
-	variable v_rdy_first: natural;
+	variable v_rdy_ctdn : t_rdy_ctdn;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -106,11 +114,15 @@ begin
 			MEM_ROM_nCE_o <= '1';
 			MEM_RAM_nWE_o <= '1';
 			MEM_ROM_nWE_o <= '1';
-			fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
-			fb_p2c_o.ack <= '0';
-			fb_p2c_o.nul <= '0';
+			v_rdy_ctdn := RDY_CTDN_MAX;
+			r_rdy_ctdn <= RDY_CTDN_MIN;
+			r_ack <= '0';
+			r_rdy <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
+
+				r_ack <= '0';
+
 				case state is
 					when idle =>
 						MEM_A_o <= (others => '0');
@@ -120,89 +132,81 @@ begin
 						MEM_ROM_nWE_o <= '1';
 						MEM_RAM0_nCE_o <= '1';
 						MEM_ROM_nCE_o <= '1';
-						fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
-						fb_p2c_o.ack <= '0';
-						fb_p2c_o.nul <= '0';
+						r_rdy <= '0';
+						v_rdy_ctdn := RDY_CTDN_MAX;
+
 						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
 
-							if fb_c2p_i.we = '0' or fb_c2p_i.D_wr_stb = '1' then
-								MEM_RAM_nWE_o <= not fb_c2p_i.we;
-								MEM_ROM_nWE_o <= not fb_c2p_i.we;
-								MEM_nOE_o <= fb_c2p_i.we;							
-								MEM_A_o <= fb_c2p_i.A(20 downto 0);
-								if fb_c2p_i.we = '1' then
-									MEM_D_io <= fb_c2p_i.D_wr;
-								end if;
+							r_rdy_ctdn <= fb_c2p_i.rdy_ctdn;
 
-								-- work out which memory chip and what speed
-								if fb_c2p_i.A(23) = '1' then
-									MEM_ROM_nCE_o <= '0';
-									IF G_FLASH_IS_45 then
-										v_st_first := wait4;
-										v_rdy_first := 5;
-									else
-										v_st_first := wait2;
-										v_rdy_first := 7;
-									end if;
-								else -- BBRAM
-									MEM_RAM0_nCE_o <= '0';
-									if G_SLOW_IS_45 then
-										v_st_first := wait4;
-										v_rdy_first := 5;
-									else
-										v_st_first := wait2;
-										v_rdy_first := 7;
-									end if;
-								end if;
-
-								fb_p2c_o.rdy_ctdn <= to_unsigned(v_rdy_first, RDY_CTDN_LEN);			
-								state <= v_st_first;
+							MEM_RAM_nWE_o <= not fb_c2p_i.we;
+							MEM_ROM_nWE_o <= not fb_c2p_i.we;
+							MEM_nOE_o <= fb_c2p_i.we;							
+							MEM_A_o <= fb_c2p_i.A(20 downto 0);
+							if fb_c2p_i.we = '1' then
+								MEM_D_io <= fb_c2p_i.D_wr;
 							end if;
+
+							-- work out which memory chip and what speed
+							if fb_c2p_i.A(23) = '1' then
+								MEM_ROM_nCE_o <= '0';
+								IF G_FLASH_IS_45 then
+									v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+								else
+									v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+								end if;
+							else -- BBRAM
+								MEM_RAM0_nCE_o <= '0';
+								if G_SLOW_IS_45 then
+									v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+								else
+									v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+								end if;
+							end if;
+
+							if fb_c2p_i.we = '0' then							
+								state <= wait_rd;
+							else
+						 		if fb_c2p_i.D_wr_stb = '1' then
+						 			state <= wait_wr;
+						 		else
+									state <= wait_wr_stb;
+								end if;
+							end if;		
 						end if;
-					when wait1 =>
-						state <= wait2;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(7, RDY_CTDN_LEN);
-					when wait2 =>
-						state <= wait3;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(6, RDY_CTDN_LEN);
-					when wait3 =>
-						state <= wait4;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(5, RDY_CTDN_LEN);
-					when wait4 =>
-						state <= wait5;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(4, RDY_CTDN_LEN);
-					when wait5 =>
-						state <= wait6;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(3, RDY_CTDN_LEN);
-					when wait6 =>
-							state <= wait7;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(2, RDY_CTDN_LEN);
-					when wait7 =>
-						state <= wait8;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(1, RDY_CTDN_LEN);
-					when wait8 =>
-						state <= act;
-						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
-						fb_p2c_o.ack <= '1';
-					when act =>
-						fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN);
-						fb_p2c_o.ack <= '0';
+					when wait_wr_stb =>
+						if fb_c2p_i.D_wr_stb = '1' then
+							MEM_D_io <= fb_c2p_i.D_wr;
+							state <= wait_wr;
+						end if;
+					when wait_rd =>
+						if v_rdy_ctdn <= r_rdy_ctdn then
+							r_rdy <= '1';
+						else
+							r_rdy <= '0';
+						end if;
+
+						if v_rdy_ctdn = 0 then
+						state <= idle;
+							r_ack <= '1';
+						else
+							v_rdy_ctdn := v_rdy_ctdn - 1;
+						end if;
+					when wait_wr =>
+						r_rdy <= '0';
+						if v_rdy_ctdn = 0 then
+							state <= idle;
+							MEM_RAM_nWE_o <= '0';
+							MEM_ROM_nWE_o <= '0';
+						else
+							v_rdy_ctdn := v_rdy_ctdn - 1;
+						end if;
 					when others =>
-						fb_p2c_o.nul <= '1';
-						fb_p2c_o.ack <= '1';
+						r_ack <= '1';
+						r_rdy <= '1';
+						r_rdy_ctdn <= RDY_CTDN_MIN;
 						state <= idle;
 				end case;
-				if fb_c2p_i.cyc = '0' or fb_c2p_i.a_stb = '0' then
-					state <= idle;
-					fb_p2c_o.rdy_ctdn <= RDY_CTDN_MAX;
-					fb_p2c_o.ack <= '0';
-					fb_p2c_o.nul <= '0';
-					MEM_nOE_o <= '1';
-					MEM_RAM_nWE_o <= '1';
-					MEM_ROM_nWE_o <= '1';
-					MEM_RAM0_nCE_o <= '1';
-					MEM_ROM_nCE_o <= '1';
-				end if;
 			end if;
 		end if;
 

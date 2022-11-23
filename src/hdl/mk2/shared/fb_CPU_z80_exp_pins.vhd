@@ -40,7 +40,7 @@
 ----------------------------------------------------------------------------------
 
 -- NOTE: this requires a board mod on the mk.2 board - the z80's RFSH pin needs to 
--- be connected to CPUSKT_VSS6VPA9BAKnAS_i
+-- be connected to CPUSKT_VSS6VPA9BAKnAS_b2c
 
 
 library ieee;
@@ -63,26 +63,26 @@ entity fb_cpu_z80_exp_pins is
 
 		-- local z80 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_nBUSREQ_i						: in std_logic;
-		CPUSKT_CLK_i							: in std_logic;
-		CPUSKT_nWAIT_i							: in std_logic;
-		CPUSKT_nIRQ_i							: in std_logic;
-		CPUSKT_nNMI_i							: in std_logic;
-		CPUSKT_nRES_i							: in std_logic;
+		CPUSKT_nBUSREQ_b2c					: in std_logic;
+		CPUSKT_CLK_b2c							: in std_logic;
+		CPUSKT_nWAIT_b2c						: in std_logic;
+		CPUSKT_nIRQ_b2c						: in std_logic;
+		CPUSKT_nNMI_b2c						: in std_logic;
+		CPUSKT_nRES_b2c						: in std_logic;
+		CPUSKT_D_b2c							: in std_logic_vector(7 downto 0);
+		BUF_D_RnW_b2c							: in std_logic;
 
-		CPU_D_RnW_i								: in std_logic;
 
+		CPUSKT_nRD_c2b							: out std_logic;
+		CPUSKT_nWR_c2b							: out std_logic;
+		CPUSKT_nMREQ_c2b						: out std_logic;
+		CPUSKT_nM1_c2b							: out std_logic;
+		CPUSKT_nRFSH_c2b						: out std_logic;
+		CPUSKT_nIOREQ_c2b						: out std_logic;
+		CPUSKT_nBUSACK_c2b					: out std_logic;
 
-		CPUSKT_nRD_o							: out std_logic;
-		CPUSKT_nWR_o							: out std_logic;
-		CPUSKT_nMREQ_o							: out std_logic;
-		CPUSKT_nM1_o							: out std_logic;
-		CPUSKT_nRFSH_o							: out std_logic;
-		CPUSKT_nIOREQ_o						: out std_logic;
-		CPUSKT_nBUSACK_o						: out std_logic;
-
-		CPUSKT_D_o								: out std_logic_vector(7 downto 0);
-		CPUSKT_A_o								: out std_logic_vector(15 downto 0)
+		CPUSKT_D_c2b							: out std_logic_vector(7 downto 0);
+		CPUSKT_A_c2b							: out std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_z80_exp_pins;
@@ -92,25 +92,27 @@ begin
 
 	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= '1';
 	wrap_exp_o.CPUSKT_9Q 					<= '1';
-	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 		<= CPUSKT_nBUSREQ_i;
-	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_CLK_i;
-	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT	<= CPUSKT_nWAIT_i;
-	wrap_exp_o.CPUSKT_nIRQKnIPL1			<= CPUSKT_nIRQ_i;
-	wrap_exp_o.CPUSKT_nNMIKnIPL02			<= CPUSKT_nNMI_i;
-	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_i;
+	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 		<= CPUSKT_nBUSREQ_b2c;
+	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_CLK_b2c;
+	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT	<= CPUSKT_nWAIT_b2c;
+	wrap_exp_o.CPUSKT_nIRQKnIPL1			<= CPUSKT_nIRQ_b2c;
+	wrap_exp_o.CPUSKT_nNMIKnIPL02			<= CPUSKT_nNMI_b2c;
+	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_b2c;
 	wrap_exp_o.CPUSKT_9nFIRQLnDTACK		<= '1';
+	wrap_exp_o.CPUSKT_D						<=	CPUSKT_D_b2c;
+	wrap_exp_o.CPU_D_RnW 					<= BUF_D_RnW_b2c;
 
-	CPUSKT_nRD_o		<= wrap_exp_i.CPUSKT_6EKEZnRD;
-	CPUSKT_nWR_o		<= wrap_exp_i.CPUSKT_RnWZnWR;
-	CPUSKT_nMREQ_o		<= wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
-	CPUSKT_nM1_o		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	CPUSKT_nRFSH_o		<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
-	CPUSKT_nIOREQ_o	<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
-	CPUSKT_nBUSACK_o	<= wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
 
-	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_nRD_c2b			<= wrap_exp_i.CPUSKT_6EKEZnRD;
+	CPUSKT_nWR_c2b			<= wrap_exp_i.CPUSKT_RnWZnWR;
+	CPUSKT_nMREQ_c2b		<= wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ;
+	CPUSKT_nM1_c2b			<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
+	CPUSKT_nRFSH_c2b		<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
+	CPUSKT_nIOREQ_c2b		<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
+	CPUSKT_nBUSACK_c2b	<= wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;
+
+	CPUSKT_A_c2b 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
+	CPUSKT_D_c2b 		<= wrap_exp_i.CPUSKT_D;
 
 end rtl;
 

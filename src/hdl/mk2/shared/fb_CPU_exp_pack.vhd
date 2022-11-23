@@ -47,8 +47,6 @@ use work.fishbone.all;
 
 package fb_CPU_exp_pack is
 
-	constant	C_CPU_BYTELANES	: positive := 1;									-- number of data byte lanes
-
 
 	type t_cpu_wrap_exp_o is record
 		CPUSKT_6BE9TSCKnVPA					:		std_logic;
@@ -60,12 +58,28 @@ package fb_CPU_exp_pack is
 		CPUSKT_nNMIKnIPL02					:		std_logic;
 		CPUSKT_nRES								:		std_logic;
 		CPUSKT_9nFIRQLnDTACK					:		std_logic;
+		CPUSKT_D									:		std_logic_vector(7 downto 0);
 
 		-- control signals for cpu core on a per wrapper basis
-		CPU_D_RnW								: std_logic;
+		CPU_D_RnW								:		std_logic;
 
 
 	end record;
+
+	constant C_EXP_O_DUMMY : t_cpu_wrap_exp_o := (
+		CPUSKT_6BE9TSCKnVPA					=> 'Z',
+		CPUSKT_9Q								=> 'Z',
+		CPUSKT_KnBRZnBUSREQ					=> 'Z',
+		CPUSKT_PHI09EKZCLK					=> 'Z',
+		CPUSKT_RDY9KnHALTZnWAIT				=> 'Z',
+		CPUSKT_nIRQKnIPL1						=> 'Z',
+		CPUSKT_nNMIKnIPL02					=> 'Z',
+		CPUSKT_nRES								=> '0',
+		CPUSKT_9nFIRQLnDTACK					=> 'Z',
+		CPUSKT_D									=> (others => '-'),
+		CPU_D_RnW								=> '1'
+	);
+
 
 	type t_cpu_wrap_exp_o_arr is array(natural range<>) of t_cpu_wrap_exp_o;
 
@@ -81,8 +95,8 @@ package fb_CPU_exp_pack is
 		CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ		:		std_logic;		-- nSO is actually an output but pulled up on the board
 
 		-- control signals for cpu core on a per wrapper basis
-		CPUSKT_D						: std_logic_vector(7 downto 0);
-		CPUSKT_A						: std_logic_vector(19 downto 0);
+		CPUSKT_D									:		std_logic_vector(7 downto 0);
+		CPUSKT_A									:		std_logic_vector(19 downto 0);
 
 	end record;
 

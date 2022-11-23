@@ -60,25 +60,26 @@ entity fb_cpu_6x09_exp_pins is
 
 		-- local z80 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_TSC_i							: in std_logic;
-		CPUSKT_CLK_Q_i							: in std_logic;
-		CPUSKT_CLK_E_i							: in std_logic;
-		CPUSKT_nHALT_i							: in std_logic;
-		CPUSKT_nIRQ_i							: in std_logic;
-		CPUSKT_nNMI_i							: in std_logic;
-		CPUSKT_nRES_i							: in std_logic;
-		CPUSKT_nFIRQ_i							: in std_logic;
+		CPUSKT_TSC_b2c							: in std_logic;
+		CPUSKT_CLK_Q_b2c						: in std_logic;
+		CPUSKT_CLK_E_b2c						: in std_logic;
+		CPUSKT_nHALT_b2c						: in std_logic;
+		CPUSKT_nIRQ_b2c						: in std_logic;
+		CPUSKT_nNMI_b2c						: in std_logic;
+		CPUSKT_nRES_b2c						: in std_logic;
+		CPUSKT_nFIRQ_b2c						: in std_logic;
+		CPUSKT_D_b2c							: in std_logic_vector(7 downto 0);
 
-		CPU_D_RnW_i							: in std_logic;
+		BUF_D_RnW_b2c							: in std_logic;
 
-		CPUSKT_RnW_o							: out std_logic;
-		CPUSKT_BS_o								: out std_logic;
-		CPUSKT_LIC_o							: out std_logic;
-		CPUSKT_BA_o								: out std_logic;
-		CPUSKT_AVMA_o							: out std_logic;
+		CPUSKT_RnW_c2b							: out std_logic;
+		CPUSKT_BS_c2b							: out std_logic;
+		CPUSKT_LIC_c2b							: out std_logic;
+		CPUSKT_BA_c2b							: out std_logic;
+		CPUSKT_AVMA_c2b						: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector(7 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(15 downto 0)
+		CPUSKT_D_c2b							: out std_logic_vector(7 downto 0);
+		CPUSKT_A_c2b							: out std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_6x09_exp_pins;
@@ -86,25 +87,26 @@ end fb_cpu_6x09_exp_pins;
 architecture rtl of fb_cpu_6x09_exp_pins is
 begin
 
-	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= CPUSKT_TSC_i;
-	wrap_exp_o.CPUSKT_9Q 					<= CPUSKT_CLK_Q_i;
+	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= CPUSKT_TSC_b2c;
+	wrap_exp_o.CPUSKT_9Q 					<= CPUSKT_CLK_Q_b2c;
 	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 		<= '1';
-	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_CLK_E_i;
-	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT	<= CPUSKT_nHALT_i;
-	wrap_exp_o.CPUSKT_nIRQKnIPL1			<= CPUSKT_nIRQ_i;
-	wrap_exp_o.CPUSKT_nNMIKnIPL02			<= CPUSKT_nNMI_i;
-	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_i;
-	wrap_exp_o.CPUSKT_9nFIRQLnDTACK		<= CPUSKT_nFIRQ_i;
+	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_CLK_E_b2c;
+	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT	<= CPUSKT_nHALT_b2c;
+	wrap_exp_o.CPUSKT_nIRQKnIPL1			<= CPUSKT_nIRQ_b2c;
+	wrap_exp_o.CPUSKT_nNMIKnIPL02			<= CPUSKT_nNMI_b2c;
+	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_b2c;
+	wrap_exp_o.CPUSKT_9nFIRQLnDTACK		<= CPUSKT_nFIRQ_b2c;
+	wrap_exp_o.CPUSKT_D						<=	CPUSKT_D_b2c;
+	wrap_exp_o.CPU_D_RnW 					<= BUF_D_RnW_b2c;
 
-	CPUSKT_RnW_o		<= wrap_exp_i.CPUSKT_RnWZnWR;
-	CPUSKT_BS_o			<= wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS;
-	CPUSKT_LIC_o		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
-	CPUSKT_BA_o			<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
-	CPUSKT_AVMA_o		<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
+	CPUSKT_RnW_c2b		<= wrap_exp_i.CPUSKT_RnWZnWR;
+	CPUSKT_BS_c2b		<= wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS;
+	CPUSKT_LIC_c2b		<= wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1;
+	CPUSKT_BA_c2b		<= wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS;
+	CPUSKT_AVMA_c2b	<= wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ;
 
-	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	CPUSKT_A_c2b 		<= wrap_exp_i.CPUSKT_A(15 downto 0);
+	CPUSKT_D_c2b 		<= wrap_exp_i.CPUSKT_D;
 
 end rtl;
 
