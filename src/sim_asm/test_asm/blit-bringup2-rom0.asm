@@ -563,6 +563,16 @@ mos_handle_res:
 	sta	sheila_SYSVIA_orb
 	sta	sheila_SYSVIA_orb
 
+	; quick chipram r/w
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	lda 	#0
+	sta 	fred_JIM_PAGE_HI	
+	sta 	fred_JIM_PAGE_LO
+	inc	JIM
+	inc	JIM
+	inc	JIM
+
 	; quick memory read/write test
 	lda	#100
 	sta	$200

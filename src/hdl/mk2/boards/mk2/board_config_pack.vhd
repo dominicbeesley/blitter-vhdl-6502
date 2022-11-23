@@ -71,10 +71,8 @@ package board_config_pack is
 	constant G_INCL_CPU_68008			: boolean := true;
 	constant G_INCL_CPU_680x0			: boolean := false;
 
-	constant G_MEM_SWRAM_SLOT			: natural := 0;
-	constant G_MEM_FAST_IS_10			: boolean := true;
 	constant G_MEM_SLOW_IS_45			: boolean := true;
-
+	constant G_MEM_FLASH_IS_45			: boolean := false;
 
 	constant PERIPHERAL_COUNT			: natural := 5;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;

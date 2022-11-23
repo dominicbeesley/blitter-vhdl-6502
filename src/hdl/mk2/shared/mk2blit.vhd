@@ -570,6 +570,10 @@ END GENERATE;
 
 
 	e_fb_mem: entity work.fb_mem
+	generic map (
+		G_FLASH_IS_45						=> G_MEM_FLASH_IS_45,
+		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45		
+	)
 	port map (
 			-- 2M RAM/256K ROM bus
 		MEM_A_o								=> MEM_A_o,
