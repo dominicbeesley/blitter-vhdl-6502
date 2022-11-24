@@ -189,42 +189,20 @@ begin
 	-- BOOT TIME
 	-- =========
 	-- After reset a boot flag causes all reads to be made from the boot sector of the MOS rom at FF FFXX
-	-- the Z80 starts executing at 0000 which would normally be mapped to 00 0000 which is ChipRAM. At boot
+	-- the Z80 starts executing at 0000 which would normally be mapped to FF 0000 which is System RAM. At boot
 	-- time the MOS/MONITOR should set up the zero page (writes are still mapped as normal) and jump to an
-	-- entry point in the MOS boot ears FF FFxx (boot mapping is still in force) then
+	-- entry point in the MOS boot in FF FFxx (boot mapping is still in force) then
 	-- write the JIM_ENABLE value to the DEVICE_SELECT register i.e. ($FCFF)=$D1 all before enabling any
 	-- interrupts.
 	-- TODO: what happens if there is an NMI at boot time?! Need a handler at FF FF33?
 	--
-	-- NORMAL MEMORY MAP
-	-- =================
-	-- 
-	-- CPU					Logical				Physical
-	-- +------------+
-	-- | 0000..9FFF |		00 0000..00 9FFF 	00 0000..00 9FFF - RAM at full speed 10ns/55ns
-	-- | user mem   |
-	-- | 40K			 |
-	-- +------------+
-	-- | A000..EFFF |		FF 3000..FF 7FFF	FF 3000..FF 7FFF - SYS/screen can be used as RAM but will run at 2MHz
-	-- | screen mem |
-	-- | 20K        |
-	-- +------------+
-	-- | F000..FBFF |		FF F000..FF FBFF  FF F000..FF FBFF - if running with ROM set 0
-	-- | monitor rom|								7D 3000..7D 3BFF - if running in rom bank 1 with mosram
-	-- | 3K         |    						9D 3000..9D 3BFF - if running in rom bank 1 normally
-	-- +------------+
-	-- | FC00..FEFF |		FF FC00..FF FEFF 	FF FC00..FF FEFF - hardware registers
-	-- | hardware   |
-	-- | 0.75K      |
-	-- +------------+
-	-- | FF00..FFFF |		FF FF00..FF FFFF	FF FF00..FF FFFF - if running in rom bank 0
-	-- | boot rom   |								7D 3F00..7D 3FFF - if running in rom bank 1 with mosram
-	-- | 0.25K      |    						9D 3F00..9D 3FFF - if running in rom bank 1 normally
-	-- +------------+
+	-- Note: After boot time there used to be a special bowdlerised mapping to logical RAM which 
+	-- moved the screen up to A000 and placed ChipRAM elsewhere, this has now been removed and
+	-- a better remapping will be made available in log2phys should it be needed
 	--
 	-- IO Mapping
 	-- ==========
-	-- IO ports always access lofical and physical FF FDxx
+	-- IO ports always access logical and physical FF FDxx
 
 
 	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_c2b, i_CPUSKT_nIOREQ_c2b, i_CPUSKT_A_c2b)
@@ -237,15 +215,8 @@ begin
 		elsif i_CPUSKT_nRD_c2b = '0' and r_z80_boot = '1' then
 			-- boot rom reads
 			i_A_log <= x"FFFF" & i_CPUSKT_A_c2b(7 downto 0);
-		elsif v_A_top >= x"A" and v_A_top <= x"E" then
-			-- screen memory
-			i_A_log <= x"FF" & std_logic_vector(v_A_top - 7) & i_CPUSKT_A_c2b(11 downto 0);
-		elsif v_A_top = x"F" then
-			-- mos rom / boot rom / hardware regs
-			i_A_log <= x"FFF" & i_CPUSKT_A_c2b(11 downto 0);
 		else
-			-- chip ram low memory
-			i_A_log <= x"00" & i_CPUSKT_A_c2b; 	-- low memory from chip ram
+			i_A_log <= x"FF" & i_CPUSKT_A_c2b; 	-- low memory from chip ram
 		end if;
 	end process;
 
