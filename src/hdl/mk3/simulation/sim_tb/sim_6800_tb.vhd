@@ -139,7 +139,7 @@ begin
 	i_exp_PORTG <= (
 		2 downto 0 => "111" -- Model B
 	,	3 => '1' -- not t65
-	,	4 => '1' -- swromx off
+	,	4 => '0' -- swromx off
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
@@ -326,11 +326,13 @@ begin
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
 		tco => 10 ns,
 		taa => 10 ns,
-		tolz => 0 ns,
-		tlz => 0 ns,
-		tohz => 0 ns,
-		thz => 0 ns,
-		toe => 0 ns
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns
 	)
 	port map (
 		A				=> i_MEM_A(19 downto 0),

@@ -292,7 +292,6 @@ architecture rtl of mk2blit is
 	-----------------------------------------------------------------------------
 	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
 	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
-	signal i_cpuskt_D_o					: std_logic_vector(7 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
@@ -571,6 +570,10 @@ END GENERATE;
 
 
 	e_fb_mem: entity work.fb_mem
+	generic map (
+		G_FLASH_IS_45						=> G_MEM_FLASH_IS_45,
+		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45		
+	)
 	port map (
 			-- 2M RAM/256K ROM bus
 		MEM_A_o								=> MEM_A_o,
@@ -679,7 +682,6 @@ END GENERATE;
 		wrap_exp_o							=> i_wrap_exp_o,
 
 		hard_cpu_en_o						=> open,
-		cpuskt_D_o							=> i_cpuskt_D_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -755,7 +757,7 @@ END GENERATE;
 
 
 	CPUSKT_D_io	 		<= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
-									i_CPUSKT_D_o;
+								i_wrap_exp_o.CPUSKT_D;
 
 
 

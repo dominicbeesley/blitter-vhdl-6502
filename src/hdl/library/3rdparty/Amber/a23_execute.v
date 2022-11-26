@@ -67,8 +67,10 @@ output      [31:0]          o_address_nxt,          // un-registered version of 
 output reg                  o_priviledged,    // Priviledged access
 output reg                  o_exclusive,      // swap access
 output reg                  o_write_enable,
+output                      o_write_enable_next,
 output reg                  o_translate,
 output reg  [3:0]           o_byte_enable,
+output reg  [3:0]           o_byte_enable_next,
 output reg                  o_data_access,    // To Fetch stage. high = data fetch,
                                                     // low = instruction fetch
 output      [31:0]          o_status_bits,          // Full PC will all status bits, but PC part zero'ed out
@@ -203,6 +205,9 @@ wire                adex_nxt;
 
 wire                carry_in;
 
+
+assign o_byte_enable_next = byte_enable_nxt;
+assign o_write_enable_next = write_enable_nxt;
 
 // ========================================================
 // Status Bits in PC register

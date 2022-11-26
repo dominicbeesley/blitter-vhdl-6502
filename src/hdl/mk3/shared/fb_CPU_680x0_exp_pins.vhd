@@ -60,33 +60,34 @@ entity fb_cpu_680x0_exp_pins is
 
 		-- local 68k wrapper signals to/from CPU expansion port 
 
-		CPUSKT_VPA_i							: in std_logic;
-		CPUSKT_CLK_i							: in std_logic;
-		CPUSKT_nHALT_i							: in std_logic;
-		CPUSKT_nIPL0_i							: in std_logic;
-		CPUSKT_nIPL1_i							: in std_logic;
-		CPUSKT_nIPL2_i							: in std_logic;
-		CPUSKT_nRES_i							: in std_logic;
-		CPUSKT_nDTACK_i						: in std_logic;
+		CPUSKT_VPA_b2c							: in std_logic;
+		CPUSKT_CLK_b2c							: in std_logic;
+		CPUSKT_nHALT_b2c						: in std_logic;
+		CPUSKT_nIPL0_b2c						: in std_logic;
+		CPUSKT_nIPL1_b2c						: in std_logic;
+		CPUSKT_nIPL2_b2c						: in std_logic;
+		CPUSKT_nRES_b2c						: in std_logic;
+		CPUSKT_nDTACK_b2c						: in std_logic;
+		CPUSKT_D_b2c							: in std_logic_vector(15 downto 0);
 
-		CPU_D_RnW_i								: in std_logic;
+		BUF_D_RnW_b2c							: in std_logic;
 
 		MUX_PORTE_nOE_i						: in std_logic;
 		MUX_PORTF_nOE_i						: in std_logic;
 
 
-		CPUSKT_E_o								: out std_logic;
-		CPUSKT_nBG_o							: out std_logic;
-		CPUSKT_RnW_o							: out std_logic;
-		CPUSKT_nUDS_o							: out std_logic;
-		CPUSKT_nLDS_o							: out std_logic;
-		CPUSKT_FC0_o							: out std_logic;
-		CPUSKT_FC2_o							: out std_logic;
-		CPUSKT_nAS_o							: out std_logic;
-		CPUSKT_FC1_o							: out std_logic;
+		CPUSKT_E_c2b							: out std_logic;
+		CPUSKT_nBG_c2b							: out std_logic;
+		CPUSKT_RnW_c2b							: out std_logic;
+		CPUSKT_nUDS_c2b						: out std_logic;
+		CPUSKT_nLDS_c2b						: out std_logic;
+		CPUSKT_FC0_c2b							: out std_logic;
+		CPUSKT_FC2_c2b							: out std_logic;
+		CPUSKT_nAS_c2b							: out std_logic;
+		CPUSKT_FC1_c2b							: out std_logic;
 
-		CPUSKT_D_o							: out std_logic_vector(15 downto 0);
-		CPUSKT_A_o							: out std_logic_vector(23 downto 1)
+		CPUSKT_D_c2b							: out std_logic_vector(15 downto 0);
+		CPUSKT_A_c2b							: out std_logic_vector(23 downto 1)
 
 
 	);
@@ -95,47 +96,57 @@ end fb_cpu_680x0_exp_pins;
 architecture rtl of fb_cpu_680x0_exp_pins is
 begin
 
-	wrap_exp_o.exp_PORTB(0) <= CPUSKT_VPA_i;
-	wrap_exp_o.exp_PORTB(1) <= '1';
-	wrap_exp_o.exp_PORTB(2) <= CPUSKT_CLK_i;
-	wrap_exp_o.exp_PORTB(3) <= '1';
-	wrap_exp_o.exp_PORTB(4) <= CPUSKT_nIPL1_i;
-	wrap_exp_o.exp_PORTB(5) <= CPUSKT_nIPL0_i;
-	wrap_exp_o.exp_PORTB(6) <= CPUSKT_nIPL2_i;
-	wrap_exp_o.exp_PORTB(7) <= CPUSKT_nDTACK_i;
+	CPUSKT_D_c2b(7 downto 0) 	<= wrap_exp_i.PORTA;
+	wrap_exp_o.PORTA 				<= CPUSKT_D_b2c(7 downto 0);
+	wrap_exp_o.PORTA_nOE 		<= '0';
+	wrap_exp_o.PORTA_DIR 		<= not BUF_D_RnW_b2c;
 
 
-	CPUSKT_RnW_o		<= wrap_exp_i.exp_PORTD(1);
-	CPUSKT_nUDS_o		<= wrap_exp_i.exp_PORTD(2);
-	CPUSKT_FC0_o		<= wrap_exp_i.exp_PORTD(3);
-	CPUSKT_FC2_o		<= wrap_exp_i.exp_PORTD(4);
-	CPUSKT_nAS_o		<= wrap_exp_i.exp_PORTD(5);
-	CPUSKT_FC1_o		<= wrap_exp_i.exp_PORTD(6);
-	CPUSKT_nBG_o		<= wrap_exp_i.exp_PORTD(7);
+	wrap_exp_o.PORTB(0)			<= CPUSKT_VPA_b2c;
+	wrap_exp_o.PORTB(1)			<= '1';
+	wrap_exp_o.PORTB(2)			<= CPUSKT_CLK_b2c;
+	wrap_exp_o.PORTB(3)			<= '1';
+	wrap_exp_o.PORTB(4)			<= CPUSKT_nIPL1_b2c;
+	wrap_exp_o.PORTB(5)			<= CPUSKT_nIPL0_b2c;
+	wrap_exp_o.PORTB(6)			<= CPUSKT_nIPL2_b2c;
+	wrap_exp_o.PORTB(7)			<= CPUSKT_nDTACK_b2c;
 
-	CPUSKT_nLDS_o		<= wrap_exp_i.CPUSKT_A(0);
+	CPUSKT_nLDS_c2b				<= wrap_exp_i.PORTC(0);
+	CPUSKT_A_c2b(7 downto 1) 	<= wrap_exp_i.PORTC(7 downto 1);
+	CPUSKT_A_c2b(19 downto 16) <= wrap_exp_i.PORTC(11 downto 8);
 
+	CPUSKT_E_c2b					<= wrap_exp_i.PORTD(0);	
+	CPUSKT_RnW_c2b					<= wrap_exp_i.PORTD(1);
+	CPUSKT_nUDS_c2b				<= wrap_exp_i.PORTD(2);
+	CPUSKT_FC0_c2b					<= wrap_exp_i.PORTD(3);
+	CPUSKT_FC2_c2b					<= wrap_exp_i.PORTD(4);
+	CPUSKT_nAS_c2b					<= wrap_exp_i.PORTD(5);
+	CPUSKT_FC1_c2b					<= wrap_exp_i.PORTD(6);
+	CPUSKT_nBG_c2b					<= wrap_exp_i.PORTD(7);
 
-	wrap_exp_o.exp_PORTD <= (
+	wrap_exp_o.PORTD <= (
 		8 => '1',										-- nBR
-		9 => CPUSKT_nRES_i,
-		10 => CPUSKT_nHALT_i,					-- 68K halt
+		9 => CPUSKT_nRES_b2c,
+		10 => CPUSKT_nHALT_b2c,					-- 68K halt
 		others => '1'
 		);
 
-	wrap_exp_o.exp_PORTD_o_en <= (
+	wrap_exp_o.PORTD_o_en <= (
 		8 => '1',
 		9 => '1',
 		10 => '1',
 		others => '0'
 		);
 
-	wrap_exp_o.exp_PORTE_nOE <= MUX_PORTE_nOE_i;
-	wrap_exp_o.exp_PORTF_nOE <= MUX_PORTF_nOE_i;
+	wrap_exp_o.PORTE_i_nOE <= MUX_PORTE_nOE_i;
+	wrap_exp_o.PORTF_i_nOE <= MUX_PORTF_nOE_i or BUF_D_RnW_b2c;
+	wrap_exp_o.PORTF_o_nOE <= MUX_PORTF_nOE_i or not BUF_D_RnW_b2c;
 
-	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(23 downto 1);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D;
+	wrap_exp_o.PORTF(11 downto 4) <= CPUSKT_D_b2c(15 downto 8);
+	CPUSKT_D_c2b(15 downto 8) <= wrap_exp_i.PORTEFG(11 downto 4);
+
+	CPUSKT_A_c2b(15 downto 8) <= wrap_exp_i.PORTEFG(7 downto 0);
+	CPUSKT_A_c2b(23 downto 20) <= wrap_exp_i.PORTEFG(11 downto 8);
 
 end rtl;
 

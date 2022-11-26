@@ -99,12 +99,10 @@ entity fb_cpu is
 
 		hard_cpu_en_o							: out std_logic;
 
-		cpuskt_D_o								: out std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
 		JIM_page_i								: in  	std_logic_vector(15 downto 0);
-		jim_en_i									: in		std_logic;		-- jim enable, this is handled here 
+		JIM_en_i									: in		std_logic;		-- jim enable, this is handled here 
 
 		-- memctl signals
 		swmos_shadow_i							: in	std_logic;		-- shadow mos from SWRAM slot #8
@@ -145,7 +143,9 @@ entity fb_cpu is
 		debug_SYS_VIA_block_o				: out std_logic;
 
 		debug_80188_state_o					: out std_logic_vector(2 downto 0);
-		debug_80188_ale_o						: out std_logic
+		debug_80188_ale_o						: out std_logic;
+
+		debug_65816_addr_meta_o				: out std_logic
 
 	);
 end fb_cpu;
@@ -166,10 +166,8 @@ architecture rtl of fb_cpu is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i;
+		wrap_i									: in t_cpu_wrap_i
 
-		-- special 
-		D_Rd_i						: in std_logic_vector(7 downto 0)
 	);
 	end component;
 
@@ -218,7 +216,7 @@ architecture rtl of fb_cpu is
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- special m68k signals
-		jim_en_i									: in		std_logic
+		JIM_en_i									: in		std_logic
 
 	);
 	end component;
@@ -245,7 +243,7 @@ architecture rtl of fb_cpu is
 
 		-- special m68k signals
 
-		jim_en_i									: in		std_logic
+		JIM_en_i									: in		std_logic
 
 	);
 	end component;
@@ -273,7 +271,7 @@ architecture rtl of fb_cpu is
 
 		-- special m68k signals
 
-		jim_en_i									: in		std_logic
+		JIM_en_i									: in		std_logic
 
 	);
 	end component;
@@ -301,7 +299,9 @@ architecture rtl of fb_cpu is
 
 		boot_65816_i							: in		std_logic;
 
-		debug_vma_o								: out		std_logic
+		debug_vma_o								: out		std_logic;
+
+		debug_addr_meta_o						: out		std_logic
 
 	);
 	end component;
@@ -404,7 +404,7 @@ architecture rtl of fb_cpu is
 
 		-- special m68k signals
 
-		jim_en_i									: in		std_logic
+		JIM_en_i									: in		std_logic
 
 	);
 	end component;
@@ -450,11 +450,12 @@ architecture rtl of fb_cpu is
 	signal r_cpu_run_ix_act		: natural range 0 to C_IX_CPU_COUNT-1;				-- index of currently selected hard OR soft cpu
 
 
+	signal i_fb_c2p_log			: fb_con_o_per_i_t;
+	signal i_fb_p2c_log			: fb_con_i_per_o_t;
+
 	-----------------------------------------------------------------------------
 	-- cpu mapping signals
 	-----------------------------------------------------------------------------
-
-
 
 	-- wrapper enable signals
 
@@ -469,23 +470,6 @@ architecture rtl of fb_cpu is
 	signal r_cpu_en_65816 : std_logic;
 	signal r_cpu_en_arm2 : std_logic;
 
-	type state_t is (
-		s_idle							-- waiting for address ready signal from cpu wrapper
-		, s_block						-- SYS via was accessed recently and we're trying to access it again
-		, s_waitack						
-		);
-
-	signal r_state				: state_t;
-
-	signal r_D_rd				: std_logic_vector((C_CPU_BYTELANES*8)-1 downto 0);
-	signal r_acked 			: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
-
-	signal r_wrap_cyc					: std_logic;
-	signal i_wrap_phys_A				: std_logic_vector(23 downto 0);
-	signal r_wrap_phys_A				: std_logic_vector(23 downto 0);
-	signal r_wrap_we					: std_logic;
-	signal r_wrap_D_WR_stb			: std_logic;
-	signal r_wrap_D_WR				: std_logic_vector(7 downto 0);
 
 	signal i_wrap_D_rd				: std_logic_vector(8*C_CPU_BYTELANES-1 downto 0);
 
@@ -497,8 +481,6 @@ architecture rtl of fb_cpu is
 	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
 	signal r_do_sys_via_block		: std_logic;
-	signal i_SYS_VIA_block			: std_logic;
-	signal r_sys_via_block_clken 	: std_logic;
 begin
 
 	-- ================================================================================================ --
@@ -537,76 +519,70 @@ begin
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
 				else
-					case cfg_cpu_type_i is
-						when CPU_65816 =>
-							r_cpu_run_ix_act <= C_IX_CPU_65816;
+					if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+						r_cpu_run_ix_act <= C_IX_CPU_65816;
+						r_do_sys_via_block <= '1';	
+						r_cpu_en_65816 <= '1';
+					elsif cfg_cpu_type_i = CPU_680x0 and G_INCL_CPU_680x0 then
+						r_cpu_run_ix_act <= C_IX_CPU_680x0;
+						r_cpu_en_680x0 <= '1';
+					elsif cfg_cpu_type_i = CPU_68008 and G_INCL_CPU_68008 then
+						r_cpu_run_ix_act <= C_IX_CPU_68008;
+						r_cpu_en_68008 <= '1';
+					elsif cfg_cpu_type_i = CPU_6800 and G_INCL_CPU_6800 then
+						r_cpu_run_ix_act <= C_IX_CPU_6800;
+						r_cpu_en_6800 <= '1';
+					elsif cfg_cpu_type_i = CPU_6x09 and G_INCL_CPU_6x09 then
+						r_cpu_run_ix_act <= C_IX_CPU_6x09;
+						if cfg_cpu_speed_opt_i = CPUSPEED_6309_3_5 then
 							r_do_sys_via_block <= '1';	
-							r_cpu_en_65816 <= '1';
-						when CPU_680x0 =>
-							r_cpu_run_ix_act <= C_IX_CPU_680x0;
-							r_cpu_en_680x0 <= '1';
-						when CPU_68008 =>
-							r_cpu_run_ix_act <= C_IX_CPU_68008;
-							r_cpu_en_68008 <= '1';
-						when CPU_6800 =>
-							r_cpu_run_ix_act <= C_IX_CPU_6800;
-							r_cpu_en_6800 <= '1';
-						when CPU_6x09 =>
-							r_cpu_run_ix_act <= C_IX_CPU_6x09;
-							if cfg_cpu_speed_opt_i = CPUSPEED_6309_3_5 then
-								r_do_sys_via_block <= '1';	
-							end if;
-							r_cpu_en_6x09 <= '1';
-						when CPU_65C02 =>
-							r_cpu_run_ix_act <= C_IX_CPU_65C02;
-							r_do_sys_via_block <= '1';	
-							r_cpu_en_65c02 <= '1';
-						when CPU_80188 =>
-							r_cpu_run_ix_act <= C_IX_CPU_80188;
-							r_cpu_en_80188 <= '1';
-						when CPU_Z80 =>
-							r_cpu_run_ix_act <= C_IX_CPU_Z80;
-							r_cpu_en_z80 <= '1';						
-						when CPU_ARM2 =>
-							r_cpu_run_ix_act <= C_IX_CPU_ARM2;
-							r_cpu_en_arm2 <= '1';						
-						when others => 
-							null;
-					end case;
+						end if;
+						r_cpu_en_6x09 <= '1';
+					elsif cfg_cpu_type_i = CPU_65C02 and G_INCL_CPU_65C02 then
+						r_cpu_run_ix_act <= C_IX_CPU_65C02;
+						r_do_sys_via_block <= '1';	
+						r_cpu_en_65c02 <= '1';
+					elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
+						r_cpu_run_ix_act <= C_IX_CPU_80188;
+						r_cpu_en_80188 <= '1';
+					elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
+						r_cpu_run_ix_act <= C_IX_CPU_Z80;
+						r_cpu_en_z80 <= '1';						
+					elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
+						r_cpu_run_ix_act <= C_IX_CPU_ARM2;
+						r_cpu_en_arm2 <= '1';						
+					end if;
 				end if;
 
 				-- multiplex/enable current hard cpu expansion out
-				case cfg_cpu_type_i is
-					when CPU_65816 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_65816;
-						r_hard_cpu_en <= '1';
-					when CPU_680x0 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_680x0;
-						r_hard_cpu_en <= '1';
-					when CPU_68008 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_68008;
-						r_hard_cpu_en <= '1';
-					when CPU_6800 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_6800;
-						r_hard_cpu_en <= '1';
-					when CPU_6x09 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_6x09;
-						r_hard_cpu_en <= '1';
-					when CPU_65C02 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_65C02;
-						r_hard_cpu_en <= '1';
-					when CPU_80188 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_80188;
-						r_hard_cpu_en <= '1';
-					when CPU_Z80 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_Z80;
-						r_hard_cpu_en <= '1';
-					when CPU_ARM2 =>
-						r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
-						r_hard_cpu_en <= '1';
-					when others => 
-						null;
-				end case;
+				if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+					r_cpu_run_ix_hard <= C_IX_CPU_65816;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_680x0 and G_INCL_CPU_680x0 then
+					r_cpu_run_ix_hard <= C_IX_CPU_680x0;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_68008 and G_INCL_CPU_68008 then
+					r_cpu_run_ix_hard <= C_IX_CPU_68008;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_6800 and G_INCL_CPU_6800 then
+					r_cpu_run_ix_hard <= C_IX_CPU_6800;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_6x09 and G_INCL_CPU_6x09 then
+					r_cpu_run_ix_hard <= C_IX_CPU_6x09;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_65C02 and G_INCL_CPU_65C02 then
+					r_cpu_run_ix_hard <= C_IX_CPU_65C02;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
+					r_cpu_run_ix_hard <= C_IX_CPU_80188;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
+					r_cpu_run_ix_hard <= C_IX_CPU_Z80;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
+					r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
+					r_hard_cpu_en <= '1';
+				end if;
 
 
 
@@ -638,124 +614,97 @@ begin
 
 
 
-	debug_wrap_cyc_o <= r_wrap_cyc;
-
-	-- ================================================================================================ --
-	-- BYTE lanes 
-	-- ================================================================================================ --
-
-
-	G_BL_RD:FOR I in C_CPU_BYTELANES-1 downto 0 GENERATE
-		i_wrap_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd when r_acked(I) = '0' else 
-															r_D_rd(7+I*8 downto I*8);
-	END GENERATE;
-
-	cpuskt_D_o <= i_wrap_D_rd;	-- send data out to socket, socket assignment handled at top level
+	debug_wrap_cyc_o <= i_wrap_o_cur_act.cyc;
 	
-	-- CAVEATS:
-	--   the process below has been trimmed with the following expectations:
-	--		1 when i_wrap cyc goes active it is a register in the wrapper
-	--	   2 the logical address passed in i_wrap_o_cur.A_log is also registered in the wrapper
-	--			the above two allow for the log->phys mapping in a single cycle
-
 	-- ================================================================================================ --
-	-- State Machine 
+	-- Multibyte burst controller
 	-- ================================================================================================ --
 
 
-	p_wrap_state:process(fb_syscon_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_state <= s_idle;
-			r_wrap_phys_A <= (others => '0');
-			r_wrap_cyc <= '0';
-			r_wrap_we <= '0';
-			r_wrap_D_WR_stb <= '0';
-			r_wrap_D_WR <= (others => '0');
-
-
-			r_acked <= (others => '0');
-
-			r_D_rd <= (others => '0');
-
-		elsif rising_edge(fb_syscon_i.clk) then
-			r_state <= r_state;
-			r_sys_via_block_clken <= '0';
-
-			if (or_reduce(i_wrap_o_cur_act.cyc) = '1' or r_wrap_cyc = '1' or r_state = s_block) and i_wrap_o_cur_act.D_WR_stb = '1' then
-				r_wrap_D_WR_stb <= '1';
-				r_wrap_D_WR <= i_wrap_o_cur_act.D_WR;
-			end if;
-
-			case r_state is
-				when s_idle =>
-					if or_reduce(i_wrap_o_cur_act.cyc) = '1' then
-						r_wrap_phys_A <= i_wrap_phys_A;
-						r_wrap_we <= i_wrap_o_cur_act.we;
-
-						if r_do_sys_via_block = '1' and i_SYS_VIA_block = '1' then
-							r_state <= s_block;
-						else
-							r_state <= s_waitack;
-							r_wrap_cyc <= '1';
-						end if;
-					end if;
-				   r_acked <= not(i_wrap_o_cur_act.cyc);
-				when s_block =>
-					if i_SYS_VIA_block = '0' then
-						r_state <= s_waitack;
-						r_wrap_cyc <= '1';
-					end if;
-				when s_waitack =>
-					if i_wrap_o_cur_act.ack = '1' then
-						r_sys_via_block_clken <= '1';
-						r_state <= s_idle;
-						r_wrap_cyc <= '0';
-						r_wrap_D_WR_stb <= '0';
-						for I in C_CPU_BYTELANES-1 downto 0 loop
-							if r_acked(I) = '0' then
-								r_D_rd(7+I*8 downto I*8) <= fb_p2c_i.D_rd;
-								r_acked(I) <= '1';
-						end if;
-						end loop;
-					end if;
-				when others =>
-					r_state <= s_idle;
-			end case;
-
-
-		end if;
-	end process;
-
-	-- ================================================================================================ --
-	-- Logical to physical address mapping 
-	-- ================================================================================================ --
-
-
-	e_log2phys: entity work.log2phys
+	e_burst:entity work.fb_cpu_con_burst
 	generic map (
-		SIM									=> SIM,
-		G_MK3									=> G_MK3
-	)
+		SIM 				=> SIM,
+		G_BYTELANES 	=> C_CPU_BYTELANES
+		)
 	port map (
-		fb_syscon_i 						=> fb_syscon_i,	
-		-- CPU address control signals from other components
-		JIM_page_i							=> JIM_page_i,
-		sys_ROMPG_i							=> sys_ROMPG_i,
-		cfg_swram_enable_i				=> cfg_swram_enable_i,
-		cfg_swromx_i						=> cfg_swromx_i,
-		cfg_mosram_i						=> cfg_mosram_i,
-		cfg_t65_i							=> r_cpu_en_t65,
-      cfg_sys_type_i                => cfg_sys_type_i,
-
-		jim_en_i								=> jim_en_i,
-		swmos_shadow_i						=> swmos_shadow_i,
-		turbo_lo_mask_i					=> turbo_lo_mask_i,
-		noice_debug_shadow_i				=> noice_debug_shadow_i,
-
-		A_i									=> i_wrap_o_cur_act.A_log,
-		A_o									=> i_wrap_phys_A
+		
+		BE_i					=> i_wrap_o_cur_act.BE,
+		cyc_i					=> i_wrap_o_cur_act.cyc,
+		A_i					=> i_wrap_o_cur_act.A,
+		we_i					=> i_wrap_o_cur_act.we,
+		lane_req_i			=> i_wrap_o_cur_act.lane_req,
+		D_wr_i				=> i_wrap_o_cur_act.D_wr,
+		D_wr_stb_i			=> i_wrap_o_cur_act.D_wr_stb,
+		rdy_ctdn_i			=> i_wrap_o_cur_act.rdy_ctdn,
+	
+		-- return to wrappers
+	
+		rdy_o					=> i_wrap_i.rdy,
+		act_lane_o			=> i_wrap_i.act_lane,
+		ack_lane_o			=> i_wrap_i.ack_lane,
+		ack_o					=> i_wrap_i.ack,
+		D_rd_o				=> i_wrap_i.D_rd,
+	
+		-- fishbone byte wide controller interface
+	
+		fb_syscon_i			=> fb_syscon_i,
+	
+		fb_con_c2p_o		=> i_fb_c2p_log,
+		fb_con_p2c_i		=> i_fb_p2c_log
+	
 	);
+	
+
+	-- ================================================================================================ --
+	-- log2phys and VIA throttle stage
+	-- ================================================================================================ --
+
+	e_log:entity work.fb_cpu_log2phys
+	generic map (
+		SIM			=> SIM,
+		CLOCKSPEED	=> CLOCKSPEED,
+		G_MK3			=> G_MK3
+	)
+	port map(
+
+		fb_syscon_i								=> fb_syscon_i,
+
+		-- controller interface from the cpu
+		fb_con_c2p_i							=> i_fb_c2p_log,
+		fb_con_p2c_o							=> i_fb_p2c_log,
+
+		fb_per_c2p_o							=> fb_c2p_o,
+		fb_per_p2c_i							=> fb_p2c_i,
+
+		-- per cpu config
+		cfg_sys_via_block_i					=> r_do_sys_via_block,
+		cfg_t65_i								=> r_cpu_en_t65,
+
+		-- system type
+		cfg_sys_type_i							=> cfg_sys_type_i,
+		cfg_swram_enable_i					=> cfg_swram_enable_i,
+		cfg_mosram_i							=> cfg_mosram_i,
+		cfg_swromx_i							=> cfg_swromx_i,
+
+		-- extra memory map control signals
+		sys_ROMPG_i								=> sys_ROMPG_i,
+		JIM_page_i								=> JIM_page_i,
+		JIM_en_i									=> JIM_en_i,
+
+		-- memctl signals
+		swmos_shadow_i							=> swmos_shadow_i,
+		turbo_lo_mask_i						=> turbo_lo_mask_i,
+
+		-- noice signals
+		noice_debug_shadow_i					=> noice_debug_shadow_i,
+
+		-- debug
+		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o 				
+
+	);
+
+	
+
 
 	-- ================================================================================================ --
 	-- Instantiate CPU wrappers 
@@ -775,10 +724,7 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_T65),
-		wrap_i									=> i_wrap_i,
-
-		D_rd_i									=> i_wrap_D_rd(7 downto 0)
-
+		wrap_i									=> i_wrap_i
 
 	);
 
@@ -823,7 +769,7 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_Z80),
 		wrap_exp_i								=> i_wrap_exp_i,
 
- 		jim_en_i									=> jim_en_i
+ 		JIM_en_i									=> JIM_en_i
 
 	);
 END GENERATE;
@@ -848,7 +794,7 @@ g680x0:IF G_INCL_CPU_680x0 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_680x0),
 		wrap_exp_i								=> i_wrap_exp_i,
 
- 		jim_en_i									=> jim_en_i
+ 		JIM_en_i									=> JIM_en_i
 
 	);
 END GENERATE;
@@ -872,7 +818,7 @@ gARM2:IF G_INCL_CPU_ARM2 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_ARM2),
 		wrap_exp_i								=> i_wrap_exp_i,
 
- 		jim_en_i									=> jim_en_i
+ 		JIM_en_i									=> JIM_en_i
 
 	);
 END GENERATE;
@@ -897,7 +843,7 @@ g68008:IF G_INCL_CPU_68008 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_68008),
 		wrap_exp_i								=> i_wrap_exp_i,
 
- 		jim_en_i									=> jim_en_i
+ 		JIM_en_i									=> JIM_en_i
 
 	);
 END GENERATE;
@@ -995,29 +941,19 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 
 		boot_65816_i							=> boot_65816_i,
 
-		debug_vma_o								=> debug_65816_vma_o
+		debug_vma_o								=> debug_65816_vma_o,
+		debug_addr_meta_o						=> debug_65816_addr_meta_o
 	);
 END GENERATE;
 
+
 	-- ================================================================================================ --
-	-- SYS VIA blocker
+	-- Dummy exp out for when no external CPU is selected
 	-- ================================================================================================ --
 
-	e_sys_via_block:entity work.fb_sys_via_blocker
-	generic map (
-		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED		
-		)
-	port map (
-		fb_syscon_i => fb_syscon_i,
-		cfg_sys_type_i => cfg_sys_type_i,
-		clken => r_sys_via_block_clken,
-		A_i => i_wrap_o_cur_act.A_log,
-		RnW_i => not i_wrap_o_cur_act.we,
-		SYS_VIA_block_o => i_SYS_VIA_block
-		);
-
-	debug_SYS_VIA_block_o <= i_SYS_VIA_block;
+	G_DEF_EXP:IF G_INCL_CPU_T65 GENERATE
+		i_wrap_exp_o_all(C_IX_CPU_T65) <= C_EXP_O_DUMMY;
+	END GENERATE;
 
 	-- ================================================================================================ --
 	-- multiplex wrapper signals
@@ -1028,20 +964,8 @@ END GENERATE;
 
 
 	-- ================================================================================================ --
-	-- Wrapper to/from CPU handlers
+	-- extra Wrapper to/from CPU handlers
 	-- ================================================================================================ --
-
-  	fb_c2p_o.cyc <= r_wrap_cyc;
-  	fb_c2p_o.we <= r_wrap_we;
-  	fb_c2p_o.A <= r_wrap_phys_A;
-  	fb_c2p_o.A_stb <= r_wrap_cyc;
-  	fb_c2p_o.D_wr <=  r_wrap_D_wr;
-  	fb_c2p_o.D_wr_stb <= r_wrap_D_wr_stb;
-
-
-
-	i_wrap_i.rdy_ctdn						<= fb_p2c_i.rdy_ctdn;
-	i_wrap_i.cyc 							<= r_wrap_cyc;
 
 	i_wrap_i.cpu_halt 					<= cpu_halt_i;
 

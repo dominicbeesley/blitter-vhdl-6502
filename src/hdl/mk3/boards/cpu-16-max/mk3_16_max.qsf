@@ -111,12 +111,14 @@ set_global_assignment -name VHDL_FILE board_config_pack.vhd
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_syscon.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../library/common.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_many_to_one.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to_many.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
-set_global_assignment -name VHDL_FILE ../../../library/common.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_null.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd
 set_global_assignment -name VHDL_FILE ../../../library/clockreg.vhd
 set_global_assignment -name VHDL_FILE ../../../library/bbc/bbc_slow_cyc.vhd
@@ -124,7 +126,6 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_Pack.v
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_MCode.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
@@ -140,8 +141,6 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_65816_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_65816.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_65C02_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_65C02.vhd
-set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_Z80_exp_pins.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_Z80.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_680x0_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_680x0.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_arm2_exp_pins.vhd
@@ -150,14 +149,19 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6800_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6800.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_80188.vhd
+
+
+set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_log2phys.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_con_burst.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
@@ -174,7 +178,7 @@ set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
 set_global_assignment -name TOP_LEVEL_ENTITY mk3blit
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_68000_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 

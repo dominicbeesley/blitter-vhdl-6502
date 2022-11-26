@@ -1,0 +1,4 @@
+
+# Improve
+
+- consecutive reads from SYS in m68k skip a 2M cycle, writes ok - look at meta stability stuff in cpu wrapper, reduce levels?

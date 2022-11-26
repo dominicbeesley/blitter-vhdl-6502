@@ -38,6 +38,18 @@
 --
 ----------------------------------------------------------------------------------
 
+-- Speed up notes 7/11/22 - it seems SUBSTATE_A_8 could be shaved to 3 for the 14MHz part at 5V except
+-- that the i_VMA signal then seems to cause problems with possible metastability - look at either 
+-- timing constraints on ports to improve this or ignore VMA altogether?
+
+-- The following cycles were tested and found ok 7/11/22 on 14MHz part, returned values to those
+-- for the 3.3V/8MHz part
+--	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
+--	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(4, t_substate'length);
+--	constant SUBSTATE_D_8	: t_substate := to_unsigned(2, t_substate'length);
+--	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -71,7 +83,8 @@ entity fb_cpu_65816 is
 
 		boot_65816_i							: in		std_logic;
 
-		debug_vma_o								: out		std_logic
+		debug_vma_o								: out		std_logic;
+		debug_addr_meta_o						: out		std_logic
 
 );
 end fb_cpu_65816;
@@ -103,7 +116,10 @@ architecture rtl of fb_cpu_65816 is
 	-- address latch state:
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
 
-	constant SUBSTATE_D_8	: t_substate := to_unsigned(1, t_substate'length);
+	constant SUBSTATE_A_META: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
+
+
+	constant SUBSTATE_D_8	: t_substate := to_unsigned(2, t_substate'length);
 
 	constant SUBSTATE_D_WR_8: t_substate := SUBSTATEMAX_8 - to_unsigned(5, t_substate'length);
 
@@ -117,11 +133,12 @@ architecture rtl of fb_cpu_65816 is
 															-- this should be before A/CYC
 
 	signal i_vma				: std_logic;		-- '1' if VPA or VDA
-	signal r_a_stb				: std_logic;		-- '1' for 1 cycle at start of a controller cycle
+	signal r_cyc				: std_logic;		-- '1' for entirety of cycle
 	signal r_D_WR_stb			: std_logic;
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
+	signal r_A_meta			: std_logic_vector(23 downto 0);
 
 	signal i_ack				: std_logic;
 
@@ -132,24 +149,24 @@ architecture rtl of fb_cpu_65816 is
 
 
 	-- port b
-	signal i_CPUSKT_BE_o		: std_logic;		-- note only for the WDC 's' parts
-	signal i_CPUSKT_PHI0_o	: std_logic;
-	signal i_CPUSKT_RDY_o	: std_logic;
-	signal i_CPUSKT_nIRQ_o	: std_logic;
-	signal i_CPUSKT_nNMI_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPU_D_RnW_o		: std_logic;
+	signal i_CPUSKT_BE_b2c		: std_logic;		-- note only for the WDC 's' parts
+	signal i_CPUSKT_PHI0_b2c	: std_logic;
+	signal i_CPUSKT_RDY_b2c		: std_logic;
+	signal i_CPUSKT_nIRQ_b2c	: std_logic;
+	signal i_CPUSKT_nNMI_b2c	: std_logic;
+	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_BUF_D_RnW_b2c		: std_logic;
 
 	-- port d
 
-	signal i_CPUSKT_6E_i		: std_logic;
-	signal i_CPUSKT_RnW_i	: std_logic;
-	signal i_CPUSKT_VDA_i	: std_logic;
-	signal i_CPUSKT_VPA_i	: std_logic;
-	signal i_CPUSKT_VPB_i	: std_logic;
+	signal i_CPUSKT_6E_c2b		: std_logic;
+	signal i_CPUSKT_RnW_c2b		: std_logic;
+	signal i_CPUSKT_VDA_c2b		: std_logic;
+	signal i_CPUSKT_VPA_c2b		: std_logic;
+	signal i_CPUSKT_VPB_c2b		: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_c2b		: std_logic_vector(15 downto 0);
 
 
 
@@ -165,24 +182,25 @@ begin
 
 		-- local 65816 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_BE_i			=> i_CPUSKT_BE_o,
-		CPUSKT_PHI0_i		=> i_CPUSKT_PHI0_o,
-		CPUSKT_RDY_i		=> i_CPUSKT_RDY_o,
-		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
-		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
+		CPUSKT_BE_b2c			=> i_CPUSKT_BE_b2c,
+		CPUSKT_PHI0_b2c		=> i_CPUSKT_PHI0_b2c,
+		CPUSKT_RDY_b2c			=> i_CPUSKT_RDY_b2c,
+		CPUSKT_nIRQ_b2c		=> i_CPUSKT_nIRQ_b2c,
+		CPUSKT_nNMI_b2c		=> i_CPUSKT_nNMI_b2c,
+		CPUSKT_nRES_b2c		=> i_CPUSKT_nRES_b2c,
+		CPUSKT_D_b2c			=> wrap_i.D_rd(7 downto 0),
 
-		CPUSKT_6E_o			=>	i_CPUSKT_6E_i,
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_VDA_o		=> i_CPUSKT_VDA_i,
-		CPUSKT_VPA_o		=> i_CPUSKT_VPA_i,
-		CPUSKT_VPB_o		=> i_CPUSKT_VPB_i,
+		BUF_D_RnW_b2c			=> i_BUF_D_RnW_b2c,
+
+		CPUSKT_6E_c2b			=>	i_CPUSKT_6E_c2b,
+		CPUSKT_RnW_c2b			=> i_CPUSKT_RnW_c2b,
+		CPUSKT_VDA_c2b			=> i_CPUSKT_VDA_c2b,
+		CPUSKT_VPA_c2b			=> i_CPUSKT_VPA_c2b,
+		CPUSKT_VPB_c2b			=> i_CPUSKT_VPB_c2b,
 
 		-- shared per CPU signals
-		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
-
-		CPUSKT_A_o			=> i_CPUSKT_A_i,
-		CPUSKT_D_o			=> i_CPUSKT_D_i
+		CPUSKT_A_c2b			=> i_CPUSKT_A_c2b,
+		CPUSKT_D_c2b			=> i_CPUSKT_D_c2b
 
 	);
 
@@ -192,19 +210,26 @@ begin
 
 
 
-	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' 						-- we need to make sure that
+	i_BUF_D_RnW_b2c <= 	'1' 	when i_CPUSKT_RnW_c2b = '1' 						-- we need to make sure that
 										and r_PHI0_dly(r_PHI0_dly'high) = '1' 	-- read data into the CPU from the
-										and r_PHI0_dly(1) = '1' 					-- board doesn't crash into the bank
+										and r_PHI0 = '1' 								-- board doesn't crash into the bank
 										else												-- bank address so hold is short
 																							-- and setup late														
-							'0';
+								'0';
 
-	wrap_o.A_log 			<= r_log_A;
-	wrap_o.cyc	 			<= ( 0 => r_a_stb, others => '0');
-	wrap_o.we	  			<= not(i_CPUSKT_RnW_i);
-	wrap_o.D_wr				<=	i_CPUSKT_D_i;	
-	wrap_o.D_wr_stb		<= r_D_WR_stb;
-	wrap_o.ack				<= i_ack;
+	wrap_o.BE 					<= '0';
+	wrap_o.A 					<= r_log_A;
+	wrap_o.cyc					<= r_cyc;
+	wrap_o.lane_req 			<= ( 0 => '1', others => '0');
+	wrap_o.we	  				<= not(i_CPUSKT_RnW_c2b);
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
+
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;
+
+	wrap_o.D_wr_stb			<= ( 0 => r_D_WR_stb, others => '0');
+	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -219,10 +244,7 @@ begin
 	variable v_ctupnext : t_substate;	
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
-			r_D_WR_stb <= '0';
-
-			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
+			if wrap_i.rdy = '1' then
 				v_ctupnext := r_rdy_ctup + 1;
 				if v_ctupnext /= 0 then
 					r_rdy_ctup <= v_ctupnext;
@@ -235,26 +257,37 @@ begin
 
 			case r_state is
 				when phi1 =>
+
+					if r_substate = SUBSTATE_A_META then
+						r_A_meta <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;
+					end if;
+
 					if r_substate = SUBSTATE_A_8 then
 
 						if r_cpu_hlt = '0' then
 							if i_boot = '1' then
-								if i_CPUSKT_D_i(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
-									if i_CPUSKT_VPB_i = '0' and i_CPUSKT_6E_i = '0' then
+								if i_CPUSKT_D_c2b(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
+									if i_CPUSKT_VPB_c2b = '0' and i_CPUSKT_6E_c2b = '0' then
 										-- vector pull in Native mode - get from 008Fxx
-										r_log_A <= x"008F" & i_CPUSKT_A_i(7 downto 0);
+										r_log_A <= x"008F" & i_CPUSKT_A_c2b(7 downto 0);
 									else
 										-- bank 0 maps to FF in boot mode
-										r_log_A <= x"FF" & i_CPUSKT_A_i;
+										r_log_A <= x"FF" & i_CPUSKT_A_c2b;
 									end if;
 								else
 									-- not bank 0 map direct
-									r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;	
+									r_log_A <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;	
 								end if;
 							else
 								-- not boot mode map direct
-								r_log_A <= i_CPUSKT_D_i(7 downto 0) & i_CPUSKT_A_i;
+								r_log_A <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;
 							end if;
+						end if;
+
+						if r_A_meta = i_CPUSKT_D_c2b & i_CPUSKT_A_c2b then
+							debug_addr_meta_o <= '0';
+						else
+							debug_addr_meta_o <= '1';
 						end if;
 
 
@@ -262,7 +295,7 @@ begin
 						 	fb_syscon_i.rst = '0' and
 						 	wrap_i.cpu_halt = '0' and
 						 	i_vma = '1' then
-							r_a_stb <= '1';
+								r_cyc <= '1';
 								r_D_WR_stb <= '0';
 								r_rdy_ctup <= (others => '0');
 							r_inihib <= '0';
@@ -304,6 +337,8 @@ begin
 							r_state <= phi1;
 							r_PHI0 <= '0';
 							r_substate <= SUBSTATEMAX_8;
+							r_cyc <= '0';
+							r_D_WR_stb <= '0';
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -313,6 +348,8 @@ begin
 					r_state <= phi1;
 					r_substate <= SUBSTATEMAX_8;
 					r_PHI0 <= '0';
+					r_cyc <= '0';
+					r_D_WR_stb <= '0';
 			end case;
 
 
@@ -335,7 +372,8 @@ begin
 		(
 			r_inihib = '1' or
 			r_cpu_res = '1' or
-				(r_rdy_ctup >= SUBSTATE_D_8) 
+				(	(i_CPUSKT_RnW_c2b = '0' and wrap_i.rdy = '1') or 
+					r_rdy_ctup >= SUBSTATE_D_8) 
 		) and
 		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
 
@@ -344,19 +382,19 @@ begin
 
 
 
-	i_vma <= i_CPUSKT_VPA_i or i_CPUSKT_VDA_i;
+	i_vma <= i_CPUSKT_VPA_c2b or i_CPUSKT_VDA_c2b;
 
-	i_CPUSKT_BE_o <= cpu_en_i;
+	i_CPUSKT_BE_b2c <= cpu_en_i;
 	
-	i_CPUSKT_PHI0_o <= r_PHI0;
+	i_CPUSKT_PHI0_b2c <= r_PHI0;
 	
-	i_CPUSKT_nRES_o <= not r_cpu_res;
+	i_CPUSKT_nRES_b2c <= not r_cpu_res;
 	
-	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
   	
-	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
 
-  	i_CPUSKT_RDY_o <= 	'0' when r_cpu_hlt = '1' else
+  	i_CPUSKT_RDY_b2c <= 	'0' when r_cpu_hlt = '1' else
   											'1';
 
 --=======================================================================================
@@ -372,7 +410,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_boot_65816_dly <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_i = '1' and i_CPUSKT_VDA_i = '1' then
+			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
 				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i;
 			end if;
 		end if;
@@ -380,7 +418,7 @@ begin
 	end process;
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
-	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_i = '1' and i_CPUSKT_VDA_i = '1' else
+	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
 				 r_boot_65816_dly(2);
 
 
@@ -394,19 +432,19 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if r_state = phi2 and r_substate = 0 then
-  				r_prev_A0 <= i_CPUSKT_A_i(0);
+  				r_prev_A0 <= i_CPUSKT_A_c2b(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_i(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_c2b(0);
 
   	wrap_o.noice_debug_cpu_clken <= '1' when r_state = phi2 and r_substate = 0 and i_ack = '1' else '0';
   	
   	wrap_o.noice_debug_5c	 <= '0';
 
-  	wrap_o.noice_debug_opfetch <= i_CPUSKT_VPA_i and i_CPUSKT_VDA_i and not r_cpu_hlt;
+  	wrap_o.noice_debug_opfetch <= i_CPUSKT_VPA_c2b and i_CPUSKT_VDA_c2b and not r_cpu_hlt;
 
 
 

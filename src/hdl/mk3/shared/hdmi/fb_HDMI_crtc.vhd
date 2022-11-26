@@ -39,6 +39,7 @@ entity fb_HDMI_crtc is
 	
 		-- Clock enable output to CRTC
 		CLKEN_CRTC_i						:	in		std_logic;
+		CLKEN_CRTC_ADR_i					:	in		std_logic;
 		
 		-- Display interface
 		VSYNC_o								:	out	std_logic;
@@ -56,13 +57,15 @@ end fb_HDMI_crtc;
 
 architecture rtl of fb_HDMI_crtc is
 
+	type		t_per_state	is (idle, rd, wait_d_stb);
+	signal	r_per_state : t_per_state;
+
 	-- FISHBONE wrapper signals
-	signal	i_fb_wrcyc_stb : std_logic;
-	signal	i_fb_rdcyc		: std_logic;
+	signal	r_mc6845_en		: std_logic;
+	signal	r_mc6845_rnw	: std_logic;
 	signal	r_ack				: std_logic;
-	signal 	i_rnw				: std_logic;
-
-
+	signal	r_A				: std_logic;
+	signal	r_D_wr			: std_logic_vector(7 downto 0);
 
 begin
 
@@ -70,13 +73,14 @@ begin
 	port map (
 		CLOCK		=> fb_syscon_i.clk,
 		CLKEN		=> CLKEN_CRTC_i,
+		CLKEN_ADR=> CLKEN_CRTC_ADR_i,
 		nRESET	=> not fb_syscon_i.rst,
 
 		-- Bus interface
-		ENABLE	=> i_fb_wrcyc_stb,
-		R_nW		=> i_rnw,
-		RS			=> fb_c2p_i.A(0),
-		DI			=> fb_c2p_i.D_wr,
+		ENABLE	=> r_mc6845_en,
+		R_nW		=> r_mc6845_rnw,
+		RS			=> r_A,
+		DI			=> r_d_wr,
 		DO			=> fb_p2c_o.D_rd,
 
 		-- Display interface
@@ -88,36 +92,69 @@ begin
 		
 		-- Memory interface
 		MA			=> MA_o,
-		RA			=> RA_o
+		RA			=> RA_o,
+
+		VGA		=> '0'
 	);
 
 
 
 	-- FISHBONE wrapper for CPU/DMA access
-
-	i_fb_wrcyc_stb <= fb_c2p_i.cyc and fb_c2p_i.A_stb and fb_c2p_i.we and fb_c2p_i.D_wr_stb;
-	i_fb_rdcyc		<=  fb_c2p_i.cyc and fb_c2p_i.A_stb and not fb_c2p_i.we;
-
-	fb_p2c_o.nul <= '0';
 	fb_p2c_o.ack <= r_ack;
-	i_rnw <= not fb_c2p_i.we;
+	fb_p2c_o.rdy <= r_ack;
+	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
-	-- TODO: This could give a better countdown but can't be bothered and it's unlikely
-	-- to cause performance issues except for busy palette writes - might deliberately 
-	-- delay this even more to a character cycle and count down to that?
-	fb_p2c_o.rdy_ctdn <= to_unsigned(0, RDY_CTDN_LEN) when r_ack = '1' else
-								RDY_CTDN_MAX;
 
-	p_ack:process(fb_syscon_i)
+
+	p_per_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
+			r_per_state <= idle;
 			r_ack <= '0';
+			r_mc6845_en <= '0';
+			r_mc6845_rnw <= '1';
+			r_A <= '0';
+			r_d_wr <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_fb_wrcyc_stb = '1' or i_fb_rdcyc = '1' then
-				r_ack <= '1';
-			else
-				r_ack <= '0';
-			end if;
+			r_ack <= '0';
+			r_mc6845_en <= '0';
+			case r_per_state is
+				when idle =>
+					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
+						r_mc6845_rnw <= not fb_c2p_i.we;
+						r_A <= fb_c2p_i.A(0);
+						if fb_c2p_i.we = '1' then
+							if fb_c2p_i.D_wr_stb = '1' then
+								r_d_wr <= fb_c2p_i.D_Wr;
+								r_mc6845_en <= '1';
+								r_ack <= '1';
+								r_per_state <= idle;
+							else
+								r_per_state <= wait_d_stb;
+							end if;
+						else
+							r_mc6845_en <= '1';
+							r_per_state <= rd;
+						end if;
+					end if;
+				when wait_d_stb =>
+					if fb_c2p_i.D_wr_stb = '1' then
+						r_d_wr <= fb_c2p_i.D_Wr;
+						r_mc6845_en <= '1';
+						r_ack <= '1';
+						r_per_state <= idle;
+					else
+						r_per_state <= wait_d_stb;
+					end if;
+				when rd =>
+					r_ack <= '1';
+					r_per_state <= idle;
+				when others =>
+					r_per_state <= idle;
+					r_ack <= '1';
+					r_mc6845_en <= '0';
+					r_mc6845_rnw <= '1';
+			end case;
 		end if;
 	end process;
 

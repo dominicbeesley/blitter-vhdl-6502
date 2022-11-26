@@ -47,12 +47,14 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
+use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_t65 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		CLKEN_DLY_MAX						: natural 	:= 2								-- used to time latching of address etc signals			
+		CLKEN_DLY_MAX						: natural 	:= 2;								-- used to time latching of address etc signals			
+		MAXSPEED								: natural := 32
 	);
 	port(
 		-- configuration
@@ -61,10 +63,8 @@ entity fb_cpu_t65 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i;
+		wrap_i									: in t_cpu_wrap_i
 
-		-- special 
-		D_Rd_i						: in std_logic_vector(7 downto 0)
 	);
 end fb_cpu_t65;
 
@@ -78,18 +78,12 @@ architecture rtl of fb_cpu_t65 is
 	signal i_t65_res_n		: std_logic;
 
 
-	signal r_t65_RnW			: std_logic;
-	signal r_t65_SYNC			: std_logic;
-	signal r_t65_A	 			: std_logic_vector(23 downto 0);
-	signal r_t65_D_out		: std_logic_vector(7 downto 0);
-
-
 	signal i_cpu65_nmi_n		: std_logic;
 
 	signal r_prev_A0			: std_logic;
 
 	-- count down to next cycle - when all 1's can proceed
-	signal r_cpu_clk			: std_logic_vector(CLKEN_DLY_MAX downto 0);
+	signal r_cpu_clk			: std_logic_vector((CLOCKSPEED/MAXSPEED)-2 downto 0);
 
 	-- i_t65_clken '1' for one cycle to complete a cycle/start another
 	signal i_t65_clken		: std_logic;
@@ -105,24 +99,15 @@ architecture rtl of fb_cpu_t65 is
 
 	signal i_wrap_cyc 		: std_logic;
 
+	signal i_wrap_ack 		: std_logic;
+	signal r_wrap_acked		: std_logic;
+
 	--TODO: throttle only works on SYS_BBC, on Elk it repeats cycles!
 
 begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
-	p_reg_A:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			if r_clken_dly(0) = '1' then
-				r_t65_SYNC <= i_t65_SYNC;
-				r_t65_A <= i_t65_A;
-				r_t65_RnW <= i_t65_RnW;
-				r_t65_D_out <= i_t65_D_out;
-			end if;
-		end if;
-
-	end process;
 
 	p_throttle:process(fb_syscon_i)
 	begin
@@ -140,25 +125,30 @@ begin
 
 	end process;
 
-	i_throttle_wait <= r_throttle_wait and not wrap_i.cpu_2MHz_phi2_clken;
+	i_throttle_wait <= r_throttle_wait and not wrap_i.cpu_2MHz_phi2_clken; -- TODO: break this can we? it makes for a big comb-loop
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_clken_dly(1) = '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and i_t65_clken /= '1' else
 								'0';
 
-	wrap_o.A_log 		<= x"FF" & r_t65_A(15 downto 0);
-	wrap_o.cyc			<= ( 0 => i_wrap_cyc, others => '0');
-	wrap_o.we	 		<= not r_t65_RnW;
-	wrap_o.D_WR 		<= r_t65_D_out;
-	wrap_o.D_WR_stb 	<= r_clken_dly(1);
-	wrap_o.ack	 		<= i_t65_clken;
+	wrap_o.BE			<= '0';
+	wrap_o.A 			<= x"FF" & i_t65_A(15 downto 0);
+	wrap_o.cyc			<= i_wrap_cyc;
+	wrap_o.lane_req   <= (0 => '1', others => '0');
+	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
+	wrap_o.we	 		<= not i_t65_RnW;
+	wrap_o.D_WR(7 downto 0) <= i_t65_D_out;
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;
+	wrap_o.D_WR_stb 	<= (0 => r_clken_dly(2), others => '0');								-- TEST late Data strobe TODOPIPE: put this back to (0)
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
 
 
-	i_t65_clken <= '1' when r_cpu_clk(0) = '1' and (
-									(wrap_i.rdy_ctdn = RDY_CTDN_MIN) or 
+	i_t65_clken <= '1' when r_cpu_clk(0) = '1' and (		
+									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
 									) and i_throttle_wait = '0'
@@ -170,19 +160,27 @@ begin
 	i_t65_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
 						'0';
 
-	i_t65_D_in <= D_rd_i when i_t65_RnW = '1' else
+	i_t65_D_in <= wrap_i.D_rd(7 downto 0) when i_t65_RnW = '1' else
 					  i_t65_D_out;
 	
 	p_rdy:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_cpu_halt <= '0';
+			r_wrap_acked <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_t65_clken = '1' then
 				r_cpu_halt <= wrap_i.cpu_halt;
+				r_wrap_acked <= '0';
+			else
+				if wrap_i.ack = '1' then
+					r_wrap_acked <= '1';
+				end if;
 			end if;
 		end if;			
 	end process;
+
+	i_wrap_ack <= r_wrap_acked or wrap_i.ack;
 
 	e_cpu: entity work.T65 
   	port map (
@@ -241,23 +239,23 @@ begin
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
   			if i_t65_clken = '1' then
-  				r_prev_A0 <= r_t65_A(0);
+  				r_prev_A0 <= i_t65_A(0);
   			end if;
   		end if;
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor r_t65_A(0);
+	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_t65_A(0);
 
   	wrap_o.noice_debug_cpu_clken <= i_t65_clken_h;
   	
   	wrap_o.noice_debug_5c	 <=
   								'1' when 
-  										r_t65_SYNC = '1' 
+  										i_t65_SYNC = '1' 
   										and i_t65_D_in = x"5C" else
   								'0';
 
-  	wrap_o.noice_debug_opfetch <= r_t65_SYNC;
+  	wrap_o.noice_debug_opfetch <= i_t65_SYNC;
 
 
 

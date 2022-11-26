@@ -200,6 +200,41 @@ _CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
 			.byte	$72				; 10 Cursor Start Line	  =&72	Blink=On, Speed=1/32, Line=18
 			.byte	$13				; 11 Cursor End Line	  =19
 
+sin_samp:
+	.byte	$0
+	.byte	$18
+	.byte	$30
+	.byte	$46
+	.byte	$59
+	.byte	$69
+	.byte	$75
+	.byte	$7C
+	.byte	$7F
+	.byte	$7C
+	.byte	$75
+	.byte	$69
+	.byte	$59
+	.byte	$46
+	.byte	$30
+	.byte	$18
+	.byte	$0
+	.byte	$E7
+	.byte	$CF
+	.byte	$B9
+	.byte	$A6
+	.byte	$96
+	.byte	$8A
+	.byte	$83
+	.byte	$81
+	.byte	$83
+	.byte	$8A
+	.byte	$96
+	.byte	$A6
+	.byte	$B9
+	.byte	$CF
+	.byte	$E7
+
+
 
 sprite:
 		.INCBIN "SPRIT2"
@@ -375,6 +410,33 @@ sample_to_blit:
 	WORDBE	256		;				0 STRIDE_D
 
 
+dollar_copy_to_HDMI_settings:
+	.byte	BLITCON_EXEC_B + BLITCON_EXEC_D					;0
+	.byte	$CC		; copy B to D, ignore A, C	FUNCGEN		;1
+	.byte	0		; 				WIDTH		;2
+	.byte	7		;				HEIGHT		;3
+	.byte	0		;				SHIFT		;4
+	.byte	0		;				MASK_FIRST	;5
+	.byte	0		;				MASK_LAST	;6
+	.byte	$AA		;				DATA_A		;7
+	.byte	0		;				ADDR_A_BANK	;8
+	WORDBE	0		;				ADDR_A		;9
+	.byte	$55		;				DATA_B		;B
+	.byte	$FF		;				ADDR_B_BANK	;C
+	WORDBE	(mostbl_chardefs+8*('$'-' '));			ADDR_B		;D
+	.byte	0		;				ADDR_C_BANK	;F
+	WORDBE	0		;				ADDR_C		;10
+	.byte	$FA		;				ADDR_D_BANK	;12
+	WORDBE	$0		;				ADDR_D		;13
+	.byte	$00		;				ADDR_E_BANK	;15
+	WORDBE	$0		;				ADDR_E		;16
+	WORDBE	1		;				STRIDE_A	;18
+	WORDBE	1		;				STRIDE_B	;1A
+	WORDBE	1		;				STRIDE_C	;1C
+	WORDBE	1		;				STRIDE_D	;1E
+	.byte	BLITCON_ACT_ACT + BLITCON_ACT_MODE_1BBP		;BLTCON ACT	;0
+
+
 
 dollar_copy_to_SRAM_settings:
 	.byte	BLITCON_EXEC_B + BLITCON_EXEC_D					;0
@@ -492,6 +554,25 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	lda	#$A5
+
+	; test BBC slow bus bodge
+	sta	sheila_SYSVIA_orb
+	lda	sheila_SYSVIA_ora
+	lda	#$5A
+	sta	sheila_SYSVIA_orb
+	sta	sheila_SYSVIA_orb
+
+	; quick chipram r/w
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	lda 	#0
+	sta 	fred_JIM_PAGE_HI	
+	sta 	fred_JIM_PAGE_LO
+	inc	JIM
+	inc	JIM
+	inc	JIM
+
 	; quick memory read/write test
 	lda	#100
 	sta	$200
@@ -503,6 +584,76 @@ mos_handle_res:
 	lda	#17
 	sta	$8000
 	lda	$8000
+
+
+	; SOUND test
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	jsr	jimDMACPAGE
+	jsr	QUICK_SOUNDTEST
+
+
+;;	; mem write test lp
+;;	ldx	#0
+;;@tlt:	ldy	#32
+;;	txa
+;;@tlt1:	sta	$2000,y
+;;	dey
+;;	bpl	@tlt1
+;;	ldy	#32
+;;@tlt2:	cmp	$2000,y
+;;	bne	@tlsk
+;;	dey
+;;	bpl	@tlt2
+;;	inx
+;;	jmp	@tlt
+;;
+;;@tlsk:	jmp	@tlsk
+
+
+	; simple DMA test
+	lda	#$D1
+	sta	fred_JIM_DEVNO
+	jsr	jimDMACPAGE
+
+	; test channel sel, sel highest
+	lda 	#$FF
+	sta	jim_DMAC_DMA_SEL
+	lda 	jim_DMAC_DMA_SEL			; readback test
+
+
+DMA_TEST1_SRC_ADDR := $FF0000 + mos_handle_res
+DMA_TEST1_DEST_ADDR:= $FF3000
+DMA_TEST1_COUNT    := 10
+
+	LDA	#.BANKBYTE(DMA_TEST1_SRC_ADDR)
+	STA	jim_DMAC_DMA_SRC_ADDR
+	LDA	#.BANKBYTE(DMA_TEST1_DEST_ADDR)
+	STA	jim_DMAC_DMA_DEST_ADDR
+	LDA	#>DMA_TEST1_SRC_ADDR
+	STA	jim_DMAC_DMA_SRC_ADDR + 1
+	LDA	#<DMA_TEST1_SRC_ADDR
+	STA	jim_DMAC_DMA_SRC_ADDR + 2
+	LDA	#>DMA_TEST1_DEST_ADDR
+	STA	jim_DMAC_DMA_DEST_ADDR + 1
+	LDA	#<DMA_TEST1_DEST_ADDR
+	STA	jim_DMAC_DMA_DEST_ADDR + 2
+	LDA	#>DMA_TEST1_COUNT
+	STA	jim_DMAC_DMA_COUNT
+	LDA	#<DMA_TEST1_COUNT
+	STA	jim_DMAC_DMA_COUNT+1
+	LDA	#DMACTL2_PAUSE		
+	STA	jim_DMAC_DMA_CTL2		; pause!
+	LDA	#5
+	STA	jim_DMAC_DMA_PAUSE_VAL
+	LDA	#DMACTL_ACT|DMACTL_EXTEND|DMACTL_STEP_DEST_UP|DMACTL_STEP_SRC_UP
+	STA	jim_DMAC_DMA_CTL
+
+@lll:	INC	$8000
+	INC	$1000
+	BIT	jim_DMAC_DMA_CTL
+	BMI	@lll				; loop while waiting for DMA
+
 
 	; test throttle
 
@@ -541,12 +692,6 @@ mos_handle_res:
 	bne	@lp00
 
 
-
-	; test BBC slow bus bodge
-	sta	sheila_SYSVIA_orb
-	lda	sheila_SYSVIA_ora
-	sta	sheila_SYSVIA_orb
-	sta	sheila_SYSVIA_orb
 
 	; turn off throttle
 	lda	#0
@@ -612,6 +757,9 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 	dex
 	bne	pplp
 
+	jsr testDMAC_to_hdmi
+
+	jsr testDMAC_simple
 
 
 	; test i2c interface 
@@ -815,9 +963,6 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 	bpl	@lprts
 	jsr	$FD00
 
-	jsr testDMAC_simple
-
-
 
 ;;	jsr	illegalops
 
@@ -855,7 +1000,6 @@ pplp:	sta	HDMI_ADDR_VIDPROC_PAL
 
 
 
-	jsr	SOUNDTEST
 
 	jsr	AERTEST
 
@@ -1047,6 +1191,27 @@ HERE:	jmp	HERE
 
 skipahead:
 
+testDMAC_to_hdmi:
+	jsr	jimDMACPAGE
+	ldx	#<dollar_copy_to_HDMI_settings
+	ldy	#>dollar_copy_to_HDMI_settings
+	jsr	blit
+	rts
+
+blit:	stx	$70
+	sty	$71
+	ldy	#DMAC_STRIDE_D_offs+2
+	lda	($70),Y
+	pha
+	dey
+@lp:	lda	($70),Y
+	sta	jim_DMAC_BLITCON,Y
+	dey
+	bpl	@lp
+	pla
+	sta	jim_DMAC_BLITCON
+	rts	
+
 
 testDMAC_simple:
 	; test DMAC simple 16 bits
@@ -1115,6 +1280,46 @@ jimChipRAMPAGE:
 	sta	fred_JIM_PAGE_HI
 	pla
 	rts
+
+QUICK_SOUNDTEST:
+	jsr	jimDMACPAGE
+	; sound read test
+	lda	#3
+	sta	jim_DMAC_SND_SEL
+	lda	#$ff
+	sta	jim_DMAC_SND_SEL
+	lda	jim_DMAC_SND_SEL
+	lda	#$F0
+	sta	jim_DMAC_SND_MA_VOL
+
+
+	ldy	#0
+	sty	jim_DMAC_SND_SEL
+	; play samples
+
+;	ldx	#$FF
+	ldx	#0
+	stx	jim_DMAC_SND_ADDR
+	ldx	#>sin_samp
+	stx	jim_DMAC_SND_ADDR + 1
+	ldx	#<sin_samp
+	stx	jim_DMAC_SND_ADDR + 2
+	ldx	#0
+	stx	jim_DMAC_SND_PERIOD
+	stx	jim_DMAC_SND_LEN
+	lda	#10
+	sta	jim_DMAC_SND_PERIOD + 1
+	ldx	#31
+	stx	jim_DMAC_SND_LEN + 1
+	ldx	#$81
+	stx	jim_DMAC_SND_STATUS
+
+
+
+
+
+	rts
+
 
 
 SOUNDTEST:

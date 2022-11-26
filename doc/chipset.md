@@ -653,3 +653,65 @@ all other ops will only check for a vsync during a fetch. This ensures that
 hardware registers in an undefined state. PLAY will only terminate while 
 fetching the first byte of the move data.
 
+# The i2c controller
+
+The i2c controller is mainly used to control the on-board eeprom and/or rtc where fitted
+on the Mk.3 board there is also a header to which other i2c peripherals may be attached.
+
+## registers
+
+Physical Base address: **FE FC70**
+
+
+STATUS/CONTROL register is at offset + $0
+
+Address  | Direction    | Bit | Name | Description
+---------+--------------+-----+-------------------------------------------------------------------
+STAT=0   |  Read        |     |      | Status register:
+         |              |  7  | BUSY | flag, when set a shift is in operation
+         |              |  6  | ACK  | 0 if previous operation was ack'd either by controller or peripheral
+CTL=0    |  Write       |  7  | BUSY | 1 start a new operation or abort a current op\*
+         |              |  6  | ACK  | if 0 and operation is a read acknowledge it afterwards
+         |              |  2  | STOP | send a stop condition after this operation
+         |              |  1  | START| send a start condition before this operation
+         |              |  0  | RnW  | 1 read a byte, 0 write
+---------+--------------+-----+------+------------------------------------------------------------
+DAT=1    | Read         |     |      | Read received data
+         | Write        |     |      | Write data latch 
+
+\* Writing 0 to BUSY during an operation a stop condition will be generated as soon as the clock is released by the peripheral, any pending operation will be terminated
+
+
+## example: probe address exists
+```
+    DAT = <addr> << 1 & "1"
+    STAT = "10000110"                            ; BUSY+START+STOP+WRITE
+    WHILE STAT(BUSY) = "0":WEND
+    RETURN (STAT(ACK) = "0")
+```
+
+## example: write 1,2,3 to addres 0x23
+```
+    DAT = x"46"
+    CTL = "10000010"
+   
+    WHILE STAT(BUSY) = "0":WEND
+   
+    IF STAT(ACK) = "1" RETURN
+   
+    DAT = x"01"
+    STAT = "10000000"
+    WHILE STAT(BUSY) = "0":WEND
+   
+    IF STAT(ACK) = "1" RETURN
+   
+    DAT = x"01"
+    STAT = "10000000"
+    WHILE STAT(BUSY) = "0":WEND
+   
+    IF STAT(ACK) = "1" RETURN
+   
+    DAT = x"03"
+    STAT = "10000100"
+    WHILE STAT(BUSY) = "0":WEND
+```

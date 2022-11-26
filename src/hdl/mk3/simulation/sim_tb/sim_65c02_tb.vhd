@@ -341,8 +341,8 @@ g_cpu_4:IF not G_CPU_8MHz GENERATE
 			dly_phi0c => 5 ns,
 			dly_phi0d => 5 ns,
 			dly_addr  => 70 ns, 
-			dly_dwrite=> 55 ns,	-- dwrite must be > dhold
-			dly_dhold => 30 ns
+			dly_dwrite=> 25 ns,	-- dwrite must be > dhold -- faster than spec but closer to measured
+			dly_dhold => 20 ns
 		)
 	PORT MAP (
 		A => i_CPU_A(15 downto 0),
@@ -392,11 +392,13 @@ END GENERATE;
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
 		tco => 10 ns,
 		taa => 10 ns,
-		tolz => 0 ns,
-		tlz => 0 ns,
-		tohz => 0 ns,
-		thz => 0 ns,
-		toe => 0 ns
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns
 	)
 	port map (
 		A				=> i_MEM_A(19 downto 0),

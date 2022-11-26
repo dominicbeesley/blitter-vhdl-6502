@@ -48,17 +48,19 @@ package fishbone is
 
 	-- RDY_CTDN
 	-- --------
-	-- the RDY countdown allows a peripheral to indicate how long it will be until data will be ready 
-	-- this should count down to 0 and go to 0 once D_rd is valid for reads or 0 once a write is 
-	-- under way
-	-- when the number of cycles is not known then the rdy_ctdn should be set to RDY_CTDN_MAX
-	-- it is allowable to jump suddenly downwards _but not upwards_
-	-- care should be taken when propagating D_rd and rdy_ctdn through any interconnects that 
-	-- they are subject to similar delays (where they are registered)
+
+	-- As of Oct 2022 the semantics of rdy_ctdn has changed, rather than the peripheral providing a count
+	-- down it returns a single rdy signal. The controller specifies (at the start of each cycle) the
+	-- number of cycles _before_ ack that rdy should go high.
+	-- 
+	-- It is up to the peripheral to return rdy. It MUST at least:
+	--  * set rdy no later than ack
+	--  * set rdy no earlier than rdy_ctdn cycles before ack
 
 	constant RDY_CTDN_LEN 	:	natural		:= 7;
-	constant RDY_CTDN_MAX	:	unsigned 	:= to_unsigned(127, RDY_CTDN_LEN);		-- allow up to 127 wait states for 1MHz cycles
-	constant RDY_CTDN_MIN	:  unsigned 	:= to_unsigned(0, RDY_CTDN_LEN);
+	subtype t_rdy_ctdn is unsigned(RDY_CTDN_LEN-1 downto 0);
+	constant RDY_CTDN_MAX	:	t_rdy_ctdn 	:= to_unsigned(127, RDY_CTDN_LEN);		-- allow up to 127 wait states for 1MHz cycles
+	constant RDY_CTDN_MIN	:  t_rdy_ctdn 	:= to_unsigned(0, RDY_CTDN_LEN);
 
 	type fb_std_logic_2d is array(natural range <>, natural range <>) of std_logic;
 
@@ -108,22 +110,22 @@ package fishbone is
 	-- signals from controllers to peripherals
 	type fb_con_o_per_i_t is record				
 		cyc					:  std_logic;							-- stays active throughout cycle
-		we						: 	std_logic;							-- write =1, read = 0, qualified by A_o_stb_o
+		we						: 	std_logic;							-- write =1, read = 0, qualified by A_stb
 		A						: 	std_logic_vector(23 downto 0);-- physical address
-		A_stb					: 	std_logic;							-- address out strobe, qualifies A_o, hold until end of cyc_o
+		A_stb					: 	std_logic;							-- address out strobe, qualifies A
 		D_wr					: 	std_logic_vector(7 downto 0);	-- data out from controller to peripheral
-		D_wr_stb				:	std_logic;							-- data out strobe, qualifies D_o, can ack writes as soon
+		D_wr_stb				:	std_logic;							-- data out strobe, qualifies D_wr, can ack writes as soon
 																			-- as this is ready or wait until end of cycle
+		rdy_ctdn				:	t_rdy_ctdn;							-- see above
 	end record fb_con_o_per_i_t;
 
 	--signals from peripherals to controllers
 	type fb_con_i_per_o_t is record
 
 		D_rd					: 	std_logic_vector(7 downto 0);	-- data in during a read
-		rdy_ctdn				:	unsigned(RDY_CTDN_LEN-1 downto 0);							-- see above
-		ack					:	std_logic;							-- cycle complete, controller must terminate cycle now, data was supplied or latched
-		nul					:	std_logic;							-- when set there is no respone i.e. either there is an error or no address matches
-																			-- the cycle should be abored immediately (ack will also be set)
+		stall					:  std_logic;							-- when asserted re-try a_stb
+		ack					:	std_logic;							-- cycle complete, controller can/should terminate cycle now, data was supplied or latched
+		rdy					:  std_logic;							-- cycle will be complete in (at most) rdy_ctdn (input) bus cycles
 
 	end record fb_con_i_per_o_t;
 
@@ -137,17 +139,17 @@ package fishbone is
 		A => (others => '1'),
 		A_stb => '0',
 		D_wr => (others => '1'),
-		D_wr_stb => '0'
+		D_wr_stb => '0',
+		rdy_ctdn => RDY_CTDN_MIN
 		);
 
-	-- this constant contains the nul peripheral to controller signal
+	-- this constant contains the nul peripheral to controller signal which will wait forever
 	constant fb_p2c_unsel : fb_con_i_per_o_t := (
 		D_rd => (others => '1'),
-		rdy_ctdn => RDY_CTDN_MAX,
 		ack => '0',
-		nul => '0'
+		rdy => '0',
+		stall => '1'
 		);
-
 
 	type fb_arr_std_logic_vector is array (integer range <>) of std_logic_vector;
 	type fb_arr_unsigned is array (integer range <>) of unsigned;

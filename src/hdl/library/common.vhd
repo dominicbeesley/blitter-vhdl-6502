@@ -37,11 +37,17 @@
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+
 package common is
   function ceil_log2(i : natural) return natural;
   function floor_log2(i : natural) return natural;
   -- numbits is the number of bits required to hold w as a *number of options*
   function numbits(w : natural) return natural;
+  function b2s(b:boolean) return std_logic;
 end package;
 
 library ieee;
@@ -68,4 +74,14 @@ package body common is
 			return ceil_log2(w);
 		end if;
 	end function;
+
+	function b2s(b:boolean) return std_logic is
+	begin
+		if b then
+			return '1';
+		else
+			return '0';
+		end if;
+	end function;
+
 end package body;

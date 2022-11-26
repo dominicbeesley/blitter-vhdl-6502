@@ -53,6 +53,7 @@ ENTITY real_65816_tb IS
 			dly_addr  : time := 40 ns;
 			dly_dwrite: time := 40 ns;	-- dwrite must be > dhold
 			dly_dhold : time := 10 ns;
+			dly_dsetup: time := 10 ns;
 			hld_EMX	 : time := 5 ns;
 			dly_EMX	 : time := 45 ns
 		);
@@ -135,7 +136,7 @@ BEGIN
 			i_cpu_D_out_dly_hold when (i_phi2_D_hold = '1' and i_phi2_D_dly = '1') and i_RnW_hold = '0' else
 		 	(others => 'Z');
 
-	i_cpu_D_in <= D;
+	i_cpu_D_in <= D after dly_dsetup;
 
 	i_phi2_D_dly <= PHI2 after dly_dwrite;
 	i_phi2_D_hold <= PHI2 after dly_dhold; 

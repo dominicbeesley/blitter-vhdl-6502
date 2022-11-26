@@ -60,36 +60,37 @@ entity fb_cpu_80188_exp_pins is
 
 		-- local 80188 wrapper signals to/from CPU expansion port 
 
-		CPUSKT_nTEST_i		: in  std_logic;
-		CPUSKT_X1_i			: in  std_logic;
-		CPUSKT_SRDY_i		: in  std_logic;
-		CPUSKT_ARDY_i		: in  std_logic;
-		CPUSKT_INT0_i		: in  std_logic;
-		CPUSKT_nNMI_i		: in  std_logic;
-		CPUSKT_nRES_i		: in  std_logic;
-		CPUSKT_INT1_i		: in  std_logic;
-		CPUSKT_DRQ0_i		: in  std_logic;
-		CPUSKT_INT2_i		: in  std_logic;
-		CPUSKT_HOLD_i		: in  std_logic;
-		CPUSKT_INT3_i		: in  std_logic;
+		CPUSKT_nTEST_b2c		: in  std_logic;
+		CPUSKT_X1_b2c			: in  std_logic;
+		CPUSKT_SRDY_b2c		: in  std_logic;
+		CPUSKT_ARDY_b2c		: in  std_logic;
+		CPUSKT_INT0_b2c		: in  std_logic;
+		CPUSKT_nNMI_b2c		: in  std_logic;
+		CPUSKT_nRES_b2c		: in  std_logic;
+		CPUSKT_INT1_b2c		: in  std_logic;
+		CPUSKT_DRQ0_b2c		: in  std_logic;
+		CPUSKT_INT2_b2c		: in  std_logic;
+		CPUSKT_HOLD_b2c		: in  std_logic;
+		CPUSKT_INT3_b2c		: in  std_logic;
+		CPUSKT_D_b2c			: in  std_logic_vector(7 downto 0);
 
-		CPU_D_RnW_i			: in std_logic;
+		BUF_D_RnW_b2c				: in std_logic;
 
-		CPUSKT_nS_o			: out std_logic_vector(2 downto 0);
-		CPUSKT_nUCS_o		: out std_logic;
-		CPUSKT_nLCS_o		: out std_logic;
-		CPUSKT_RESET_o		: out std_logic;
-		CPUSKT_CLKOUT_o	: out std_logic;
-		CPUSKT_nRD_o		: out std_logic;
-		CPUSKT_nWR_o		: out std_logic;
-		CPUSKT_nDEN_o		: out std_logic;
-		CPUSKT_DTnR_o		: out std_logic;
-		CPUSKT_ALE_o		: out std_logic;
-		CPUSKT_HLDA_o		: out std_logic;
-		CPUSKT_nLOCK_o		: out std_logic;
+		CPUSKT_nS_c2b			: out std_logic_vector(2 downto 0);
+		CPUSKT_nUCS_c2b		: out std_logic;
+		CPUSKT_nLCS_c2b		: out std_logic;
+		CPUSKT_RESET_c2b		: out std_logic;
+		CPUSKT_CLKOUT_c2b		: out std_logic;
+		CPUSKT_nRD_c2b			: out std_logic;
+		CPUSKT_nWR_c2b			: out std_logic;
+		CPUSKT_nDEN_c2b		: out std_logic;
+		CPUSKT_DTnR_c2b		: out std_logic;
+		CPUSKT_ALE_c2b			: out std_logic;
+		CPUSKT_HLDA_c2b		: out std_logic;
+		CPUSKT_nLOCK_c2b		: out std_logic;
 
-		CPUSKT_D_o			: out std_logic_vector(7 downto 0);
-		CPUSKT_A_o			: out std_logic_vector(19 downto 8)
+		CPUSKT_D_c2b			: out std_logic_vector(7 downto 0);
+		CPUSKT_A_c2b			: out std_logic_vector(19 downto 8)
 
 
 	);
@@ -98,41 +99,47 @@ end fb_cpu_80188_exp_pins;
 architecture rtl of fb_cpu_80188_exp_pins is
 begin
 
-	wrap_exp_o.exp_PORTB(0)	<= CPUSKT_nTEST_i;
-	wrap_exp_o.exp_PORTB(1)	<= CPUSKT_ARDY_i;
-	wrap_exp_o.exp_PORTB(2)	<= CPUSKT_X1_i;
-	wrap_exp_o.exp_PORTB(3)	<= CPUSKT_SRDY_i;
-	wrap_exp_o.exp_PORTB(4)	<= CPUSKT_INT0_i;
-	wrap_exp_o.exp_PORTB(5)	<= CPUSKT_nNMI_i;
-	wrap_exp_o.exp_PORTB(6)	<= CPUSKT_nRES_i;
-	wrap_exp_o.exp_PORTB(7)	<= CPUSKT_INT1_i;
+	CPUSKT_D_c2b			<= wrap_exp_i.PORTA;
+	wrap_exp_o.PORTA		<= CPUSKT_D_b2c;
+	wrap_exp_o.PORTA_nOE <= '0';
+	wrap_exp_o.PORTA_DIR <= not BUF_D_RnW_b2c;
 
-	CPUSKT_nS_o(0)		<= wrap_exp_i.CPUSKT_A(0);
-	CPUSKT_nS_o(1)		<= wrap_exp_i.CPUSKT_A(1);
-	CPUSKT_nS_o(2)		<= wrap_exp_i.CPUSKT_A(2);
-	CPUSKT_nUCS_o		<= wrap_exp_i.CPUSKT_A(3);
-	CPUSKT_nLCS_o		<= wrap_exp_i.CPUSKT_A(4);
-	CPUSKT_RESET_o		<= wrap_exp_i.CPUSKT_A(5);
-	CPUSKT_CLKOUT_o	<= wrap_exp_i.CPUSKT_A(6);
+	wrap_exp_o.PORTB(0)	<= CPUSKT_nTEST_b2c;
+	wrap_exp_o.PORTB(1)	<= CPUSKT_ARDY_b2c;
+	wrap_exp_o.PORTB(2)	<= CPUSKT_X1_b2c;
+	wrap_exp_o.PORTB(3)	<= CPUSKT_SRDY_b2c;
+	wrap_exp_o.PORTB(4)	<= CPUSKT_INT0_b2c;
+	wrap_exp_o.PORTB(5)	<= CPUSKT_nNMI_b2c;
+	wrap_exp_o.PORTB(6)	<= CPUSKT_nRES_b2c;
+	wrap_exp_o.PORTB(7)	<= CPUSKT_INT1_b2c;
 
+	CPUSKT_nS_c2b(0)		<= wrap_exp_i.PORTC(0);
+	CPUSKT_nS_c2b(1)		<= wrap_exp_i.PORTC(1);
+	CPUSKT_nS_c2b(2)		<= wrap_exp_i.PORTC(2);
+	CPUSKT_nUCS_c2b		<= wrap_exp_i.PORTC(3);
+	CPUSKT_nLCS_c2b		<= wrap_exp_i.PORTC(4);
+	CPUSKT_RESET_c2b		<= wrap_exp_i.PORTC(5);
+	CPUSKT_CLKOUT_c2b		<= wrap_exp_i.PORTC(6);
 
-	CPUSKT_nRD_o		<= wrap_exp_i.exp_PORTD(0);
-	CPUSKT_nWR_o		<= wrap_exp_i.exp_PORTD(1);
-	CPUSKT_nDEN_o		<= wrap_exp_i.exp_PORTD(2);
-	CPUSKT_DTnR_o		<= wrap_exp_i.exp_PORTD(4);
-	CPUSKT_ALE_o		<= wrap_exp_i.exp_PORTD(5);
-	CPUSKT_HLDA_o		<= wrap_exp_i.exp_PORTD(7);
-	CPUSKT_nLOCK_o		<= wrap_exp_i.exp_PORTD(11);
+	CPUSKT_A_c2b(19 downto 16)	<= wrap_exp_i.PORTC(11 downto 8);
 
-	wrap_exp_o.exp_PORTD <= (
-		3						=> CPUSKT_INT2_i,
-		6						=> CPUSKT_DRQ0_i,
-		8						=> CPUSKT_HOLD_i,
-		10						=> CPUSKT_INT3_i,
+	CPUSKT_nRD_c2b			<= wrap_exp_i.PORTD(0);
+	CPUSKT_nWR_c2b			<= wrap_exp_i.PORTD(1);
+	CPUSKT_nDEN_c2b		<= wrap_exp_i.PORTD(2);
+	CPUSKT_DTnR_c2b		<= wrap_exp_i.PORTD(4);
+	CPUSKT_ALE_c2b			<= wrap_exp_i.PORTD(5);
+	CPUSKT_HLDA_c2b		<= wrap_exp_i.PORTD(7);
+	CPUSKT_nLOCK_c2b		<= wrap_exp_i.PORTD(11);
+
+	wrap_exp_o.PORTD <= (
+		3						=> CPUSKT_INT2_b2c,
+		6						=> CPUSKT_DRQ0_b2c,
+		8						=> CPUSKT_HOLD_b2c,
+		10						=> CPUSKT_INT3_b2c,
 		others				=> '1'
 		);
 
-	wrap_exp_o.exp_PORTD_o_en <= (
+	wrap_exp_o.PORTD_o_en <= (
 		3 => '1',
 		6 => '1',
 		8 => '1',
@@ -140,12 +147,13 @@ begin
 		others => '0'
 		);
 
-	wrap_exp_o.exp_PORTE_nOE <= '0';
-	wrap_exp_o.exp_PORTF_nOE <= '1';
+	wrap_exp_o.PORTE_i_nOE <= '0';
+	wrap_exp_o.PORTF_i_nOE <= '1';
+	wrap_exp_o.PORTF_o_nOE <= '1';
 
-	wrap_exp_o.CPU_D_RnW 	<= CPU_D_RnW_i;
-	CPUSKT_A_o 		<= wrap_exp_i.CPUSKT_A(19 downto 8);
-	CPUSKT_D_o 		<= wrap_exp_i.CPUSKT_D(7 downto 0);
+	wrap_exp_o.PORTF <= (others => '-');
+
+	CPUSKT_A_c2b(15 downto 8)	<= wrap_exp_i.PORTEFG(7 downto 0);
 
 end rtl;
 

@@ -166,12 +166,13 @@ architecture Behavioral of fb_dmac_blit is
 	TYPE 		state_cha_A 		IS (sMemAccA, sShiftA1, sShiftA2, sShiftA3, sShiftA4, sShiftA5, sShiftA6, sShiftA7);
 
 	-- peripheral interface sigs
-	type		per_state_t		is (idle, addr, wait_cyc);
+	type		per_state_t			is (idle, wait_d_stb, rd);
 
 	signal	r_per_state				: per_state_t;
 	signal	r_per_addr				: std_logic_vector(6 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
-	signal	r_per_rdy				: std_logic;
+	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
+	signal	r_per_D_wr_stb			: std_logic;
 	signal 	r_per_ack				: std_logic;
 
 	-- controller cycle sigs
@@ -908,108 +909,103 @@ begin
 				r_BLTCON_collision <= '0';
 			end if;
 
-			if fb_per_c2p_i.cyc = '1' 
-				and fb_per_c2p_i.A_stb = '1'
-				and fb_per_c2p_i.D_wr_stb = '1' 
-				and fb_per_c2p_i.we = '1' 
-				and r_per_ack = '1' 
-				then 
+			if r_per_D_wr_stb = '1' then -- register write from peripheral port
 				case to_integer(unsigned(r_per_addr)) is
 					when A_BLTCON =>
-						if fb_per_c2p_i.D_wr(7) = '1' then
+						if r_per_d_wr(7) = '1' then
 							r_BLTCON_act <= '1';
-							r_BLTCON_cell <= fb_per_c2p_i.D_wr(6);
-							r_BLTCON_mode <= fb_per_c2p_i.D_wr(5 downto 4);
-							r_BLTCON_line <= fb_per_c2p_i.D_wr(3);
-							r_BLTCON_collision <= fb_per_c2p_i.D_wr(2);
-							r_BLTCON_wrap <= fb_per_c2p_i.D_wr(1);
+							r_BLTCON_cell <= r_per_D_wr(6);
+							r_BLTCON_mode <= r_per_D_wr(5 downto 4);
+							r_BLTCON_line <= r_per_D_wr(3);
+							r_BLTCON_collision <= r_per_D_wr(2);
+							r_BLTCON_wrap <= r_per_D_wr(1);
 						else
-							r_BLTCON_execA <= fb_per_c2p_i.D_wr(0);
-							r_BLTCON_execB <= fb_per_c2p_i.D_wr(1);
-							r_BLTCON_execC <= fb_per_c2p_i.D_wr(2);
-							r_BLTCON_execD <= fb_per_c2p_i.D_wr(3);
-							r_BLTCON_execE <= fb_per_c2p_i.D_wr(4);
+							r_BLTCON_execA <= r_per_D_wr(0);
+							r_BLTCON_execB <= r_per_D_wr(1);
+							r_BLTCON_execC <= r_per_D_wr(2);
+							r_BLTCON_execD <= r_per_D_wr(3);
+							r_BLTCON_execE <= r_per_D_wr(4);
 						end if;
 					when A_FUNCGEN =>
-						r_FUNCGEN <= fb_per_c2p_i.D_wr;
+						r_FUNCGEN <= r_per_d_wr;
 					when A_WIDTH =>
-						r_width(7 downto 0) <= unsigned(fb_per_c2p_i.D_wr);
+						r_width(7 downto 0) <= unsigned(r_per_d_wr);
 					when A_HEIGHT =>
-						r_height(7 downto 0) <= unsigned(fb_per_c2p_i.D_wr);
+						r_height(7 downto 0) <= unsigned(r_per_d_wr);
 					when A_SHIFT => -- TODO: maybe split to two addresses to make calcs easier?
-						r_shift_A <= fb_per_c2p_i.D_wr(2 downto 0);
-						r_shift_B <= fb_per_c2p_i.D_wr(6 downto 4);
+						r_shift_A <= r_per_d_wr(2 downto 0);
+						r_shift_B <= r_per_d_wr(6 downto 4);
 					when A_MASK_FIRST =>
-						r_mask_first <= fb_per_c2p_i.D_wr;
+						r_mask_first <= r_per_d_wr;
 					when A_MASK_LAST =>
-						r_mask_last <= fb_per_c2p_i.D_wr;
+						r_mask_last <= r_per_d_wr;
 					when A_DATA_A =>
 						r_cha_A_data_pre <= r_cha_A_data(6 downto 0);			
-						r_cha_A_data <= fb_per_c2p_i.D_wr;
+						r_cha_A_data <= r_per_d_wr;
 
 					when A_ADDR_A + 0 =>
-						r_cha_A_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_A_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_A + 1 =>
-						r_cha_A_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
+						r_cha_A_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_A + 2 =>
-						r_cha_A_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
+						r_cha_A_addr(7 downto 0) <= r_per_d_wr;			
 					when A_DATA_B =>
 						r_cha_B_data_pre <= r_cha_B_data (6 downto 0);
-						r_cha_B_data <= fb_per_c2p_i.D_wr;
+						r_cha_B_data <= r_per_d_wr;
 					when A_ADDR_B + 0 =>
-						r_cha_B_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_B_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_B + 1 =>
-						r_cha_B_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
+						r_cha_B_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_B + 2 =>
-						r_cha_B_addr(7 downto 0) <= fb_per_c2p_i.D_wr;	
+						r_cha_B_addr(7 downto 0) <= r_per_d_wr;	
 					when A_ADDR_C + 0 =>
-						r_cha_C_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_C_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_C + 1 =>
-						r_cha_C_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
+						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_C + 2 =>
-						r_cha_C_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
+						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
 					when A_ADDR_D + 0 =>
-						r_cha_D_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_D + 1 =>
-						r_cha_D_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
+						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_D + 2 =>
-						r_cha_D_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
+						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			
 					when A_ADDR_E + 0 =>
-						r_cha_E_addr(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_E_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_E + 1 =>
-						r_cha_E_addr(15 downto 8) <= fb_per_c2p_i.D_wr;			
+						r_cha_E_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_E + 2 =>
-						r_cha_E_addr(7 downto 0) <= fb_per_c2p_i.D_wr;			
+						r_cha_E_addr(7 downto 0) <= r_per_d_wr;			
 					when A_STRIDE_A =>
-						r_cha_A_stride(15 downto 8) <= fb_per_c2p_i.D_wr; -- note 16 bits for line mode
+						r_cha_A_stride(15 downto 8) <= r_per_d_wr; -- note 16 bits for line mode
 					when A_STRIDE_A + 1 =>
-						r_cha_A_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_A_stride(7 downto 0) <= r_per_d_wr;
 					when A_STRIDE_B =>
-						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_B + 1 =>
-						r_cha_B_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_B_stride(7 downto 0) <= r_per_d_wr;
 					when A_STRIDE_C =>
-						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_C + 1 =>
-						r_cha_C_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
 					when A_STRIDE_D =>
-						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= fb_per_c2p_i.D_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
 					when A_STRIDE_D + 1 =>
-						r_cha_D_stride(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_D_stride(7 downto 0) <= r_per_d_wr;
 
 					when A_ADDR_D_MIN => 
-						r_cha_D_addr_min(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_min(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_D_MIN+1 => 
-						r_cha_D_addr_min(15 downto 8) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_min(15 downto 8) <= r_per_d_wr;
 					when A_ADDR_D_MIN+2 => 
-						r_cha_D_addr_min(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_min(7 downto 0) <= r_per_d_wr;
 
 					when A_ADDR_D_MAX => 
-						r_cha_D_addr_max(23 downto 16) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_max(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_D_MAX+1 => 
-						r_cha_D_addr_max(15 downto 8) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_max(15 downto 8) <= r_per_d_wr;
 					when A_ADDR_D_MAX+2 => 
-						r_cha_D_addr_max(7 downto 0) <= fb_per_c2p_i.D_wr;
+						r_cha_D_addr_max(7 downto 0) <= r_per_d_wr;
 
 					when others => null;
 				end case;
@@ -1135,7 +1131,8 @@ begin
 				A => (others => '-'),
 				A_stb => '0',
 				D_wr => (others => '-'),
-				D_wr_stb => '0'
+				D_wr_stb => '0',
+				rdy_ctdn => RDY_CTDN_MIN
 				);
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -1151,7 +1148,8 @@ begin
 										A => std_logic_vector(r_cha_A_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccB =>
 									r_con_state <= waitack;
@@ -1161,7 +1159,8 @@ begin
 										A => std_logic_vector(r_cha_B_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccC => -- |sMemAccC_min =>
 									r_con_state <= waitack;
@@ -1171,7 +1170,8 @@ begin
 										A => std_logic_vector(r_cha_C_addr),
 										A_stb => '1',
 										D_wr => (others => '-'),
-										D_wr_stb => '0'
+										D_wr_stb => '0',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 						   	when sMemAccD => --|sMemAccD_min =>
 						   		if r_BLTCON_execD = '1' then
@@ -1182,7 +1182,8 @@ begin
 											A => std_logic_vector(r_cha_D_addr),
 											A_stb => '1',
 											D_wr => i_cha_D_data,
-											D_wr_stb => '1'
+											D_wr_stb => '1',
+											rdy_ctdn => RDY_CTDN_MIN
 											);
 									end if;
 						   	when sMemAccE =>
@@ -1193,60 +1194,96 @@ begin
 										A => std_logic_vector(r_cha_E_addr),
 										A_stb => '1',
 										D_wr => r_cha_C_data,
-										D_wr_stb => '1'
+										D_wr_stb => '1',
+										rdy_ctdn => RDY_CTDN_MIN
 										);
 								when others => null;
 							end case;
 						end if;
 					when waitack =>
-						if fb_con_p2c_i.ack = '1' then
-							r_con_state <= idle;
-							fb_con_c2p_o.cyc <= '0';
+						if fb_con_p2c_i.stall = '0' then
+							fb_con_c2p_o.a_stb <= '0';
+							fb_con_c2p_o.d_wr_stb <= '0';
 						end if;
-					when others => null;
+					when others => 
+						r_con_state <= idle;
+						fb_con_c2p_o <= (
+							cyc => '0',
+							we => '0',
+							A => (others => '-'),
+							A_stb => '0',
+							D_wr => (others => '-'),
+							D_wr_stb => '0',
+							rdy_ctdn => RDY_CTDN_MIN
+							);
 				end case;
+
+				if fb_con_p2c_i.ack = '1' then
+					r_con_state <= idle;
+					fb_con_c2p_o.cyc <= '0';
+				end if;
+
+
 			end if;
 		end if;
 	end process;
 
 
 	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
+	variable v_write:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_rdy <= '0';
 			r_per_ack <= '0';
 			r_per_addr <= (others => '0');
+			r_per_D_wr <= (others => '0');
+			r_per_D_wr_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_per_ack <= '0';
+			r_per_D_wr_stb <= '0';
+			v_write := false;
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
 						r_per_addr <= not fb_per_c2p_i.A(6) & "0" & fb_per_c2p_i.A(4 downto 0);
-						r_per_state <= addr;
+						if fb_per_c2p_i.we = '0' then
+							r_per_state <= rd;
+						else
+							v_write := true;
+						end if;
 					end if;
-				when addr =>
+				when wait_d_stb =>
+					v_write := true;
+				when rd =>
 					fb_per_p2c_o.D_rd <= i_per_D_rd;
 					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-						r_per_state <= wait_cyc;
-						r_per_rdy <= '1';
+						r_per_state <= idle;
 						r_per_ack <= '1';
 					end if;
-				when wait_cyc => 
-					if fb_per_c2p_i.cyc = '0' or fb_per_c2p_i.a_stb = '0' then
-						r_per_state <= idle;
-						r_per_rdy <= '0';
-					end if;				
 				when others => null;
 			end case;
+
+			if v_write then
+				if fb_per_c2p_i.D_wr_stb = '1' then
+					r_per_D_wr <= fb_per_c2p_i.D_wr;
+					r_per_D_wr_stb <= '1';
+					r_per_state <= idle;
+					r_per_ack <= '1';
+				else
+					r_per_state <= wait_d_stb;
+				end if;
+			end if;
+
+			if fb_per_c2p_i.cyc = '0' then
+				r_per_state <= idle;
+			end if;
 
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy_ctdn <= RDY_CTDN_MIN when r_per_rdy = '1' else
-									 RDY_CTDN_MAX;
+	fb_per_p2c_o.rdy <= r_per_ack;
 	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.nul <= '0';
+	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
 end Behavioral;
 

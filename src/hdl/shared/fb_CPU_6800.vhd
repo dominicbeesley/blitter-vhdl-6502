@@ -126,29 +126,29 @@ architecture rtl of fb_cpu_6800 is
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 	signal r_we					: std_logic;
-	signal r_a_stb				: std_logic;
+	signal r_cyc				: std_logic;
 	signal r_cpu_phi1			: std_logic;
 	signal r_cpu_phi2			: std_logic;
 	signal r_cpu_res			: std_logic;
 	signal r_wrap_ack			: std_logic;
 
-	signal i_CPUSKT_TSC_o	: std_logic;
-	signal i_CPUSKT_Phi1_o	: std_logic;
-	signal i_CPUSKT_Phi2_o	: std_logic;
-	signal i_CPUSKT_nHALT_o	: std_logic;
-	signal i_CPUSKT_nIRQ_o	: std_logic;
-	signal i_CPUSKT_nNMI_o	: std_logic;
-	signal i_CPUSKT_nRES_o	: std_logic;
-	signal i_CPUSKT_DBE_o	: std_logic;
+	signal i_CPUSKT_TSC_b2c	: std_logic;
+	signal i_CPUSKT_Phi1_b2c	: std_logic;
+	signal i_CPUSKT_Phi2_b2c	: std_logic;
+	signal i_CPUSKT_nHALT_b2c	: std_logic;
+	signal i_CPUSKT_nIRQ_b2c	: std_logic;
+	signal i_CPUSKT_nNMI_b2c	: std_logic;
+	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_CPUSKT_DBE_b2c	: std_logic;
 
-	signal i_CPU_D_RnW_o		: std_logic;
+	signal i_BUF_D_RnW_b2c		: std_logic;
 
-	signal i_CPUSKT_RnW_i	: std_logic;
-	signal i_CPUSKT_BA_i		: std_logic;
-	signal i_CPUSKT_VMA_i	: std_logic;
+	signal i_CPUSKT_RnW_c2b	: std_logic;
+	signal i_CPUSKT_BA_c2b		: std_logic;
+	signal i_CPUSKT_VMA_c2b	: std_logic;
 
-	signal i_CPUSKT_D_i		: std_logic_vector(7 downto 0);
-	signal i_CPUSKT_A_i		: std_logic_vector(15 downto 0);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(7 downto 0);
+	signal i_CPUSKT_A_c2b		: std_logic_vector(15 downto 0);
 
 begin
 
@@ -162,53 +162,61 @@ begin
 		wrap_exp_i => wrap_exp_i,
 
 		-- local 6800 wrapper signals to/from CPU expansion port 
-		CPUSKT_TSC_i		=> i_CPUSKT_TSC_o,
-		CPUSKT_Phi1_i		=> i_CPUSKT_Phi1_o,
-		CPUSKT_Phi2_i		=> i_CPUSKT_Phi2_o,
-		CPUSKT_nHALT_i		=> i_CPUSKT_nHALT_o,
-		CPUSKT_nIRQ_i		=> i_CPUSKT_nIRQ_o,
-		CPUSKT_nNMI_i		=> i_CPUSKT_nNMI_o,
-		CPUSKT_nRES_i		=> i_CPUSKT_nRES_o,
-		CPUSKT_DBE_i		=> i_CPUSKT_DBE_o,
+		CPUSKT_TSC_b2c		=> i_CPUSKT_TSC_b2c,
+		CPUSKT_Phi1_b2c	=> i_CPUSKT_Phi1_b2c,
+		CPUSKT_Phi2_b2c	=> i_CPUSKT_Phi2_b2c,
+		CPUSKT_nHALT_b2c	=> i_CPUSKT_nHALT_b2c,
+		CPUSKT_nIRQ_b2c	=> i_CPUSKT_nIRQ_b2c,
+		CPUSKT_nNMI_b2c	=> i_CPUSKT_nNMI_b2c,
+		CPUSKT_nRES_b2c	=> i_CPUSKT_nRES_b2c,
+		CPUSKT_DBE_b2c		=> i_CPUSKT_DBE_b2c,
+		CPUSKT_D_b2c		=> wrap_i.D_rd(7 downto 0),
 
-		CPUSKT_RnW_o		=> i_CPUSKT_RnW_i,
-		CPUSKT_BA_o			=> i_CPUSKT_BA_i,
-		CPUSKT_VMA_o		=> i_CPUSKT_VMA_i,
+		CPUSKT_RnW_c2b		=> i_CPUSKT_RnW_c2b,
+		CPUSKT_BA_c2b		=> i_CPUSKT_BA_c2b,
+		CPUSKT_VMA_c2b		=> i_CPUSKT_VMA_c2b,
 
 		-- shared per CPU signals
-		CPU_D_RnW_i			=> i_CPU_D_RnW_o,
+		BUF_D_RnW_b2c		=> i_BUF_D_RnW_b2c,
 
-		CPUSKT_A_o			=> i_CPUSKT_A_i,
-		CPUSKT_D_o			=> i_CPUSKT_D_i
+		CPUSKT_A_c2b		=> i_CPUSKT_A_c2b,
+		CPUSKT_D_c2b		=> i_CPUSKT_D_c2b
 
 	);
 
 
 	
 
-	i_CPU_D_RnW_o <= 	'1' 	when i_CPUSKT_RnW_i = '1' and r_DH_ring(T_MAX_DH) = '1' else
-							'0';
+	i_BUF_D_RnW_b2c <= 	i_CPUSKT_RnW_c2b;
 
-	wrap_o.A_log 			<= r_log_A;
+	wrap_o.BE				<= '0';
+	wrap_o.A 				<= r_log_A;
 																		
 	-- note: don't start CYC until AS is settled
-	wrap_o.cyc 				<= (0 => r_a_stb, others => '0');
+	wrap_o.cyc				<= r_cyc;
+	wrap_o.lane_req		<= (0 => '1', others => '0');
 	wrap_o.we	  			<= r_we;
-	wrap_o.D_wr				<=	i_CPUSKT_D_i(7 downto 0);	
-	wrap_o.D_wr_stb		<= r_DD_ring(T_MAX_DD);
-	wrap_o.ack				<= r_wrap_ack;
+	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
+	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	END GENERATE;	
+	wrap_o.D_wr_stb		<= (0 => r_DD_ring(T_MAX_DD), others => '0');
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 
 
 
 	p_address_latch:process(fb_syscon_i)
 	begin
-		if rising_edge(fb_syscon_i.clk) then
-			r_a_stb <= '0';
-			if r_cpu_res = '0' and i_CPUSKT_VMA_i = '1' and r_AD_ring(T_MAX_AD) = '1'  then
+		if fb_syscon_i.rst = '1' then
+			r_cyc <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if r_cpu_res = '0' and i_CPUSKT_VMA_c2b = '1' and r_AD_ring(T_MAX_AD) = '1'  then
 				--TODO: noice inhibit?
-				r_a_stb <= '1';
-				r_log_A <= x"FF" & i_CPUSKT_A_i(15 downto 0);
-				r_we <= not(i_CPUSKT_RnW_i);
+				r_cyc <= '1';
+				r_log_A <= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
+				r_we <= not(i_CPUSKT_RnW_c2b);
+			elsif r_cyc = '1' and r_wrap_ack = '1' then
+				r_cyc <= '0';
 			end if;
 		end if;
 	end process;
@@ -224,10 +232,10 @@ begin
 
 			r_PH_ring <= r_PH_ring(r_PH_ring'high-1 downto 0) & "1";
 			r_AD_ring <= r_AD_ring(r_AD_ring'high-1 downto 0) & "0";
-			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "0";
+			r_DD_ring <= r_DD_ring(r_DD_ring'high-1 downto 0) & "1";
 			r_DBE_ring <= r_DBE_ring(r_DBE_ring'high-1 downto 0) & "1";
 
-			if wrap_i.rdy_ctdn = RDY_CTDN_MIN then
+			if wrap_i.ack = '1' then
 				r_DS_ring <= r_DS_ring(r_DS_ring'high-1 downto 0) & "1";
 			else
 				r_DS_ring <= (others => '0');
@@ -243,16 +251,16 @@ begin
 
 			case r_state is
 				when Phi1 => 
+					r_DD_ring <= (0 => '1', others => '0');
 					if r_PH_ring(T_MAX_Ph) then
 						r_state <= Phi2;
-						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_phi2 <= '1';
 						r_cpu_phi1 <= '0';
 						r_ph_ring <= (others => '0');
 					end if;
 				when Phi2 =>
 					if r_PH_ring(T_MAX_Ph) = '1' then
-						if r_cpu_res = '1' or i_CPUSKT_VMA_i = '0' or r_DS_ring(T_MAX_DS) = '1' then
+						if r_cpu_res = '1' or i_CPUSKT_VMA_c2b = '0' or r_DS_ring(T_MAX_DS) = '1' then
 							r_state <= Phi1;
 							r_AD_ring <= (0 => '1', others => '0');
 							r_wrap_ack <= '1';
@@ -282,24 +290,24 @@ begin
 		end if;
 	end process;
 
-	i_CPUSKT_TSC_o <= not cpu_en_i;
+	i_CPUSKT_TSC_b2c <= not cpu_en_i;
 		
-	i_CPUSKT_Phi1_o <= r_cpu_Phi1;
+	i_CPUSKT_Phi1_b2c <= r_cpu_Phi1;
 	
-	i_CPUSKT_Phi2_o <= r_cpu_Phi2;
+	i_CPUSKT_Phi2_b2c <= r_cpu_Phi2;
 	
-	i_CPUSKT_nRES_o <= (not r_cpu_res) when cpu_en_i = '1' else '0';
+	i_CPUSKT_nRES_b2c <= (not r_cpu_res) when cpu_en_i = '1' else '0';
 	
-	i_CPUSKT_nNMI_o <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
 	
-	i_CPUSKT_nIRQ_o <=  wrap_i.irq_n;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
   	
-  	i_CPUSKT_DBE_o <= r_DBE_ring(T_MAX_DBE);
+  	i_CPUSKT_DBE_b2c <= r_DBE_ring(T_MAX_DBE);
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
 
-  	i_CPUSKT_nHALT_o <= 	i_rdy;
+  	i_CPUSKT_nHALT_b2c <= 	i_rdy;
 
   	i_rdy <=								'0' when wrap_i.cpu_halt = '1' else
   											'1';						

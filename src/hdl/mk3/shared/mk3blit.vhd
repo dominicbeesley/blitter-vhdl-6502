@@ -54,6 +54,7 @@ use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_CPU_exp_pack.all;
 use work.fb_chipset_pack.all;
+use work.fb_intcon_pack.all;
 
 entity mk3blit is
 	generic (
@@ -304,7 +305,6 @@ architecture rtl of mk3blit is
 	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
 	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
 	signal i_hard_cpu_en					: std_logic;
-	signal i_cpuskt_D_o					: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
@@ -320,6 +320,10 @@ architecture rtl of mk3blit is
 	signal i_vga_debug_hs				: std_logic;
 	signal i_vga_debug_vs				: std_logic;
 	signal i_vga_debug_blank			: std_logic;
+
+	signal i_debug_hsync_det			: std_logic;
+	signal i_debug_vsync_det			: std_logic;
+	signal i_debug_hsync_crtc			: std_logic;
 
 
 	-----------------------------------------------------------------------------
@@ -341,8 +345,7 @@ architecture rtl of mk3blit is
 	signal	i_debug_wrap_sys_st		: std_logic;
 
 	signal	i_debug_65816_vma			: std_logic;
-
-	signal	i_debug_jim_hi_wr			: std_logic;
+	signal	i_debug_65816_addr_meta : std_logic;
 
 	signal	i_debug_SYS_VIA_block		: std_logic;
 
@@ -393,7 +396,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
+		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI
 	)
@@ -405,7 +408,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 end generate;
 
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_shared
+	e_fb_intcon: fb_intcon_shared
 	generic map (
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
@@ -431,7 +434,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 
 END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_one_to_many
+	e_fb_intcon: fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
 		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
@@ -509,6 +512,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
 	);
 
+	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
 
 		e_dac_snd: entity work.dac_1bit 
@@ -673,7 +677,6 @@ END GENERATE;
 
 		cpu_2MHz_phi2_clken_o			=> i_cpu_2MHz_phi2_clken,
 
-		debug_jim_hi_wr_o					=> i_debug_jim_hi_wr,
 		debug_write_cycle_repeat_o		=> i_debug_write_cycle_repeat,
 
 		debug_wrap_sys_cyc_o				=> i_debug_wrap_sys_cyc,
@@ -720,7 +723,6 @@ END GENERATE;
 		wrap_exp_o							=> i_wrap_exp_o,
 
 		hard_cpu_en_o						=> i_hard_cpu_en,
-		cpuskt_D_o							=> i_cpuskt_D_o,
 
 		-- memctl signals
 		swmos_shadow_i						=> i_swmos_shadow,
@@ -764,7 +766,8 @@ END GENERATE;
 
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_80188_state_o				=> i_debug_80188_state,
-		debug_80188_ale_o					=> i_debug_80188_ale
+		debug_80188_ale_o					=> i_debug_80188_ale,
+		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta
 
 	);
 
@@ -778,32 +781,30 @@ END GENERATE;
 	--===========================================================
 
 	-- PORTA is a 74lvc4245 need to control direction and enable
-	exp_PORTA_nOE_o <= not i_hard_cpu_en or i_fb_syscon.rst;
-	exp_PORTA_DIR_o <= not i_wrap_exp_o.CPU_D_RnW;
-	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.CPU_D_RnW = '0' else
-						 	 i_CPUSKT_D_o(7 downto 0);
+	exp_PORTA_nOE_o <= i_wrap_exp_o.PORTA_nOE;
+	exp_PORTA_DIR_o <= i_wrap_exp_o.PORTA_DIR;
+	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.PORTA_DIR = '1' or i_wrap_exp_o.PORTA_nOE = '1' else
+						 	 i_wrap_exp_o.PORTA;
 
-	i_wrap_exp_i.CPUSKT_D(7 downto 0) <= exp_PORTA_io;
+	i_wrap_exp_i.PORTA <= exp_PORTA_io;
 
 	-- PORTB is hardwired output 74lvc4245
 
-	exp_PORTB_o <= i_wrap_exp_o.exp_PORTB;
+	exp_PORTB_o <= i_wrap_exp_o.PORTB;
 
 	-- PORTC is always input only CB3T buffer, can be output but not used
 
-	i_wrap_exp_i.CPUSKT_A(7 downto 0) <= exp_PORTC_io(7 downto 0);
-	i_wrap_exp_i.CPUSKT_A(19 downto 16) <= exp_PORTC_io(11 downto 8);
+	i_wrap_exp_i.PORTC <= exp_PORTC_io;
 	exp_PORTC_io <= (others => 'Z');
-
 
 	-- PORTD - individual cpu wrappers control direction and direction 
 
 	g_portd_o:for I in 11 downto 0 generate
-		exp_PORTD_io(I) <= i_wrap_exp_o.exp_PORTD(I) when i_wrap_exp_o.exp_PORTD_o_en(I) = '1' else
+		exp_PORTD_io(I) <= i_wrap_exp_o.PORTD(I) when i_wrap_exp_o.PORTD_o_en(I) = '1' else
 							 'Z';
 	end generate;
 
-	i_wrap_exp_i.exp_PORTD <= exp_PORTD_io;
+	i_wrap_exp_i.PORTD <= exp_PORTD_io;
 
 	-- PORTE,F,G are multiplexed CB3T's with PORTEFG_io connected to all three on one side
 	-- broken out to separate pins on expansion headers on other sides
@@ -811,23 +812,16 @@ END GENERATE;
 	-- only port F is used as inputs and needs the DIR signal asserted to output data
 
 	-- PORTE always inputs at present
-	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.exp_PORTE_nOE; 
+	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.PORTE_i_nOE; 
 	-- NOTE: address 23 downto 20, 15 downto 8 only valid when portE is enabled
-	i_wrap_exp_i.CPUSKT_A(15 downto 8) <= exp_PORTEFG_io(7 downto 0);
-	i_wrap_exp_i.CPUSKT_A(23 downto 20) <= exp_PORTEFG_io(11 downto 8);
+	i_wrap_exp_i.PORTEFG <= exp_PORTEFG_io;
 
-	i_cpu_exp_PORTF_nOE <= i_wrap_exp_o.exp_PORTF_nOE;
+	i_cpu_exp_PORTF_nOE <= i_wrap_exp_o.PORTF_i_nOE and i_wrap_exp_o.PORTF_o_nOE;
 
 	-- PORTF data output on lines 11..4 on 16 bit cpus, 3..0 always inputs for config
-	g_portefg_o:for I in 7 downto 0 generate
-		exp_PORTEFG_io(I + 4) <= i_CPUSKT_D_o(I + 8) when i_wrap_exp_o.CPU_D_RnW = '1' and i_wrap_exp_o.exp_PORTF_nOE = '0' else
-							 'Z';
-	end generate;
+	exp_PORTEFG_io(11 downto 4) <= i_wrap_exp_o.PORTF when i_wrap_exp_o.PORTF_o_nOE = '0' else (others => 'Z');
 
-	i_wrap_exp_i.CPUSKT_D(15 downto 8) <= exp_PORTEFG_io(11 downto 4);
-
-
-	exp_PORTEFG_io <= (others => 'Z');
+	exp_PORTEFG_io(3 downto 0) <= (others => 'Z');
 	
 	-- PORTG only used at reset, read in top level
 	i_cpu_exp_PORTG_nOE <= '1';
@@ -982,20 +976,21 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= not i_debug_write_cycle_repeat;
+LED_o(3) <= not i_chipset_cpu_halt;
 
+SYS_AUX_o			<= (
+	0 => i_vga_debug_r,
+	1 => i_debug_vsync_det,
+	2 => i_debug_hsync_det,
+	3 => i_debug_hsync_crtc
+);
 
-SYS_AUX_o(2 downto 0)	<= i_debug_80188_state;
-
-SYS_AUX_o(3)				<= i_debug_80188_ale;
-
-SYS_AUX_io(0) <= i_debug_wrap_sys_st;
-SYS_AUX_io(1) <= i_debug_wrap_sys_cyc;
-SYS_AUX_io(2) <= i_wrap_exp_o.CPU_D_RnW;
+SYS_AUX_io(0) <= i_vga_debug_hs;
+SYS_AUX_io(1) <= i_vga_debug_vs;
+SYS_AUX_io(2) <= i_vga_debug_blank;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');
-
 
 
 SD_CS_o <= '1';
@@ -1041,7 +1036,14 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_B_o				=> i_vga_debug_b,
 		VGA_HS_o				=> i_vga_debug_hs,
 		VGA_VS_o				=> i_vga_debug_vs,
-		VGA_BLANK_o			=> i_vga_debug_blank
+		VGA_BLANK_o			=> i_vga_debug_blank,
+
+		PCM_L_i				=> i_dac_sample,
+
+		debug_hsync_det_o => i_debug_hsync_det,
+		debug_vsync_det_o => i_debug_vsync_det,
+		debug_hsync_crtc_o => i_debug_hsync_crtc
+
 	);
 END GENERATE;
 
