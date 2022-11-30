@@ -337,9 +337,9 @@ begin
 
 			case r_state is
 				when phA => 
+					r_DD_ring <= (0 => '1', others => '0');
 					if (r_cfg_3_5_MHz = '1' and r_PH_ring(T_phA_3) = '1') or r_PH_ring(T_phA_2) = '1' then
 						r_state <= phB;
-						r_DD_ring <= (0 => '1', others => '0');
 						r_cpu_Q <= '1';
 						r_ph_ring <= (others => '0');
 					end if;
