@@ -21,13 +21,13 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity sim_6x09_tb is
+entity sim_sbc09_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm09/build/test_rom0.bin"
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_sbc09/build/boot.bin"
 	);
-end sim_6x09_tb;
+end sim_sbc09_tb;
 
-architecture Behavioral of sim_6x09_tb is
+architecture Behavioral of sim_sbc09_tb is
 
 	signal	sim_ENDSIM			: 	std_logic 		:= '0';
 	
@@ -118,8 +118,7 @@ begin
 
 	i_CFG <= (
 	0				=>	'1',	-- don't use t65 core
---	3 downto 1 	=> "010", -- 6x09 @ 3.5MHz
-	3 downto 1 	=> "110", -- 6809 @ 2MHz
+	3 downto 1 	=> "111", -- 6x09 @ 3.5MHz -- SBC test mode
 	4 				=> '1', -- swromx off
 	7				=> '1', -- debug button
 	8				=> '1', -- onboard swrom/ram enable
@@ -236,8 +235,8 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
-		tco => 55 ns,
-		taa => 55 ns
+		tco => 45 ns,
+		taa => 45 ns
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),
@@ -256,8 +255,8 @@ begin
 		size 			=> 16*1024,
 		dump_filename => "",
 		romfile => G_MOSROMFILE,
-		tco => 45 ns,
-		taa => 45 ns
+		tco => 55 ns,
+		taa => 55 ns
 	)
 	port map (
 		A				=> i_MEM_A(13 downto 0),

@@ -70,6 +70,7 @@ package board_config_pack is
 	constant G_INCL_CPU_Z80				: boolean := true;
 	constant G_INCL_CPU_68008			: boolean := true;
 	constant G_INCL_CPU_680x0			: boolean := false;
+	constant G_INCL_CPU_SBC09			: boolean := true;
 
 	constant G_MEM_SLOW_IS_45			: boolean := true;
 	constant G_MEM_FLASH_IS_45			: boolean := false;

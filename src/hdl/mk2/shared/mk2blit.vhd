@@ -835,6 +835,9 @@ begin
 					r_cfg_cpu_type <= CPU_65816;
 					r_cfg_mk2_cpubits <= "001";
 					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "111" =>
+					r_cfg_cpu_type <= CPU_sbc09;
+					r_cfg_mk2_cpubits <= "111";
 				when "110" =>
 					r_cfg_cpu_type <= CPU_6x09;
 					r_cfg_mk2_cpubits <= "110";
@@ -856,7 +859,7 @@ begin
 					r_cfg_cpu_type <= CPU_65C02;
 					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
 					r_cfg_mk2_cpubits <= "101";
-					r_cfg_do6502_debug <= '1';
+					r_cfg_do6502_debug <= '1';			
 				when others =>
 					null;
 			end case;
