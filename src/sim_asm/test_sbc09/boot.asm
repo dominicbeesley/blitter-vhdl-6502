@@ -56,6 +56,17 @@ handle_res	clra
 
 		; we should now be in map 0 with mmu enabled
 
+		; Test mmu readback
+
+		lda	MMU_CTL
+		lda	MMU_ACC_KEY
+		lda	MMU_TASK_KEY
+		lda	MMU_MAP+MMU_16_0
+		lda	MMU_MAP+MMU_16_4
+		lda	MMU_MAP+MMU_16_8
+		lda	MMU_MAP+MMU_16_C
+
+
 		; set up task 2 to contain a user task which is all RAM 
 
 		lda 	#2

@@ -127,15 +127,15 @@ module mmu_int
    end
 
    assign DATA_out = 
-               E && RnW && cpu_access_mmu_reg && ADDR[2:0] == 'h0 ? {5'b0, S, mode8k, enmmu} :
-               E && RnW && cpu_access_mmu_reg && ADDR[2:0] == 'h1 ? {3'b0, access_key} :
-               E && RnW && cpu_access_mmu_reg && ADDR[2:0] == 'h2 ? {3'b0, task_key} :
-               E && RnW && cpu_access_mmu_reg && ADDR[2:0] == 'h3 ? {8'h3b} :
-               E && RnW && cpu_access_mmu_reg && ADDR[2:0] == 'h4 ? {8'h3b} :
-                                                                    MMU_DATA_in;
+               cpu_access_mmu_reg && ADDR[2:0] == 'h0 ? {5'b0, S, mode8k, enmmu} :
+               cpu_access_mmu_reg && ADDR[2:0] == 'h1 ? {3'b0, access_key} :
+               cpu_access_mmu_reg && ADDR[2:0] == 'h2 ? {3'b0, task_key} :
+               cpu_access_mmu_reg && ADDR[2:0] == 'h3 ? {8'h3b} :
+               cpu_access_mmu_reg && ADDR[2:0] == 'h4 ? {8'h3b} :
+                                                        MMU_DATA_in;
    assign DATA_oe = 
-               (E && RnW && cpu_access_mmu_reg) || 
-               (E && mmu_access_rd);
+               (RnW && cpu_access_mmu_reg) || 
+               (mmu_access_rd);
 
    //DB: mask out bottom part ADDR when in 16k mode
    assign MMU_ADDR = mmu_access     ? {access_key, ADDR[2:0]} : 
