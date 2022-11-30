@@ -42,6 +42,7 @@ set_time_format -unit ns -decimal_places 3
 
 create_clock -name {CLK_50M} -period 20.000 -waveform { 0.000 10.000 } [get_ports {CLK_50M_i}]
 
+create_clock -name {CLK_CPU_E} -period 500.000 -waveform { 0.000 250.000 } [get_registers {fb_cpu:e_fb_cpu|fb_cpu_sbc09:\gSBC09:e_wrap_SBC09|r_cpu_E}]
 
 #**************************************************************
 # Create Generated Clock
@@ -86,6 +87,9 @@ derive_clock_uncertainty
 #**************************************************************
 # Set False Path
 #**************************************************************
+
+set_false_path -from [get_clocks {CLK_CPU_E}] -to [get_clocks {main_pll}]
+
 
 set_false_path -from [get_clocks {snd_pll}] -to [get_clocks {main_pll}]
 
