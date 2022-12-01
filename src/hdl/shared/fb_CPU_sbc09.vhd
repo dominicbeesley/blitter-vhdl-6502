@@ -578,7 +578,7 @@ begin
 	
 	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n;
 	
-	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n or i_CPUSKT_BS_c2b;
   	
   	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n;
 
