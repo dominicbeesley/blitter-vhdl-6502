@@ -580,7 +580,7 @@ begin
 	
 	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n or i_CPUSKT_BS_c2b;
   	
-  	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n;
+  	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n or i_CPUSKT_BS_c2b;
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
