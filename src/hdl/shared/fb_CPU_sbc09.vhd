@@ -42,6 +42,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -283,6 +284,9 @@ port(
 	signal i_MMU_SEL_nCSROM0	: std_logic;
 	signal i_MMU_SEL_nCSROM1	: std_logic;
 
+
+	signal r_BS_hold				: std_logic_vector(3 downto 0);
+
 begin
 
 	p_cfg:process(fb_syscon_i)
@@ -473,6 +477,7 @@ begin
 
 			if fb_syscon_i.rst = '1' then
 				r_cpu_res <= '1';
+				r_BS_hold <= (others => '1');
 			end if;
 
 			r_PH_ring <= r_PH_ring(r_PH_ring'high-1 downto 0) & "1";
@@ -530,6 +535,7 @@ begin
 							or wrap_i.noice_debug_inhibit_cpu = '1'
 							or i_mmu_cpu_access_nCS = '0'
 							then
+							r_BS_hold <= r_BS_hold(r_BS_hold'high-1 downto 0) & i_CPUSKT_BS_c2b;
 							r_state <= phA;
 							r_cpu_6x09_FIC <= i_CPUSKT_LIC_c2b;
 							if SIM then
@@ -578,9 +584,9 @@ begin
 	
 	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n;
 	
-	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n or i_CPUSKT_BS_c2b;
+	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n or i_CPUSKT_BS_c2b or or_reduce(r_BS_hold);
   	
-  	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n or i_CPUSKT_BS_c2b;
+  	i_CPUSKT_nFIRQ_b2c <=  wrap_i.nmi_n or i_CPUSKT_BS_c2b or or_reduce(r_BS_hold);
 
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
