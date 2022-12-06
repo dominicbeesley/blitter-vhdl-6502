@@ -44,11 +44,11 @@ handle_res	clra
 		sta	MMU_ACC_KEY
 		lda	#$80
 		sta	MMU_MAP+MMU_16_0
-		lda	#$82
+		lda	#$81
 		sta	MMU_MAP+MMU_16_4
-		lda	#$84
+		lda	#$82
 		sta	MMU_MAP+MMU_16_8
-		lda	#$C6
+		lda	#$C3
 		sta	MMU_MAP+MMU_16_C
 
 		lda 	#MMU_CTL_ENMMU|MMU_CTL_PROT
@@ -71,19 +71,19 @@ handle_res	clra
 
 		lda 	#2
 		sta	MMU_ACC_KEY
-		lda	#$86
+		lda	#$83
 		sta	MMU_MAP+MMU_16_0
-		lda	#$88
+		lda	#$84
 		sta	MMU_MAP+MMU_16_4
-		lda	#$8A
+		lda	#$85
 		sta	MMU_MAP+MMU_16_8
-		lda	#$8C
+		lda	#$86
 		sta	MMU_MAP+MMU_16_C
 
 		; page in task 2's buttom page at 4000-7FFF
 		lda 	#0
 		sta	MMU_ACC_KEY
-		lda	#$86
+		lda	#$83
 		sta	MMU_MAP+MMU_16_4
 
 		; copy user task to 1000 (5000)

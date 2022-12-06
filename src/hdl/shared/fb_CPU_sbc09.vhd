@@ -464,15 +464,15 @@ begin
 					r_cyc <= '1';
 
 					if i_MMU_SEL_nCSEXT = '0' then
-						r_log_A <= x"FF" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"FF" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					elsif i_MMU_SEL_nCSEXT_IO = '0' then
 						r_log_A <= x"FFF" 																					  & '1' 				 & r_log_A_premmu(10 downto 0);
 					elsif i_MMU_SEL_nCSROM0 = '0' then						
-						r_log_A <= x"7C" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"7C" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					elsif i_MMU_SEL_nCSROM1 = '0' then
-						r_log_A <= x"7D" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"7D" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					else
-						r_log_A <= "0000" & i_MMU_DATA_in(6 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= "0000" & i_MMU_DATA_in(5 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					end if;
 
 					r_we <= not(i_CPUSKT_RnW_c2b);
