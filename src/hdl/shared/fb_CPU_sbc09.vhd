@@ -79,9 +79,12 @@ architecture rtl of fb_cpu_sbc09 is
 
 component mmu_int 
 generic (
-	BOARD_BLITTER : boolean := true;
-	PROTECT_HW : boolean := true;
-	IO_PAGE : unsigned := x"FB00"
+   IO_ADDR_MIN  : unsigned := x"FC00";
+   IO_ADDR_MAX  : unsigned := x"FEFF";
+
+   UART_BASE    : unsigned := x"FE00";
+   MMU_BASE     : unsigned := x"FE20";
+   BLITTER		 : boolean  := false
 	);
 port(
    -- CPU
@@ -92,6 +95,7 @@ port(
    RnW			: in std_logic;
    nRESET		: in std_logic;
    DATA_in		: in std_logic_vector(7 downto 0);
+   INTMASK		: out std_logic;
    DATA_out		: out std_logic_vector(7 downto 0);
    DATA_oe		: out std_logic;
 
@@ -110,6 +114,7 @@ port(
    nRD			: out std_logic;
    nWR			: out std_logic;
    nCSEXT		: out std_logic;
+   nCSEXTIO		: out std_logic;
    nCSROM0		: out std_logic;
    nCSROM1		: out std_logic;
    nCSRAM		: out std_logic;
@@ -281,6 +286,7 @@ port(
 	signal i_MMU_SEL_A11X		: std_logic;
 	signal i_MMU_SEL_QA13		: std_logic;
 	signal i_MMU_SEL_nCSEXT		: std_logic;
+	signal i_MMU_SEL_nCSEXT_IO	: std_logic;
 	signal i_MMU_SEL_nCSROM0	: std_logic;
 	signal i_MMU_SEL_nCSROM1	: std_logic;
 
@@ -368,9 +374,13 @@ begin
 
 	e_mmi:mmu_int 
 	generic map (
-		BOARD_BLITTER => true,
-		PROTECT_HW => false,
-		IO_PAGE => x"FB00"
+	   IO_ADDR_MIN  => x"FB00",
+	   IO_ADDR_MAX  => x"FEFF",
+
+   	UART_BASE    => x"0000",
+   	MMU_BASE     => x"FB20",
+
+   	BLITTER 		 => true
 		)
 	port map(
 	   -- CPU
@@ -383,6 +393,7 @@ begin
 	   DATA_in		=> i_CPUSKT_D_c2b,
 	   DATA_out		=> i_mmu_CPU_DATA_out,
 	   DATA_oe		=> open,
+	   INTMASK		=> open,	--TOOD: use this!
 	
 	   -- MMU RAM
 	
@@ -399,6 +410,7 @@ begin
 	   nRD			=> open,
 	   nWR			=> open,
 	   nCSEXT		=> i_MMU_SEL_nCSEXT,
+	   nCSEXTIO		=> i_MMU_SEL_nCSEXT_IO,
 	   nCSROM0		=> i_MMU_SEL_nCSROM0,
 	   nCSROM1		=> i_MMU_SEL_nCSROM1,
 	   nCSRAM		=> open,
@@ -452,13 +464,15 @@ begin
 					r_cyc <= '1';
 
 					if i_MMU_SEL_nCSEXT = '0' then
-						r_log_A <= x"FF" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"FF" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+					elsif i_MMU_SEL_nCSEXT_IO = '0' then
+						r_log_A <= x"FFF" 																					  & '1' 				 & r_log_A_premmu(10 downto 0);
 					elsif i_MMU_SEL_nCSROM0 = '0' then						
-						r_log_A <= x"7C" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"7C" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					elsif i_MMU_SEL_nCSROM1 = '0' then
-						r_log_A <= x"7D" & i_MMU_DATA_in(1 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= x"7D" & i_MMU_DATA_in(2 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					else
-						r_log_A <= "000" & i_MMU_DATA_in(6 downto 0) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
+						r_log_A <= "0000" & i_MMU_DATA_in(6 downto 1) & i_MMU_SEL_QA13 & r_log_A_premmu(12) & i_MMU_SEL_A11X & r_log_A_premmu(10 downto 0);
 					end if;
 
 					r_we <= not(i_CPUSKT_RnW_c2b);
