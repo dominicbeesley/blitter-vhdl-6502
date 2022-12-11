@@ -286,7 +286,7 @@ begin
   	i_CPUSKT_nWAIT_b2c <= 	'1' 			when fb_syscon_i.rst = '1' else
   									'1' 			when wrap_i.noice_debug_inhibit_cpu = '1' else
   									i_rdy		 	when r_cyc ='1' else
-  									'0';						
+  									'1';						
 
 	p_z80_boot:process(fb_syscon_i)
 	begin
