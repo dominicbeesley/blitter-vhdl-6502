@@ -1,4 +1,4 @@
-AS=vasmarm_std.exe
+AS=vasmarm_std
 ASFLAGS=-m2 -little -Fvobj
 
 LD=vlink
