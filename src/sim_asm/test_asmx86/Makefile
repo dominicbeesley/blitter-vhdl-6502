@@ -1,4 +1,4 @@
-AS=nasm.exe
+AS=nasm
 ASFLAGS=
 
 TARGETS=bootx86_testbench_mos.rom
