@@ -1,4 +1,4 @@
-AS=vasmm68k_mot.exe
+AS=vasmm68k_mot
 ASFLAGS=-m68008 -spaces -ldots -I ../includes -D MACH_BEEB=1 -D MACH_CHIPKIT=0
 BUILD=./build/
 
