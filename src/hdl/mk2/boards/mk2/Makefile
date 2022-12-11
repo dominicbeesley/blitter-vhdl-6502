@@ -1,4 +1,12 @@
-# heavily edite version of https://github.com/mfischer/Altera-Makefile
+# heavily edited version of https://github.com/mfischer/Altera-Makefile
+
+	QUARTUS_SH=quartus_sh.exe
+	QUARTUS_MAP=quartus_map.exe
+	QUARTUS_FIT=quartus_fit.exe
+	QUARTUS_ASM=quartus_asm.exe
+	QUARTUS_PGM=quartus_pgm.exe
+	QUARTUS_CPF=quartus_cpf.exe
+
 
 ###################################################################
 # Project Configuration: 
@@ -47,19 +55,19 @@ ASM_ARGS =
 STAMP = echo done >
 
 version.vhd: $(SCRIPTS)/tcl/get-version.tcl
-	quartus_sh -t $(SCRIPTS)/tcl/get-version.tcl
+	$(QUARTUS_SH) -t $(SCRIPTS)/tcl/get-version.tcl
 
 
 output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf 
-	quartus_map $(MAP_ARGS) $(PROJECT)
+	$(QUARTUS_MAP) $(MAP_ARGS) $(PROJECT)
 	$(STAMP) fit.chg
 
 output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).map.rpt fit.chg
-	quartus_fit $(FIT_ARGS) $(PROJECT)
+	$(QUARTUS_FIT) $(FIT_ARGS) $(PROJECT)
 	$(STAMP) asm.chg
 
 output_files/$(PROJECT).sof output_files/$(PROJECT).asm.rpt: $(PROJECT).qsf output_files/$(PROJECT).fit.rpt asm.chg
-	quartus_asm $(ASM_ARGS) $(PROJECT)
+	$(QUARTUS_ASM) $(ASM_ARGS) $(PROJECT)
 	{ if [ -e version.tag ]; then cat version.tag; fi ; date +'_%Y%m%d_%H%M%S'; } | tr -d "\r\n" | tr ":" "_" > output_files/$(PROJECT).sof.ver
 	cp output_files/$(PROJECT).sof output_files/$(PROJECT).$$(cat output_files/$(PROJECT).sof.ver).sof
 
@@ -71,16 +79,16 @@ output_files/$(PROJECT).sof output_files/$(PROJECT).asm.rpt: $(PROJECT).qsf outp
 program: output_files/$(PROJECT).sof reprogram
 
 reprogram:
-	quartus_pgm --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
+	$(QUARTUS_PGM) --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
 
 program-pof: $(PROJECT).pof
-	quartus_pgm --no_banner --mode=jtag -o "BVP;$(PROJECT).pof"
+	$(QUARTUS_PGM) --no_banner --mode=jtag -o "BVP;$(PROJECT).pof"
 
 program-perm:: output_files/$(PROJECT).jic
-	quartus_pgm --no_banner --mode=jtag -o "IP;output_files/$(PROJECT).jic"
+	$(QUARTUS_PGM) --no_banner --mode=jtag -o "IP;output_files/$(PROJECT).jic"
 
 output_files/$(PROJECT).jic: output_files/$(PROJECT).sof	
-	quartus_cpf -c $(PROJECT).cof
+	$(QUARTUS_CPF) -c $(PROJECT).cof
 	cp output_files/$(PROJECT).jic output_files/$(PROJECT).$$(cat output_files/$(PROJECT).sof.ver).jic
 
 

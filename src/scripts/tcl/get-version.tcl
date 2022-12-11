@@ -42,6 +42,9 @@ set systemTime [clock seconds]
 set tm [clock format $systemTime -format {%Y-%m-%d:%H:%M:%S}]
 set board [file tail [pwd]]
 
+set svnv ""
+set svnb ""
+
 if {
     ![catch {exec svnversion .. } svnv] 
     && ![catch {exec svn info | sed -n -e 's/^Relative URL:\\s*\\(.*\\)/\\1/p'} svnb]
@@ -52,6 +55,11 @@ if {
 } else {
   # looks like this isn't an svn repo
   puts "Not in SVN, try git... $svnv $svnb"
+
+  set gitv ""
+  set gitb ""
+  set gitul ""
+
   if {
     ![catch {exec git describe --always --dirty=M } gitv]
     && ![catch {exec git branch --show-current } gitb] 
