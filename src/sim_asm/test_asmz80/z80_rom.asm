@@ -9,7 +9,7 @@ scr_ptr:	.rmb 2
 
 		.globl	font_data
 
-SCREEN_BASE	= 0xA000
+SCREEN_BASE	= 0x3000
 SCREEN_LEN	= 0x4000
 
 handle_res3:	di
