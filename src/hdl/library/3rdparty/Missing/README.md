@@ -12,7 +12,7 @@ Copy the files in https://github.com/MiSTer-devel/SNES_MiSTer/tree/master/rtl/65
 
 Developed by [John E Kent](http://members.optushome.com.au/jekent/system09/index.html)
 
-Copy the file cpu09l.vhd to a directory "JohnKent"
+Copy the file cpu09l.vhd to a directory "JohnKent", tested against version 1.28
 
 # System68 6800 core
 

@@ -109,7 +109,7 @@ BEGIN
 	i_halt <= not(nHALT);
 	i_reset <= not(nRESET);
 
-	i_cpu_clk <= not(CLK_E);
+	i_cpu_clk <= CLK_E; -- Note: requires core version 1.28 or higher, older cores are opposite sense
 
 	i_RnW_hold <= i_RnW AFTER dly_addr;
 	RnW <= i_RnW_hold;
