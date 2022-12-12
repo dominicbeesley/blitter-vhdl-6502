@@ -247,8 +247,8 @@ begin
 	generic map (
 		size 			  => 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
-		tco => 55 ns,
-		taa => 55 ns
+		tco => 45 ns,
+		taa => 45 ns
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),
