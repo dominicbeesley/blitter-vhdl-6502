@@ -81,15 +81,15 @@ program: output_files/$(PROJECT).sof reprogram
 reprogram:
 	$(QUARTUS_PGM) --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
 
-program-pof: $(PROJECT).pof
-	$(QUARTUS_PGM) --no_banner --mode=jtag -o "BVP;$(PROJECT).pof"
+program-perm: output_files/$(PROJECT).pof
+	$(QUARTUS_PGM) --no_banner --mode=jtag -o "BVP;output_files/$(PROJECT).pof"
 
-program-perm:: output_files/$(PROJECT).jic
-	$(QUARTUS_PGM) --no_banner --mode=jtag -o "IP;output_files/$(PROJECT).jic"
+#program-perm:: output_files/$(PROJECT).jic
+#	$(QUARTUS_PGM) --no_banner --mode=jtag -o "IP;output_files/$(PROJECT).jic"
 
-output_files/$(PROJECT).jic: output_files/$(PROJECT).sof	
+output_files/$(PROJECT).pof: output_files/$(PROJECT).sof	
 	$(QUARTUS_CPF) -c $(PROJECT).cof
-	cp output_files/$(PROJECT).jic output_files/$(PROJECT).$$(cat output_files/$(PROJECT).sof.ver).jic
+	cp output_files/$(PROJECT).pof output_files/$(PROJECT).$$(cat output_files/$(PROJECT).sof.ver).pof
 
 
 
