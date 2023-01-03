@@ -9,7 +9,6 @@
 */*.bak
 */*.rpt
 */makefile.deps
-*/*.cof
 */version.tag
 */version.vhd
 */*.out.sdc
