@@ -95,8 +95,7 @@ architecture rtl of fb_cpu_t65 is
 
 	signal r_throttle_cpu_2MHz : std_logic;
 	signal r_throttle_wait  : std_logic;
-	signal i_throttle_wait  : std_logic;
-
+	
 	signal i_wrap_cyc 		: std_logic;
 
 	signal i_wrap_ack 		: std_logic;
@@ -112,7 +111,7 @@ begin
 	p_throttle:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if i_wrap_cyc = '1' then
+			if i_t65_clken = '1' then
 				r_throttle_wait <= r_throttle_cpu_2MHz;
 			end if;
 
@@ -125,7 +124,6 @@ begin
 
 	end process;
 
-	i_throttle_wait <= r_throttle_wait and not wrap_i.cpu_2MHz_phi2_clken; -- TODO: break this can we? it makes for a big comb-loop
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
@@ -151,7 +149,7 @@ begin
 									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
-									) and i_throttle_wait = '0'
+									) and r_throttle_wait = '0'
 									else
 						'0';
 	i_t65_clken_h <= 	'0' when r_cpu_halt = '1' else
