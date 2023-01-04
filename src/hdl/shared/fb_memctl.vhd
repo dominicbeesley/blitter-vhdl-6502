@@ -301,19 +301,17 @@ begin
 						r_noice_state <= start5C;
 						r_noice_debug_inhibit_cpu <= '1';
 					elsif r_swmos_save_written_en = '1' 
-							and r_con_ack = '1'
 							and r_noice_debug_en = '1' then								-- restore state
 						r_noice_state <= restore;
 					elsif r_noice_debug_written_en = '1'
-							and r_con_ack = '1'
 							and r_noice_debug_en = '1'		
 							and r_noice_debug_written_val /= r_noice_debug_shadow							
 							then 															-- write to SWMOS_DEBUG _after_ next instruction
 						r_noice_state <= startREGwr;
 					end if;
 				when start5C =>
-			   	if noice_debug_A0_tgl_i = '1' then -- check for 5C but A0 didn't toggle, abandon irq being serviced
-		   			r_noice_debug_nmi_n <= '0';
+			   		if noice_debug_A0_tgl_i = '1' then -- check for 5C but A0 didn't toggle, abandon irq being serviced
+		   				r_noice_debug_nmi_n <= '0';
 						r_noice_debug_act <= '1';
 						r_noice_debug_5C <= '1';
 						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
@@ -323,19 +321,19 @@ begin
 		   		r_noice_state <= idle;
 				when startBTN =>
 					if noice_debug_opfetch_i = '1' then						
-		   			r_noice_debug_nmi_n <= '0';
+		   				r_noice_debug_nmi_n <= '0';
 						r_noice_state <= wait65int;
 					end if;
 				when startREGwr =>
 					if noice_debug_opfetch_i = '1' then
 			   			r_noice_debug_nmi_n <= '0';
-							r_noice_debug_act <= r_noice_debug_written_val;
-							r_noice_debug_5C <= '0';
-							r_noice_debug_shadow_saved <= r_noice_debug_shadow;
-							r_noice_debug_shadow <= r_noice_debug_written_val;
+						r_noice_debug_act <= r_noice_debug_written_val;
+						r_noice_debug_5C <= '0';
+						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
+						r_noice_debug_shadow <= r_noice_debug_written_val;
 
-							r_noice_debug_inhibit_cpu <= '0';
-							r_noice_state <= idle;
+						r_noice_debug_inhibit_cpu <= '0';
+						r_noice_state <= idle;
 					end if;
 				when wait65int =>																-- wait for a 6502 interrupt signature 
 																									-- which is a SYNC followed by a fetch

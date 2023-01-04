@@ -987,7 +987,7 @@ SYS_AUX_o			<= (
 
 SYS_AUX_io(0) <= i_vga_debug_hs;
 SYS_AUX_io(1) <= i_vga_debug_vs;
-SYS_AUX_io(2) <= i_vga_debug_blank;
+SYS_AUX_io(2) <= i_noice_debug_opfetch;
 SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 
 SYS_AUX_io <= (others => 'Z');

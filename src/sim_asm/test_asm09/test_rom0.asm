@@ -71,6 +71,9 @@ blit_regs
 mos_handle_res
 		lds	#STACKTOP
 
+		lda	#$0C
+		sta	$FE31
+
 		ldx	#$1000
 		ldb	#4
 		lda	#0
