@@ -27,6 +27,30 @@ swmos_test	lda	#1
 		rts
 swmos_test_end
 
+
+noice_mos_test
+		sta 	$FE32
+
+
+		lda	#$0C
+		sta	$FE31
+
+		nop 
+		nop
+
+		lda 	$FF00
+		lda 	$F800
+		lda 	$CF00
+		lda 	$C000
+
+		sta 	$FE32
+
+		nop 
+		nop
+		rts
+noice_mos_test_end
+
+
 		; this is copied to bottom of stack before exec, as when we trigger
 		; the switch this rom will be paged out!
 swmos_test_call lda	#1
@@ -71,8 +95,16 @@ blit_regs
 mos_handle_res
 		lds	#STACKTOP
 
-		lda	#$0C
-		sta	$FE31
+		ldy 	#noice_mos_test_end-noice_mos_test
+		ldx 	#noice_mos_test
+		ldu 	#0
+1		lda	,X+
+		sta	,U+
+		leay	-1,Y
+		bne	1B
+
+		jsr	0
+
 
 		ldx	#$1000
 		ldb	#4

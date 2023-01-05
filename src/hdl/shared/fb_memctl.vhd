@@ -130,9 +130,13 @@ architecture rtl of fb_memctl is
 
 	signal	r_noice_state					:	noice_state_t;
 
-	signal	r_noice_debug_written_en	: 	std_logic;
 	signal	r_noice_debug_written_val	: 	std_logic;
+	signal	r_swmos_debug_written_en		: 	std_logic;
+	signal	r_swmos_debug_written_ack		: 	std_logic;
+
+
 	signal	r_swmos_save_written_en		: 	std_logic;
+	signal	r_swmos_save_written_ack	: 	std_logic;
 
 	signal   r_65816_boot					: 	std_logic;
 
@@ -198,8 +202,8 @@ begin
 			if fb_syscon_i.rst = '1' then
 				fb_state <= idle;
 				r_turbo_lo <= (others => '0');
-				r_noice_debug_written_en <= '0';
 				r_swmos_save_written_en <= '0';
+				r_swmos_debug_written_en <= '0';
 				r_65816_boot <= '1';	
 				DEBUG_REG_o <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
@@ -232,8 +236,6 @@ begin
 						end if;
 					when others =>
 						fb_state <= idle;
-						r_noice_debug_written_en <= '0';
-						r_swmos_save_written_en <= '0';
 				end case;
 
 				if fb_c2p_i.cyc = '0' then
@@ -252,10 +254,10 @@ begin
 							r_swmos_shadow <= fb_c2p_i.D_wr(0);
 							r_noice_debug_en <= fb_c2p_i.D_wr(3);
 							r_65816_boot <= fb_c2p_i.D_wr(5);
-							r_noice_debug_written_en <= '1';
 							r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
+							r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
 						when 2 => 
-							r_swmos_save_written_en <= '1';
+							r_swmos_save_written_en <= not r_swmos_save_written_ack;
 						when others =>
 					end case;
 				end if;
@@ -281,6 +283,8 @@ begin
 			r_noice_debug_inhibit_cpu <= '0';
 			r_noice_debug_shadow <= '0';	
 			r_noice_debug_5C <= '0';	
+			r_swmos_save_written_ack <= '0';
+			r_swmos_debug_written_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) and noice_debug_cpu_clken_i = '1' then
 
 			case r_noice_state is
@@ -300,14 +304,16 @@ begin
 							then																		-- 5C instruction (65)
 						r_noice_state <= start5C;
 						r_noice_debug_inhibit_cpu <= '1';
-					elsif r_swmos_save_written_en = '1' 
-							and r_noice_debug_en = '1' then								-- restore state
-						r_noice_state <= restore;
-					elsif r_noice_debug_written_en = '1'
-							and r_noice_debug_en = '1'		
-							and r_noice_debug_written_val /= r_noice_debug_shadow							
-							then 															-- write to SWMOS_DEBUG _after_ next instruction
-						r_noice_state <= startREGwr;
+					elsif r_swmos_save_written_en /= r_swmos_save_written_ack then
+						if r_noice_debug_en = '1' then								-- restore state
+							r_noice_state <= restore;
+						end if;
+						r_swmos_save_written_ack <= r_swmos_save_written_en;
+					elsif  r_swmos_debug_written_en /= r_swmos_debug_written_ack then
+						if r_noice_debug_en = '1'  then											-- write to SWMOS_DEBUG _after_ next instruction
+							r_noice_state <= startREGwr;
+						end if;
+						r_swmos_debug_written_ack <= r_swmos_debug_written_en;
 					end if;
 				when start5C =>
 			   		if noice_debug_A0_tgl_i = '1' then -- check for 5C but A0 didn't toggle, abandon irq being serviced
@@ -318,7 +324,7 @@ begin
 						r_noice_debug_shadow <= '1';
 					end if;
 					r_noice_debug_inhibit_cpu <= '0';
-		   		r_noice_state <= idle;
+		   			r_noice_state <= idle;
 				when startBTN =>
 					if noice_debug_opfetch_i = '1' then						
 		   				r_noice_debug_nmi_n <= '0';
