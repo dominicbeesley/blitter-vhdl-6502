@@ -173,7 +173,8 @@ This header gives a number of spare fpga connections which may be used to
 connect various signals from the motherboard, either using the jumpers above
 or as flying leads. The "io" pins are bidirectional 5V tolerant LVTTL 
 and the "o" signals are 5V CMOS level outputs.
-  
+
+```
                 Label       SYS           Firmware
         +---+
         |   |
@@ -202,6 +203,7 @@ and the "o" signals are 5V CMOS level outputs.
    GND  |o o|   AUX_io6                   Debug button
         |   |
         +---+
+```
 
 If using a firware with the AERIS function enabled it the AUX_io4 and 5 pins 
 should be connected with flying leads to pins 39 and 40 respectively of the 
