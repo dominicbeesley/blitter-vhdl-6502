@@ -240,19 +240,17 @@ begin
 	i_nDS_either <= i_CPUSKT_nUDS_c2b and i_CPUSKT_nLDS_c2b;
 
 	-- register async signals for meta stability and to delay relative to each other
---	e_m_DS_e:entity work.metadelay 
---		generic map ( N => 1 ) 
---		port map (clk => fb_syscon_i.clk, i => i_nDS_either, o => i_nDS_either_m);
-i_nDS_either_m <= i_nDS_either;
+	e_m_DS_e:entity work.metadelay 
+		generic map ( N => 2 ) 
+		port map (clk => fb_syscon_i.clk, i => i_nDS_either, o => i_nDS_either_m);
 
 	e_m_AS_e:entity work.metadelay 
-		generic map ( N => 1 ) 
+		generic map ( N => 3 ) 
 		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nAS_c2b, o => i_nAS_m);
 
---	e_m_RnW_e:entity work.metadelay 
---		generic map ( N => 0 ) 
---		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_RnW_c2b, o => i_RnW_m);
-i_RnW_m <= i_CPUSKT_RnW_c2b;
+	e_m_RnW_e:entity work.metadelay 
+		generic map ( N => 1 ) 
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_RnW_c2b, o => i_RnW_m);
 
 	-- register and fiddle cpu socket address, bodge for upper/lower byte
 	p_reg_cpu_A:process(fb_syscon_i)
