@@ -697,6 +697,7 @@ END GENERATE;
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
+		G_INCL_CPU_Z180						=> G_INCL_CPU_Z180,
 		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
 		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
 		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
@@ -945,6 +946,9 @@ begin
 				when "0110111" =>
 					r_cfg_cpu_type <= CPU_ARM2;
 					r_cfg_mk2_cpubits <= "000";
+				when "0101001" =>
+					r_cfg_cpu_type <= CPU_Z180;
+					r_cfg_mk2_cpubits <= "100";
 				when others =>
 					null;
 			end case;

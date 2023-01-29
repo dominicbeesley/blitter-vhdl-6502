@@ -71,6 +71,7 @@ entity fb_cpu is
 		G_INCL_CPU_65816					: boolean := false;
 		G_INCL_CPU_6x09					: boolean := false;
 		G_INCL_CPU_Z80						: boolean := false;
+		G_INCL_CPU_Z180					: boolean := false;
 		G_INCL_CPU_680x0					: boolean := false;
 		G_INCL_CPU_68008					: boolean := false;
 		G_INCL_CPU_ARM2					: boolean := false;
@@ -197,6 +198,31 @@ architecture rtl of fb_cpu is
 	end component;
 
 	component fb_cpu_z80 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		-- special m68k signals
+		JIM_en_i									: in		std_logic
+
+	);
+	end component;
+
+	component fb_cpu_z180 is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural
@@ -426,7 +452,8 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_65816						: natural := C_IX_CPU_80188 + B2OZ(G_INCL_CPU_80188);
 	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816);
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
-	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
+	constant C_IX_CPU_Z180						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
+	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z180 + B2OZ(G_INCL_CPU_Z180);
 	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
 	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_68008 + B2OZ(G_INCL_CPU_68008);
 	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + 1; -- always add 1 at end though it might not be actually used!
@@ -462,6 +489,7 @@ architecture rtl of fb_cpu is
 	signal r_cpu_en_t65 : std_logic;
 	signal r_cpu_en_6x09 : std_logic;
 	signal r_cpu_en_z80 : std_logic;
+	signal r_cpu_en_z180 : std_logic;
 	signal r_cpu_en_680x0 : std_logic;
 	signal r_cpu_en_68008 : std_logic;
 	signal r_cpu_en_65c02 : std_logic;
@@ -501,6 +529,7 @@ begin
 				r_cpu_en_t65 <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
+				r_cpu_en_z180 <= '0';
 				r_cpu_en_680x0 <= '0';
 				r_cpu_en_68008 <= '0';
 				r_cpu_en_65c02 <= '0';
@@ -548,6 +577,9 @@ begin
 					elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
 						r_cpu_run_ix_act <= C_IX_CPU_Z80;
 						r_cpu_en_z80 <= '1';						
+					elsif cfg_cpu_type_i = CPU_Z180 and G_INCL_CPU_Z180 then
+						r_cpu_run_ix_act <= C_IX_CPU_Z180;
+						r_cpu_en_z180 <= '1';						
 					elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
 						r_cpu_run_ix_act <= C_IX_CPU_ARM2;
 						r_cpu_en_arm2 <= '1';						
@@ -578,6 +610,9 @@ begin
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
 					r_cpu_run_ix_hard <= C_IX_CPU_Z80;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_Z180 and G_INCL_CPU_Z180 then
+					r_cpu_run_ix_hard <= C_IX_CPU_Z180;
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
 					r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
@@ -774,6 +809,28 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 	);
 END GENERATE;
 
+gz180: IF G_INCL_CPU_Z180 GENERATE
+	e_wrap_z80:fb_cpu_z180
+	generic map (
+		SIM										=> SIM,
+		CLOCKSPEED								=> CLOCKSPEED
+	) 
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_z80,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z180),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_Z180),
+		wrap_exp_i								=> i_wrap_exp_i,
+
+ 		JIM_en_i									=> JIM_en_i
+
+	);
+END GENERATE;
 
 g680x0:IF G_INCL_CPU_680x0 GENERATE
 	e_wrap_680x0:fb_cpu_680x0
