@@ -216,8 +216,8 @@ begin
 	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_c2b, i_CPUSKT_nIOREQ_c2b, i_CPUSKT_A_c2b)
 	begin
 		if i_CPUSKT_nIOREQ_c2b = '0' then
-			-- IO ports all map to JIM page - TODO: 64k IO mapping?
-			i_A_log <= x"FFFD" & i_CPUSKT_A_c2b(7 downto 0);
+			-- IO ports all map to SYS i.e. 64k IO mapping?
+			i_A_log <= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
 		elsif i_CPUSKT_nRD_c2b = '0' and r_z80_boot = '1' then
 			-- boot rom reads
 			i_A_log <= x"FFFF" & i_CPUSKT_A_c2b(7 downto 0);
