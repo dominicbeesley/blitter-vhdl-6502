@@ -980,7 +980,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= not i_chipset_cpu_halt;
+LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
 SYS_AUX_o			<= (
 	0 => i_vga_debug_r,

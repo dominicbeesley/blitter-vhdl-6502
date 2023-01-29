@@ -818,7 +818,7 @@ gz180: IF G_INCL_CPU_Z180 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> r_cpu_en_z80,
+		cpu_en_i									=> r_cpu_en_z180,
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_Z180),

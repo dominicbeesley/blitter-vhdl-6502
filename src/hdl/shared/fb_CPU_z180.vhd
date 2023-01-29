@@ -193,7 +193,7 @@ begin
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go earlier!?
+	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
   		
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
@@ -208,13 +208,9 @@ begin
 	-- interrupts.
 	-- TODO: what happens if there is an NMI at boot time?! Need a handler at FF FF33?
 	--
-	-- Note: After boot time there used to be a special bowdlerised mapping to logical RAM which 
-	-- moved the screen up to A000 and placed ChipRAM elsewhere, this has now been removed and
-	-- a better remapping will be made available in log2phys should it be needed
-	--
 	-- IO Mapping
 	-- ==========
-	-- IO ports always access logical and physical FF FDxx
+	-- IO ports are 64k and always access logical and physical FF xxxx
 
 
 	p_logadd:process(wrap_i, r_z80_boot, i_CPUSKT_nRD_c2b, i_CPUSKT_nIOREQ_c2b, i_CPUSKT_A_c2b)
@@ -228,7 +224,7 @@ begin
 			--TODO: this looks wrong check in z80 too
 		--else
 			--i_A_log <= x"FF" & i_CPUSKT_A_c2b; 	-- low memory from chip ram
-		elsif i_CPUSKT_nIOREQ_c2b(19) = '1' then
+		elsif i_CPUSKT_A_c2b(19) = '1' then
 			i_A_log <= x"F" & i_CPUSKT_A_c2b; 	-- chipset / SYS
 		else
 			i_A_log <= x"0" & i_CPUSKT_A_c2b; 	-- low memory from chip ram
