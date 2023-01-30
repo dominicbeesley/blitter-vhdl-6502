@@ -197,7 +197,7 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	--wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
-  	wrap_o.rdy_ctdn		<= to_unsigned(7, RDY_CTDN_LEN);
+  	wrap_o.rdy_ctdn		<= to_unsigned(0, RDY_CTDN_LEN);
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
 	--

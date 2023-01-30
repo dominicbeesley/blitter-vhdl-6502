@@ -45,7 +45,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_z180_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm09/build/test_rom0.bin"
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asmz180/build/z180_rom.bin"
 	);
 end sim_z180_tb;
 
@@ -313,7 +313,7 @@ begin
 
 	e_cpu: entity work.T80a
 	generic map (
-			mode => 1
+			mode => 0
 	)
 	port map (
 		  RESET_n     => i_CPUSKT_nRES,
@@ -338,6 +338,7 @@ begin
 
 	);
 
+	i_CPUSKT_D <= i_exp_PORTA_io_cpu;
 	i_CPUSKT_D <= i_CPU_Dout when i_cpu_den = '1' else (others => 'Z');
 	i_CPU_Din <= i_CPUSKT_D;
 
