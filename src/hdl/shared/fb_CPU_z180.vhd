@@ -86,7 +86,7 @@ architecture rtl of fb_cpu_z180 is
 --Assume 128MHz fast clock
 
 -- timings below in number of fast clocks
-	constant T_cpu_clk_half	: natural 		:= 8;		-- clock half period - 8MHZ
+	constant T_cpu_clk_half	: natural 		:= 4;		-- clock half period - 16MHZ
 
 
 	signal r_clkctdn			: unsigned(NUMBITS(T_cpu_clk_half)-1 downto 0) := to_unsigned(T_cpu_clk_half-1, NUMBITS(T_cpu_clk_half));
@@ -132,6 +132,9 @@ architecture rtl of fb_cpu_z180 is
 
 	signal i_CPUSKT_D_c2b			: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_c2b			: std_logic_vector(19 downto 0);
+
+	signal i_nMREQ_dly				: std_logic;
+	signal i_nIOREQ_dly				: std_logic;
 
 begin
 
@@ -194,7 +197,7 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
-  		
+  	--wrap_o.rdy_ctdn		<= to_unsigned(8, RDY_CTDN_LEN);
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
 	--
@@ -255,30 +258,35 @@ begin
 
 	end process;
 
+	-- register IOREQ/MREQ signals
+	e_m_MREQ_e:entity work.metadelay 
+		generic map ( N => 2 ) 
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nMREQ_c2b, o => i_nMREQ_dly);
 
+	e_m_IOREQ_e:entity work.metadelay 
+		generic map ( N => 2 ) 
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nIOREQ_c2b, o => i_nIOREQ_dly);
 
 	p_act:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_cyc <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_cpu_clk_pe = '1' then
 
-				r_D_WR_stb <= not(i_CPUSKT_nWR_c2b);
+			r_D_WR_stb <= not(i_CPUSKT_nWR_c2b);
 
-				if r_cyc = '0' and 
-					(
-						(i_CPUSKT_nMREQ_c2b = '0' and i_CPUSKT_nRFSH_c2b = '1' ) or
-						(i_CPUSKT_nIOREQ_c2b = '0' and (i_CPUSKT_nRD_c2b = '0' or i_CPUSKT_nWR_c2b = '0')) 
-					) then
-					r_cyc <= '1';
+			if r_cyc = '0' and 
+				(
+					(i_nMREQ_dly = '0' and i_CPUSKT_nRFSH_c2b = '1' ) or
+					(i_nIOREQ_dly = '0' and (i_CPUSKT_nRD_c2b = '0' or i_CPUSKT_nWR_c2b = '0')) 
+				) then
+				r_cyc <= '1';
 
-					r_A_log <=	i_A_log;
+				r_A_log <=	i_A_log;
 
-					r_WE <= i_CPUSKT_nRD_c2b;
-				elsif i_CPUSKT_nMREQ_c2b = '1' and i_CPUSKT_nIOREQ_c2b = '1' then
-					r_cyc <= '0';
-				end if;
+				r_WE <= i_CPUSKT_nRD_c2b;
+			elsif i_nMREQ_dly = '1' and i_nIOREQ_dly = '1' then
+				r_cyc <= '0';
 			end if;
 		end if;
 	end process;
