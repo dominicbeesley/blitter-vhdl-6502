@@ -196,8 +196,8 @@ begin
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
-	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
-  	--wrap_o.rdy_ctdn		<= to_unsigned(8, RDY_CTDN_LEN);
+	--wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
+  	wrap_o.rdy_ctdn		<= to_unsigned(7, RDY_CTDN_LEN);
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
 	--
@@ -240,13 +240,10 @@ begin
 
 		if rising_edge(fb_syscon_i.clk) then
 
-			r_cpu_clk_pe <= '0';
-
 			if r_clkctdn = 0 then
 				if r_cpu_clk = '1' then
 					r_cpu_clk <= '0';
 				else
-					r_cpu_clk_pe <= '1';
 					r_cpu_clk <= '1';					
 				end if;
 				r_clkctdn <= to_unsigned(T_cpu_clk_half-1, r_clkctdn'length);
@@ -326,7 +323,7 @@ begin
 
 
   	--TODO: this doesn't look right
-  	wrap_o.noice_debug_cpu_clken <= 	'1' when r_cpu_clk_pe = '1' and r_cyc = '1' and i_rdy = '1' else
+  	wrap_o.noice_debug_cpu_clken <= 	'1' when i_nMREQ_dly = '1' and i_nIOREQ_dly = '1' and r_cyc = '1' and i_rdy = '1' else
   												'0';
   	
   	wrap_o.noice_debug_5c	 	 	<=	'0';
