@@ -143,8 +143,7 @@ entity fb_cpu is
 
 		debug_SYS_VIA_block_o				: out std_logic;
 
-		debug_80188_state_o					: out std_logic_vector(2 downto 0);
-		debug_80188_ale_o						: out std_logic;
+		debug_Z180_M1_o						: out std_logic;
 
 		debug_65816_addr_meta_o				: out std_logic
 
@@ -242,7 +241,9 @@ architecture rtl of fb_cpu is
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- special m68k signals
-		JIM_en_i									: in		std_logic
+		JIM_en_i									: in		std_logic;
+
+		DBG_M1_o									: out std_logic
 
 	);
 	end component;
@@ -827,7 +828,9 @@ gz180: IF G_INCL_CPU_Z180 GENERATE
 		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_Z180),
 		wrap_exp_i								=> i_wrap_exp_i,
 
- 		JIM_en_i									=> JIM_en_i
+ 		JIM_en_i									=> JIM_en_i,
+
+ 		DBG_M1_o									=> debug_Z180_M1_o
 
 	);
 END GENERATE;
@@ -969,8 +972,8 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 
 		-- debug signals
 
-		debug_80188_state_o					=> debug_80188_state_o,
-		debug_80188_ale_o						=> debug_80188_ale_o
+		debug_80188_state_o					=> open,
+		debug_80188_ale_o						=> open
 
 	);
 END GENERATE;

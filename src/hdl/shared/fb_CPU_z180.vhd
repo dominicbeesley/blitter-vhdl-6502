@@ -55,8 +55,9 @@ use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_z180 is
 	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural
+		SIM									: boolean := false;								-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;
+		INT0_IM2_VEC							: std_logic_vector(7 downto 0) := x"56"	-- int mode 2 interrupt ack value
 	);
 	port(
 
@@ -73,7 +74,10 @@ entity fb_cpu_z180 is
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
 		-- special m68k signals
-		jim_en_i								: in std_logic
+		jim_en_i								: in std_logic;
+
+		-- debug
+		DBG_M1_o									: out std_logic
 
 	);
 end fb_cpu_z180;
@@ -115,6 +119,7 @@ architecture rtl of fb_cpu_z180 is
 	signal i_CPUSKT_nRES_b2c		: std_logic;
 	signal i_CPUSKT_nDREQ0_b2c		: std_logic;
 	signal i_CPUSKT_nBUSREQ_b2c	: std_logic;
+	signal i_CPUSKT_D_b2c			: std_logic_vector(7 downto 0);
 
 	signal i_BUF_D_RnW_b2c			: std_logic;
 
@@ -135,6 +140,8 @@ architecture rtl of fb_cpu_z180 is
 
 	signal i_nMREQ_dly				: std_logic;
 	signal i_nIOREQ_dly				: std_logic;
+
+	signal r_int0ack						: std_logic;
 
 begin
 
@@ -158,7 +165,7 @@ begin
 		CPUSKT_nNMI_b2c						=> i_CPUSKT_nNMI_b2c,
 		CPUSKT_nDREQ0_b2c						=> i_CPUSKT_nDREQ0_b2c,
 		CPUSKT_nRES_b2c						=> i_CPUSKT_nRES_b2c,
-		CPUSKT_D_b2c							=> wrap_i.D_rd(7 downto 0),
+		CPUSKT_D_b2c							=> i_CPUSKT_D_b2c,
 
 		BUF_D_RnW_b2c							=> i_BUF_D_RnW_b2c,
 
@@ -175,11 +182,14 @@ begin
 		CPUSKT_A_c2b							=> i_CPUSKT_A_c2b,
 		CPUSKT_D_c2b							=> i_CPUSKT_D_c2b
 
-
 	);
 
-	i_BUF_D_RnW_b2c <= '0' when i_CPUSKT_nRD_c2b = '1' else
-					 	'1';
+	i_CPUSKT_D_b2c <= INT0_IM2_VEC when r_int0ack = '1' else -- im2 interrupt ack
+							wrap_i.D_rd(7 downto 0);
+
+	i_BUF_D_RnW_b2c <= 	'1' when r_int0ack = '1' else -- im2 interrupt ack
+								'0' when i_CPUSKT_nRD_c2b = '1' else
+					 			'1';
 
 	--TODO: mark rdy earlier!
 	--TODO: register this signal (metastable vs z80?)
@@ -268,6 +278,7 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_cyc <= '0';
+			r_int0ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_D_WR_stb <= not(i_CPUSKT_nWR_c2b);
@@ -278,13 +289,22 @@ begin
 					(i_nIOREQ_dly = '0' and (i_CPUSKT_nRD_c2b = '0' or i_CPUSKT_nWR_c2b = '0')) 
 				) then
 				r_cyc <= '1';
+				r_int0ack <= '0';
 
 				r_A_log <=	i_A_log;
 
 				r_WE <= i_CPUSKT_nRD_c2b;
 			elsif i_nMREQ_dly = '1' and i_nIOREQ_dly = '1' then
 				r_cyc <= '0';
+				r_int0ack <= '0';
 			end if;
+
+			if r_int0ack = '0' and i_nIOREQ_dly = '0' and i_CPUSKT_nM1_c2b = '0' then
+				r_int0ack <= '1';
+			elsif r_int0ack = '1' and i_nIOREQ_dly = '1' then
+				r_int0ack <= '0';
+			end if;
+
 		end if;
 	end process;
 
