@@ -90,7 +90,8 @@ handle_res:
 handle_res2:	; we are now running in ROM and can disable the boot mapping by writing to FCFF
 
 		ld	a,#0xD1
-		ld	(0xFCFF),a
+		ld	bc,0xFCFF
+		out	(c),a
 
 		jp	handle_res3
 
