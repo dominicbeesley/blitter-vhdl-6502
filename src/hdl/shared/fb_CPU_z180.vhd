@@ -57,7 +57,7 @@ entity fb_cpu_z180 is
 	generic (
 		SIM									: boolean := false;								-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;
-		INT0_IM2_VEC							: std_logic_vector(7 downto 0) := x"56"	-- int mode 2 interrupt ack value
+		INT0_IM2_VEC							: std_logic_vector(7 downto 0) := x"3E"	-- int mode 2 interrupt ack value
 	);
 	port(
 
@@ -140,6 +140,8 @@ architecture rtl of fb_cpu_z180 is
 
 	signal i_nMREQ_dly				: std_logic;
 	signal i_nIOREQ_dly				: std_logic;
+	signal i_nRD_dly					: std_logic;
+	signal i_nWR_dly					: std_logic;
 
 	signal r_int0ack						: std_logic;
 
@@ -267,12 +269,21 @@ begin
 
 	-- register IOREQ/MREQ signals
 	e_m_MREQ_e:entity work.metadelay 
-		generic map ( N => 2 ) 
+		generic map ( N => 3 ) 
 		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nMREQ_c2b, o => i_nMREQ_dly);
 
 	e_m_IOREQ_e:entity work.metadelay 
-		generic map ( N => 2 ) 
+		generic map ( N => 3 ) 
 		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nIOREQ_c2b, o => i_nIOREQ_dly);
+
+	e_m_RD_e:entity work.metadelay 
+		generic map ( N => 1 ) 
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nRD_c2b, o => i_nRD_dly);
+
+	e_m_WR_e:entity work.metadelay 
+		generic map ( N => 1 ) 
+		port map (clk => fb_syscon_i.clk, i => i_CPUSKT_nWR_c2b, o => i_nWR_dly);
+
 
 	p_act:process(fb_syscon_i)
 	begin
@@ -286,14 +297,14 @@ begin
 			if r_cyc = '0' and 
 				(
 					(i_nMREQ_dly = '0' and i_CPUSKT_nRFSH_c2b = '1' ) or
-					(i_nIOREQ_dly = '0' and (i_CPUSKT_nRD_c2b = '0' or i_CPUSKT_nWR_c2b = '0')) 
+					(i_nIOREQ_dly = '0' and (i_nRD_dly = '0' or i_nWR_dly = '0')) 
 				) then
 				r_cyc <= '1';
 				r_int0ack <= '0';
 
 				r_A_log <=	i_A_log;
 
-				r_WE <= i_CPUSKT_nRD_c2b;
+				r_WE <= i_nRD_dly;
 			elsif i_nMREQ_dly = '1' and i_nIOREQ_dly = '1' then
 				r_cyc <= '0';
 				r_int0ack <= '0';
