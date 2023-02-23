@@ -1,0 +1,5 @@
+MODULE pllmain_int DEFIN pllmain_int.vhd
+	SUBMODULE EHXPLLJ
+		INSTANCE PLLInst_0
+	SUBMODULE VLO
+		INSTANCE scuba_vlo_inst

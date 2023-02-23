@@ -1,0 +1,33 @@
+#Start recording tcl command: 2/17/2023 14:11:40
+#Project Location: C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test; Project name: testxo3
+prj_project open "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/testxo3.ldf"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd" "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd" "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd" "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/bbc/bbc_slow_cyc.vhd"
+prj_src remove "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/pllmain.vhd"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/pllmain.ipx"
+prj_src remove "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/pllmain.ipx"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/pllmain_int.ipx"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/pllmain.vhd"
+prj_src add "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/lattice-xo3-test.sdc"
+prj_src add -exclude "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/timing.ldc"
+prj_src enable "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/timing.ldc"
+prj_src remove "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/timing.ldc"
+prj_run PAR -impl impl1 -task PARTrace
+prj_run PAR -impl impl1 -task IOTiming
+prj_run PAR -impl impl1 -task IOTiming
+prj_strgy set_value -strategy Strategy1 syn_frequency=128
+prj_src add -exclude "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/timing.ldc"
+prj_src enable "C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/lattice-xo3-test/timing.ldc"
+prj_run PAR -impl impl1 -task IOTiming
+prj_run PAR -impl impl1 -task IOTiming -forceAll
+prj_run PAR -impl impl1 -task IOTiming
+prj_run PAR -impl impl1 -task IOTiming -forceOne
+prj_run PAR -impl impl1 -task IOTiming -forceOne
+prj_run PAR -impl impl1 -task IOTiming -forceOne
+get_registers { e_fb_cpu|\gt65:e_t65|e_cpu|* }
+get_pins { e_fb_cpu|\gt65:e_t65|e_cpu|* }
+get_ports
+get_port
+prj_run PAR -impl impl1 -task IOTiming -forceAll
+prj_run PAR -impl impl1
+#Stop recording: 2/17/2023 16:02:25
