@@ -554,6 +554,13 @@ mos_handle_res:
 	ldx	#$FF
 	txs
 
+	; simple supershadow test
+	ldx	#$7C
+	stx	$feed
+	stx	$feed
+	stx	$fee5
+
+
 	lda	#$A5
 
 	; test BBC slow bus bodge

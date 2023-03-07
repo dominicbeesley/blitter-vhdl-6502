@@ -103,10 +103,74 @@ architecture rtl of fb_cpu_t65 is
 
 	--TODO: throttle only works on SYS_BBC, on Elk it repeats cycles!
 
+
+	-- supershadow signals
+
+	type 		t_ss_lockmode is (mode0, mode1, mode2, mode3);
+
+	signal	r_ss_read								: std_logic;
+	signal	r_ss_act									: std_logic; 
+	signal	r_ss_xfer_addr							: std_logic_vector(15 downto 0);
+	signal	r_logA									: std_logic_vector(23 downto 0);
+
 begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
+	p_ss:process(fb_syscon_i)
+	variable v_ss_read: std_logic;
+	variable v_xfer: std_logic;
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_ss_read <= '0';
+			r_ss_act <= '0';
+			r_logA <= (others => '0');
+			r_ss_xfer_addr <= (others => '0');
+		else
+			if rising_edge(fb_syscon_i.clk) then
+				r_ss_act <= '0';
+				v_ss_read := r_ss_read;
+				v_xfer := '0';
+				if i_t65_clken_h = '1' then
+					r_ss_act <= '1';
+				elsif r_ss_act = '1' then
+					if i_t65_SYNC = '1' and i_t65_A(15 downto 8) = x"00" then
+						v_ss_read := i_t65_A(7);
+						r_ss_read <= i_t65_A(7);
+					end if;
+
+				--NOTE: more restrictive than gfoot to keep beeblink working!
+					if (i_t65_A(15 downto 0) and x"FFF1") = x"FEE1" then
+						v_ss_read := '1';						
+						if i_t65_A(7 downto 0) = x"E5" then							
+							r_ss_xfer_addr <= std_logic_vector(unsigned(r_ss_xfer_addr) + 1); 
+							v_xfer := '1';
+						elsif i_t65_A(7 downto 0) = x"ED" then
+							if i_t65_RnW = '1' then
+								r_ss_xfer_addr <= r_ss_xfer_addr(7 downto 0) & x"FE";
+							else
+								r_ss_xfer_addr <= r_ss_xfer_addr(7 downto 0) & i_t65_D_out;
+							end if;
+						end if;
+					elsif i_t65_A(15 downto 8) = x"01" then
+						--shared stack
+						v_ss_read := '1';
+					end if;
+
+					if v_xfer = '1' then
+						r_logA <= x"01" & r_ss_xfer_addr;
+					elsif v_ss_read = '1' then
+						r_logA <= x"01" & i_t65_A(15 downto 0);
+					else
+						r_logA <= x"FF" & i_t65_A(15 downto 0);
+					end if;
+
+
+				end if;
+			end if;
+		end if;
+	end process;
+	
 
 	p_throttle:process(fb_syscon_i)
 	begin
@@ -127,11 +191,11 @@ begin
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and i_t65_clken /= '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and i_t65_clken /= '1' and r_ss_act /= '1' else
 								'0';
 
 	wrap_o.BE			<= '0';
-	wrap_o.A 			<= x"FF" & i_t65_A(15 downto 0);
+	wrap_o.A 			<= r_logA;
 	wrap_o.cyc			<= i_wrap_cyc;
 	wrap_o.lane_req   <= (0 => '1', others => '0');
 	wrap_o.rdy_ctdn   <= RDY_CTDN_MIN;
