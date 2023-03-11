@@ -345,20 +345,22 @@ begin
 	--TODO: z180
 	i_CPUSKT_A(19 downto 16) <= (others => '0');
 
-	p_phi:process
-	begin
+--	p_phi:process
+--	begin
 
 		--TODO: z180
 
-		wait until rising_edge(i_CPUSKT_EXTAL);
-		wait for 30 ns;
-		if i_CPUSKT_PHI = '0' then
-			i_CPUSKT_PHI <= '1';
-		else
-			i_CPUSKT_PHI <= '0';
-		end if;
+--		wait until rising_edge(i_CPUSKT_EXTAL);
+--		wait for 30 ns;
+--		if i_CPUSKT_PHI = '0' then
+--			i_CPUSKT_PHI <= '1';
+--		else
+--			i_CPUSKT_PHI <= '0';
+--		end if;
 
-	end process;
+--	end process;
+
+	i_CPUSKT_PHI <= i_CPUSKT_EXTAL after 25 ns;
 
 
 	i_CPUSKT_nINT1 	<= i_exp_PORTB_o_cpu(0);

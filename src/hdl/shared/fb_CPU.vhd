@@ -811,7 +811,7 @@ gz80: IF G_INCL_CPU_Z80 GENERATE
 END GENERATE;
 
 gz180: IF G_INCL_CPU_Z180 GENERATE
-	e_wrap_z80:fb_cpu_z180
+	e_wrap_z180:fb_cpu_z180
 	generic map (
 		SIM										=> SIM,
 		CLOCKSPEED								=> CLOCKSPEED
