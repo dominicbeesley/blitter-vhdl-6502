@@ -90,7 +90,7 @@ architecture rtl of fb_cpu_z180 is
 --Assume 128MHz fast clock
 
 -- timings below in number of fast clocks
-	constant T_cpu_clk_half	: natural 		:= 4;		-- clock half period - 16MHZ
+	constant T_cpu_clk_half	: natural 		:= 4;		-- clock half period - 18.28MHZ - one half is 1 cycle smaller!
 
 
 	signal r_clkctdn			: unsigned(NUMBITS(T_cpu_clk_half)-1 downto 0) := to_unsigned(T_cpu_clk_half-1, NUMBITS(T_cpu_clk_half));
@@ -209,7 +209,7 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	--wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
-  	wrap_o.rdy_ctdn		<= to_unsigned(0, RDY_CTDN_LEN);
+  	wrap_o.rdy_ctdn		<= to_unsigned(5, RDY_CTDN_LEN);
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
 	--
@@ -255,10 +255,11 @@ begin
 			if r_clkctdn = 0 then
 				if r_cpu_clk = '1' then
 					r_cpu_clk <= '0';
+					r_clkctdn <= to_unsigned(T_cpu_clk_half-1, r_clkctdn'length);
 				else
 					r_cpu_clk <= '1';					
-				end if;
-				r_clkctdn <= to_unsigned(T_cpu_clk_half-1, r_clkctdn'length);
+					r_clkctdn <= to_unsigned(T_cpu_clk_half-2, r_clkctdn'length);
+			end if;
 			else
 				r_clkctdn <= r_clkctdn - 1;
 			end if;
