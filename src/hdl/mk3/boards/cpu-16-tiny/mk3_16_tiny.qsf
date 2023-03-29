@@ -99,6 +99,8 @@ source ../../simulation/sim_tb/sim_80188.qsf
 
 source ../../simulation/sim_tb/sim_arm2.qsf
 
+source ../../simulation/sim_tb/sim_z180.qsf
+
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
@@ -145,6 +147,8 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_680x0_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_680x0.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_arm2_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_arm2.vhd
+set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_z180_exp_pins.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_z180.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6800_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6800.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
@@ -173,7 +177,7 @@ set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_arm2_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_z180_tb -section_id eda_simulation
 
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"

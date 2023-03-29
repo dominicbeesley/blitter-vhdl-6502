@@ -351,8 +351,7 @@ architecture rtl of mk3blit is
 
 	signal	i_debug_write_cycle_repeat : std_logic;
 
-	signal   i_debug_80188_state		: std_logic_vector(2 downto 0);
-	signal   i_debug_80188_ale			: std_logic;
+	signal   i_debug_z180_m1			: std_logic;
 
 begin
 
@@ -697,6 +696,7 @@ END GENERATE;
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
+		G_INCL_CPU_Z180						=> G_INCL_CPU_Z180,
 		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
 		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
 		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
@@ -765,8 +765,7 @@ END GENERATE;
 		JIM_page_i							=> i_JIM_page,
 
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
-		debug_80188_state_o				=> i_debug_80188_state,
-		debug_80188_ale_o					=> i_debug_80188_ale,
+		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta
 
 	);
@@ -945,6 +944,9 @@ begin
 				when "0110111" =>
 					r_cfg_cpu_type <= CPU_ARM2;
 					r_cfg_mk2_cpubits <= "000";
+				when "0101001" =>
+					r_cfg_cpu_type <= CPU_Z180;
+					r_cfg_mk2_cpubits <= "100";
 				when others =>
 					null;
 			end case;
@@ -976,13 +978,13 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= not i_chipset_cpu_halt;
+LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
 SYS_AUX_o			<= (
 	0 => i_vga_debug_r,
 	1 => i_debug_vsync_det,
 	2 => i_debug_hsync_det,
-	3 => i_debug_hsync_crtc
+	3 => i_debug_z180_m1
 );
 
 SYS_AUX_io(0) <= i_vga_debug_hs;

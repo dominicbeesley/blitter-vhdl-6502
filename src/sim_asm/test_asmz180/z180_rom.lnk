@@ -1,0 +1,9 @@
+-i build/z180_rom.ihx
+-b CODE=0xC000
+-b CODE_VEC=0xFF00
+-b DATA=0x100
+-m
+-j
+build/font_data.rel
+build/z180_rom.rel
+-e
