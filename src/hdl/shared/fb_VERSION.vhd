@@ -75,7 +75,7 @@ architecture rtl of fb_version is
 	signal	r_A		: std_logic_vector(7 downto 0);
 	signal	r_Q		: std_logic_vector(7 downto 0);
 
-	signal	i_cap_bits : std_logic_vector(15 downto 0);
+	signal	i_cap_bits : std_logic_vector(20 downto 0);
 
 	function to_std(b: boolean) return std_ulogic is
 	begin
@@ -104,6 +104,11 @@ begin
 	i_cap_bits(13)				<= to_std(G_INCL_CPU_Z80);
 	i_cap_bits(14)				<= to_std(G_INCL_CPU_68008);
 	i_cap_bits(15)				<= to_std(G_INCL_CPU_680x0);
+	i_cap_bits(16)				<= to_std(G_INCL_CPU_ARM2);
+	i_cap_bits(17)				<= to_std(G_INCL_CPU_Z180);
+	i_cap_bits(18)				<= '0';							-- reserved for GFoot supershadow
+	i_cap_bits(19)				<= to_std(G_MEM_FAST_IS_10);
+	i_cap_bits(20)				<= to_std(G_MEM_SLOW_IS_45);
 
 	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.ack <= r_ack;
@@ -153,6 +158,8 @@ begin
 									r_Q <= i_cap_bits(7 downto 0);
 								when 9 =>
 									r_Q <= i_cap_bits(15 downto 8);
+								when 10 =>
+									r_Q <= "000" & i_cap_bits(20 downto 16);
 								when others =>
 									r_Q <= x"00";
 							end case;

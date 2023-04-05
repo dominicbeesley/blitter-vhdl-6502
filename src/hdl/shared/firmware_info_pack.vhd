@@ -34,6 +34,7 @@
 -- Dependencies: 
 --
 -- Revision: 
+--	0101	- Added ARM2, Z180 and configuration bits for mem speed, supershadow
 -- Revision 0.01 - File Created
 -- Additional Comments: 
 --
@@ -48,7 +49,7 @@ package firmware_info_pack is
 	type firmware_board_level is (PAULA, MK1, MK2, MK3);
 
 	constant FW_API_level : std_logic_vector(7 downto 0) := x"01";
-	constant FW_API_sublevel : std_logic_vector(7 downto 0) := x"00";
+	constant FW_API_sublevel : std_logic_vector(7 downto 0) := x"01";
 
 
 end firmware_info_pack;
