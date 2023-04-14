@@ -218,10 +218,10 @@ TODO: This may well need to change!? Any thoughts?
 
   | # | Type      | Physical address   | Notes                                 
   |---|-----------|--------------------|---------------------------------------
-  | 0 | BB RAM    | 9E 0000 - 7E 3FFF  |                                       
-  | 1 | EEPROM    | 8E 0000 - 9E 3FFF  |                                       
-  | 2 | BB RAM    | 9E 4000 - 7E 7FFF  |                                       
-  | 3 | EEPROM    | 8E 4000 - 9E 7FFF  |                                       
+  | 0 | BB RAM    | 7E 0000 - 7E 3FFF  |                                       
+  | 1 | EEPROM    | 9E 0000 - 9E 3FFF  |                                       
+  | 2 | BB RAM    | 7E 4000 - 7E 7FFF  |                                       
+  | 3 | EEPROM    | 9E 4000 - 9E 7FFF  |                                       
   | 4 | SYS IC 52 | FF 8000 - FF BFFF  |                                       
   | 5 | SYS IC 88 | FF 8000 - FF BFFF  |                                       
   | 6 | SYS IC 100| FF 8000 - FF BFFF  |                                       
