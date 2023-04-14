@@ -31,7 +31,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		shared types
+-- Description: 		board build configuration 
 -- Dependencies: 
 --
 -- Revision: 
@@ -70,7 +70,10 @@ package board_config_pack is
 	constant G_INCL_CPU_Z80				: boolean := true;
 	constant G_INCL_CPU_68008			: boolean := true;
 	constant G_INCL_CPU_680x0			: boolean := false;
+	constant G_INCL_CPU_ARM2			: boolean := false;
+	constant G_INCL_CPU_Z180			: boolean := false;
 
+	constant G_MEM_FAST_IS_10			: boolean := true;
 	constant G_MEM_SLOW_IS_45			: boolean := true;
 	constant G_MEM_FLASH_IS_45			: boolean := false;
 
