@@ -86,16 +86,15 @@ entity fb_memctl is
 
 		-- cput throttle
 		throttle_cpu_2MHz_o				: out std_logic;
+		rom_throttle_map_o				: out std_logic_vector(15 downto 0);
 
 		-- fishbone signals
 
 		fb_syscon_i							: in		fb_syscon_t;
 		fb_c2p_i								: in		fb_con_o_per_i_t;
-		fb_p2c_o								: out		fb_con_i_per_o_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t
 
-		-- debug
 
-		DEBUG_REG_o							: out		std_logic_vector(7 downto 0)
 
 	);
 end fb_memctl;
@@ -141,10 +140,12 @@ architecture rtl of fb_memctl is
 	signal   r_65816_boot					: 	std_logic;
 
 	signal	r_throttle_cpu_2MHz				: 	std_logic;
+	signal	r_rom_throttle_map				: std_logic_vector(15 downto 0);
 
 begin
 
 	throttle_cpu_2MHz_o <= r_throttle_cpu_2MHz;
+	rom_throttle_map_o <= r_rom_throttle_map;
 
 	boot_65816_o <= r_65816_boot;
 
@@ -169,12 +170,16 @@ begin
 								-- FE36 - 2Mhz throttle
 								r_throttle_cpu_2MHz & "0000000" 
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 6 else
+								r_rom_throttle_map(15 downto 8)
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 5 else
+								r_rom_throttle_map(7 downto 0)
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 3 else
 								-- FE31 / swmos register
 								r_noice_debug_act
 							& 	r_noice_debug_5C
 							& 	r_65816_boot
 							&	'0'
-							&  r_noice_debug_en
+							&  	r_noice_debug_en
 							&	r_noice_debug_shadow
 							&	'0'
 							&	r_swmos_shadow 
@@ -205,9 +210,9 @@ begin
 				r_swmos_save_written_en <= '0';
 				r_swmos_debug_written_en <= '0';
 				r_65816_boot <= '1';	
-				DEBUG_REG_o <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
 					r_throttle_cpu_2MHz <= '0';
+					r_rom_throttle_map <= (others => '0');
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
 				end if;		
@@ -249,7 +254,9 @@ begin
 						when 6 =>
 							r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
 						when 5 => 
-							DEBUG_REG_o <= fb_c2p_i.D_wr;
+							r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
+						when 3 => 
+							r_rom_throttle_map(7 downto 0) <= fb_c2p_i.D_wr;
 						when 1 =>
 							r_swmos_shadow <= fb_c2p_i.D_wr(0);
 							r_noice_debug_en <= fb_c2p_i.D_wr(3);

@@ -81,6 +81,9 @@ entity log2phys is
 		JIM_page_i							: in  std_logic_vector(15 downto 0);
 		turbo_lo_mask_i					: in	std_logic_vector(7 downto 0);
 
+		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
+		rom_throttle_act_o				: out std_logic;
+
 		-- memctl signals in
 		jim_en_i								: in  std_logic;		-- local jim override
 		swmos_shadow_i						: in	std_logic;		-- shadow mos from SWRAM slot #8
@@ -100,6 +103,8 @@ architecture rtl of log2phys is
 	signal map0n1 : boolean;
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
+
+	signal r_rom_throttle_cur : std_logic;		-- set to '1' when the currently select ROM is throttled
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
@@ -129,7 +134,11 @@ begin
 							r_pagrom_A <= x"9" & "110" & sys_ROMPG_i(3 downto 1);
 						end if;						
 					end if;
-				end if;				
+				end if;	
+
+				r_rom_throttle_cur <= rom_throttle_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
+			else			
+				r_rom_throttle_cur <= '0';
 			end if;
 		end if;
 	end process;
@@ -159,12 +168,14 @@ begin
 	end process;
 
 
-	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i)
+	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur)
 	begin
 		A_o <= A_i;
+		rom_throttle_act_o <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
 				A_o <= r_pagrom_A & A_i(13 downto 0);
+				rom_throttle_act_o <= r_rom_throttle_cur; -- throttle accesses to current ROM if needed, TODO: consider making this for whole instruction from ROM using SYNC?
 			elsif A_i(15 downto 8) = x"FD" then
 				if jim_en_i = '1' then
 					A_o <= JIM_page_i & A_i(7 downto 0);

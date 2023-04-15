@@ -746,6 +746,23 @@ All other bits should be left alone (they may be non-zero) for future
 expansion.
 
 
+### FF FEF3, FF FEF5 Throttle per ROM
+
+Certain sideways ROMs may misbehave if they are allowed to run faster than
+2MHz. By default ROMs on the Blitter will run faster than this depending on 
+the type of memory that is delivering the ROM and which revision of the board.
+
+Setting a bit in FEF3 or FEF5 will throttle accesses to bytes from that ROM
+much as the CPU throttle in bit 7 of FE36. Bits in FE33 control accesses
+to ROMs 0..7 and in FE35 control ROMs 8..15.
+
+Depending on the type of memory this might not have any effect i.e. accesses
+to motherboard roms will be unaffected as these run at 2MHz already.
+
+See the [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO), 
+[\*SRLOAD](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:SRLOAD) and 
+[\*ROMS](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:SRLOAD) commands
+
 ### FF FE37 Low Memory Turbo
 
 This register controls the mapping of the "low" portion of memory in the

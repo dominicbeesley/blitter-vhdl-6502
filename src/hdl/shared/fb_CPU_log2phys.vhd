@@ -83,6 +83,8 @@ entity fb_cpu_log2phys is
 		-- memctl signals
 		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
+		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		rom_throttle_act_o					: out std_logic;
 
 		-- noice signals
 		noice_debug_shadow_i					: in std_logic;
@@ -114,6 +116,9 @@ architecture rtl of fb_cpu_log2phys is
 
 	signal i_sysvia_clken			: std_logic;
 
+	signal i_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
+	signal r_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
+
 begin
 
 
@@ -129,6 +134,8 @@ begin
 	fb_per_c2p_o.D_wr			<= r_D_wr;
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
+
+	rom_throttle_act_o <= r_rom_throttle_act;
 
 	-- ================================================================================================ --
 	-- State Machine 
@@ -161,6 +168,7 @@ begin
 					if fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' then
 						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
+						r_rom_throttle_act <= i_rom_throttle_act;
 						r_we <= fb_con_c2p_i.we;
 						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
@@ -279,6 +287,9 @@ begin
 		swmos_shadow_i						=> swmos_shadow_i,
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
+
+		rom_throttle_map_i				=> rom_throttle_map_i,
+		rom_throttle_act_o				=> i_rom_throttle_act,
 
 		A_i									=> fb_con_c2p_i.A,
 		A_o									=> i_phys_A

@@ -93,6 +93,7 @@ entity fb_cpu is
 		-- cpu throttle
 		throttle_cpu_2MHz_i					: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
+		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 
 
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
@@ -510,6 +511,8 @@ architecture rtl of fb_cpu is
 	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
 	signal r_do_sys_via_block		: std_logic;
+
+	signal i_rom_throttle_act		: std_logic; -- qualifies the current cycle as being to/from a ROM slot that is throttled
 begin
 
 	-- ================================================================================================ --
@@ -730,6 +733,9 @@ begin
 		-- memctl signals
 		swmos_shadow_i							=> swmos_shadow_i,
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
+		rom_throttle_map_i					=> rom_throttle_map_i,
+
+		rom_throttle_act_o					=> i_rom_throttle_act,
 
 		-- noice signals
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
@@ -1032,7 +1038,7 @@ END GENERATE;
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_rom_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;
