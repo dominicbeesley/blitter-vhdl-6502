@@ -437,6 +437,7 @@ begin
   		end if;
   	end process;
 
+	--TODO: this doesn't work for 65816 - there's no special A0 no-toggle cycle
 
 	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_CPUSKT_A_c2b(0);
 
