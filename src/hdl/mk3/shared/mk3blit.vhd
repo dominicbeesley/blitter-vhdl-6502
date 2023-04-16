@@ -937,10 +937,12 @@ begin
 				when "1101110" =>
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_mk2_cpubits <= "011";
+					r_cfg_do6502_debug <= '1';
 				when "1110101" =>
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
 					r_cfg_mk2_cpubits <= "101";
+					r_cfg_do6502_debug <= '1';
 				when "0110111" =>
 					r_cfg_cpu_type <= CPU_ARM2;
 					r_cfg_mk2_cpubits <= "000";
@@ -981,10 +983,10 @@ LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
 SYS_AUX_o			<= (
-	0 => i_vga_debug_r,
-	1 => i_debug_vsync_det,
-	2 => i_debug_hsync_det,
-	3 => i_debug_z180_m1
+	0 => i_noice_debug_5c,
+	1 => i_noice_debug_cpu_clken,
+	2 => i_noice_debug_A0_tgl,
+	3 => i_noice_debug_opfetch
 );
 
 SYS_AUX_io(0) <= i_vga_debug_hs;

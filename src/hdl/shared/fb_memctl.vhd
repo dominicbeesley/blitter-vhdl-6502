@@ -332,7 +332,6 @@ begin
 					end if;
 				when startREGwr =>
 					if noice_debug_opfetch_i = '1' then
-			   			r_noice_debug_nmi_n <= '0';
 						r_noice_debug_act <= r_noice_debug_written_val;
 						r_noice_debug_5C <= '0';
 						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
