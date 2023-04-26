@@ -5,13 +5,6 @@ New rules:
 - d_wr_stb for cycle n - may be asserted after a_stb for n+i - TODO: check, if not then assert stall must *should* be asserted until d_wr_stb?
 
 
-what are rules when cyc is dropped early - must all items support it?
-- must negate ack/rdy instantly?
-- ack/rdy should be qualified by cyc i.e. must be deasserted as soon as cyc dropped
-- ack will be active for exactly one cycle
-- rdy may be active for one ore more cycles before ack 
-- rdy must be asserted when ack is asserted
-- rdy must not be asserted after ack is deasserted
 
 Masters must handle slaves that ack a write cycle *before* d_wr_stb has been asserted (where a write is inappropriate for example)
 
@@ -44,6 +37,14 @@ Slave => Peripheral
 
 i.e. a CPU is a Controller, Memory would be a Peripheral
 
+## Pipelining
+
+As of October 2022 the bus specification has been updated to to support the 
+concept of pipelining - this allows further transactions to be initiated
+at a controller without having to wait for a response for earlier transactions.
+In this way, a CPU with a wide (16bit, 32bit) databus can request multiple 
+bytes be read or written in a burst shortening bus latency considerably.
+
 # Bus Clock Speed
 
 The bus clock speed for the Fishbone bus is generally much faster than that of the devices attached to 
@@ -56,8 +57,9 @@ the bus. The speed is generally chosen to:
 In general the clock speed is 128MHz, as of November 2021 many of the Blitter components are coded to
 expect a 128MHz bus.
 
-
 # Bus signals
+
+Signals annotated (p) have changed to support pipelining - please see the notes in each section.
 
 ## Syscon Signals
 
@@ -127,36 +129,89 @@ These signals are asserted by a controller to control a bus cycle
         | Signal      | VHDL type                  | Description                                          |
         +-------------+----------------------------+------------------------------------------------------+
         | cyc         | std_logic                  | A cycle is being requested. This signal must remain  |
-        |             | (+)                        | asserted for the duration of a cycle                 |
-        |             |                            |                                                      |
+        |             |                            | asserted for the duration of a cycle in a multiple   |
+        |             |                            | transaction burst cyc must remain asserted throughout|
         +-------------+----------------------------+------------------------------------------------------+
-        | A_stb       | std_logic                  | The A and we signals are valid. The A_stb signal     |
-        |             | (+)                        | should normally remain asserted for the entirety of  |
-        |             |                            | a cycle and once asserted A and we must not change   |
+        | A_stb (p)   | std_logic                  | The A and we signals are valid. The A_stb signal     |
+        |             |                            | should be asserted for one clock period for each     |
+        |             |                            | address in a burst. The A_stb signal qualifies A and |
+        |             |                            | we. If the A_stb signal is asserted for multiple     |
+        |             |                            | clock cycles then multiple transactions will occur   |
+        |             |                            | **except** when the stall signal is asserted by the  |
+        |             |                            | peripheral, in which case the a_stb signal **must**  |
+        |             |                            | be repeated!
         +-------------+----------------------------+------------------------------------------------------+
-        | A           | std_logic_vector           | The system address that is being requested.          |
+        | A (p)       | std_logic_vector           | The system address that is being requested.          |
         |             | (23 downto 0)              | All peripherals accept a 24 bit address even if they |
         |             |                            | only decode a subset of these addresses. The cyc     |
-        |             |                            | and a_stb signals are used to qualify the address and|
-        |             |                            | indicate that a peripheral access is required.       |
-        |             |                            |                                                      |
+        |             |                            | and a_stb signals are used to qualify the address.   |
+        |             |                            | The address must be registered in devices as it may  |
+        |             |                            | change once the A_stb is de-asserted                 |
         +-------------+----------------------------+------------------------------------------------------+
         | we          | std_logic                  | Write Enable. The current cycle will be a write      |
-        |             | (+)                        | cycle. This signal must be valid when A_stb is       |
-        |             |                            | asserted and must not change during a cycle          |
+        |             |                            | cycle. This signal must be valid when A_stb is       |
+        |             |                            | asserted                                             |
         +-------------+----------------------------+------------------------------------------------------+
         | D_wr        | std_logic_vector           | Write Data. The data to be written in a write cycle  |
-        |             | (7 downto 0)               | the write data must remain stable whilst D_wr_stb    |
-        |             |                            | is asserted                                          |
+        |             | (7 downto 0)               | the write data must be valid when  D_wr_stb is       |
+        |             |                            | asserted                                             |
         +-------------+----------------------------+------------------------------------------------------+
-        | D_wr_stb    | std_logic                  | Write Data Strobe. The D_wr signal is valid.         |
-        |             | (+)                        | This may be some time after a cycle has started. For |
-        |             |                            | instance on a 6502 hard processor the write data is  |
-        |             |                            | not ready until some time after the start of the phi2|
-        |             |                            | part of the cycle but a SYS cycle must be started    |
-        |             |                            | during the phi1 cycle                                |
+        | D_wr_stb (p)| std_logic                  | Write Data Strobe. The D_wr signal is valid.         |
+        |             |                            | This may be some time after a cycle has started*.    |
+        |             |                            | The d_wr_stb signal must be asserted for the same    |
+        |             |                            | clock that the D_Wr signal is valid. There must be   |
+        |             |                            | the same number of valid D_wr_stb signals as there   |
+        |             |                            | in a burst. See below for a discussion of "valid"    |
+        +-------------+----------------------------+------------------------------------------------------+
+        | rdy_ctdn (p)| unsigned(<>)               | The number of cycles before "ack" is ready that rdy  |
+        |             |                            | should be asserted. Note: this is currently not      |
+        |             |                            | expected to change during a cycle and therefore is   |
+        |             |                            | not registerd by A_stb                               |
         +-------------+----------------------------+------------------------------------------------------+
 
+
+### Pipelining notes (p)
+
+In previous incarnations of the spec the A_stb signal was normally asserted with cyc throughout a cycle
+and A had to remain stable for the entire cycle after A_stb was asserted. Similarly D_wr had to remain
+stable after D_wr_stb had been asserted. 
+
+In pipelined mode the A_stb and D_stb are only asserted for a single cycle during which the peripheral
+or interconnect device should register the A/we or D_wr signals. Note: however that the stall signal from
+the peripheral/interconnect can be used to stretch these strobes (see below)
+
+### Pipeline Transactions
+
+In the non-pipelined mode there was one transaction per cycle in pipelined mode a cycle can contain multiple
+transactions. Usually but not necessarily at consecutive addresses. This is particularly useful when 
+interfacing a CPU with a databus width greater than 8 bits.
+
+### Stall
+
+The signal back from the peripheral or interconnect device may be used to indicate to a controller that
+the connected peripheral is not yet ready to receive another transaction. The controller should continue
+to assert the strobe until the stall line is de-asserted. 
+
+The stall signal *only* stretches the d_wr_stb signal where it is coincident with the cycle whose a_stb
+is being stretched i.e. if the d_wr_stb is for a previously pipelined cycle it should not be stretched.
+
+### D_wr_stb notes
+
+The D_wr_stb signal is not always coincident with the a_stb signal in many cases. For instance on a 6502 
+hard processor the write data is not ready until some time after the start of the phi2 part of it's cycle.
+It may appear that it would be possible, for writes to just delay a_stb until both the address and data to
+write are ready but that would mean that a bus transaction would not reach the SYS (motherboard) wrapper
+peripheral until far too late in the cycle (it must appear early in phi1) and each cpu write access of the 
+motherboard would then skip a cycle. Fishbone's complexity is down, in the main to this problem - the
+older asynchronous buses of the CPUs and the BBC's motherboard require the address to be asserted a long
+time before the data are available.
+
+### Cyc before A_stb
+
+The cyc signal may be asserted before the first A_stb is ready for a set of grouped transaction. This may
+be used in a multi-controller system to request the arbitration logic to make the requesting controller
+take precedence before transactions are ready. This should be used sparingly and may be ignored by an 
+arbitrator.
 
 ## Peripheral to Controller signals
 
@@ -169,120 +224,204 @@ These signals are returned from a peripheral to a controller
         |             | (7 downto 0)               | read cycle. This data should not be read until the   |
         |             |                            | ack and/or rdy_ctdn=0 is/are asserted                |
         +-------------+----------------------------+------------------------------------------------------+
-        | rdy_ctdn    | unsigned                   | This signal gives an indication of how many fast     |
-        |             | (RDY_CTDN_LEN-1 downto 0   | clock cycles remain until the data will be ready.    |
-        |             |                            | When a cycle starts or when no cycle is in progress  |
-        |             |                            | this signal will be set to RDY_CTDN_MAX. During a    |
-        |             |                            | cycle this value may decrement by more than one each |
-        |             |                            | clock but must never increment except when a cycle   |
-        |             |                            | is released.                                         |
-        |             |                            | This signal is used to give an indication of when    |
-        |             |                            | data will become available for CPUs such as the M68K |
-        |             |                            | and Z80 which require a DTACK/WAIT signal a signi-   |
-        |             |                            | ficant time ahead of data actually being available   |
-        |             |                            | For write signals this countdown is usally asserted  |
-        |             |                            | 0 as soon as D_wr_stb is asserted. However for slow  |
-        |             |                            | devices this might not be the case so any controller |
-        |             |                            | must respect this count (or ack) during write cycles |
+        | rdy (p)     | unsigned                   | This signal gives an indication of how many fast     |
+        |             |                            | clock cycles remain until the data will be ready.    |
+        |             |                            | The controller should setup the rdy_ctdn signal to   |
+        |             |                            | indicate how many clocks before ack rdy ctdn may be  |
+        |             |                            | asserted                                             |             
         +-------------+----------------------------+------------------------------------------------------+
-        | ack         | std_logic                  | This must be asserted when rdy_ctdn is 0 and         |
-        |             | (+)                        | indicates that the peripheral has finished or has    |
-        |             |                            | enough data to finish a cycle and that the controller|
-        |             |                            | should terminate the cycle. Note: during write cycles|
-        |             |                            | a peripheral may latch the D_wr data as soon as      |
-        |             |                            | D_wr_stb is asserted and assert this signal even if  |
-        |             |                            | the data have not yet been written for example to a  |
-        |             |                            | slow device/memory. The controller should contain a  |
-        |             |                            | state machine and interlock logic to ensure that     |
-        |             |                            | another cycle is not serviced and data lost until    |
-        |             |                            | ready                                                |
+        | ack (p)     | std_logic                  | This signal must be asserted exactly once per        |
+        |             |                            | transaction (unless cyc is dropped in which case no  |
+        |             |                            | more acks should be generated                        |
         +-------------+----------------------------+------------------------------------------------------+
-        | nul         | std_logic                  | Null cycle. This indicates a bus error and that      |
-        |             | (+)                        | the current ack/rdy_ctdn=0 state is being asserted   |
-        |             |                            | due to an error                                      |
-        +-------------+----------------------------+------------------------------------------------------+
+
+### rdy / rdy_ctdn (p)
+
+These signals have changed with pipelining, the number of clock cycles remaining until ack would be returned
+from the peripheral to the controller. Now the controller indicates how "early" rdy should be asserted.
+
+This signal is used to give an indication of when data will become available for CPUs such as the M68K and 
+Z80 which require a DTACK/WAIT signal a significant time ahead of data actually being available. For write 
+transactions rdy is usually asserted coincidentally with ack and writes are acknowledged before they are 
+actually carried out on slow devices
+
+The rdy signal should be qualified by cyc and ack's must not be generated after cyc has been de-asserted for
+a bus transaction
+
+rdy may be active for zero or more cycles before ack 
+
+rdy must be asserted when ack is asserted
+
+rdy must not be asserted for a transaction after that transaction's ack is deasserted
+
+
+### ack (p)
+
+The ack signal should be asserted once per cycle to indicated that either the read data is valid in D_rd
+or that a write has occurred / has been queued.
+
+The ack signal should be qualified by cyc and ack's must not be generated after cyc has been de-asserted for
+a bus transaction
+
+ack should be active for exactly one cycle per transaction
+
 
 
 # Bus Cycle
 
 A bus cycle may take many clocks to service or may be over in a minimum of 2 clocks. A bus cycle can
-be thought of as a trnsaction that takes place between a controller and a peripheral.
+be thought of as one or more transactions that take place in a group between a controller and a peripheral.
+
+It may be tempting to continuously assert cyc. Wowever, to do so would be counter-productive in a multi-controller
+environment where it could mean that the controller arbitration logic favoured a single controller indefinitely.
 
 
 # Examples
 
 Note in the following cycles the rdy_ctdn signal has a maximum value of 7 and width of 3 - in the actual firmware this is 127/7. The bus clock speed is actually 16MHz to allow a cycle to fit on a line!
 
-## Simple registered fast read
+## Simple fast read
                              A   B   C   D
 
         clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
 
         cyc             ______¯¯¯¯¯¯¯¯__________
-        a_stb           ______¯¯¯¯¯¯¯¯__________
-        A               XXXXX<========>XXXXXXXXX
-        we              XXXXXX00000000XXXXXXXXXX
-        D_wr            XXXXXXXXXXXXXXXXXXXXXXXX
-        D_wr_stb        XXXXXXXXXXXXXXXXXXXXXXXX
+        a_stb           ______¯¯¯¯______________
+        A               ------<A0>--------------
+        we              ------____--------------
+        D_wr            ------------------------
+        D_wr_stb        ------------------------
+        rdy_ctdn        ------<  00  >----------
 
-        D_rd            XXXXXXXXXX<======>XXXXXX
-        rdy_ctdn        777777777700000000XXXXXX
-        ack             __________¯¯¯¯¯¯¯¯______
-        nul             ________________________
+        stall           ________________________
+        D_rd            ----------<D0>----------
+        rdy             __________¯¯¯¯__________
+        ack             __________¯¯¯¯__________
 
 At:
-* A the controller has started the read cycle
-* B the peripheral has registered the cycle and instantly returned data asserting ack/rdy_ctdn=0
-* C the controller has registered the ack and instanly drops cyc/a_stb 
+* A the controller starts the read cycle, asserting cyc, a_stb, we, rdy_ctdn, stall is 0 so no stretch is necessary
+* B the peripheral registers the cycle and instantly returned data asserting ack/rdy, the peripheral optionally asserts stall
+* C the controller has registered the ack and instanly drops cyc
 * D the peripheral deasserts the ack/ctdn signals
 
-Here all signals are registered, this is the simplest way to get timing closure however it is possible 
-to reduce the cycle by making rdy_ctdn/ack combinatorial however this is likely to introduces timing
-closure difficulties.
-
-## Simple combinatorial super-fast read
-                             A   B       
+## Simple fast multibyte read
+                             A   B   C   D
 
         clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
 
-        cyc             ______¯¯¯¯______________
-        a_stb           ______¯¯¯¯______________
-        A               XXXXX<===>XXXXXXXXXXXXXX
-        we              XXXXXX0000XXXXXXXXXXXXXX
-        D_wr            XXXXXXXXXXXXXXXXXXXXXXXX
-        D_wr_stb        XXXXXXXXXXXXXXXXXXXXXXXX
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯______
+        A               ------<A0><A1><A2>------
+        we              ------____________------
+        D_wr            ------------------------
+        D_wr_stb        ------------------------
+        rdy_ctdn        ------<    00        >--
 
-        D_rd            XXXXXXX<==>XXXXXXXXXXXXX
-        rdy_ctdn        77777700000XXXXXXXXXXXXX
-        ack             _______¯¯¯¯_____________
-        nul             ________________________
+        stall           ________________________
+        D_rd            ----------<D0><D1><D2>--
+        rdy             __________¯¯¯¯¯¯¯¯¯¯¯¯__
+        ack             __________¯¯¯¯¯¯¯¯¯¯¯¯__
 
-At:
-* A the controller has started the read cycle, the peripheral has tied ack/rdy_ctdn = 0 to ```cyc and a_stb``` combinatorially
-* B controller ends cycle 
+The peripheral in this case has not asserted stall so that transactions are sent back - to back with no gaps between a_stb's though there could have been if the controller desired
 
-Here all signals are registered, this is the simplest way to get timing closure however it is possible 
-to reduce the cycle by making rdy_ctdn/ack combinatorial however this is likely to introduces timing
-closure difficulties.
+## Simple stalled multibyte read
+
+        clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
+
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯______
+        A               ------<A0><  A1  ><  A2  >------
+        we              ------____________________------
+        D_wr            --------------------------------
+        D_wr_stb        --------------------------------
+        rdy_ctdn        ------<          00          >--
+
+        stall           __________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+        D_rd            ----------<D0>----<D1>----<D2>--
+        rdy             __________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+        ack             __________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+
+Here is the typical case in a multi-byte transaction where a peripheral can only handle a single transaction at a time, it asserts
+the stall signal which causes the controller to stretch the a_stb of transactions A1 and A2
+
+
 
 ## Long read cycle (e.g. BBC Motherboard / SYS)
 
-                                         
+        clk             _|¯|_|¯|_|¯|_|¯| ~~ _|¯|_|¯|_|¯|_|¯|
 
-        clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
+        cyc             ______¯¯¯¯¯¯¯¯¯¯ ~~ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯______ ~~ ________________
+        A               ------<A0>------ ~~ ----------------
+        we              ------____------ ~~ ----------------
+        D_wr            ---------------- ~~ ----------------
+        D_wr_stb        ---------------- ~~ ----------------
+        rdy_ctdn        ------<          ~~  02          >--
 
-        cyc             __¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯______________
-        a_stb           __¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯______________
-        A               X<============================>XXXXXXXXXXXXX
-        we              XX0000000000000000000000000000XXXXXXXXXXXXXX
-        D_wr            XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        D_wr_stb        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        stall           __________¯¯¯¯¯¯ ~~ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        D_rd            ---------------- ~~ ----------<D0>--
+        rdy             ________________ ~~ __¯¯¯¯¯¯¯¯¯¯¯¯__
+        ack             ________________ ~~ __________¯¯¯¯__
 
-        D_rd            XXXXXXXXXXXXXXXXXXXXXXXXXX>===<XXXXXXXXXXXXX
-        rdy_ctdn        7777775555444433332222111100000XXXXXXXXXXXXX
-        ack             __________________________¯¯¯¯¯_____________
-        nul             ____________________________________________
 
-        BBC phi2        ¯________________¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯___________
-        BBC A           XXXX>============================<XXXXXXXXXX
-        BBC D           XXXXXXXXXXXXXXXXXXXXXXXXXX>======<XXXXXXXXXX
+note: rdy_ctdn is 2 meaning rdy is asserted early, SYS knows when the data will be ready.
+
+## Simple fast multibyte write
+
+
+        clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
+
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯______
+        A               ------<A0><A1><A2>------
+        we              ------____________------
+        D_wr            ------<D0><D1><D2>------
+        D_wr_stb        ------¯¯¯¯¯¯¯¯¯¯¯¯------
+        rdy_ctdn        ------<    00        >--
+
+        stall           ________________________
+        D_rd            ------------------------
+        rdy             __________¯¯¯¯¯¯¯¯¯¯¯¯__
+        ack             __________¯¯¯¯¯¯¯¯¯¯¯¯__
+
+
+D_wr/d_wr_stb coincident with a_stb, no stall
+
+## Simple stalled multibyte write
+
+
+        clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
+
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯______
+        A               ------<A0><  A1  ><  A2  >------
+        we              ------____________________------
+        D_wr            ------<D0><  D1  ><  D2  >------
+        D_wr_stb        ------¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯------
+        rdy_ctdn        ------<        00            >--
+
+        stall           __________¯¯¯¯____¯¯¯¯__________
+        D_rd            --------------------------------
+        rdy             __________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+        ack             __________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+
+Note: here the D_wr_stb's are stretched
+
+## Simple stalled multibyte write, D_wr_stb delayed
+
+        clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
+
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__
+        a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯______
+        A               ------<A0><  A1  ><  A2  >----------
+        we              ------____________________----------
+        D_wr            ----------<D0>----<D1>----<D2>------
+        D_wr_stb        ------____¯¯¯¯____¯¯¯¯____¯¯¯¯------
+        rdy_ctdn        ------<          00              >--
+
+        stall           __________¯¯¯¯____¯¯¯¯______________
+        D_rd            ------------------------------------
+        rdy             ______________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+        ack             ______________¯¯¯¯____¯¯¯¯____¯¯¯¯__
+
+Here the D_wr_stb's are not stretched as they are not coincident with their respective a_stb
