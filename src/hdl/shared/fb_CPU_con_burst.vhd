@@ -43,7 +43,6 @@ use ieee.std_logic_misc.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
-use work.fb_sys_pack.all;
 
 
 entity fb_cpu_con_burst is
