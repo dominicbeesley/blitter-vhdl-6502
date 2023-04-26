@@ -164,6 +164,9 @@ begin
 	i_c2p_uart				<= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
 	e_fb_mem: entity work.fb_eff_mem
+	generic map (
+		G_ADDR_W => 9
+		)
 	port map (
 		-- fishbone signals
 
