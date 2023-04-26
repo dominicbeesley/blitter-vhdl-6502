@@ -230,7 +230,7 @@ begin
 	i_wrap_i.noice_debug_shadow 		<= '0';
 	i_wrap_i.noice_debug_inhibit_cpu <= '0';
 	i_wrap_i.throttle_cpu_2MHz 		<= '0';
-	i_wrap_i.cpu_2MHz_phi2_clken 		<= '0';
+	i_wrap_i.cpu_2MHz_phi2_clken 		<= '1';		-- required to force throttle off in process p_throttle
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;
 
