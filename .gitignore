@@ -15,4 +15,10 @@ src/hdl/mk3/boards/cpu-16-tiny/cr_ie_info.json
 src/hdl/mk3/boards/cpu-16-hdmitest/pll_hdmi.cnx
 
 vunit_out/
+work_pnr/
+outflow/
+work_pt/
+work_syn/
+
+.lock
 

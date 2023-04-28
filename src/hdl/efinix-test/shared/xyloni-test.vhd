@@ -54,19 +54,26 @@ use work.board_config_pack.all;
 entity xyloni_test is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural := 128								-- fast clock speed in mhz				
+		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
+		BAUD									: natural := 9600
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
-		CLK_128_pll_i						: in		std_logic;
+		clk_128_pll_i						: in		std_logic;
 
-		SER_TX_o								: out		std_logic;
-		SER_RX_i								: in		std_logic
+		ser_tx_o								: out		std_logic;
+		ser_rx_i								: in		std_logic;
+
+		led									: out		std_logic_vector(3 downto 0);
+
+		debug_ser_tx_o						: out		std_logic
 
 	);
 end xyloni_test;
 
 architecture rtl of xyloni_test is
+
+
 
 
 	-----------------------------------------------------------------------------
@@ -101,6 +108,16 @@ architecture rtl of xyloni_test is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
+	-----------------------------------------------------------------------------
+	-- peripherals
+	-----------------------------------------------------------------------------
+	
+	constant C_BAUD_CKK16_DIV2 : positive := (CLOCKSPEED*1000000)/(32*BAUD);
+
+	signal r_clk_baud16	: std_logic;
+	signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV2-1) downto 0); -- note 1 bigger to catch carry out
+
+	signal i_ser_tx		: std_logic;
 
 begin
 
@@ -165,7 +182,9 @@ begin
 
 	e_fb_mem: entity work.fb_eff_mem
 	generic map (
-		G_ADDR_W => 9
+		G_ADDR_W => 9,
+--		INIT_FILE => "./../../../../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
+		INIT_FILE => "./../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
 		)
 	port map (
 		-- fishbone signals
@@ -176,6 +195,37 @@ begin
 
 	);
 
+	p_uart_clk:process(i_fb_syscon)
+	begin
+		if i_fb_syscon.rst = '1' then
+			r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV2-1, r_clk_baud_div'length);
+			r_clk_baud16 <= '1';
+		elsif rising_edge(i_fb_syscon.clk) then
+			if r_clk_baud_div(r_clk_baud_div'high) = '1' then
+				r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV2-1, r_clk_baud_div'length);
+				r_clk_baud16 <= not(r_clk_baud16);
+			else
+				r_clk_baud_div <= r_clk_baud_div - 1;
+			end if;
+		end if;
+	end process;
+
+	e_fb_uart: entity work.fb_uart
+	port map (
+		clk_baud16_i	=>	r_clk_baud16,
+		ser_rx_i			=> ser_rx_i,
+		ser_tx_o			=> i_ser_tx,
+
+		-- fishbone signals
+
+		fb_syscon_i		=> i_fb_syscon,
+		fb_c2p_i		=> i_c2p_uart,
+		fb_p2c_o		=> i_p2c_uart
+
+	);
+
+	ser_tx_o <= i_ser_tx;
+	debug_ser_tx_o <= i_ser_tx;
 
 	e_fb_cpu_t65only: entity work.fb_cpu_t65only
 	generic map (
@@ -196,6 +246,9 @@ begin
 
 	);
 
-
+	led(0) <= i_ser_tx;
+	led(1) <= '1';
+	led(2) <= not i_ser_tx;
+	led(3) <= '0';
 
 end rtl;

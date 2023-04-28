@@ -51,7 +51,7 @@ begin
 			if run("boop") then
 
 
-				wait for 100 us;
+				wait for 500 us;
 
 			end if;
 
