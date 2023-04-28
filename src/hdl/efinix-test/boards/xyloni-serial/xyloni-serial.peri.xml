@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efxpt:design_db name="xyloni-serial" device_def="T8F81" location="C:\Users\Dominic\Documents\GitHub\blitter-vhdl-6502\src\hdl\efinix-test\boards\xyloni-serial" version="2022.2.322" db_version="20222999" last_change_date="Fri Apr 28 15:37:38 2023" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
+<efxpt:design_db name="xyloni-serial" device_def="T8F81" location="C:\Users\Dominic\Documents\GitHub\blitter-vhdl-6502\src\hdl\efinix-test\boards\xyloni-serial" version="2022.2.322" db_version="20222999" last_change_date="Fri Apr 28 17:13:58 2023" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
     <efxpt:device_info>
         <efxpt:iobank_info>
             <efxpt:iobank name="1A" iostd="3.3 V LVTTL / LVCMOS"/>
@@ -39,7 +39,7 @@
     </efxpt:gpio_info>
     <efxpt:pll_info>
         <efxpt:pll name="clk_128_pll_i" pll_def="PLL_0" ref_clock_name="" ref_clock_freq="33.3333" multiplier="92" pre_divider="3" post_divider="1" reset_name="" locked_name="" is_ipfrz="false" is_bypass_lock="true">
-            <efxpt:output_clock name="clk_128_pll_i" number="0" out_divider="64"/>
+            <efxpt:output_clock name="clk_128_pll_i" number="0" out_divider="16"/>
         </efxpt:pll>
     </efxpt:pll_info>
     <efxpt:osc_info/>
