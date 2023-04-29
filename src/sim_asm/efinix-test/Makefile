@@ -31,7 +31,7 @@ $(BUILD)/%rom:	%.cfg
 $(BUILD)/%.rom:	$(BUILD)/%.o $(LIBS)
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $< $(LIBS)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
-		da65 -S 0xFC00 --comments 4 $(basename $@).rom >$(basename $@).da.s
+		da65 -S 0xE000 --comments 4 $(basename $@).rom >$(basename $@).da.s
 		$(SCRIPTS)/perl/bin2bitvector.pl $@ >$(basename $@).vec
 
 

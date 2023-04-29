@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efx:project name="xyloni-serial" description="" last_change_date="Fri April 28 2023 17:21:19" location="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/boards/xyloni-serial" sw_version="2022.2.322" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project name="xyloni-serial" description="" last_change_date="Fri April 28 2023 17:43:02" location="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/boards/xyloni-serial" sw_version="2022.2.322" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Trion"/>
         <efx:device name="T8F81"/>
-        <efx:timing_model name="C2"/>
+        <efx:timing_model name="I2"/>
     </efx:device_info>
     <efx:design_info def_veri_version="verilog_2k" def_vhdl_version="vhdl_2008">
         <efx:top_module name="xyloni_test"/>

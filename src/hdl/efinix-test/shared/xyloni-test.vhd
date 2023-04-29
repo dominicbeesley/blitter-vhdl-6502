@@ -182,7 +182,7 @@ begin
 
 	e_fb_mem: entity work.fb_eff_mem
 	generic map (
-		G_ADDR_W => 9,
+		G_ADDR_W => 12,
 --		INIT_FILE => "./../../../../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
 		INIT_FILE => "./../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
 		)
