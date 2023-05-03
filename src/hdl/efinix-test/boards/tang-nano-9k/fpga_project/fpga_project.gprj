@@ -1,0 +1,34 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW1NR-9C" pn="GW1NR-LV9QN88PC6/I5">gw1nr9c-004</Device>
+    <FileList>
+        <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/main_pll/main_pll.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/xyloni_test_nano_wrap.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/shared/address_decode_xyloni.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/shared/fb_CPU_log2phys_simple16.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/shared/fb_CPU_t65only.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/shared/fb_eff_MEM.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/efinix-test/shared/xyloni-test.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_MCode.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/clockreg.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/common.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/library/uart_tx.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/shared/fb_uart.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fpga_project.cst" type="file.cst" enable="1"/>
+        <File path="src/fpga_project.sdc" type="file.sdc" enable="1"/>
+    </FileList>
+</Project>

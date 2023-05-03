@@ -19,6 +19,9 @@ work_pnr/
 outflow/
 work_pt/
 work_syn/
+**/impl/gwsynthesis/
+**/impl/pnr/
+**/impl/temp/
 
 .lock
 

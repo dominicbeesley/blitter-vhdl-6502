@@ -55,7 +55,8 @@ entity xyloni_test is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		BAUD									: natural := 9600
+		BAUD									: natural := 9600;
+		PROJECT_ROOT_PATH					: string  := "./../../../../"
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -184,7 +185,7 @@ begin
 	generic map (
 		G_ADDR_W => 12,
 --		INIT_FILE => "./../../../../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
-		INIT_FILE => "./../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
+		INIT_FILE => PROJECT_ROOT_PATH & "sim_asm/efinix-test/build/efinix-boot-rom.vec"
 		)
 	port map (
 		-- fishbone signals
