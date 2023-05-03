@@ -287,6 +287,8 @@ architecture rtl of mk2blit is
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
+	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
+
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
 	-----------------------------------------------------------------------------
@@ -296,8 +298,6 @@ architecture rtl of mk2blit is
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
 	-----------------------------------------------------------------------------
-	signal 	i_debug_reg					: std_logic_vector(7 downto 0);
-
 	signal	i_debug_lock				: std_logic;
 	signal	i_debug_fast				: std_logic;
 	signal	i_debug_slow				: std_logic;
@@ -564,8 +564,7 @@ END GENERATE;
 
 		boot_65816_o						=> i_boot_65816,
 
-		-- degbug TEMP:
-		DEBUG_reg_o							=> i_debug_reg
+		rom_throttle_map_o				=> i_rom_throttle_map		
 	);
 
 
@@ -676,6 +675,7 @@ END GENERATE;
 
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
+		rom_throttle_map_i				=> i_rom_throttle_map,
 
 		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,
