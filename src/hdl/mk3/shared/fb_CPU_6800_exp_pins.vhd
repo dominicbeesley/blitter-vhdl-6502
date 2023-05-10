@@ -115,6 +115,7 @@ begin
 		);
 
 	wrap_exp_o.PORTE_i_nOE 	<= '0';
+	wrap_exp_o.PORTE_o_nOE  <= '1';
 	wrap_exp_o.PORTF_i_nOE 	<= '1';
 	wrap_exp_o.PORTF_o_nOE 	<= '1';
 	

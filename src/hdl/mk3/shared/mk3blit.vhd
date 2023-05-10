@@ -812,16 +812,18 @@ END GENERATE;
 	-- only port F is used as inputs and needs the DIR signal asserted to output data
 
 	-- PORTE always inputs at present
-	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.PORTE_i_nOE; 
+	i_cpu_exp_PORTE_nOE <= i_wrap_exp_o.PORTE_i_nOE and i_wrap_exp_o.PORTE_o_nOE;
+
 	-- NOTE: address 23 downto 20, 15 downto 8 only valid when portE is enabled
 	i_wrap_exp_i.PORTEFG <= exp_PORTEFG_io;
 
 	i_cpu_exp_PORTF_nOE <= i_wrap_exp_o.PORTF_i_nOE and i_wrap_exp_o.PORTF_o_nOE;
 
 	-- PORTF data output on lines 11..4 on 16 bit cpus, 3..0 always inputs for config
-	exp_PORTEFG_io(11 downto 4) <= i_wrap_exp_o.PORTF when i_wrap_exp_o.PORTF_o_nOE = '0' else (others => 'Z');
-
-	exp_PORTEFG_io(3 downto 0) <= (others => 'Z');
+	exp_PORTEFG_io(11 downto 0) 
+		<= 	i_wrap_exp_o.PORTF & "ZZZZ" when i_wrap_exp_o.PORTF_o_nOE = '0' else
+		    "ZZZZ" & i_wrap_exp_o.PORTE when i_wrap_exp_o.PORTE_o_nOE = '0' else
+			(others => 'Z');
 	
 	-- PORTG only used at reset, read in top level
 	i_cpu_exp_PORTG_nOE <= '1';
@@ -935,6 +937,8 @@ begin
 					r_cfg_mk2_cpubits <= "000";
 				when "0100000" =>
 					r_cfg_cpu_type <= CPU_80188;
+				when "0100100" =>
+					r_cfg_cpu_type <= CPU_80186;
 				when "1101110" =>
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_mk2_cpubits <= "011";

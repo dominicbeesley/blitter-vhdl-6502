@@ -139,6 +139,7 @@ begin
 		);
 
 	wrap_exp_o.PORTE_i_nOE <= MUX_PORTE_nOE_i;
+	wrap_exp_o.PORTE_o_nOE <= '1';
 	wrap_exp_o.PORTF_i_nOE <= MUX_PORTF_nOE_i or BUF_D_RnW_b2c;
 	wrap_exp_o.PORTF_o_nOE <= MUX_PORTF_nOE_i or not BUF_D_RnW_b2c;
 

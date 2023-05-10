@@ -72,9 +72,10 @@ entity fb_cpu_80188_exp_pins is
 		CPUSKT_INT2_b2c		: in  std_logic;
 		CPUSKT_HOLD_b2c		: in  std_logic;
 		CPUSKT_INT3_b2c		: in  std_logic;
-		CPUSKT_D_b2c			: in  std_logic_vector(7 downto 0);
+		CPUSKT_D_b2c			: in  std_logic_vector(15 downto 0);
 
-		BUF_D_RnW_b2c				: in std_logic;
+		BUF_D_RnW_L_b2c		: in std_logic;	-- bits 7..0
+		BUF_D_RnW_H_b2c		: in std_logic;	-- bits 15..8
 
 		CPUSKT_nS_c2b			: out std_logic_vector(2 downto 0);
 		CPUSKT_nUCS_c2b		: out std_logic;
@@ -88,9 +89,10 @@ entity fb_cpu_80188_exp_pins is
 		CPUSKT_ALE_c2b			: out std_logic;
 		CPUSKT_HLDA_c2b		: out std_logic;
 		CPUSKT_nLOCK_c2b		: out std_logic;
+		CPUSKT_BHE_c2b			: out std_logic;
 
-		CPUSKT_D_c2b			: out std_logic_vector(7 downto 0);
-		CPUSKT_A_c2b			: out std_logic_vector(19 downto 8)
+		CPUSKT_D_c2b			: out std_logic_vector(15 downto 0);
+		CPUSKT_A_c2b			: out std_logic_vector(19 downto 0)
 
 
 	);
@@ -99,10 +101,13 @@ end fb_cpu_80188_exp_pins;
 architecture rtl of fb_cpu_80188_exp_pins is
 begin
 
-	CPUSKT_D_c2b			<= wrap_exp_i.PORTA;
-	wrap_exp_o.PORTA		<= CPUSKT_D_b2c;
+	CPUSKT_D_c2b(7 downto 0)
+	 							<= wrap_exp_i.PORTA;
+	CPUSKT_A_c2b(7 downto 0)
+	 							<= wrap_exp_i.PORTA;
+	wrap_exp_o.PORTA		<= CPUSKT_D_b2c(7 downto 0);
 	wrap_exp_o.PORTA_nOE <= '0';
-	wrap_exp_o.PORTA_DIR <= not BUF_D_RnW_b2c;
+	wrap_exp_o.PORTA_DIR <= not BUF_D_RnW_L_b2c;
 
 	wrap_exp_o.PORTB(0)	<= CPUSKT_nTEST_b2c;
 	wrap_exp_o.PORTB(1)	<= CPUSKT_ARDY_b2c;
@@ -120,6 +125,7 @@ begin
 	CPUSKT_nLCS_c2b		<= wrap_exp_i.PORTC(4);
 	CPUSKT_RESET_c2b		<= wrap_exp_i.PORTC(5);
 	CPUSKT_CLKOUT_c2b		<= wrap_exp_i.PORTC(6);
+	CPUSKT_BHE_c2b			<= wrap_exp_i.PORTC(7);
 
 	CPUSKT_A_c2b(19 downto 16)	<= wrap_exp_i.PORTC(11 downto 8);
 
@@ -154,6 +160,13 @@ begin
 	wrap_exp_o.PORTF <= (others => '-');
 
 	CPUSKT_A_c2b(15 downto 8)	<= wrap_exp_i.PORTEFG(7 downto 0);
+
+	CPUSKT_D_c2b(15 downto 8)	<= wrap_exp_i.PORTEFG(7 downto 0);
+
+	wrap_exp_o.PORTE			<= CPUSKT_D_b2c(15 downto 8);
+	wrap_exp_o.PORTE_o_nOE 	<= '0' when BUF_D_RnW_H_b2c = '1' else 
+										'1';
+
 
 end rtl;
 
