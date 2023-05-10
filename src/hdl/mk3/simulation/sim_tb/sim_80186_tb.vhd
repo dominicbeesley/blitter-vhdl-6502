@@ -21,13 +21,13 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity sim_80188_tb is
+entity sim_80186_tb is
 generic (
 	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asmx86/build/bootx86_testbench_mos.rom"
 	);
-end sim_80188_tb;
+end sim_80186_tb;
 
-architecture Behavioral of sim_80188_tb is
+architecture Behavioral of sim_80186_tb is
 
 	signal	sim_ENDSIM			: 	std_logic 		:= '0';
 	
@@ -99,6 +99,10 @@ architecture Behavioral of sim_80188_tb is
 	signal	i_CPU_nS				: std_logic_vector(2 downto 0);
 	signal	i_CPU_nDEN			: std_logic;
 	signal	i_CPU_DTnR			: std_logic;
+	signal 	i_CPU_nBHE			: std_logic;
+	signal   i_CPU_nWR			: std_logic;
+	signal   i_CPU_nRD			: std_logic;
+
 
 begin
 
@@ -139,7 +143,7 @@ begin
 	,	5 => '1' -- mosram off
 	,  6 => '1' -- memi off (enable mem)
 	,	8 downto 7 => "11" -- spare
-	, 11 downto 9 => "000" -- hard cpu speed 
+	, 11 downto 9 => "100" -- hard cpu speed 
 		);
 
 	i_exp_PORTF <= (
@@ -273,20 +277,21 @@ begin
 	i_exp_PORTC_io <= (
 		2 downto 0 => i_CPU_nS,
 		6 => i_CPU_CLKOUT,
+		7 => i_CPU_nBHE,
 		11 downto 8 => i_CPU_A(19 downto 16),
 		others => 'H'
 		);
 
-	i_exp_PORTD_io(0) <= 'H';
-	i_exp_PORTD_io(1) <= 'H';
-	i_exp_PORTD_io(2) <=	i_CPU_nDEN;
+	i_exp_PORTD_io(0) <= i_CPU_nRD;
+	i_exp_PORTD_io(1) <= i_CPU_nWR;
+	i_exp_PORTD_io(2) <= i_CPU_nDEN;
 	i_exp_PORTD_io(3) <= 'H';
 	i_exp_PORTD_io(4) <= i_CPU_DTnR;
 	i_exp_PORTD_io(5) <= i_CPU_ALE;
 	i_exp_PORTD_io(6) <= 'H';
 	i_exp_PORTD_io(7) <= 'H';
 
-	i_exp_PORTE(7 downto 0) <= i_CPU_A(15 downto 8);		
+	
 
 	i_CPU_X1 <= i_exp_PORTB_o_cpu(2);
 	i_CPU_SRDY <= i_exp_PORTB_o_cpu(3);
@@ -294,21 +299,109 @@ begin
 
 
 
-	e_cpu:entity work.real80188_tb
-	port map (
-		X1_i		=> i_CPU_X1,
-		SRDY_i 	=> i_CPU_SRDY,
-		nRES_i	=> i_CPU_nRES,
+--	e_cpu:entity work.real80188_tb
+--	port map (
+--		X1_i		=> i_CPU_X1,
+--		SRDY_i 	=> i_CPU_SRDY,
+--		nRES_i	=> i_CPU_nRES,
+--
+--		AD_io		=> i_exp_PORTA_io_cpu,		
+--		CLKOUT_o => i_CPU_CLKOUT,
+--		A_o		=> i_CPU_A,
+--		ALE_o		=> i_CPU_ALE,
+--		nS_o		=> i_CPU_nS,
+--		nDEN_o	=> i_CPU_nDEN,
+--		DTnR_o	=> i_CPU_DTnR	
+--
+--		);
 
-		AD_io		=> i_exp_PORTA_io_cpu,		
-		CLKOUT_o => i_CPU_CLKOUT,
-		A_o		=> i_CPU_A,
-		ALE_o		=> i_CPU_ALE,
-		nS_o		=> i_CPU_nS,
-		nDEN_o	=> i_CPU_nDEN,
-		DTnR_o	=> i_CPU_DTnR	
 
-		);
+	p_cpu_clk:process
+	begin
+		wait until falling_edge(i_CPU_X1);
+		wait for 6 ns;
+		i_CPU_CLKOUT <= '1';
+		wait until falling_edge(i_CPU_X1);
+		wait for 6 ns;
+		i_CPU_CLKOUT <= '0';
+	end process;
+
+	p_cpu:process
+
+	procedure UNSET_ADDR is
+	begin
+		i_exp_PORTA_io_cpu <= (others => 'Z');
+		i_exp_PORTE(7 downto 0) <= (others => 'Z');
+
+	end procedure;
+
+	procedure SET_ADDR(
+		a : in std_logic_vector(19 downto 0); 
+		nbhe : in std_logic;
+		dtnr : in std_logic;		
+		cpu_nS : in std_logic_vector(2 downto 0)
+		) is
+	begin
+
+		wait until rising_edge(i_CPU_CLKOUT);
+		wait for 6 ns;
+		i_CPU_ALE <= '1';
+		i_CPU_nS <= cpu_nS;
+
+		wait until falling_edge(i_CPU_CLKOUT);
+		wait for 10 ns;
+
+		i_exp_PORTA_io_cpu <= a(7 downto 0);
+		i_exp_PORTE(7 downto 0) <= a(15 downto 8);
+		i_cpu_A(19 downto 16) <= a(19 downto 16);
+		i_CPU_DTnR <= dtnr;
+		i_CPU_nBHE <= nbhe;
+
+
+		wait until rising_edge(i_CPU_CLKOUT);
+		wait for 10 ns;
+		i_cpu_ALE <= '0';
+
+	end procedure;
+
+	procedure SET_DATA_WR(
+		d : in std_logic_vector(15 downto 0)
+		) is
+	begin
+		
+		i_exp_PORTA_io_cpu <= d(7 downto 0);
+		i_exp_PORTE(7 downto 0) <= d(15 downto 8);
+
+	end procedure;
+
+	begin
+		UNSET_ADDR;
+		i_CPU_ALE <= '0';
+		i_CPU_nS <= (others => '1');
+		i_CPU_nRD <= '1';
+		i_CPU_nWR <= '1';
+		i_CPU_nDEN <= '1';
+
+		wait until i_CPU_nRES = '0';
+		wait until i_CPU_nRES = '1';
+		wait until rising_edge(i_CPU_CLKOUT);
+		wait until rising_edge(i_CPU_CLKOUT);
+		wait until rising_edge(i_CPU_CLKOUT);
+		wait until rising_edge(i_CPU_CLKOUT);
+
+		-- do a dummy write
+		SET_ADDR(x"00000", '0', '1', "110");
+
+		i_CPU_nDEN <= '0';
+
+		wait until falling_edge(i_CPU_CLKOUT);
+		wait for 6 ns;
+		i_CPU_nWR <= '0';
+		SET_DATA_WR(x"4567");
+
+		wait;
+
+	end process;
 
 
 	-- single non BB ram

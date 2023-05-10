@@ -97,6 +97,8 @@ source ../../simulation/sim_tb/sim_6800.qsf
 
 source ../../simulation/sim_tb/sim_80188.qsf
 
+source ../../simulation/sim_tb/sim_80186.qsf
+
 source ../../simulation/sim_tb/sim_arm2.qsf
 
 source ../../simulation/sim_tb/sim_z180.qsf
@@ -182,12 +184,14 @@ set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
 set_global_assignment -name TOP_LEVEL_ENTITY mk3blit
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_6x09_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_80186_tb -section_id eda_simulation
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 
 set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING ON
+
+
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
