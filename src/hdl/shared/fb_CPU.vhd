@@ -146,7 +146,9 @@ entity fb_cpu is
 
 		debug_Z180_M1_o						: out std_logic;
 
-		debug_65816_addr_meta_o				: out std_logic
+		debug_65816_addr_meta_o				: out std_logic;
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0)
 
 	);
 end fb_cpu;
@@ -621,6 +623,9 @@ begin
 				elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
 					r_cpu_run_ix_hard <= C_IX_CPU_80188;
 					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_80186 and G_INCL_CPU_80188 then
+					r_cpu_run_ix_hard <= C_IX_CPU_80188;
+					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
 					r_cpu_run_ix_hard <= C_IX_CPU_Z80;
 					r_hard_cpu_en <= '1';
@@ -990,7 +995,7 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 
 		-- debug signals
 
-		debug_80188_state_o					=> open,
+		debug_80188_state_o					=> debug_80188_state_o,
 		debug_80188_ale_o						=> open
 
 	);

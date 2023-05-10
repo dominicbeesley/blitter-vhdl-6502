@@ -349,7 +349,7 @@ begin
 				when ActWrite2 =>
 					-- wait for data, place on bus then wait for data and then ack
 					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
-					if wrap_i.rdy ='1' and i_CPU_CLK_posedge = '1' then
+					if wrap_i.rdy = '1' and i_CPU_CLK_posedge = '1' then
 						r_state <= ActRel;
 						r_SRDY <= '1';
 					end if;

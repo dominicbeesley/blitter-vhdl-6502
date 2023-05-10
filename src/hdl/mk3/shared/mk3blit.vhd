@@ -354,6 +354,8 @@ architecture rtl of mk3blit is
 
 	signal   i_debug_z180_m1			: std_logic;
 
+	signal  i_debug_80188_state			: std_logic_vector(2 downto 0);
+
 begin
 
 	e_fb_clocks: entity work.clocks_pll
@@ -767,8 +769,8 @@ END GENERATE;
 
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
-		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta
-
+		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
+		debug_80188_state_o				=> i_debug_80188_state
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
@@ -987,13 +989,7 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
-SYS_AUX_o			<= (
-	0 => i_noice_debug_5c,
-	1 => i_noice_debug_cpu_clken,
-	2 => i_noice_debug_A0_tgl,
-	3 => i_noice_debug_opfetch
-);
-
+SYS_AUX_o			<= "0" & i_debug_80188_state;
 SYS_AUX_io(0) <= i_vga_debug_hs;
 SYS_AUX_io(1) <= i_vga_debug_vs;
 SYS_AUX_io(2) <= i_noice_debug_opfetch;
