@@ -235,9 +235,9 @@ begin
 	i_CPUSKT_DRQ0_b2c <= not wrap_i.nmi_n;
 
 
-	i_BUF_D_RnW_L_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' and r_lanes(0) = '1' else
+	i_BUF_D_RnW_L_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' else
 									'0';
-	i_BUF_D_RnW_H_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' and r_lanes(1) = '1' else
+	i_BUF_D_RnW_H_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' and cpu_16bit_i = '1' else
 									'0';
 
 	wrap_o.BE					<= '0';
