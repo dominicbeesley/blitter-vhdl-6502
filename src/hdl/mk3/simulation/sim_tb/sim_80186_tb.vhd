@@ -390,7 +390,7 @@ begin
 		wait until rising_edge(i_CPU_CLKOUT);
 
 		-- do a dummy write
-		SET_ADDR(x"00000", '0', '1', "110");
+		SET_ADDR(x"F3000", '0', '1', "110");
 
 		i_CPU_nDEN <= '0';
 
