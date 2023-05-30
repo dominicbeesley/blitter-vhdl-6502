@@ -146,7 +146,9 @@ entity fb_cpu is
 
 		debug_Z180_M1_o						: out std_logic;
 
-		debug_65816_addr_meta_o				: out std_logic
+		debug_65816_addr_meta_o				: out std_logic;
+
+		debug_80188_state_o					: out std_logic_vector(2 downto 0)
 
 	);
 end fb_cpu;
@@ -392,6 +394,8 @@ architecture rtl of fb_cpu is
 		-- configuration
 		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
 
+		cpu_16bit_i								: in std_logic;
+
 		fb_syscon_i								: in	fb_syscon_t;
 
 		-- state machine signals
@@ -496,7 +500,8 @@ architecture rtl of fb_cpu is
 	signal r_cpu_en_68008 : std_logic;
 	signal r_cpu_en_65c02 : std_logic;
 	signal r_cpu_en_6800 : std_logic;
-	signal r_cpu_en_80188 : std_logic;
+	signal r_cpu_en_8018x : std_logic;
+	signal r_cpu_8018x_16bit : std_logic;
 	signal r_cpu_en_65816 : std_logic;
 	signal r_cpu_en_arm2 : std_logic;
 
@@ -538,7 +543,8 @@ begin
 				r_cpu_en_68008 <= '0';
 				r_cpu_en_65c02 <= '0';
 				r_cpu_en_6800 <= '0';
-				r_cpu_en_80188 <= '0';
+				r_cpu_en_8018x <= '0';
+				r_cpu_8018x_16bit <= '0';
 				r_cpu_en_65816 <= '0';
 				r_cpu_en_arm2 <= '0';
 
@@ -577,7 +583,12 @@ begin
 						r_cpu_en_65c02 <= '1';
 					elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
 						r_cpu_run_ix_act <= C_IX_CPU_80188;
-						r_cpu_en_80188 <= '1';
+						r_cpu_en_8018x <= '1';
+						r_cpu_8018x_16bit <= '0';
+					elsif cfg_cpu_type_i = CPU_80186 and G_INCL_CPU_80188 then
+						r_cpu_run_ix_act <= C_IX_CPU_80188;
+						r_cpu_en_8018x <= '1';
+						r_cpu_8018x_16bit <= '1';
 					elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
 						r_cpu_run_ix_act <= C_IX_CPU_Z80;
 						r_cpu_en_z80 <= '1';						
@@ -610,6 +621,9 @@ begin
 					r_cpu_run_ix_hard <= C_IX_CPU_65C02;
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_80188 and G_INCL_CPU_80188 then
+					r_cpu_run_ix_hard <= C_IX_CPU_80188;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_80186 and G_INCL_CPU_80188 then
 					r_cpu_run_ix_hard <= C_IX_CPU_80188;
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_Z80 and G_INCL_CPU_Z80 then
@@ -967,7 +981,10 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 	port map(
 
 		-- configuration
-		cpu_en_i									=> r_cpu_en_80188,
+		cpu_en_i									=> r_cpu_en_8018x,
+
+		cpu_16bit_i								=> r_cpu_8018x_16bit,
+
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_80188),
@@ -978,7 +995,7 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 
 		-- debug signals
 
-		debug_80188_state_o					=> open,
+		debug_80188_state_o					=> debug_80188_state_o,
 		debug_80188_ale_o						=> open
 
 	);

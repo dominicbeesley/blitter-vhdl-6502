@@ -59,6 +59,8 @@ entity fb_cpu_80188 is
 		-- configuration
 		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
 
+		cpu_16bit_i								: in std_logic;							-- 1 when this is actually a 80C186
+
 		fb_syscon_i								: in	fb_syscon_t;
 
 		-- state machine signals
@@ -95,6 +97,7 @@ architecture rtl of fb_cpu_80188 is
    signal r_X1					: std_logic;
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
+	signal r_lanes				: std_logic_vector(1 downto 0);
 	signal r_we					: std_logic;
 	signal r_cyc				: std_logic;
 	signal r_wrap_ack			: std_logic;
@@ -118,40 +121,44 @@ architecture rtl of fb_cpu_80188 is
 	signal i_CPUSKT_nUCS_c2b	: std_logic;
 	signal i_CPUSKT_nLCS_c2b	: std_logic;
 	signal i_CPUSKT_RESET_c2b	: std_logic;
-	signal i_CPUSKT_CLKOUT_c2b: std_logic;
+	signal i_CPUSKT_CLKOUT_c2b	: std_logic;
 
-	signal i_CPUSKT_nRD_c2b	: std_logic;
-	signal i_CPUSKT_nWR_c2b	: std_logic;
+	signal i_CPUSKT_nRD_c2b		: std_logic;
+	signal i_CPUSKT_nWR_c2b		: std_logic;
 	signal i_CPUSKT_nDEN_c2b	: std_logic;
 	signal i_CPUSKT_DTnR_c2b	: std_logic;
-	signal i_CPUSKT_ALE_c2b	: std_logic;
+	signal i_CPUSKT_ALE_c2b		: std_logic;
 	signal i_CPUSKT_HLDA_c2b	: std_logic;
 	signal i_CPUSKT_nLOCK_c2b	: std_logic;
+	signal i_CPUSKT_BHE_c2b		: std_logic;
 
-	signal i_BUF_D_RnW_b2c		: std_logic;
-	signal i_CPUSKT_A_c2b		: std_logic_vector(19 downto 8);
-	signal i_CPUSKT_D_c2b		: std_logic_vector(7 downto 0);
+	signal i_BUF_D_RnW_L_b2c	: std_logic;
+	signal i_BUF_D_RnW_H_b2c	: std_logic;
 
-	signal r_CLK_meta			: std_logic_vector((T_MAX_X1 * 4 - 2) downto 0);
-	signal i_CPU_CLK_posedge: std_logic;
-	signal i_CPU_CLK_negedge: std_logic;
+	signal i_CPUSKT_A_c2b		: std_logic_vector(19 downto 0);
+	signal i_CPUSKT_D_c2b		: std_logic_vector(15 downto 0);
 
-	signal r_SRDY				: std_logic;
+	signal r_CLK_meta				: std_logic_vector((T_MAX_X1 * 4 - 2) downto 0);
+	signal i_CPU_CLK_posedge	: std_logic;
+	signal i_CPU_CLK_negedge	: std_logic;
 
-	signal i_mem_addr			: std_logic_vector(23 downto 0);
-	signal i_io_addr			: std_logic_vector(23 downto 0);
+	signal r_SRDY					: std_logic;
+
+	signal i_mem_addr				: std_logic_vector(23 downto 0);
+	signal i_io_addr				: std_logic_vector(23 downto 0);
 
 begin
 
 	
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
+	assert C_CPU_BYTELANES >= 2 report "Requires 2 or more byte lanes" severity failure;
 
 	e_pinmap:entity work.fb_cpu_80188_exp_pins
 	port map (
 
 		-- cpu wrapper signals
-		wrap_exp_o => wrap_exp_o,
+	wrap_exp_o => wrap_exp_o,
 		wrap_exp_i => wrap_exp_i,
 
 		-- local 80188 wrapper signals to/from CPU expansion port 
@@ -168,22 +175,24 @@ begin
 		CPUSKT_INT2_b2c		=> i_CPUSKT_INT2_b2c,
 		CPUSKT_HOLD_b2c		=> i_CPUSKT_HOLD_b2c,
 		CPUSKT_INT3_b2c		=> i_CPUSKT_INT3_b2c,
-		CPUSKT_D_b2c			=> wrap_i.D_rd(7 downto 0),
+		CPUSKT_D_b2c			=> wrap_i.D_rd(15 downto 0),
 
-		BUF_D_RnW_b2c			=> i_BUF_D_RnW_b2c,
+		BUF_D_RnW_L_b2c		=> i_BUF_D_RnW_L_b2c,
+		BUF_D_RnW_H_b2c		=> i_BUF_D_RnW_H_b2c,
 
 		CPUSKT_nS_c2b			=> i_CPUSKT_nS_c2b,
 		CPUSKT_nUCS_c2b		=> i_CPUSKT_nUCS_c2b,
 		CPUSKT_nLCS_c2b		=> i_CPUSKT_nLCS_c2b,
 		CPUSKT_RESET_c2b		=> i_CPUSKT_RESET_c2b,
-		CPUSKT_CLKOUT_c2b	=> i_CPUSKT_CLKOUT_c2b,
-		CPUSKT_nRD_c2b		=> i_CPUSKT_nRD_c2b,
-		CPUSKT_nWR_c2b		=> i_CPUSKT_nWR_c2b,
+		CPUSKT_CLKOUT_c2b		=> i_CPUSKT_CLKOUT_c2b,
+		CPUSKT_nRD_c2b			=> i_CPUSKT_nRD_c2b,
+		CPUSKT_nWR_c2b			=> i_CPUSKT_nWR_c2b,
 		CPUSKT_nDEN_c2b		=> i_CPUSKT_nDEN_c2b,
 		CPUSKT_DTnR_c2b		=> i_CPUSKT_DTnR_c2b,
-		CPUSKT_ALE_c2b		=> i_CPUSKT_ALE_c2b,
+		CPUSKT_ALE_c2b			=> i_CPUSKT_ALE_c2b,
 		CPUSKT_HLDA_c2b		=> i_CPUSKT_HLDA_c2b,
 		CPUSKT_nLOCK_c2b		=> i_CPUSKT_nLOCK_c2b,
+		CPUSKT_BHE_c2b			=> i_CPUSKT_BHE_c2b,
 
 		CPUSKT_D_c2b			=> i_CPUSKT_D_c2b,
 		CPUSKT_A_c2b			=> i_CPUSKT_A_c2b
@@ -223,22 +232,25 @@ begin
 	i_CPUSKT_INT2_b2c	<= '0';
 	i_CPUSKT_HOLD_b2c	<= '0';
 	i_CPUSKT_INT3_b2c	<= '0';
-	i_CPUSKT_DRQ0_b2c   <= not wrap_i.nmi_n;
+	i_CPUSKT_DRQ0_b2c <= not wrap_i.nmi_n;
 
 
-	i_BUF_D_RnW_b2c 	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' else
-								'0';
+	i_BUF_D_RnW_L_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' else
+									'0';
+	i_BUF_D_RnW_H_b2c	<= 	'1' 	when i_CPUSKT_DTnR_c2b = '0' and i_CPUSKT_nDEN_c2b = '0' and cpu_16bit_i = '1' else
+									'0';
 
 	wrap_o.BE					<= '0';
 	wrap_o.cyc					<= r_cyc;
 	wrap_o.A		 				<= r_log_A;
-	wrap_o.lane_req			<= (0 => '1', others => '0');
+	wrap_o.lane_req(1 downto 0) <= r_lanes;
 	wrap_o.we	  				<= r_we;
-	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
-	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
-		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
+	wrap_o.D_wr(15 downto 0)<=	i_CPUSKT_D_c2b;	
+	G_D_WR_EXT:if C_CPU_BYTELANES > 2 GENERATE
+		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 16) <= (others => '-');
+		wrap_o.lane_req(C_CPU_BYTELANES-1 downto 2) <= (others => '0');
 	END GENERATE;		
-	wrap_o.D_wr_stb			<= (0 => r_d_wr_stb, others => '0');
+	wrap_o.D_wr_stb			<= (others => r_d_wr_stb);
 	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
 
 
@@ -250,18 +262,19 @@ begin
 
 
 
-	i_io_addr <= x"FF" & i_CPUSKT_A_c2b(15 downto 8) & i_CPUSKT_D_c2b(7 downto 0);
+	i_io_addr <= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
 	i_mem_addr <= 	(i_CPUSKT_A_c2b(19) and i_CPUSKT_A_c2b(18)) & 
 						(i_CPUSKT_A_c2b(19) and i_CPUSKT_A_c2b(18)) & 
 						(i_CPUSKT_A_c2b(19) and i_CPUSKT_A_c2b(18)) & 
 						(i_CPUSKT_A_c2b(19) and i_CPUSKT_A_c2b(18)) & 
-						i_CPUSKT_A_c2b(19 downto 8) & 
-						i_CPUSKT_D_c2b(7 downto 0);
+						i_CPUSKT_A_c2b(19 downto 0);
 
 	p_state:process(fb_syscon_i)
+	variable v_start_mem_cycle:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_log_A <= (others => '0');
+			r_lanes <= (others => '0');
 			r_cyc <= '0';
 			r_d_wr_stb <= '0';
 			r_we <= '0';
@@ -274,6 +287,7 @@ begin
 				when idle =>
 					if i_CPU_CLK_posedge = '1' and i_CPUSKT_ALE_c2b = '1' then
 						-- check cycle type
+						v_start_mem_cycle := false;
 						case i_CPUSKT_nS_c2b is
 							when "000" => 
 								r_state <= IntAck;	
@@ -281,33 +295,41 @@ begin
 								r_state <= ActRead;
 								r_we <= '0';
 								r_log_A <= i_io_addr;
-								r_cyc <= '1';
-								r_SRDY <= '0';
+								v_start_mem_cycle := true;
 							when "010" =>
 								r_state <= ActWrite;
 								r_we <= '1';
 								r_log_A <= i_io_addr;
-								r_cyc <= '1';
-								r_SRDY <= '0';
+								v_start_mem_cycle := true;
 							when "011" =>
 								r_state <= ActHalt;
 								r_we <= '1';
 							when "100"|"101" =>
 								r_state <= ActRead;
 								r_we <= '0';
-								r_log_A <=  i_mem_addr;
-								r_cyc <= '1';
-								r_SRDY <= '0';
+								r_log_A <= i_mem_addr;
+								v_start_mem_cycle := true;
 							when "110" =>
 								r_state <= ActWrite;
 								r_we <= '1';
 								r_log_A <= i_mem_addr;
-								r_cyc <= '1';
-								r_SRDY <= '0';
+								v_start_mem_cycle := true;
 							when others =>
 								r_state <= Idle; -- passive?
 						end case;
 
+						if v_start_mem_cycle then
+							r_cyc <= '1';
+							r_SRDY <= '0';
+							if cpu_16bit_i = '0' then
+								-- 8 bit just bottom lane
+								r_lanes <= "01";
+							else
+								-- do byte lanes stuff
+								r_lanes(0) <= not i_CPUSKT_A_c2b(0);
+								r_lanes(1) <= not i_CPUSKT_BHE_c2b;
+							end if;
+						end if;
 					end if;
 				when ActRead =>
 					-- wait for data, place on bus then wait for data and then ack
@@ -327,7 +349,7 @@ begin
 				when ActWrite2 =>
 					-- wait for data, place on bus then wait for data and then ack
 					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
-					if wrap_i.rdy ='1' and i_CPU_CLK_posedge = '1' then
+					if wrap_i.ack = '1' and i_CPU_CLK_posedge = '1' then
 						r_state <= ActRel;
 						r_SRDY <= '1';
 					end if;

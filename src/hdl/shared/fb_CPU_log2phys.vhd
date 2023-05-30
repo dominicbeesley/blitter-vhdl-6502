@@ -218,7 +218,7 @@ begin
 
 			if v_accept_wr_stb then
 				if r_done_r_d_wr_stb = '0' or r_state = idle then
-					if r_D_wr_stb = '0' and fb_con_c2p_i.D_wr_stb = '1' then
+					if (r_D_wr_stb = '0' or r_state = idle) and fb_con_c2p_i.D_wr_stb = '1' then
 						r_D_wr_stb <= '1';
 						r_D_wr <= fb_con_c2p_i.D_WR;
 						r_done_r_d_wr_stb <= '1';

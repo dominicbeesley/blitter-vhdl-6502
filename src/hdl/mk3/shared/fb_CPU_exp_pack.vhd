@@ -55,6 +55,8 @@ package fb_CPU_exp_pack is
 		PORTD					: std_logic_vector(11 downto 0);
 		PORTD_o_en			: std_logic_vector(11 downto 0);
 		PORTE_i_nOE			: std_logic;	
+		PORTE_o_nOE			: std_logic;	
+		PORTE					: std_logic_vector(7 downto 0);
 		PORTF_i_nOE			: std_logic;	
 		PORTF_o_nOE			: std_logic;	
 		PORTF					: std_logic_vector(11 downto 4);
@@ -68,6 +70,8 @@ package fb_CPU_exp_pack is
 		PORTD 		=> (others => '-'),
 		PORTD_o_en 	=> (others => '0'),
 		PORTE_i_nOE 	=> '1',
+		PORTE_o_nOE 	=> '1',
+		PORTE 		=> (others => '-'),
 		PORTF_i_nOE 	=> '1',
 		PORTF_o_nOE 	=> '1',
 		PORTF 		=> (others => '-')

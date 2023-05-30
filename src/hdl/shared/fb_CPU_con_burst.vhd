@@ -217,6 +217,7 @@ begin
 					r_ack_lane <= r_ack_lane or i_rx_cur;
 					if or_reduce(lane_req_i and r_rx_mas and not i_rx_cur) = '0' then
 						r_ack <= '1';
+						r_rdy <= '1';
 					end if;
 				end if;
 
