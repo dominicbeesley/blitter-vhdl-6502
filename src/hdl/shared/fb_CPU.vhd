@@ -75,6 +75,7 @@ entity fb_cpu is
 		G_INCL_CPU_680x0					: boolean := false;
 		G_INCL_CPU_68008					: boolean := false;
 		G_INCL_CPU_ARM2					: boolean := false;
+		G_INCL_CPU_386ex					: boolean := false;
 		G_MK3									: boolean := false
 	);
 	port(
@@ -414,6 +415,30 @@ architecture rtl of fb_cpu is
 	);
 	end component;
 
+	component fb_cpu_386ex is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;
+		G_BYTELANES							: positive	:= 1
+	);
+	port(
+
+		-- configuration
+		cpu_en_i									: in std_logic;							-- 1 when this cpu is the current one
+
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- CPU expansion signals
+		wrap_exp_o								: out t_cpu_wrap_exp_o;
+		wrap_exp_i								: in t_cpu_wrap_exp_i
+
+	);
+	end component;
+
 	component fb_cpu_arm2 is
 	generic (
 		CLOCKSPEED							: positive := 128;
@@ -462,7 +487,8 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z180 + B2OZ(G_INCL_CPU_Z180);
 	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
 	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_68008 + B2OZ(G_INCL_CPU_68008);
-	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + 1; -- always add 1 at end though it might not be actually used!
+	constant C_IX_CPU_386ex						: natural := C_IX_CPU_ARM2 + B2OZ(G_INCL_CPU_ARM2);
+	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_386ex + 1; -- always add 1 at end though it might not be actually used!
 
 	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
 	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
@@ -504,6 +530,7 @@ architecture rtl of fb_cpu is
 	signal r_cpu_8018x_16bit : std_logic;
 	signal r_cpu_en_65816 : std_logic;
 	signal r_cpu_en_arm2 : std_logic;
+	signal r_cpu_en_386ex : std_logic;
 
 
 	signal i_wrap_D_rd				: std_logic_vector(8*C_CPU_BYTELANES-1 downto 0);
@@ -547,6 +574,7 @@ begin
 				r_cpu_8018x_16bit <= '0';
 				r_cpu_en_65816 <= '0';
 				r_cpu_en_arm2 <= '0';
+				r_cpu_en_386ex <= '0';
 
 				r_do_sys_via_block <= '0';	
 
@@ -598,6 +626,9 @@ begin
 					elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
 						r_cpu_run_ix_act <= C_IX_CPU_ARM2;
 						r_cpu_en_arm2 <= '1';						
+					elsif cfg_cpu_type_i = CPU_386ex and G_INCL_CPU_386ex then
+						r_cpu_run_ix_act <= C_IX_CPU_386ex;
+						r_cpu_en_386ex <= '1';						
 					end if;
 				end if;
 
@@ -634,6 +665,9 @@ begin
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_ARM2 and G_INCL_CPU_ARM2 then
 					r_cpu_run_ix_hard <= C_IX_CPU_ARM2;
+					r_hard_cpu_en <= '1';
+				elsif cfg_cpu_type_i = CPU_386ex and G_INCL_CPU_386ex then
+					r_cpu_run_ix_hard <= C_IX_CPU_386ex;
 					r_hard_cpu_en <= '1';
 				end if;
 
@@ -998,6 +1032,28 @@ g80188:IF G_INCL_CPU_80188 GENERATE
 		debug_80188_state_o					=> debug_80188_state_o,
 		debug_80188_ale_o						=> open
 
+	);
+END GENERATE;
+
+g386ex:IF G_INCL_CPU_386ex GENERATE
+	e_wrap_386ex:fb_cpu_386ex
+	generic map (
+		SIM									=> SIM,
+		CLOCKSPEED							=> CLOCKSPEED,
+		G_BYTELANES							=> C_CPU_BYTELANES
+	)
+	port map(
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_386ex,
+
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_386ex),
+		wrap_i									=> i_wrap_i,
+
+		wrap_exp_o								=> i_wrap_exp_o_all(C_IX_CPU_386ex),
+		wrap_exp_i								=> i_wrap_exp_i
 	);
 END GENERATE;
 

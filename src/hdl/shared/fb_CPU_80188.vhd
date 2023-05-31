@@ -38,6 +38,10 @@
 --
 ----------------------------------------------------------------------------------
 
+--TODO: properly execute an IntAck cycle, should drive databus and RDY...
+--TODO: properly execute an Halt cycle, should drive databus and RDY...
+--TODO: Halt cycle shouldn't be a WRITE!?!
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

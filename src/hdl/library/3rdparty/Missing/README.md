@@ -26,3 +26,13 @@ Developed by http://www.ht-lab.com/cpu86.htm
 
 Copy the directory cpu86_rtl from https://github.com/nsauzede/cpu86
 
+
+# 386 core
+
+Found at https://tams.informatik.uni-hamburg.de/vhdl/models/i80386/i80386.vhd
+
+Mark Dakur
+
+copy the file to a directory i386 as i80386.vhd
+
+

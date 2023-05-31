@@ -153,6 +153,8 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6800_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6800.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_80188.vhd
+set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_386ex_exp_pins.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_386ex.vhd
 
 
 set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_log2phys.vhd
