@@ -942,6 +942,8 @@ begin
 					r_cfg_cpu_type <= CPU_80188;
 				when "0100100" =>
 					r_cfg_cpu_type <= CPU_80186;
+				when "0100111" =>
+					r_cfg_cpu_type <= CPU_386ex;
 				when "1101110" =>
 					r_cfg_cpu_type <= CPU_65c02;
 					r_cfg_mk2_cpubits <= "011";

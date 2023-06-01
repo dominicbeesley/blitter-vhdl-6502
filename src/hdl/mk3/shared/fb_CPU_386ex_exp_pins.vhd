@@ -109,6 +109,7 @@ begin
 	wrap_exp_o.PORTB(1)	<= CPUSKT_DRQ_b2c;
 	wrap_exp_o.PORTB(2)	<= CPUSKT_CLK2_b2c;
 --	wrap_exp_o.PORTB(3)	<= CPUSKT_nREADY_b2c;	-- original board mistake!
+	wrap_exp_o.PORTB(3)	<= '0';
 	wrap_exp_o.PORTB(4)	<= CPUSKT_nINT0_b2c;
 	wrap_exp_o.PORTB(5)	<= CPUSKT_nNMI_b2c;
 	wrap_exp_o.PORTB(6)	<= CPUSKT_RESET_b2c;
@@ -120,6 +121,7 @@ begin
 								<= wrap_exp_i.PORTC(11 downto 8);
 
 	CPUSKT_WnR_c2b			<= wrap_exp_i.PORTD(0);
+	CPUSKT_nREADY_c2b		<= wrap_exp_i.PORTD(1) when wrap_exp_i.PORTD(6) = '1' else CPUSKT_nREADY_b2c;
 	CPUSKT_nBHE_c2b		<= wrap_exp_i.PORTD(2);
 	CPUSKT_MnIO_c2b		<= wrap_exp_i.PORTD(3);
 	CPUSKT_DnC_c2b			<= wrap_exp_i.PORTD(4);
@@ -142,6 +144,7 @@ begin
 		others => '0'
 		);
 
+	wrap_exp_o.PORTE <= (others => '0');
 	wrap_exp_o.PORTE_i_nOE <= MUX_PORTE_nOE_i;
 	wrap_exp_o.PORTE_o_nOE 	<= '1';
 	wrap_exp_o.PORTF_i_nOE <= MUX_PORTF_nOE_i or BUF_D_RnW_b2c;
