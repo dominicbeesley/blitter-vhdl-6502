@@ -132,6 +132,7 @@ architecture rtl of fb_cpu_386ex is
 
 	signal i_mem_addr					: std_logic_vector(23 downto 0);
 	signal i_io_addr					: std_logic_vector(23 downto 0);
+	signal i_io_blit					: std_logic;
 
 	signal r_SRDY						: std_logic;
 
@@ -240,6 +241,11 @@ begin
 								'0';
 
 
+--	i_io_blit   <= '1' when i_CPUSKT_A_c2b(15 downto 12) /= x"F" and  i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
+--						'0';
+--
+	i_io_blit   <= '1' when i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
+						'0';
 
 	i_io_addr 	<= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
 	i_mem_addr 	<=	x"FF" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = "00001111" else
@@ -281,16 +287,20 @@ begin
 								r_state <= IntAck;	
 							when "0100" | "0101" =>
 								-- I/O read
---								r_state <= ActRead;
---								r_we <= '0';
---								r_log_A <= i_io_addr;
---								v_start_mem_cycle := true;
+								if i_io_blit = '1' then
+									r_state <= ActRead;
+									r_we <= '0';
+									r_log_A <= i_io_addr;
+									v_start_mem_cycle := true;
+								end if;
 							when "0110" | "0111" =>
 								-- I/O write
---								r_state <= ActWrite;
---								r_we <= '1';
---								r_log_A <= i_io_addr;
---								v_start_mem_cycle := true;
+								if i_io_blit = '1' then
+									r_state <= ActWrite;
+									r_we <= '1';
+									r_log_A <= i_io_addr;
+									v_start_mem_cycle := true;
+								end if;
 							when "1010" | "1011" =>
 								r_state <= ActHalt;
 								r_we <= '0';
