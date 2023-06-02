@@ -67,7 +67,9 @@ entity fb_cpu_386ex is
 
 		-- CPU expansion signals
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
-		wrap_exp_i								: in t_cpu_wrap_exp_i
+		wrap_exp_i								: in t_cpu_wrap_exp_i;
+
+		debug_ready								: out std_logic
 	);
 end fb_cpu_386ex;
 
@@ -260,9 +262,14 @@ begin
 			i_PORTF_nOE <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_wrap_ack <= '0';
+
+			if i_CPU_CLK_negedge = '1' then
+				r_SRDY <= '0';
+			end if;
+
+
 			case r_state is
 				when idle =>
-					r_SRDY <= '0';				
 					i_PORTE_nOE <= '0';
 					i_PORTF_nOE <= '1';
 					if i_CPU_CLK_negedge = '1' and i_CPUSKT_nADS_c2b = '0' then
@@ -274,16 +281,16 @@ begin
 								r_state <= IntAck;	
 							when "0100" | "0101" =>
 								-- I/O read
-								r_state <= ActRead;
-								r_we <= '0';
-								r_log_A <= i_io_addr;
-								v_start_mem_cycle := true;
+--								r_state <= ActRead;
+--								r_we <= '0';
+--								r_log_A <= i_io_addr;
+--								v_start_mem_cycle := true;
 							when "0110" | "0111" =>
 								-- I/O write
-								r_state <= ActWrite;
-								r_we <= '1';
-								r_log_A <= i_io_addr;
-								v_start_mem_cycle := true;
+--								r_state <= ActWrite;
+--								r_we <= '1';
+--								r_log_A <= i_io_addr;
+--								v_start_mem_cycle := true;
 							when "1010" | "1011" =>
 								r_state <= ActHalt;
 								r_we <= '0';
@@ -320,7 +327,13 @@ begin
 					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
 					if wrap_i.rdy = '1' and i_CPU_CLK_negedge = '1' then
 						r_SRDY <= '1';
-						r_state <= ActRel;
+						r_state <= Idle;
+						r_wrap_ack <= '1';
+						r_state <= idle;
+						r_cyc <= '0';
+						r_d_wr_stb <= '0';
+						i_PORTE_nOE <= '0';
+						i_PORTF_nOE <= '1';
 					end if;
 
 				when ActWrite => 
@@ -333,15 +346,9 @@ begin
 				when ActWrite2 =>
 					if wrap_i.ack = '1' and i_CPU_CLK_negedge = '1' then
 						r_SRDY <= '1';
-						r_state <= ActRel;
-					end if;
-
-				when ActRel =>
-					-- wait for clock to go high while ready is signalled (either from us or cpu for LBA# cycles)
-					if i_CPUSKT_nREADY_c2b = '0' and i_CPU_CLK_negedge = '1' then
+						r_state <= Idle;
 						r_wrap_ack <= '1';
 						r_state <= idle;
-						r_SRDY <= '0';
 						r_cyc <= '0';
 						r_d_wr_stb <= '0';
 						i_PORTE_nOE <= '0';
@@ -361,7 +368,7 @@ begin
 
 	end process;
 
-
+	debug_ready <= i_CPUSKT_nREADY_c2b;
 
   	wrap_o.noice_debug_cpu_clken <= r_wrap_ack;
   	
