@@ -85,7 +85,7 @@ architecture rtl of fb_cpu_386ex is
 
    signal r_state 					: t_state;
 
-   constant T_MAX_X1					: natural := (128/64);	-- 32Mhz X1
+   constant T_MAX_X1					: natural := (128/128);	-- 64Mhz CLK2
 
    signal r_CLK2_ring				: std_logic_vector(T_MAX_X1-1 downto 0) := (0 => '1', others => '0'); -- max ring counter size for each phase
    signal r_CLK2						: std_logic;
@@ -126,7 +126,7 @@ architecture rtl of fb_cpu_386ex is
 	signal i_PORTE_nOE				: std_logic;
 	signal i_PORTF_nOE				: std_logic;
 
-	signal r_CLK_meta					: std_logic_vector((T_MAX_X1 * 4 - 2) downto 0);
+	signal r_CLK_meta					: std_logic_vector(((T_MAX_X1+1) * 2) - 2 downto 0); 
 	signal i_CPU_CLK_posedge		: std_logic;
 	signal i_CPU_CLK_negedge		: std_logic;
 
