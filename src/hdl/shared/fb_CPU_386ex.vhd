@@ -241,11 +241,14 @@ begin
 								'0';
 
 
---	i_io_blit   <= '1' when i_CPUSKT_A_c2b(15 downto 12) /= x"F" and  i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
---						'0';
---
-	i_io_blit   <= '1' when i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
+	i_io_blit   <= '1' when 		i_CPUSKT_A_c2b(15 downto 8) /= x"F0" 
+									and   i_CPUSKT_A_c2b(15 downto 8) /= x"F4" 
+									and   i_CPUSKT_A_c2b(15 downto 8) /= x"F8" 
+									and  	i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
 						'0';
+
+--	i_io_blit   <= '1' when i_CPUSKT_A_c2b(15 downto 12) /= x"0" else
+--						'0';
 
 	i_io_addr 	<= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
 	i_mem_addr 	<=	x"FF" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = "00001111" else
@@ -263,16 +266,11 @@ begin
 			r_we <= '0';
 			r_wrap_ack <= '0';
 			r_state <= idle;
-			r_SRDY <= '0';
+			r_SRDY <= '1';
 			i_PORTE_nOE <= '0';
 			i_PORTF_nOE <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_wrap_ack <= '0';
-
-			if i_CPU_CLK_negedge = '1' then
-				r_SRDY <= '0';
-			end if;
-
 
 			case r_state is
 				when idle =>
@@ -330,6 +328,7 @@ begin
 							r_lanes(1) <= not i_CPUSKT_nBHE_c2b;
 							i_PORTE_nOE <= '1';
 							i_PORTF_nOE <= '0';
+							r_SRDY <= '0';
 						end if;
 					end if;
 				when ActRead =>
