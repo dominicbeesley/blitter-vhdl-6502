@@ -86,6 +86,9 @@ architecture rtl of fb_cpu_386ex is
    signal r_state 					: t_state;
 
    constant T_MAX_X1					: natural := (128/128);	-- 64Mhz CLK2
+	signal r_CLK_meta					: std_logic_vector(((T_MAX_X1+1) * 2) - 2 downto 0); 
+--   constant T_MAX_X1					: natural := 2;
+--   signal r_CLK_meta					: std_logic_vector(6 downto 0); 
 
    signal r_CLK2_ring				: std_logic_vector(T_MAX_X1-1 downto 0) := (0 => '1', others => '0'); -- max ring counter size for each phase
    signal r_CLK2						: std_logic;
@@ -126,7 +129,6 @@ architecture rtl of fb_cpu_386ex is
 	signal i_PORTE_nOE				: std_logic;
 	signal i_PORTF_nOE				: std_logic;
 
-	signal r_CLK_meta					: std_logic_vector(((T_MAX_X1+1) * 2) - 2 downto 0); 
 	signal i_CPU_CLK_posedge		: std_logic;
 	signal i_CPU_CLK_negedge		: std_logic;
 
@@ -213,7 +215,7 @@ begin
 	i_CPUSKT_RESET_b2c	<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- TODO:does this need synchronising?
 
 	i_CPUSKT_nSMI_b2c		<= '1'; --TODO: hook up as noice debug instead of nmi
-	i_CPUSKT_DRQ_b2c		<= '0'; --TODO: hook up to MB NMI for dma disk
+	i_CPUSKT_DRQ_b2c		<= not wrap_i.nmi_n;
 
 
 
@@ -251,7 +253,7 @@ begin
 --						'0';
 
 	i_io_addr 	<= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
-	i_mem_addr 	<=	x"FF" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = "00001111" else
+	i_mem_addr 	<=	x"FF" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = x"0F" else
 						i_CPUSKT_A_c2b(23 downto 0);
 
 	p_state:process(fb_syscon_i)
@@ -327,13 +329,13 @@ begin
 							r_lanes(0) <= not i_CPUSKT_A_c2b(0);
 							r_lanes(1) <= not i_CPUSKT_nBHE_c2b;
 							i_PORTE_nOE <= '1';
-							i_PORTF_nOE <= '0';
 							r_SRDY <= '0';
 						end if;
 					end if;
 				when ActRead =>
 					-- wait for data, place on bus then wait for data and then ack
 					--TODO: maybe make this two steps - wait for ack then wait for clock edge?
+					i_PORTF_nOE <= '0';
 					if wrap_i.rdy = '1' and i_CPU_CLK_negedge = '1' then
 						r_SRDY <= '1';
 						r_state <= Idle;
@@ -347,6 +349,7 @@ begin
 
 				when ActWrite => 
 					-- wait for data from the cpu and feed on to the wrap
+					i_PORTF_nOE <= '0';
 					if i_CPU_CLK_posedge = '1' then
 						r_d_wr_stb <= '1';
 						r_state <= ActWrite2;
