@@ -85,8 +85,10 @@ architecture rtl of fb_cpu_386ex is
 
    signal r_state 					: t_state;
 
-   constant T_MAX_X1					: natural := (128/128);	-- 64Mhz CLK2
-	signal r_CLK_meta					: std_logic_vector(((T_MAX_X1+1) * 2) - 1 downto 0); 
+--   constant T_MAX_X1					: natural := (128/128);	-- 64Mhz CLK2
+	-- slower and safer?
+   constant T_MAX_X1					: natural := 1;	-- 4Mhz CLK2
+	signal r_CLK_meta					: std_logic_vector(((T_MAX_X1+1) * 2) - 2 downto 0); 
 --   constant T_MAX_X1					: natural := 2;
 --   signal r_CLK_meta					: std_logic_vector(6 downto 0); 
 
@@ -254,8 +256,6 @@ begin
 
 	i_io_addr 	<= x"FF" & i_CPUSKT_A_c2b(15 downto 0);
 	i_mem_addr 	<=	x"FF" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = x"0F" else
-						-- read version when 0Axxxx
-						x"FC" & i_CPUSKT_A_c2b(15 downto 0) when i_CPUSKT_A_c2b(23 downto 16) = x"0B" else
 						i_CPUSKT_A_c2b(23 downto 0);
 
 	p_state:process(fb_syscon_i)
