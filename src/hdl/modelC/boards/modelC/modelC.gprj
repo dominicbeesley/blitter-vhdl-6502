@@ -1,0 +1,13 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW2A-18C" pn="GW2A-LV18PG256C8/I7">gw2a18c-011</Device>
+    <FileList>
+        <File path="src/pll27/pll27.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/pll48/pll48.vhd" type="file.vhdl" enable="1"/>
+        <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC/shared/modelC_top.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/modelC.cst" type="file.cst" enable="1"/>
+    </FileList>
+</Project>

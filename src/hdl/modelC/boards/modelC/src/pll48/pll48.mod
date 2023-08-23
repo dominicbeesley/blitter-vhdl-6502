@@ -1,0 +1,34 @@
+-series GW2A
+-device GW2A-18
+-device_version C
+-package PBGA256
+-part_number GW2A-LV18PG256C8/I7
+
+
+-mod_name pll48
+-file_name pll48
+-path C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC/boards/modelC/src/pll48/
+-type PLL
+-rPll true
+-file_type vhdl
+-dev_type GW2A-18C
+-dyn_idiv_sel false
+-idiv_sel 16
+-dyn_fbdiv_sel false
+-fbdiv_sel 45
+-dyn_odiv_sel false
+-odiv_sel 4
+-dyn_sdiv_sel 8
+-dyn_da_en false
+-rst_sig false
+-rst_sig_p false
+-fclkin 48
+-clkfb_sel 0
+-en_lock false
+-clkout_bypass false
+-en_clkoutp false
+-clkoutp_bypass false
+-en_clkoutd true
+-clkoutd_bypass false
+-clkoutd_src CLKOUT
+-en_clkoutd3 false
