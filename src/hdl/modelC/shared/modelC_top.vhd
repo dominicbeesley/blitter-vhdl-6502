@@ -60,10 +60,11 @@ entity modelC is
 		CLK_48M_i							: in		std_logic;
 
 		-- 2M RAM/256K ROM bus (45)
-		MEM_A_o								: out		std_logic_vector(20 downto 0);
-		MEM_D_io								: inout	std_logic_vector(7 downto 0);	-- 17 bit RAMs used but D[7..0] is multiplexed with D[15..8]
+		MEM_A_o								: out		std_logic_vector(20 downto 8);
+		MEM_AD_io							: inout	std_logic_vector(7 downto 0);	-- 17 bit RAMs used but D[7..0] is multiplexed with D[15..8]
 		MEM_nOE_o							: out		std_logic;
 		MEM_nWE_o							: out		std_logic;							-- add external pull-up
+		MEM_ALE_o							: out		std_logic;							-- add external pull-up
 
 		MEM_FL_nCE_o						: out		std_logic;				
 		MEM_RAM_nCE_o						: out		std_logic_vector(1 downto 0);
