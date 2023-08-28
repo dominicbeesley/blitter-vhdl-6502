@@ -99,23 +99,36 @@ entity modelC is
 
 		SUP_nRESET_i						: in		std_logic;								-- SYStem reset after supervisor
 
+		SYS_RnW_io							: inout	std_logic;
 		SYS_A_o								: out		std_logic_vector(15 downto 0);
 		SYS_D_io								: inout	std_logic_vector(7 downto 0);
-		SYS_BUF_D_DIR_o					: out		std_logic;
+		--SYS_BUF_D_DIR_o					: out		std_logic; -- use SYS_RnW?!?
 		SYS_BUF_D_nOE_o					: out		std_logic;
 		
-		SYS_PHI2_o							: out		std_logic;
-		SYS_RnW_o							: out		std_logic;
+		SYS_2MHzE_o							: out		std_logic;
 		SYS_1MHzE_o							: out		std_logic;
 		SYS_nPGFC_o							: out		std_logic;
 		SYS_nPGFD_o							: out		std_logic;
 		SYS_nPGFE_o							: out		std_logic;
 
 		-- test these as outputs!!!
-		SYS_nNMI_i							: in 		std_logic;
-		SYS_nIRQ_i							: in 		std_logic;
+		SYS_nNMI_i							: inout	std_logic;		-- open drain
+		SYS_nIRQ_i							: inout	std_logic;		-- open drain
+		SYS_nRES_o							: out		std_logic;		-- open drain?
 
+		-- CPU signals to/from 65816 that aren't shared with SYS bus
+		--CPU_nML_i							: in		std_logic; -- only use if a pin is spare!
+		CPU_nVP_i							: in		std_logic;
+		CPU_E_i								: in		std_logic;
+		CPU_VPA_i							: in		std_logic;
+		CPU_VDA_i							: in		std_logic;
+		--CPU_MX_i								: in		std_logic; 	-- only used for debugging
 
+		CPU_BE_o								: out		std_logic;
+		CPU_nABORT_o						: out		std_logic;
+		CPU_PHI2_o							: out		std_logic;
+		CPU_RDY_o							: out		std_logic;		-- keep but can drop in favour of clock stretch
+		
 		-- i2c EEPROM (2)
 		I2C_SCL_io							: inout	std_logic;
 		I2C_SDA_io							: inout	std_logic;
