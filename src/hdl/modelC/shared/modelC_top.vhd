@@ -128,7 +128,7 @@ entity modelC is
 		CPU_nABORT_o						: out		std_logic;
 		CPU_PHI2_o							: out		std_logic;
 		CPU_RDY_o							: out		std_logic;		-- keep but can drop in favour of clock stretch
-		
+
 		-- i2c EEPROM (2)
 		I2C_SCL_io							: inout	std_logic;
 		I2C_SDA_io							: inout	std_logic;
@@ -151,8 +151,13 @@ entity modelC is
 		ddr_reset_n							: out		std_logic;
 		ddr_dm								: out		std_logic_vector (1 downto 0)         ;      -- DM_WIDTH=2
 		ddr_dq								: inout	std_logic_vector (15 downto 0)        ;      -- DQ_WIDTH=16
-		ddr_dqs								: inout	std_logic_vector (1 downto 0)               -- DQS_WIDTH=2
+		ddr_dqs								: inout	std_logic_vector (1 downto 0)			  ;      -- DQS_WIDTH=2
 		--ddr_dqs_n							: inout	std_logic_vector (1 downto 0)               -- DQS_WIDTH=2
+
+		pal_r_o									: out		std_logic;
+		pal_g_o									: out		std_logic;
+		pal_b_o									: out		std_logic;
+		pal_s_o									: out		std_logic
 
 	);
 end modelC;
@@ -205,6 +210,17 @@ begin
         clkin => CLK_27M_i,
         clkout => i_clk_135
    );
+
+	r_dac_vid: entity work.dac_1bit_vid
+	generic map(
+		G_SAMPLE_SIZE => 4
+		)
+	port map (
+		rst_i 	=> not SUP_nRESET_i,
+		clk_dac	=> i_clk_135,
+		sample 	=> unsigned(SYS_D_io(3 downto 0)),
+		bitstream=> pal_r_o
+		);
 
 
         ser_b : OSER10

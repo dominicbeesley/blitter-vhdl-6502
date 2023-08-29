@@ -9,5 +9,7 @@
         <File path="src/pll48/pll48.vhd" type="file.vhdl" enable="1"/>
         <File path="C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC/shared/modelC_top.vhd" type="file.vhdl" enable="1"/>
         <File path="src/modelC.cst" type="file.cst" enable="1"/>
+        <File path="../../shared/dac_1bit_vid.vhd" type="file.vhdl" enable="1"/>
+
     </FileList>
 </Project>
