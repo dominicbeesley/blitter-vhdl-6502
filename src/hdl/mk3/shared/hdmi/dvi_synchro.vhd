@@ -59,7 +59,9 @@ entity dvi_synchro is
 
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
-		debug_hsync_crtc_o		: out std_logic
+		debug_hsync_crtc_o			: out std_logic;
+
+		debug_odd_o					: out std_logic
 
 	);
 end dvi_synchro;
@@ -165,6 +167,7 @@ begin
 	debug_vsync_det_o <= r_vsync_lead_ack;
 	debug_hsync_det_o <= r_hsync_lead_ack;
 	debug_hsync_crtc_o <= HSYNC_CRTC_i;
+	debug_odd_o <= r_odd;
 
 
 	BLANK_DVI_o <= r_blank_field or r_blank_line;

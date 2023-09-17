@@ -62,7 +62,8 @@ entity fb_HDMI is
 
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
-		debug_hsync_crtc_o		: out std_logic
+		debug_hsync_crtc_o			: out std_logic;
+		debug_odd_o					: out std_logic
 
 
 	);
@@ -383,9 +384,10 @@ begin
 		G_DVI_o			=> i_G_DVI,
 		B_DVI_o			=> i_B_DVI,
 
-		debug_hsync_det_o => debug_hsync_det_o,
-		debug_vsync_det_o => debug_vsync_det_o,
-		debug_hsync_crtc_o=> debug_hsync_crtc_o
+		debug_hsync_det_o 	=> debug_hsync_det_o,
+		debug_vsync_det_o 	=> debug_vsync_det_o,
+		debug_hsync_crtc_o	=> debug_hsync_crtc_o,
+		debug_odd_o 		=> debug_odd_o
 
 	);
 

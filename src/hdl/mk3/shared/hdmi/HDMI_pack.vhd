@@ -89,7 +89,8 @@ package HDMI_pack is
 
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
-		debug_hsync_crtc_o		: out std_logic
+		debug_hsync_crtc_o			: out std_logic;
+		debug_odd_o					: out std_logic
 
 
 	);
