@@ -315,7 +315,7 @@ HERE:	lda	#$FF
 
 t0_failed:
 	lda	#$40
-	sta	$FFEE
+	sta	$FEFF
 	jmp	HERE
 
 

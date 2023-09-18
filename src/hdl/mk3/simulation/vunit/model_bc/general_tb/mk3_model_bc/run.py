@@ -15,7 +15,7 @@ root = "../../../../../../"
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/board_config_pack.vhd")
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/version.vhd")
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/pllmain.vhd")
-
+lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/fb_SYS_model_BC.vhd")
 
 # Base project files
 lib.add_source_file(root + "mk3/shared/hdmi/HDMI_pack.vhd")
@@ -38,7 +38,8 @@ lib.add_source_file(root + "library/3rdparty/T6502/T65_MCode.vhd")
 lib.add_source_file(root + "library/3rdparty/T6502/T65_ALU.vhd")
 lib.add_source_file(root + "library/3rdparty/T6502/T65.vhd")
 lib.add_source_file(root + "shared/fb_SYS_pack.vhd")
-lib.add_source_file(root + "shared/fb_SYS.vhd")
+
+
 lib.add_source_file(root + "shared/fb_SYS_phigen.vhd")
 lib.add_source_file(root + "shared/fb_SYS_VIA_blocker.vhd")
 lib.add_source_file(root + "shared/fb_SYS_clock_dll.vhd")
