@@ -905,6 +905,8 @@ begin
          case exp_PORTEFG_io(2 downto 0) is
             when "110" => 
                r_cfg_sys_type <= SYS_ELK;
+            when "100" => 
+               r_cfg_sys_type <= SYS_MODEL_BC;
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
