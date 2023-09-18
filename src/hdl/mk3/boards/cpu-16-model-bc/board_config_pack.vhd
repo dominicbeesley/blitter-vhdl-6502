@@ -21,6 +21,7 @@
 -- THE SOFTWARE.
 -- ----------------------------------------------------------------------
 
+
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
@@ -49,21 +50,22 @@ package board_config_pack is
 
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
 
-	constant G_INCL_HDMI		: boolean := true;
+	constant G_INCL_HDMI		: boolean := false;
+		
 	constant G_INCL_CHIPSET		: boolean := true;
 	constant G_INCL_CS_DMA		: boolean := true;
 	constant G_DMA_CHANNELS		: natural := 1;
-	constant G_INCL_CS_BLIT		: boolean := true;
+	constant G_INCL_CS_BLIT		: boolean := false;
 	constant G_INCL_CS_SND		: boolean := true;
 	constant G_SND_CHANNELS		: natural := 4;
-	constant G_INCL_CS_AERIS	: boolean := true;
+	constant G_INCL_CS_AERIS	: boolean := false;
 	constant G_INCL_CS_EEPROM	: boolean := true;
 		
 	constant C_CPU_BYTELANES	: positive := 4;
 	constant G_INCL_CPU_T65		: boolean := true;
 	constant G_INCL_CPU_65C02	: boolean := true;
-	constant G_INCL_CPU_6800	: boolean := true;
-	constant G_INCL_CPU_80188	: boolean := true;
+	constant G_INCL_CPU_6800	: boolean := false;
+	constant G_INCL_CPU_80188	: boolean := false;
 	constant G_INCL_CPU_65816	: boolean := true;
 	constant G_INCL_CPU_6x09	: boolean := true;
 	constant G_INCL_CPU_Z80		: boolean := false;
@@ -77,20 +79,26 @@ package board_config_pack is
 	constant G_MEM_FAST_IS_10	: boolean := true;
 	constant G_MEM_SLOW_IS_45	: boolean := true;
 
-
-	constant PERIPHERAL_COUNT	: natural := 6;
+	constant PERIPHERAL_COUNT	: natural := 5;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS	: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
 	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
 	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
-	constant PERIPHERAL_NO_HDMI	: natural := 5;
+	constant PERIPHERAL_NO_HDMI	: natural := 0;	-- not used
 	
 
 	constant CONTROLLER_COUNT	: natural := 2;
 -- note 0 is highest priority!
 	constant MAS_NO_CPU		: natural := 1;
 	constant MAS_NO_CHIPSET		: natural := 0;
+
+
+
+
+
+
+
 
 
 end board_config_pack;
