@@ -413,6 +413,15 @@ begin
 			sim_reg_halt_o <= '0';
 		elsif falling_edge(i_SYS_phi2) and i_SYS_RnW = '0' and i_SYS_TB_nPGFE = '0' and unsigned(i_SYS_A(7 downto 0)) = 16#FF# then
 			sim_reg_halt_o <= i_SYS_D(7);
+			if i_SYS_D(7) = '1' then
+				report "Simulation stop requested from code" severity note;
+			else
+				if i_SYS_D(6) = '1' then
+					report "Test #" & integer'image(to_integer(unsigned(i_SYS_D(5 downto 0)))) & " failed " severity failure;
+				else
+					report "Test #" & integer'image(to_integer(unsigned(i_SYS_D(5 downto 0)))) & " passed " severity note;
+				end if;
+			end if;
 		end if;
 	end process;
 

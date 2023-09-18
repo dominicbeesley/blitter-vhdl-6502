@@ -105,5 +105,9 @@ lib.add_source_file(root + "mk3/simulation/sim_tb/sim_t65_model_bc_tb.vhd")
 tb = lib.test_bench("sim_t65_model_bc_tb")
 tb.set_generic("G_MOSROMFILE","../../" + root + "../sim_asm/test_asm_model_BC/build/model_bc.rom")
 
+
+tb.set_sim_option("vhdl_assert_stop_level", "failure")
+tb.set_sim_option("disable_ieee_warnings", True)
+
 # Run vunit function
 vu.main()

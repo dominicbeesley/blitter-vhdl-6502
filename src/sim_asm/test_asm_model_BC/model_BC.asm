@@ -228,8 +228,15 @@ mos_handle_res:
 	txa
 	eor	#$FF
 	sta	sheila_SYSVIA_ddra
+	cmp	#$FF
+	bne	t0_failed
 	lda	sheila_SYSVIA_ddra
+	cmp	#$FF
+	bne	t0_failed
 	stx	sheila_SYSVIA_ddra
+
+	lda	#$0
+	sta	$FEFF
 
 	; TEST #1 
 	; For the Model B/C the vhdl needs to intercept the IER 
@@ -306,6 +313,10 @@ HERE:	lda	#$FF
 	sta	$FEFF
 	jmp	HERE
 
+t0_failed:
+	lda	#$40
+	sta	$FFEE
+	jmp	HERE
 
 
 mos_handle_irq:
