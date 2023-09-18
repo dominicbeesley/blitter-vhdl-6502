@@ -297,6 +297,10 @@ begin
 
 		-- sys via
 		G_SYSVIA:IF G_INCLUDE_SYSVIA GENERATE
+	
+
+			i_sysvia_cs2 <= '0' when i_SYS_A(15 downto 4) = x"FE4" else '1';
+
 			e_sys_via:m6522
 			port map (
 				-- clocking stuff
@@ -313,7 +317,7 @@ begin
 		      O_IRQ_L               => i_sysvia_nIRQ,
 
 	         I_RS                  => i_SYS_A(3 downto 0),
-	      	I_DATA                => SYS_D_io,
+	      	I_DATA                => i_SYS_D,
 	      	O_DATA                => i_sysvia_D_out,
 	      	O_DATA_OE_L           => i_sysvia_D_oe,
 
@@ -341,7 +345,7 @@ begin
 		      O_PB_OE_L             => open
 			);
 
-			SYS_D_io <= i_sysvia_D_out when i_sysvia_D_oe = '0' else (others => 'Z');
+			i_SYS_D <= i_sysvia_D_out when i_sysvia_D_oe = '0' else (others => 'Z');
 		END GENERATE;
 		G_NO_SYSVIA:IF NOT G_INCLUDE_SYSVIA GENERATE
 			i_sysvia_nIRQ <= '1';
@@ -412,5 +416,24 @@ begin
 		end if;
 	end process;
 
+	p_bus_hold:process
+	variable v_pre_D:std_logic_vector(7 downto 0) := (others => 'Z');
+	variable i:natural;
+	begin
+		i_SYS_D <= (others => 'Z');
+		wait for 0 us;
+		for i in 7 downto 0 loop
+			if not is_x(i_SYS_D(I)) then
+				v_pre_D(I) := i_SYS_D(I);
+			end if;
+			if is_X(v_pre_D(I)) then
+				v_pre_D(I) := 'Z';
+			end if;
+		end loop;
+		i_SYS_D <= v_pre_D;
+		wait for 0 us;
+		wait on i_SYS_D;
+
+	end process;
 
 end;
