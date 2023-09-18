@@ -29,6 +29,7 @@ generic (
 	G_MOSROMFILE 		: string := "";
 	G_RAMDUMPFILE		: string := "";
 	G_SIM_SYS_TYPE		: SIM_SYS_TYPE := SIM_SYS_BBC;
+	G_INCLUDE_SYSVIA	: boolean := false;
 	G_MK3			: boolean				-- enable SYS buffer delay
 	);
 port (
@@ -46,6 +47,8 @@ port (
 	SYS_BUF_D_nOE_i: in		std_logic;
 	SYS_BUF_D_DIR_i: in		std_logic;
 
+	SYS_1MHzE_o		: out		std_logic;
+	SYS_2MHzE_o		: out		std_logic;
 
 	hsync_o			: out		std_logic;
 	vsync_o			: out		std_logic;
@@ -57,6 +60,50 @@ port (
 end sim_SYS_tb;
 
 architecture Behavioral of sim_SYS_tb is
+
+	component M6522 is
+   port (
+      I_RS                  : in    std_logic_vector(3 downto 0);
+      I_DATA                : in    std_logic_vector(7 downto 0);
+      O_DATA                : out   std_logic_vector(7 downto 0);
+      O_DATA_OE_L           : out   std_logic;
+
+      I_RW_L                : in    std_logic;
+      I_CS1                 : in    std_logic;
+      I_CS2_L               : in    std_logic;
+
+      O_IRQ_L               : out   std_logic; -- note, not open drain
+
+      -- port a
+      I_CA1                 : in    std_logic;
+      I_CA2                 : in    std_logic;
+      O_CA2                 : out   std_logic;
+      O_CA2_OE_L            : out   std_logic;
+
+      I_PA                  : in    std_logic_vector(7 downto 0);
+      O_PA                  : out   std_logic_vector(7 downto 0);
+      O_PA_OE_L             : out   std_logic_vector(7 downto 0);
+
+      -- port b
+      I_CB1                 : in    std_logic;
+      O_CB1                 : out   std_logic;
+      O_CB1_OE_L            : out   std_logic;
+
+      I_CB2                 : in    std_logic;
+      O_CB2                 : out   std_logic;
+      O_CB2_OE_L            : out   std_logic;
+
+      I_PB                  : in    std_logic_vector(7 downto 0);
+      O_PB                  : out   std_logic_vector(7 downto 0);
+      O_PB_OE_L             : out   std_logic_vector(7 downto 0);
+
+      I_P2_H                : in    std_logic; -- high for phase 2 clock  ____----__
+      RESET_L               : in    std_logic;
+      ENA_4                 : in    std_logic; -- clk enable
+      CLK                   : in    std_logic
+   );
+	end component;
+
 
 	signal	i_SYS_TB_nPGFC			: std_logic;
 	signal	i_SYS_TB_nPGFD			: std_logic;
@@ -78,6 +125,8 @@ architecture Behavioral of sim_SYS_tb is
 	signal	i_SYS_phi0				: std_logic;
 	signal	i_SYS_phi1				: std_logic;
 	signal	i_SYS_phi2				: std_logic;
+	signal	i_SYS_1MHzE				: std_logic;
+	signal	i_SYS_2MHzE				: std_logic;
 	signal	i_SYS_A					: std_logic_vector(15 downto 0);
 	signal	i_SYS_D					: std_logic_vector(7 downto 0);
 	signal	i_SYS_RnW				: std_logic;
@@ -88,11 +137,21 @@ architecture Behavioral of sim_SYS_tb is
 
 	signal	r_CLK_16					: std_logic;
 
+	signal	i_clken4					: std_logic;	 -- Hoglet 6522 clocken
 
+	-- sysvia
+
+	signal	i_sysvia_cs2			: std_logic;
+	signal   i_sysvia_D_out			: std_logic_vector(7 downto 0);
+	signal   i_sysvia_D_oe			: std_logic;
+	signal   i_sysvia_nIRQ			: std_logic;
 
 begin
 
-	SYS_nIRQ_o <= '1';
+	SYS_1MHzE_o	<= i_SYS_1MHzE;
+	SYS_2MHzE_o	<= i_SYS_2MHzE;
+
+	SYS_nIRQ_o <= i_sysvia_nIRQ;
 	SYS_nNMI_o <= '1';
 	hsync_o <= r_hsync;
 	vsync_o <= r_vsync;
@@ -211,58 +270,108 @@ begin
 
 
 	G_BBC_CK:IF G_SIM_SYS_TYPE = SIM_SYS_BBC GENERATE
-	e_bbc_clk_gen:entity work.bbc_clk_gen 
-	port map (
-		clk_16_i        => r_CLK_16,
-		clk_8_o         => open,
-		clk_4_o         => open,
-		clk_2_o         => open,
-		clk_1_o         => open,
-		
-		bbc_slow_i  	 => sys_slow_hw_dl,
-		bbc_phi1_i      => i_SYS_phi1,
+		e_bbc_clk_gen:entity work.bbc_clk_gen 
+		port map (
+			clk_16_i        => r_CLK_16,
+			
+			bbc_slow_i  	=> sys_slow_hw_dl,
+			bbc_phi1_i      => i_SYS_phi1,
 
-		bbc_phi0_o      => i_SYS_PHI0
-	);
+			bbc_phi0_o      => i_SYS_PHI0,
+			bbc_2MHzE_o     => i_SYS_2MHzE,
+			bbc_1MHzE_o     => i_SYS_1MHzE,
 
-	e_slow_cyc_dec:entity work.bbc_slow_cyc
-	port map (
-		SYS_A_i => i_SYS_A,
-		SLOW_o => sys_slow_hw
+			clken4_o			 => i_clken4
 		);
-	
-	sys_slow_ram <= '0';
-	sys_slow_hw_dl <= sys_slow_hw after 30 ns;
-	sys_slow_ram_dl <= sys_slow_ram after 30 ns;
-	sys_ram_en <= '1';
+
+		e_slow_cyc_dec:entity work.bbc_slow_cyc
+		port map (
+			SYS_A_i => i_SYS_A,
+			SLOW_o => sys_slow_hw
+			);
+		
+		sys_slow_ram <= '0';
+		sys_slow_hw_dl <= sys_slow_hw after 30 ns;
+		sys_slow_ram_dl <= sys_slow_ram after 30 ns;
+		sys_ram_en <= '1';
+
+		-- sys via
+		G_SYSVIA:IF G_INCLUDE_SYSVIA GENERATE
+			e_sys_via:m6522
+			port map (
+				-- clocking stuff
+		      I_P2_H                => i_SYS_1MHzE,
+	   	   RESET_L               => SYS_nRESET_i,	-- NOTE: this should be only reset on power up but all resets are hard in sim
+	      	ENA_4                 => i_clken4, -- generated clken Hoglet specific 6522 implementation
+	      	CLK                   => not r_CLK_16,
+
+
+		      I_RW_L					 => SYS_Rnw_i,
+		      I_CS1						 => i_SYS_1MHzE,
+		      I_CS2_L					 => i_sysvia_cs2,
+		
+		      O_IRQ_L               => i_sysvia_nIRQ,
+
+	         I_RS                  => i_SYS_A(3 downto 0),
+	      	I_DATA                => SYS_D_io,
+	      	O_DATA                => i_sysvia_D_out,
+	      	O_DATA_OE_L           => i_sysvia_D_oe,
+
+		      -- port a
+		      I_CA1                 => '1',
+		      I_CA2                 => '1',
+		      O_CA2                 => open,
+		      O_CA2_OE_L            => open,
+
+		      I_PA                  => (others => '1'),
+		      O_PA                  => open,
+		      O_PA_OE_L             => open,
+
+		      -- port b
+		      I_CB1                 => '1',
+		      O_CB1                 => open,
+		      O_CB1_OE_L            => open,
+
+		      I_CB2                 => '1',
+		      O_CB2                 => open,
+		      O_CB2_OE_L            => open,
+
+		      I_PB                  => (others => '1'),
+		      O_PB                  => open,
+		      O_PB_OE_L             => open
+			);
+
+			SYS_D_io <= i_sysvia_D_out when i_sysvia_D_oe = '0' else (others => 'Z');
+		END GENERATE;
+		G_NO_SYSVIA:IF NOT G_INCLUDE_SYSVIA GENERATE
+			i_sysvia_nIRQ <= '1';
+		END GENERATE;
 
 	END GENERATE;
 
 	G_ELK_CK:IF G_SIM_SYS_TYPE = SIM_SYS_ELK GENERATE
-	e_elk_clk_gen:entity work.elk_clk_gen 
-	port map (
-		clk_16_i        => r_CLK_16,
-		clk_8_o         => open,
-		clk_4_o         => open,
-		clk_2_o         => open,
-		clk_1_o         => open,
-		
-		elk_slow_hw_i  => sys_slow_hw_dl,
-		elk_slow_RAM_i => sys_slow_ram_dl,
-		elk_ram_en_o   => sys_ram_en,
+		e_elk_clk_gen:entity work.elk_clk_gen 
+		port map (
+			clk_16_i        => r_CLK_16,
+			
+			elk_slow_hw_i  => sys_slow_hw_dl,
+			elk_slow_RAM_i => sys_slow_ram_dl,
+			elk_ram_en_o   => sys_ram_en,
 
-		elk_phi0_o      => i_SYS_PHI0
-	);
-
-	e_slow_cyc_dec:entity work.elk_slow_cyc
-	port map (
-		SYS_A_i => i_SYS_A,
-		SLOW_o => sys_slow_hw,
-		SLOW_RAM_o => sys_slow_ram
+			elk_phi0_o      => i_SYS_PHI0
 		);
-	
-	sys_slow_hw_dl <= sys_slow_hw after 40 ns;
-	sys_slow_ram_dl <= sys_slow_ram after 40 ns;
+
+		e_slow_cyc_dec:entity work.elk_slow_cyc
+		port map (
+			SYS_A_i => i_SYS_A,
+			SLOW_o => sys_slow_hw,
+			SLOW_RAM_o => sys_slow_ram
+			);
+		
+		sys_slow_hw_dl <= sys_slow_hw after 40 ns;
+		sys_slow_ram_dl <= sys_slow_ram after 40 ns;
+
+		i_sysvia_nIRQ <= '1';
 
 	END GENERATE;
 

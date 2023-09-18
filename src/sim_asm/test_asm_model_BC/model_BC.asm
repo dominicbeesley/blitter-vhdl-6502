@@ -223,6 +223,14 @@ mos_handle_res:
 	ldx	#0
 	stx	sheila_SYSVIA_ddra	; slow bus/keyboard all inputs
 
+	; TEST #0
+	ldx	sheila_SYSVIA_ddra
+	txa
+	eor	#$FF
+	sta	sheila_SYSVIA_ddra
+	lda	sheila_SYSVIA_ddra
+	stx	sheila_SYSVIA_ddra
+
 	; TEST #1 
 	; For the Model B/C the vhdl needs to intercept the IER 
 	; CA1 interrupt disabled on motherboard and enabled

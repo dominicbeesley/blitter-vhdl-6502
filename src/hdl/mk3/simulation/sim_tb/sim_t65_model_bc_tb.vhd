@@ -94,6 +94,7 @@ begin
 	generic map (
 		G_MOSROMFILE => G_MOSROMFILE,
 		G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+		G_INCLUDE_SYSVIA => true,
 		G_MK3 => true
 	)
 	port map (

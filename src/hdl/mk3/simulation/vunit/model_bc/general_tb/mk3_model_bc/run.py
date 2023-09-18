@@ -98,11 +98,12 @@ lib.add_source_file(root + "library/simulation/bbc/elk_clock_gen.vhd")
 lib.add_source_file(root + "library/bbc/elk_slow_cyc.vhd")
 lib.add_source_file(root + "simulation_shared/sim_SYS_pack.vhd")
 lib.add_source_file(root + "simulation_shared/sim_SYS_tb.vhd")
+lib.add_source_file(root + "library/3rdparty/MikeStirling/m6522.vhd")
 
 lib.add_source_file(root + "mk3/simulation/sim_tb/sim_t65_model_bc_tb.vhd")
 
 tb = lib.test_bench("sim_t65_model_bc_tb")
-tb.set_generic("G_MOSROMFILE","../../../../../../../sim_asm/test_asm_model_BC/build/model_bc.rom")
+tb.set_generic("G_MOSROMFILE","../../" + root + "../sim_asm/test_asm_model_BC/build/model_bc.rom")
 
 # Run vunit function
 vu.main()
