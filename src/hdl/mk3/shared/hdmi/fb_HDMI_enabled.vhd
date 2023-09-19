@@ -124,6 +124,7 @@ architecture rtl of fb_hdmi is
 
 	signal i_clken_crtc					: std_logic;
 	signal i_clken_crtc_adr				: std_logic;
+	signal r_clken_crtc_adr_ttx		: std_logic_vector(62 downto 0);
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(3 downto 0);
@@ -243,6 +244,8 @@ begin
 
 	);
 
+
+
 	e_crtc:entity work.fb_HDMI_crtc
 	generic map (
 		SIM				=> SIM
@@ -288,7 +291,7 @@ begin
 
     -- Character data input (in the bus clock domain)
     DI_CLOCK    => fb_syscon_i.clk,
-    DI_CLKEN    => i_clken_crtc_adr,
+    DI_CLKEN    => r_clken_crtc_adr_ttx(0),
     DI          => i_D_pxbyte(6 downto 0),
 
     -- Timing inputs
@@ -310,6 +313,13 @@ begin
     );
 
 
+	p_dly_ttx:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high-1 downto 0) <= r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high downto 1);
+			r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high) <= i_clken_crtc_adr;
+		end if;
+	end process;
 
 	e_hdmi_ram:entity work.fb_HDMI_ram
 	generic map (
