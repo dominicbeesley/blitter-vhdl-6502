@@ -50,7 +50,7 @@ package board_config_pack is
 
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
 
-	constant G_INCL_HDMI		: boolean := false;
+	constant G_INCL_HDMI		: boolean := true;
 		
 	constant G_INCL_CHIPSET		: boolean := true;
 	constant G_INCL_CS_DMA		: boolean := true;
@@ -63,29 +63,29 @@ package board_config_pack is
 		
 	constant C_CPU_BYTELANES	: positive := 4;
 	constant G_INCL_CPU_T65		: boolean := true;
-	constant G_INCL_CPU_65C02	: boolean := true;
+	constant G_INCL_CPU_65C02	: boolean := false;
 	constant G_INCL_CPU_6800	: boolean := false;
 	constant G_INCL_CPU_80188	: boolean := false;
 	constant G_INCL_CPU_65816	: boolean := true;
-	constant G_INCL_CPU_6x09	: boolean := true;
+	constant G_INCL_CPU_6x09	: boolean := false;
 	constant G_INCL_CPU_Z80		: boolean := false;
 	constant G_INCL_CPU_68008	: boolean := false;
-	constant G_INCL_CPU_680x0	: boolean := true;
-	constant G_INCL_CPU_ARM2	: boolean := true;
-	constant G_INCL_CPU_Z180	: boolean := true;
+	constant G_INCL_CPU_680x0	: boolean := false;
+	constant G_INCL_CPU_ARM2	: boolean := false;
+	constant G_INCL_CPU_Z180	: boolean := false;
 
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
 	constant G_MEM_FAST_IS_10	: boolean := true;
 	constant G_MEM_SLOW_IS_45	: boolean := true;
 
-	constant PERIPHERAL_COUNT	: natural := 5;
+	constant PERIPHERAL_COUNT	: natural := 6;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS	: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
 	constant PERIPHERAL_NO_MEMCTL	: natural := 3;
 	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
-	constant PERIPHERAL_NO_HDMI	: natural := 0;	-- not used
+	constant PERIPHERAL_NO_HDMI	: natural := 5;	-- not used
 	
 
 	constant CONTROLLER_COUNT	: natural := 2;
