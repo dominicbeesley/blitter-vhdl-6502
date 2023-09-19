@@ -217,14 +217,10 @@ begin
 	SYS_PHI2_o <= i_gen_phi2;
 	SYS_A_o <= r_sys_A;
 
---	-- latch to try and squeeze a bit of time at end of sys cycle - RAM reads are tight
---	i_D_rd <= r_sys_ROMPG when r_sys_A(15 downto 0) = x"FE30" else
---				 SYS_D_io;
 	-- new: 21/7/21 - always read rom paging register from SYS (which will read as nothing!)
 	i_D_rd <= SYS_D_io;
 
-	fb_p2c_o.D_rd <= i_D_rd when state = addrlatched_rd else
-						  r_D_rd;
+	fb_p2c_o.D_rd <= r_D_rd; -- this used to be a latch but got rid for timing simplification
 	fb_p2c_o.stall <= '0' when state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
 	fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
 	fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
@@ -371,7 +367,17 @@ begin
 										r_JIM_en <= '0';
 									end if;
 								end if;
-								r_sys_D <= r_D_wr;
+
+								-- MODEL B/C - intercept IER
+								if r_sys_A(15 downto 0) = x"FE4E" then
+									if r_D_wr(7) = '1' then
+										r_sys_D <= r_D_wr and "11111101"; 	-- mask out CA1
+									else
+										r_sys_D <= r_D_wr or "00000010"; 	-- force clear CA1
+									end if;
+								else
+									r_sys_D <= r_D_wr;
+								end if;
 								r_ack <= '1';
 								r_rdy <= '1';
 								state <= wait_sys_end_wr;
