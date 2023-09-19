@@ -111,7 +111,13 @@ entity fb_sys is
 		debug_wrap_sys_cyc_o					: out		std_logic;
 		debug_wrap_sys_st_o					: out		std_logic;
 
-		debug_sys_D_dir						: out		std_logic
+		debug_sys_D_dir						: out		std_logic;
+
+		---- MODEL B/C EXTRAS ----
+
+		mb_vsync_i								: in		std_logic;
+
+		mb_irq_o									: out		std_logic
 
 	);
 end fb_sys;
@@ -189,6 +195,17 @@ architecture rtl of fb_sys is
 	signal	r_d_wr				: std_logic_vector(7 downto 0);
 
 
+	--- model B/C Vsync irq stuff ---
+
+	signal	r_mb_ca1_clr_req  : std_logic;		-- signal from cpu to clear interrupt (either read port A or IFR set)
+	signal   r_mb_ca1_clr_ack	: std_logic;		-- ack signal for above
+
+	signal	r_ier_ca1			: std_logic;		-- interrupt enable for CA1
+	signal   r_ifr_ca1			: std_logic;		-- interrupt status for CA1
+
+	signal 	r_prev_ca1			: std_logic;
+
+
 begin
 
 	--TODOPIPE: separate peripheral and motherboard cycle state machines
@@ -248,6 +265,9 @@ begin
 
 			r_had_d_stb <= '0';
 			r_d_wr <= (others => '0');
+
+			r_mb_ca1_clr_req <= '0';
+			r_ier_ca1 <= '0';
 
 		else
 			if rising_edge(fb_syscon_i.clk) then
@@ -332,8 +352,27 @@ begin
 							end if;
 							if i_sys_rdy_ctdn_rd = RDY_CTDN_MIN then
 								state <= idle;		
-								r_ack <= '1';		
-								r_D_rd <= i_D_rd;				
+								r_ack <= '1';	
+								-- MODEL B/C intercept IER/IFR
+								if r_sys_A(15 downto 0) = x"FE4D" then
+									-- IFR
+									r_D_rd(7) <= i_D_rd(7) or (r_ier_ca1 and r_ifr_ca1);
+									r_D_rd(6 downto 2) <= i_D_rd(6 downto 2);
+									r_D_rd(1) <= r_ier_ca1 and r_ifr_ca1;
+									r_D_rd(0) <= i_D_rd(0);
+								elsif r_sys_A(15 downto 0) = x"FE4E" then
+									-- IER
+									r_D_rd(7) <= i_D_rd(7);
+									r_D_rd(6 downto 2) <= i_D_rd(6 downto 2);
+									r_D_rd(1) <= r_ier_ca1;
+									r_D_rd(0) <= i_D_rd(0);
+								else
+									if r_sys_A(15 downto 0) = x"FE40" then
+										-- reads of PORTA clear CA1 interrupt
+										r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
+									end if;
+									r_D_rd <= i_D_rd;				
+								end if;
 							end if;
 						end if;
 					when addrlatched_wr =>
@@ -375,7 +414,17 @@ begin
 									else
 										r_sys_D <= r_D_wr or "00000010"; 	-- force clear CA1
 									end if;
+
+									if r_D_wr(1) = '1' then
+										r_ier_ca1 <= r_D_wr(7);
+									end if;
 								else
+									-- MODEL B/C - intercept IFR reset
+									if r_sys_A(15 downto 0) = x"FE4D" then
+										if r_D_wr(1) = '1' then
+											r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
+										end if;
+									end if;
 									r_sys_D <= r_D_wr;
 								end if;
 								r_ack <= '1';
@@ -534,5 +583,34 @@ begin
 
 	debug_sys_rd_ack_o <= r_ack;
 
+	--- Model B/C Vsync stuff ---
+
+	p_ca1:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_prev_ca1 <= mb_vsync_i;
+			r_mb_ca1_clr_ack <= '0';
+			r_ifr_ca1 <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			
+			--detect falling edge
+			if mb_vsync_i = '0' and r_prev_ca1 = '1' then
+				if r_ier_ca1 = '1' then
+					r_ifr_ca1 <= '1';
+				end if;
+			end if;
+			r_prev_ca1 <= mb_vsync_i;
+
+			--detect cpu ca1 interrupt clear
+			if r_mb_ca1_clr_ack /= r_mb_ca1_clr_req then
+				r_mb_ca1_clr_ack <= r_mb_ca1_clr_req;
+				r_ifr_ca1 <= '0';
+			end if;
+
+		end if;
+	end process;
+
+	mb_irq_o <= '0' when r_ifr_ca1 = '1' and r_ier_ca1 = '1' else
+					'1';
 
 end rtl;
