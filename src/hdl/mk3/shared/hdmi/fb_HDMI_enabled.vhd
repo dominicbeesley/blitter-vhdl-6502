@@ -49,14 +49,26 @@ entity fb_HDMI is
 		HDMI_G_o								: out		std_logic;
 		HDMI_B_o								: out		std_logic;
 
-		-- debug video	
+		-- analogue video	
 
-		VGA_R_o								: out		std_logic;
-		VGA_G_o								: out		std_logic;
-		VGA_B_o								: out		std_logic;
+		VGA_R_o								: out		std_logic_vector(3 downto 0);
+		VGA_G_o								: out		std_logic_vector(3 downto 0);
+		VGA_B_o								: out		std_logic_vector(3 downto 0);
 		VGA_HS_o								: out		std_logic;
 		VGA_VS_o								: out		std_logic;
 		VGA_BLANK_o							: out		std_logic;
+
+		-- retimed analogue video
+		VGA27_R_o							: out		std_logic_vector(3 downto 0);
+		VGA27_G_o							: out		std_logic_vector(3 downto 0);
+		VGA27_B_o							: out		std_logic_vector(3 downto 0);
+		VGA27_HS_o							: out		std_logic;
+		VGA27_VS_o							: out		std_logic;
+		VGA27_BLANK_o						: out		std_logic;
+
+		-- sysvia scroll registers
+		scroll_latch_c_i					: in		std_logic_vector(1 downto 0);
+
 
 		PCM_L_i								: in		signed(9 downto 0);
 
@@ -158,13 +170,19 @@ architecture rtl of fb_hdmi is
 
 begin
 
-	VGA_R_o <= i_R_DVI(7);
-	VGA_G_o <= i_G_DVI(7);
-	VGA_B_o <= i_B_DVI(7);
-	VGA_VS_o <= i_vsync_DVI;
-	VGA_HS_o <= i_hsync_DVI;
-	VGA_BLANK_o <= i_blank_DVI;
+	VGA27_R_o 		<= i_R_DVI(7 downto 4);
+	VGA27_G_o 		<= i_G_DVI(7 downto 4);
+	VGA27_B_o 		<= i_B_DVI(7 downto 4);
+	VGA27_VS_o 		<= i_vsync_DVI;
+	VGA27_HS_o 		<= i_hsync_DVI;
+	VGA27_BLANK_o 	<= i_blank_DVI;
 
+	VGA_R_o 			<= i_ULA_R;
+	VGA_G_o 			<= i_ULA_G;
+	VGA_B_o 			<= i_ULA_B;
+	VGA_VS_o 		<= i_vsync_CRTC;
+	VGA_HS_o 		<= i_hsync_CRTC;
+	VGA_BLANK_o 	<= not i_disen_CRTC;
 
 	g_sim_pll:if SIM generate
 
@@ -462,7 +480,17 @@ END GENERATE;
 			-- No adjustment
 			aa := unsigned(i_crtc_ma(11 downto 8));
 		else
-			aa := unsigned(i_crtc_ma(11 downto 8)) + 6;
+			case scroll_latch_c_i is
+				when "00" =>
+					aa := unsigned(i_crtc_ma(11 downto 8)) + 8;
+				when "01" =>
+					aa := unsigned(i_crtc_ma(11 downto 8)) + 12;
+				when "10" =>
+					aa := unsigned(i_crtc_ma(11 downto 8)) + 6;
+				when others =>
+					aa := unsigned(i_crtc_ma(11 downto 8)) + 11;
+			end case;
+
 		end if;
 		
 --		if i_crtc_ma(13) = '0' then
@@ -471,7 +499,7 @@ END GENERATE;
 			i_A_pxbyte <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
 		else
 			-- TTX VDU
-			i_A_pxbyte <= "00" & std_logic(aa(3)) & "1111" & i_crtc_ma(9 downto 0);
+			i_A_pxbyte <= "0011111" & i_crtc_ma(9 downto 0);
 		end if;
 	end process;
 

@@ -76,14 +76,26 @@ package HDMI_pack is
 		HDMI_G_o								: out		std_logic;
 		HDMI_B_o								: out		std_logic;
 
-		-- debug video	
+		-- analogue video	
 
-		VGA_R_o								: out		std_logic;
-		VGA_G_o								: out		std_logic;
-		VGA_B_o								: out		std_logic;
+		VGA_R_o								: out		std_logic_vector(3 downto 0);
+		VGA_G_o								: out		std_logic_vector(3 downto 0);
+		VGA_B_o								: out		std_logic_vector(3 downto 0);
 		VGA_HS_o								: out		std_logic;
 		VGA_VS_o								: out		std_logic;
 		VGA_BLANK_o							: out		std_logic;
+
+		-- retimed analogue video
+		VGA27_R_o							: out		std_logic_vector(3 downto 0);
+		VGA27_G_o							: out		std_logic_vector(3 downto 0);
+		VGA27_B_o							: out		std_logic_vector(3 downto 0);
+		VGA27_HS_o							: out		std_logic;
+		VGA27_VS_o							: out		std_logic;
+		VGA27_BLANK_o						: out		std_logic;
+
+		-- sysvia latch scroll registers
+
+		scroll_latch_c_i					: in		std_logic_vector(1 downto 0);
 
 		PCM_L_i								: in		signed(9 downto 0);
 

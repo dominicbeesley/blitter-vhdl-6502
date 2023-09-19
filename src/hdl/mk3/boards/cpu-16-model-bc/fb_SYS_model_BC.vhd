@@ -117,7 +117,9 @@ entity fb_sys is
 
 		mb_vsync_i								: in		std_logic;
 
-		mb_irq_o									: out		std_logic
+		mb_irq_o									: out		std_logic;
+
+		mb_scroll_latch_c_o					: out		std_logic_vector(1 downto 0)
 
 	);
 end fb_sys;
@@ -205,6 +207,7 @@ architecture rtl of fb_sys is
 
 	signal 	r_prev_ca1			: std_logic;
 
+	signal	r_mb_scroll_latch : std_logic_vector(1 downto 0);
 
 begin
 
@@ -269,6 +272,7 @@ begin
 			r_mb_ca1_clr_req <= '0';
 			r_ier_ca1 <= '0';
 
+			r_mb_scroll_latch <= (others => '0');
 		else
 			if rising_edge(fb_syscon_i.clk) then
 
@@ -423,6 +427,13 @@ begin
 									if r_sys_A(15 downto 0) = x"FE4D" then
 										if r_D_wr(1) = '1' then
 											r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
+										end if;
+									elsif r_sys_A(15 downto 0) = x"FE40" then
+										-- ORB latch -- assume DDRB is 0F
+										if r_D_wr(2 downto 0) = "100" then
+											r_mb_scroll_latch(0) <= r_D_wr(3);
+										elsif r_D_wr(2 downto 0) = "101" then
+											r_mb_scroll_latch(1) <= r_D_wr(3);
 										end if;
 									end if;
 									r_sys_D <= r_D_wr;
@@ -612,5 +623,7 @@ begin
 
 	mb_irq_o <= '0' when r_ifr_ca1 = '1' and r_ier_ca1 = '1' else
 					'1';
+
+	mb_scroll_latch_c_o <= r_mb_scroll_latch;
 
 end rtl;

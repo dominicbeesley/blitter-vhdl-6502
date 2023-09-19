@@ -313,17 +313,26 @@ architecture rtl of mk3blit is
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
 
-	signal i_vga_debug_r					: std_logic;
-	signal i_vga_debug_g					: std_logic;
-	signal i_vga_debug_b					: std_logic;
+	signal i_vga_debug_r					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_g					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_b					: std_logic_vector(3 downto 0);
 	signal i_vga_debug_hs				: std_logic;
 	signal i_vga_debug_vs				: std_logic;
 	signal i_vga_debug_blank			: std_logic;
+
+	signal i_vga27_debug_r				: std_logic_vector(3 downto 0);
+	signal i_vga27_debug_g				: std_logic_vector(3 downto 0);
+	signal i_vga27_debug_b				: std_logic_vector(3 downto 0);
+	signal i_vga27_debug_hs				: std_logic;
+	signal i_vga27_debug_vs				: std_logic;
+	signal i_vga27_debug_blank			: std_logic;
 
 	signal i_debug_hsync_det			: std_logic;
 	signal i_debug_vsync_det			: std_logic;
 	signal i_debug_hsync_crtc			: std_logic;
 	signal i_debug_odd					: std_logic;
+
+	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
 
 
 	-----------------------------------------------------------------------------
@@ -685,7 +694,9 @@ END GENERATE;
 
 		mb_vsync_i							=> i_vga_debug_vs,
 
-		mb_irq_o								=> i_sys_nIRQ
+		mb_irq_o								=> i_sys_nIRQ,
+
+		mb_scroll_latch_c_o				=> i_mb_scroll_latch_c
 	);
 
 
@@ -995,11 +1006,11 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
-SYS_AUX_o			<= i_vga_debug_hs & i_vga_debug_vs & i_sys_nIRQ & "0";
-SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);
-SYS_AUX_io(1) <= i_vga_debug_r;
-SYS_AUX_io(2) <= i_debug_odd;
-SYS_AUX_io(3) <= i_vga_debug_blank;
+SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_sys_nIRQ & "0";
+SYS_AUX_io(0) 		<= not (i_vga_debug_hs xor i_vga_debug_vs);
+SYS_AUX_io(1) 		<= i_vga_debug_r(i_vga_debug_r'high);
+SYS_AUX_io(2) 		<= i_debug_odd;
+SYS_AUX_io(3) 		<= i_vga_debug_blank;
 
 SYS_AUX_io <= (others => 'Z');
 
@@ -1040,7 +1051,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		HDMI_G_o				=> HDMI_D1_o,
 		HDMI_R_o				=> HDMI_D2_o,
 
-		-- debug video	
+		-- analogue video	straight from CRTC/ULA
 
 		VGA_R_o				=> i_vga_debug_r,
 		VGA_G_o				=> i_vga_debug_g,
@@ -1048,6 +1059,17 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_HS_o				=> i_vga_debug_hs,
 		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank,
+
+		-- analogue video	retimed to 27 MHz DVI clock
+
+		VGA27_R_o				=> i_vga27_debug_r,
+		VGA27_G_o				=> i_vga27_debug_g,
+		VGA27_B_o				=> i_vga27_debug_b,
+		VGA27_HS_o				=> i_vga27_debug_hs,
+		VGA27_VS_o				=> i_vga27_debug_vs,
+		VGA27_BLANK_o			=> i_vga27_debug_blank,
+
+		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
 		PCM_L_i				=> i_dac_sample,
 
