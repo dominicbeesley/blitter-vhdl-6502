@@ -123,7 +123,14 @@ architecture rtl of fb_hdmi is
 
 	--========== LOCAL VIDEO =========--
 	signal i_D_pxbyte 					: std_logic_vector(7 downto 0);
-	signal i_A_pxbyte						: std_logic_vector(16 downto 0);
+
+	signal i_RAM_A							: std_logic_vector(16 downto 0);
+	signal i_RAM_D							: std_logic_vector(7 downto 0);
+
+	signal i_RAMA_PLANE0					: std_logic_vector(16 downto 0);
+	signal r_RAMD_PLANE0					: std_logic_vector(7 downto 0);
+	signal i_RAMA_FONT					: std_logic_vector(16 downto 0);
+	signal r_RAMD_FONT					: std_logic_vector(7 downto 0);
 
 	signal i_clken_crtc					: std_logic;
 
@@ -345,8 +352,8 @@ begin
 		-- vga signals
 	
 		hdmi_ram_clk_i		=> fb_syscon_i.clk,
-		hdmi_ram_addr_i	=> i_A_pxbyte,
-		hdmi_ram_Q_o		=> i_D_pxbyte
+		hdmi_ram_addr_i	=> i_RAM_A,
+		hdmi_ram_Q_o		=> i_RAM_D
 	
 	);
 
@@ -499,15 +506,15 @@ END GENERATE;
 	end process;
 
 --====================================================================
--- Screen address calculations 
+-- Screen address calculations and other "sequencer stuff" - TODO: move to separate module?
 --====================================================================
 
--- TODO: improve wrapping (stuck in mode 0..2)
--- TODO: improve teletext detect (out from vidproc?)
+-- TODO: improve teletext detect (out from vidproc or keep MA13?)
+-- TODO: mode 15/80 cols teletext
 
 
 	-- Address translation logic for calculation of display address
-	process(i_crtc_ma,i_crtc_ra, i_TTX)
+	process(i_crtc_ma,i_crtc_ra, i_TTX, i_seq_alphamode, r_RAMD_PLANE0, scroll_latch_c_i)
 	variable aa : unsigned(3 downto 0);
 	begin
 		if i_crtc_ma(12) = '0' then
@@ -527,19 +534,49 @@ END GENERATE;
 
 		end if;
 		
---		if i_crtc_ma(13) = '0' then
+--		if i_crtc_ma(13) = '1' then
 		if i_TTX = '1' then
 			-- TTX VDU
-			i_A_pxbyte <= "0011111" & i_crtc_ma(9 downto 0);
+			i_RAMA_PLANE0 <= "0011111" & i_crtc_ma(9 downto 0);
 		elsif i_seq_alphamode = '1' then
 			-- ANSI mode serializer
-			i_A_pxbyte <= "001111" & i_crtc_ma(10 downto 0);		
+			i_RAMA_PLANE0 <= "001111" & i_crtc_ma(10 downto 0);		
 		else
 			-- HI RES
-			i_A_pxbyte <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
+			i_RAMA_PLANE0 <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
 		end if;
+
+		-- in alpha mode the address of the next set of pixels looked up from font loaded at 3000
+		i_RAMA_FONT <= "0" & x"3" & r_RAMD_PLANE0 & i_crtc_ra(3 downto 0);
+
 	end process;
 
+	p_seq:process(fb_syscon_i)
+	variable v_seq:unsigned(2 downto 0);
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if i_clken_crtc = '1' then
+				v_seq := (others => '0');
+			elsif v_seq /= "111" then
+				v_seq := v_seq + 1;
+			end if;
+
+			case to_integer(v_seq) is
+				when 2 =>
+					i_RAM_A <= i_RAMA_PLANE0;
+				when 4 =>
+					r_RAMD_PLANE0 <= i_RAM_D;
+					i_RAM_A <= i_RAMA_FONT;
+				when 6 =>
+					r_RAMD_FONT <= i_RAM_D;
+				when others =>
+					null;
+			end case;
+		end if;					
+	end process;
+
+	i_D_pxbyte <= 	r_RAMD_FONT when i_seq_alphamode = '1' else
+						r_RAMD_PLANE0;
 
 
 --====================================================================
