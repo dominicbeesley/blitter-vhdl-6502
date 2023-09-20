@@ -133,6 +133,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/firmware_info_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
 
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ctl.vhd
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_seq_ctl.vhd
 
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd

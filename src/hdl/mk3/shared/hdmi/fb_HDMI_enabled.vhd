@@ -87,12 +87,13 @@ architecture rtl of fb_hdmi is
 
 	--=========== FISHBONE ============--
 
-	constant PERIPHERAL_COUNT 				: positive := 5;
+	constant PERIPHERAL_COUNT 				: positive := 6;
 	constant PERIPHERAL_N_MEM 				: natural := 0;
 	constant PERIPHERAL_N_VIDPROC 		: natural := 1;
 	constant PERIPHERAL_N_CRTC 			: natural := 2;
 	constant PERIPHERAL_N_I2C				: natural := 3;
 	constant PERIPHERAL_N_HDMI_CTL		: natural := 4;
+	constant PERIPHERAL_N_SEQ_CTL			: natural := 5;
 	
 	-- intcon peripheral->controller
 	signal i_per_c2p_intcon				: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
@@ -112,6 +113,8 @@ architecture rtl of fb_hdmi is
 	signal i_i2c_fb_s2m					: fb_con_i_per_o_t;
 	signal i_hdmictl_fb_m2s				: fb_con_o_per_i_t;
 	signal i_hdmictl_fb_s2m				: fb_con_i_per_o_t;
+	signal i_seqctl_fb_c2p				: fb_con_o_per_i_t;
+	signal i_seqctl_fb_p2c				: fb_con_i_per_o_t;
 
 
 	-- DVI PLL
@@ -168,6 +171,10 @@ architecture rtl of fb_hdmi is
 	signal r_pix_audio_enable			: std_logic;
 
 	signal i_ttxt_di_clken				: std_logic;
+
+	-- extras for ANSI mode
+
+	signal i_seq_alphamode				: std_logic;
 
 begin
 
@@ -359,6 +366,19 @@ begin
 	
 	);
 
+	e_hdmi_seq_ctrl:entity work.fb_HDMI_seq_ctl
+	generic map (
+		SIM				=> SIM
+	)
+	port map (
+		fb_syscon_i		=> fb_syscon_i,
+		fb_c2p_i			=> i_seqctl_fb_c2p,
+		fb_p2c_o			=> i_seqctl_fb_p2c,
+	
+		ALPHA_MODE_o	=> i_seq_alphamode
+	);
+
+
 
 	e_fb_i2c:entity work.fb_i2c
 	generic map (
@@ -508,12 +528,15 @@ END GENERATE;
 		end if;
 		
 --		if i_crtc_ma(13) = '0' then
-		if i_TTX = '0' then
-			-- HI RES
-			i_A_pxbyte <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
-		else
+		if i_TTX = '1' then
 			-- TTX VDU
 			i_A_pxbyte <= "0011111" & i_crtc_ma(9 downto 0);
+		elsif i_seq_alphamode = '1' then
+			-- ANSI mode serializer
+			i_A_pxbyte <= "001111" & i_crtc_ma(10 downto 0);		
+		else
+			-- HI RES
+			i_A_pxbyte <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
 		end if;
 	end process;
 
@@ -528,12 +551,14 @@ END GENERATE;
 	i_crtc_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_CRTC);
 	i_i2c_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_I2C);
 	i_hdmictl_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_HDMI_CTL);
+	i_seqctl_fb_c2p <= i_per_c2p_intcon(PERIPHERAL_N_SEQ_CTL);
 
 	i_per_p2c_intcon(PERIPHERAL_N_MEM) <= i_ram_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_VIDPROC) <= i_vidproc_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_CRTC) <= i_crtc_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_I2C) <= i_i2c_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_HDMI_CTL) <= i_hdmictl_fb_s2m;
+	i_per_p2c_intcon(PERIPHERAL_N_SEQ_CTL) <= i_seqctl_fb_p2c;
 
 
 
@@ -565,7 +590,8 @@ END GENERATE;
 
 
 		-- official addresses:
-		-- FB FE00, FE01 - CRTC
+		-- FB FE00, FE01 - CRTC		(IX, DAT)
+		-- FB FE02, FE03 - SEQ CTL	(IX, DAT)
 		-- FB FE2x - VIDPROC
 		-- FB FEDx - i2c
 		-- FB FEEx - HDMI control
@@ -579,9 +605,12 @@ END GENERATE;
 			elsif i_intcon_peripheral_sel_addr(7 downto 4) = x"2" then
 				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_VIDPROC, numbits(PERIPHERAL_COUNT));
 				i_intcon_peripheral_sel_oh(PERIPHERAL_N_VIDPROC) <= '1';
-			else
+			elsif i_intcon_peripheral_sel_addr(7 downto 1) = x"0" & "000" then
 				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_CRTC, numbits(PERIPHERAL_COUNT));
 				i_intcon_peripheral_sel_oh(PERIPHERAL_N_CRTC) <= '1';				
+			else
+				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_SEQ_CTL, numbits(PERIPHERAL_COUNT));
+				i_intcon_peripheral_sel_oh(PERIPHERAL_N_SEQ_CTL) <= '1';				
 			end if;
 		else
 			i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_MEM, numbits(PERIPHERAL_COUNT));
