@@ -39,7 +39,6 @@ entity fb_HDMI_crtc is
 	
 		-- Clock enable output to CRTC
 		CLKEN_CRTC_i						:	in		std_logic;
-		CLKEN_CRTC_ADR_i					:	in		std_logic;
 		
 		-- Display interface
 		VSYNC_o								:	out	std_logic;
@@ -73,11 +72,11 @@ begin
 	port map (
 		CLOCK		=> fb_syscon_i.clk,
 		CLKEN		=> CLKEN_CRTC_i,
-		CLKEN_ADR=> CLKEN_CRTC_ADR_i,
-		nRESET	=> not fb_syscon_i.rst,
+		CLKEN_CPU	=> r_mc6845_en,
+		nRESET		=> not fb_syscon_i.rst,
 
 		-- Bus interface
-		ENABLE	=> r_mc6845_en,
+		ENABLE		=> r_mc6845_en,
 		R_nW		=> r_mc6845_rnw,
 		RS			=> r_A,
 		DI			=> r_d_wr,

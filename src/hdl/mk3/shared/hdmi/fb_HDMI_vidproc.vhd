@@ -44,7 +44,6 @@ entity fb_HDMI_vidproc is
 
 		-- Clock enable output to CRTC
 		CLKEN_CRTC_o						:	out	std_logic;
-		CLKEN_CRTC_ADR_o					:	out	std_logic;
 		
 		-- Display RAM data bus (for display data fetch)
 		RAM_D_i								:	in	std_logic_vector(7 downto 0);
@@ -107,7 +106,6 @@ begin
 		nRESET			=> not fb_syscon_i.rst,
 		
 		CLKEN_CRTC		=> CLKEN_CRTC_o,
-		CLKEN_CRTC_ADR	=> CLKEN_CRTC_ADR_o,
 		
 		CPUCLKEN			=> '1',
 		ENABLE			=> r_d_wr_stb,

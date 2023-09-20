@@ -123,8 +123,6 @@ architecture rtl of fb_hdmi is
 	signal i_A_pxbyte						: std_logic_vector(16 downto 0);
 
 	signal i_clken_crtc					: std_logic;
-	signal i_clken_crtc_adr				: std_logic;
-	signal r_clken_crtc_adr_ttx		: std_logic_vector(62 downto 0);
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(3 downto 0);
@@ -168,6 +166,8 @@ architecture rtl of fb_hdmi is
 	signal i_pixel_double				: std_logic;
 	signal i_audio_enable				: std_logic;
 	signal r_pix_audio_enable			: std_logic;
+
+	signal i_ttxt_di_clken				: std_logic;
 
 begin
 
@@ -228,7 +228,6 @@ begin
 		CLK_48M_i			=> CLK_48M_i,
 
 		CLKEN_CRTC_o		=> i_clken_crtc,
-		CLKEN_CRTC_ADR_o	=> i_clken_crtc_adr,
 		RAM_D_i				=> i_D_pxbyte,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
@@ -256,7 +255,6 @@ begin
 		fb_c2p_i				=> i_crtc_fb_m2s,
 		fb_p2c_o				=> i_crtc_fb_s2m,
 		CLKEN_CRTC_i		=> i_clken_crtc,
-		CLKEN_CRTC_ADR_i	=> i_clken_crtc_adr,
 		
 		-- Display interface
 		VSYNC_o				=> i_vsync_CRTC,
@@ -291,7 +289,7 @@ begin
 
     -- Character data input (in the bus clock domain)
     DI_CLOCK    => fb_syscon_i.clk,
-    DI_CLKEN    => r_clken_crtc_adr_ttx(0),
+    DI_CLKEN    => i_ttxt_di_clken,
     DI          => i_D_pxbyte(6 downto 0),
 
     -- Timing inputs
@@ -313,13 +311,19 @@ begin
     );
 
 
-	p_dly_ttx:process(fb_syscon_i)
+	p_ttx_di:process(fb_syscon_i)
+	variable vr_delay : std_logic_vector(30 downto 0);
 	begin
-		if rising_edge(fb_syscon_i.clk) then
-			r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high-1 downto 0) <= r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high downto 1);
-			r_clken_crtc_adr_ttx(r_clken_crtc_adr_ttx'high) <= i_clken_crtc_adr;
+		if fb_syscon_i.rst = '1' then
+			vr_delay := (others => '0');
+			i_ttxt_di_clken <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			i_ttxt_di_clken <= vr_delay(vr_delay'high);
+			vr_delay(vr_delay'high downto 1) := vr_delay(vr_delay'high-1 downto 0);
+			vr_delay(0) := i_clken_crtc;
 		end if;
 	end process;
+
 
 	e_hdmi_ram:entity work.fb_HDMI_ram
 	generic map (
