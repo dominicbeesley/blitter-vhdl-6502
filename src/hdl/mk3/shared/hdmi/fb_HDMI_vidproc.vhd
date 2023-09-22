@@ -46,7 +46,8 @@ entity fb_HDMI_vidproc is
 		CLKEN_CRTC_o						:	out	std_logic;
 		
 		-- Display RAM data bus (for display data fetch)
-		RAM_D_i								:	in	std_logic_vector(7 downto 0);
+		RAM_D0_i								:	in	std_logic_vector(7 downto 0);
+		RAM_D1_i								:	in	std_logic_vector(7 downto 0);
 		
 		-- Control interface
 		nINVERT_i							:	in	std_logic;
@@ -55,6 +56,9 @@ entity fb_HDMI_vidproc is
 		
 		-- Teletext enabled
 		TTX_o									:  out std_logic;
+
+		-- Model B/C attribute in
+		MODE_ATTR_i							:  in  std_logic;
 
 		-- Video in (teletext mode)
 		R_TTX_i								:	in	std_logic;
@@ -111,7 +115,8 @@ begin
 		ENABLE			=> r_d_wr_stb,
 		A					=> r_A,
 		DI_CPU			=> r_d_wr,
-		DI_RAM			=> RAM_D_i,
+		DI_RAM_0			=> RAM_D0_i,
+		DI_RAM_1			=> RAM_D1_i,
 		nINVERT			=> nINVERT_i,
 		DISEN				=> DISEN_i,
 		CURSOR			=> CURSOR_i,
@@ -124,7 +129,9 @@ begin
 
 		VGA				=> '0',
 
-		TTXT				=> TTX_o
+		TTXT				=> TTX_o,
+
+		MODE_ATTR		=> MODE_ATTR_i
 	);
 
 

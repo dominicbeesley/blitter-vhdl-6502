@@ -121,7 +121,7 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
-set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc.vhd
+set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd

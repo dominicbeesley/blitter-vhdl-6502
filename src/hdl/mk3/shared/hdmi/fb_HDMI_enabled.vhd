@@ -129,6 +129,8 @@ architecture rtl of fb_hdmi is
 
 	signal i_RAMA_PLANE0					: std_logic_vector(16 downto 0);
 	signal r_RAMD_PLANE0					: std_logic_vector(7 downto 0);
+	signal i_RAMA_PLANE1					: std_logic_vector(16 downto 0);
+	signal r_RAMD_PLANE1					: std_logic_vector(7 downto 0);
 	signal i_RAMA_FONT					: std_logic_vector(16 downto 0);
 	signal r_RAMD_FONT					: std_logic_vector(7 downto 0);
 
@@ -242,7 +244,8 @@ begin
 		CLK_48M_i			=> CLK_48M_i,
 
 		CLKEN_CRTC_o		=> i_clken_crtc,
-		RAM_D_i				=> i_D_pxbyte,
+		RAM_D0_i				=> i_D_pxbyte,
+		RAM_D1_i				=> r_RAMD_PLANE1,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		CURSOR_i				=> i_cursor_CRTC,
@@ -253,8 +256,9 @@ begin
 		G_o					=> i_ULA_G,
 		B_o					=> i_ULA_B,
 
-		TTX_o					=> i_TTX
+		TTX_o					=> i_TTX,
 
+	   MODE_ATTR_i => i_seq_alphamode
 	);
 
 
@@ -322,6 +326,7 @@ begin
     G           => i_G_TTX,
     B           => i_B_TTX,
     Y           => open
+
     );
 
 
@@ -540,7 +545,8 @@ END GENERATE;
 			i_RAMA_PLANE0 <= "0011111" & i_crtc_ma(9 downto 0);
 		elsif i_seq_alphamode = '1' then
 			-- ANSI mode serializer
-			i_RAMA_PLANE0 <= "001111" & i_crtc_ma(10 downto 0);		
+			i_RAMA_PLANE0 <= "00111" & i_crtc_ma(10 downto 0) & '0';		
+			i_RAMA_PLANE1 <= "00111" & i_crtc_ma(10 downto 0) & '1';		
 		else
 			-- HI RES
 			i_RAMA_PLANE0 <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
@@ -552,12 +558,12 @@ END GENERATE;
 	end process;
 
 	p_seq:process(fb_syscon_i)
-	variable v_seq:unsigned(2 downto 0);
+	variable v_seq:unsigned(3 downto 0);
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			if i_clken_crtc = '1' then
 				v_seq := (others => '0');
-			elsif v_seq /= "111" then
+			elsif v_seq /= "1111" then
 				v_seq := v_seq + 1;
 			end if;
 
@@ -566,8 +572,11 @@ END GENERATE;
 					i_RAM_A <= i_RAMA_PLANE0;
 				when 4 =>
 					r_RAMD_PLANE0 <= i_RAM_D;
-					i_RAM_A <= i_RAMA_FONT;
+					i_RAM_A <= i_RAMA_PLANE1;
 				when 6 =>
+					i_RAM_A <= i_RAMA_FONT;
+					r_RAMD_PLANE1 <= i_RAM_D;
+				when 8 =>
 					r_RAMD_FONT <= i_RAM_D;
 				when others =>
 					null;
