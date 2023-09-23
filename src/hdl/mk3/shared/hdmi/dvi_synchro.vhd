@@ -364,7 +364,7 @@ begin
 
 			if r_line_counter < C_LINE_BLANK_BACK
 				--or (r_odd = '1' and r_line_counter = C_LINE_BLANK_BACK)
-				or r_line_counter > C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
+				or r_line_counter >= C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
 				then
 				r_blank_line <= '1';
 			else

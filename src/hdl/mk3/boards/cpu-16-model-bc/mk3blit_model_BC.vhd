@@ -1006,7 +1006,7 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
-SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_sys_nIRQ & "0";
+SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_sys_nIRQ & i_vga27_debug_blank;
 SYS_AUX_io(0) 		<= not (i_vga_debug_hs xor i_vga_debug_vs);
 SYS_AUX_io(1) 		<= i_vga_debug_r(i_vga_debug_r'high);
 SYS_AUX_io(2) 		<= i_debug_odd;
