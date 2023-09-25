@@ -51,14 +51,15 @@ package board_config_pack is
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
 
 	constant G_INCL_HDMI		: boolean := true;
+	constant G_HDMI_SHADOW_SYS	: boolean := true;
 		
 	constant G_INCL_CHIPSET		: boolean := true;
 	constant G_INCL_CS_DMA		: boolean := true;
-	constant G_DMA_CHANNELS		: natural := 1;
-	constant G_INCL_CS_BLIT		: boolean := false;
+	constant G_DMA_CHANNELS		: natural := 2;
+	constant G_INCL_CS_BLIT		: boolean := true;
 	constant G_INCL_CS_SND		: boolean := true;
 	constant G_SND_CHANNELS		: natural := 4;
-	constant G_INCL_CS_AERIS	: boolean := false;
+	constant G_INCL_CS_AERIS	: boolean := true;
 	constant G_INCL_CS_EEPROM	: boolean := true;
 		
 	constant C_CPU_BYTELANES	: positive := 4;

@@ -55,7 +55,8 @@ entity address_decode is
 		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_PERIPHERAL_COUNT		: natural;
 		G_INCL_CHIPSET				: boolean;
-		G_INCL_HDMI					: boolean
+		G_INCL_HDMI					: boolean;
+		G_HDMI_SHADOW_SYS			: boolean := false							-- when true chipset hdmi shadows/hides motherboard graphics
 	);
 	port(
 		addr_i						: in		std_logic_vector(23 downto 0);
@@ -83,9 +84,24 @@ begin
 					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEMCTL, numbits(G_PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_MEMCTL) <= '1';
 				else
-					-- SYS
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(G_PERIPHERAL_COUNT));
-					peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
+					
+					if addr_i(15 downto 4) = x"FE0" and addr_i(3) = '0' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
+						-- crtc
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+					elsif addr_i(15 downto 4) = x"FE2" and addr_i(3) = '0' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
+						-- (n)ula
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+					elsif unsigned(addr_i(15 downto 12)) < 8 and unsigned(addr_i(15 downto 12)) >= 3 and G_INCL_HDMI and G_HDMI_SHADOW_SYS then
+						-- memory
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+					else
+						-- SYS
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
+					end if;
 				end if;
 			elsif addr_i(17) = '1' and G_INCL_CHIPSET then										-- "11xx xx1x"		FE
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET, numbits(G_PERIPHERAL_COUNT));

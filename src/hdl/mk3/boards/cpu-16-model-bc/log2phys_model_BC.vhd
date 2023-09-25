@@ -174,13 +174,7 @@ begin
 		A_o <= A_i;
 		rom_throttle_act_o <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
-			if A_i(15 downto 4) = x"FE0" and A_i(3) = '0' then -- crtc
-				A_o <= x"FBFE0" & '0' & A_i(2 downto 0);
-			elsif A_i(15 downto 4) = x"FE2" and A_i(3) = '0' then -- (n)ula
-				A_o <= x"FBFE2" & '0' & A_i(2 downto 0);
-			elsif unsigned(A_i(15 downto 12)) < 8 and unsigned(A_i(15 downto 12)) >= 3 then
-				A_o <= x"FA" & '0' & A_i(14 downto 0);
-			elsif A_i(15 downto 14) = "10" then -- paged rom access
+			if A_i(15 downto 14) = "10" then -- paged rom access
 				A_o <= r_pagrom_A & A_i(13 downto 0);
 				rom_throttle_act_o <= r_rom_throttle_cur; -- throttle accesses to current ROM if needed, TODO: consider making this for whole instruction from ROM using SYNC?
 			elsif A_i(15 downto 8) = x"FD" then
