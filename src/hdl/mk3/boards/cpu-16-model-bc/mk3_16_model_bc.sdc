@@ -56,12 +56,12 @@ create_generated_clock -name {snd_pll} -duty_cycle 50/1 -multiply_by 80 -divide_
 	-master_clock {CLK_48M} \
 	[get_pins "$MAINPLL|clk[1]"] 
 
-set HDMIPLL {e_fb_HDMI|\g_not_sim_pll:e_pll_hdmi|altpll_component|auto_generated|pll1}
-create_generated_clock -name {hdmi_tmds} -duty_cycle 50/1 -multiply_by 45 -divide_by 16 \
+set HDMIPLL {\G_HDMI:e_fb_HDMI|\g_not_sim_pll:e_pll_hdmi|altpll_component|auto_generated|pll1}
+create_generated_clock -name {hdmi_tmds} -duty_cycle 50/1 -multiply_by 45 -divide_by 8 \
 	-source [get_pins "$HDMIPLL|inclk[0]"] \
 	-master_clock {CLK_48M} \
 	[get_pins "$HDMIPLL|clk[0]"] 
-create_generated_clock -name {hdmi_pixel} -duty_cycle 50/1 -multiply_by 9 -divide_by 16 \
+create_generated_clock -name {hdmi_pixel} -duty_cycle 50/1 -multiply_by 9 -divide_by 8 \
 	-source [get_pins "$HDMIPLL|inclk[0]"] \
 	-master_clock {CLK_48M} \
 	[get_pins "$HDMIPLL|clk[1]"] 
