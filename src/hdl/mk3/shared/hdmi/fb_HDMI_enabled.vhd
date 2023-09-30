@@ -184,6 +184,9 @@ architecture rtl of fb_hdmi is
 	-- extras for ANSI mode
 
 	signal i_seq_alphamode				: std_logic;
+	signal i_seq_alphaaddrfontA		: std_logic_vector(7 downto 0);
+
+	signal i_aa								: unsigned(3 downto 0);
 
 begin
 
@@ -380,14 +383,15 @@ begin
 
 	e_hdmi_seq_ctrl:entity work.fb_HDMI_seq_ctl
 	generic map (
-		SIM				=> SIM
+		SIM					=> SIM
 	)
 	port map (
-		fb_syscon_i		=> fb_syscon_i,
-		fb_c2p_i			=> i_seqctl_fb_c2p,
-		fb_p2c_o			=> i_seqctl_fb_p2c,
+		fb_syscon_i			=> fb_syscon_i,
+		fb_c2p_i				=> i_seqctl_fb_c2p,
+		fb_p2c_o				=> i_seqctl_fb_p2c,
 	
-		ALPHA_MODE_o	=> i_seq_alphamode
+		mode_alpha_o		=> i_seq_alphamode,
+		addr_alpha_fontA	=> i_seq_alphaaddrfontA
 	);
 
 
@@ -519,43 +523,24 @@ END GENERATE;
 
 
 	-- Address translation logic for calculation of display address
-	process(i_crtc_ma,i_crtc_ra, i_TTX, i_seq_alphamode, r_RAMD_PLANE0, scroll_latch_c_i)
-	variable aa : unsigned(3 downto 0);
-	begin
-		if i_crtc_ma(12) = '0' then
-			-- No adjustment
-			aa := unsigned(i_crtc_ma(11 downto 8));
-		else
-			case scroll_latch_c_i is
-				when "00" =>
-					aa := unsigned(i_crtc_ma(11 downto 8)) + 8;
-				when "01" =>
-					aa := unsigned(i_crtc_ma(11 downto 8)) + 12;
-				when "10" =>
-					aa := unsigned(i_crtc_ma(11 downto 8)) + 6;
-				when others =>
-					aa := unsigned(i_crtc_ma(11 downto 8)) + 11;
-			end case;
+	i_aa <= unsigned(i_crtc_ma(11 downto 8)) when i_crtc_ma(12) = '0' else
+			  unsigned(i_crtc_ma(11 downto 8)) + 8 when scroll_latch_c_i = "00" else
+			  unsigned(i_crtc_ma(11 downto 8)) + 12 when scroll_latch_c_i = "01" else
+			  unsigned(i_crtc_ma(11 downto 8)) + 6 when scroll_latch_c_i = "10" else
+			  unsigned(i_crtc_ma(11 downto 8)) + 11;
 
-		end if;
-		
---		if i_crtc_ma(13) = '1' then
-		if i_TTX = '1' then
-			-- TTX VDU
-			i_RAMA_PLANE0 <= "0011111" & i_crtc_ma(9 downto 0);
-		elsif i_seq_alphamode = '1' then
-			-- ANSI mode serializer
-			i_RAMA_PLANE0 <= "00111" & i_crtc_ma(10 downto 0) & '0';		
-			i_RAMA_PLANE1 <= "00111" & i_crtc_ma(10 downto 0) & '1';		
-		else
-			-- HI RES
-			i_RAMA_PLANE0 <= "00" & std_logic_vector(aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);
-		end if;
+	i_RAMA_PLANE0 <= 	"0011111" & i_crtc_ma(9 downto 0) when i_TTX = '1' else
+							"00111" & i_crtc_ma(10 downto 0) & '0' when i_seq_alphamode = '1' else
+							"00" & std_logic_vector(i_aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);			
 
-		-- in alpha mode the address of the next set of pixels looked up from font loaded at 3000
-		i_RAMA_FONT <= "0" & x"3" & r_RAMD_PLANE0 & i_crtc_ra(3 downto 0);
+	i_RAMA_PLANE1 <= 	(others => '1') when i_TTX = '1' else
+							"00111" & i_crtc_ma(10 downto 0) & '1' when i_seq_alphamode = '1' else
+							(others => '1');
 
-	end process;
+
+	-- in alpha mode the address of the next set of pixels looked up from font loaded at 3000
+	i_RAMA_FONT <= i_seq_alphaaddrfontA(4 downto 0) & r_RAMD_PLANE0 & i_crtc_ra(3 downto 0);
+
 
 	p_seq:process(fb_syscon_i)
 	variable v_seq:unsigned(3 downto 0);

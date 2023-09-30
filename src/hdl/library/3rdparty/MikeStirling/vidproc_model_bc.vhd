@@ -490,8 +490,8 @@ begin
                     -- ansi attribute mode (TODO: combine more with speccy mode)
                     shiftreg <= di0;
                     -- have to invert top bit for some reason!?!
-                    speccy_fg <= not di1(3) & di1(2 downto 0);
-                    speccy_bg <= '1' & di1(6 downto 4);
+                    speccy_fg <= di1(3 downto 0);
+                    speccy_bg <= di1(7 downto 4);
                 elsif nula_normal_attr_mode = '1' then
                     shiftreg <= di0;
                     if mode1 = '1' then
@@ -632,10 +632,10 @@ begin
                         palette_a := attr_bits(2 downto 0)               & shiftreg(7);
                     end if;
                 elsif MODE_ATTR = '1' then
-                    if shiftreg(7) = '1' then
+                    if shiftreg(7) = '1' and (speccy_bg(3) = '0' or r0_flash = '0') then
                         palette_a := speccy_fg;
                     else
-                        palette_a := speccy_bg;
+                        palette_a := '0' & speccy_bg(2 downto 0);
                     end if;                    
                 elsif nula_speccy_attr_mode = '1' then
                     if shiftreg(7) = '1' then
@@ -659,7 +659,7 @@ begin
                 blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
 
                 -- Output physical colour, to be used by VideoNuLA
-                if nula_palette_mode = '1' or nula_speccy_attr_mode = '1' then
+                if nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
                     phys_col <= palette_a;
                 else
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;

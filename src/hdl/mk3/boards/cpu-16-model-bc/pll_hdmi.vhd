@@ -149,11 +149,11 @@ BEGIN
 	altpll_component : altpll
 	GENERIC MAP (
 		bandwidth_type => "AUTO",
-		clk0_divide_by => 16,
+		clk0_divide_by => 8,
 		clk0_duty_cycle => 50,
 		clk0_multiply_by => 45,
 		clk0_phase_shift => "0",
-		clk1_divide_by => 16,
+		clk1_divide_by => 8,
 		clk1_duty_cycle => 50,
 		clk1_multiply_by => 9,
 		clk1_phase_shift => "0",
@@ -238,12 +238,12 @@ END SYN;
 -- Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c0"
 -- Retrieval info: PRIVATE: CUR_FBIN_CLK STRING "c0"
 -- Retrieval info: PRIVATE: DEVICE_SPEED_GRADE STRING "Any"
--- Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "16"
--- Retrieval info: PRIVATE: DIV_FACTOR1 NUMERIC "16"
+-- Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "8"
+-- Retrieval info: PRIVATE: DIV_FACTOR1 NUMERIC "8"
 -- Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
 -- Retrieval info: PRIVATE: DUTY_CYCLE1 STRING "50.00000000"
--- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "135.000000"
--- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "27.000000"
+-- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "270.000000"
+-- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "54.000000"
 -- Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 -- Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
 -- Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
@@ -321,11 +321,11 @@ END SYN;
 -- Retrieval info: PRIVATE: ZERO_DELAY_RADIO STRING "0"
 -- Retrieval info: LIBRARY: altera_mf altera_mf.altera_mf_components.all
 -- Retrieval info: CONSTANT: BANDWIDTH_TYPE STRING "AUTO"
--- Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "16"
+-- Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "8"
 -- Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "45"
 -- Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
--- Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "16"
+-- Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "8"
 -- Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"
 -- Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "9"
 -- Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "0"

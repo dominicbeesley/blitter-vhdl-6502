@@ -37,8 +37,8 @@ entity fb_HDMI_seq_ctl is
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 	
-		ALPHA_MODE_o						: out		std_logic							-- when 1 alpha (ansi text) mode i.e. char in plane 0, attrs in plane 1
-
+		mode_alpha_o						: out		std_logic;							-- when 1 alpha (ansi text) mode i.e. char in plane 0, attrs in plane 1
+		addr_alpha_fontA					: out		std_logic_vector(7 downto 0)
 
 	);
 end fb_HDMI_seq_ctl;
@@ -49,21 +49,22 @@ architecture rtl of fb_HDMI_seq_ctl is
 	signal	r_per_state : t_per_state;
 
 	-- FISHBONE wrapper signals
-	signal	r_seq_en			: std_logic;
-	signal	r_seq_rnw		: std_logic;
-	signal	r_ack				: std_logic;
-	signal	r_A				: std_logic;
-	signal	r_D_wr			: std_logic_vector(7 downto 0);
+	signal	r_seq_en				: std_logic;
+	signal	r_seq_rnw			: std_logic;
+	signal	r_ack					: std_logic;
+	signal	r_A					: std_logic;
+	signal	r_D_wr				: std_logic_vector(7 downto 0);
 
 	-- local signals
 
-	signal 	r_IX				: unsigned(2 downto 0);
-	signal	r_ALPHA			: std_logic;
-
+	signal 	r_IX					: unsigned(2 downto 0);
+	signal	r_mode_alpha		: std_logic;
+	signal   r_addr_alpha_fontA: std_logic_vector(7 downto 0);		-- font base address this will be multiplied by x"1000"
 
 begin
 
-	ALPHA_MODE_o <= r_ALPHA;
+	mode_alpha_o <= r_mode_alpha;
+	addr_alpha_fontA <= r_addr_alpha_fontA;
 
 
 	-- FISHBONE wrapper for CPU/DMA access
@@ -127,14 +128,17 @@ begin
 	p_wr:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_ALPHA <= '0';
+			r_mode_alpha <= '0';
+			r_addr_alpha_fontA <= (others => '0');
 			r_IX <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) and r_seq_en = '1' and r_seq_rnw = '0' then
 			if r_A = '1' then
 				-- data write
 				case to_integer(r_IX) is
 					when 0 =>
-						r_ALPHA <= r_D_wr(0);
+						r_mode_alpha <= r_D_wr(0);
+					when 1 => 
+						r_addr_alpha_fontA <= r_D_wr;
 					when others =>
 						null;
 				end case;
@@ -144,7 +148,8 @@ begin
 		end if;
 	end process;
 
-	fb_p2c_o.D_rd <= 	(0 => r_ALPHA, others => '0') when r_IX  = 0 else
+	fb_p2c_o.D_rd <= 	(0 => r_mode_alpha, others => '0') when r_IX  = 0 else
+							r_addr_alpha_fontA when r_IX  = 1 else
 							(others => '0');
 
 end rtl;
