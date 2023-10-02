@@ -545,7 +545,7 @@ begin
             adj_in_progress <= '0';
             eom_latched <= '0';
             eof_latched <= '0';
-            first_scanline <= '0';
+            first_scanline <= '1';		--DB: this was '0' but makes SIMs take ages to start, check real behaviour?
             extra_scanline <= '0';
 		elsif rising_edge(CLOCK) then
 			if CLKEN = '1' then
