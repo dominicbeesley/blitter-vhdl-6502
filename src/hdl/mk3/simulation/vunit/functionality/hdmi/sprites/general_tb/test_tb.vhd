@@ -275,10 +275,47 @@ begin
 				CRTCW(5,  x"00"); --	 5 Vertial Adjust	 		=0
 				CRTCW(6,  x"05"); --	 6 Vertical Displayed	 	=5
 				CRTCW(7,  x"05"); --	 7 VSync Position	 		=5
-				CRTCW(8,  x"03"); --	 8 Interlace+Cursor	 		=&03  Cursor=0, Display=0, Interlace=On+Video
+				CRTCW(8,  x"00"); --	 8 Interlace+Cursor	 		=&00  Cursor=0, Display=0, Interlace=Off
 				CRTCW(9,  x"07"); --	 9 Scan Lines/Character 	=8
 				CRTCW(10, x"6D"); --	 10 Cursor Start Line	  	=&67	Blink=On, Speed=1/32, Line=13
 				CRTCW(11, x"0F"); --	 11 Cursor End Line	  		=8
+
+				CRTCW(12, x"06"); --	 11 Cursor End Line	  		=8
+				CRTCW(13, x"00"); --	 11 Cursor End Line	  		=8
+
+				CRTCW(14, x"06"); --	 11 Cursor End Line	  		=8
+				CRTCW(15, x"00"); --	 11 Cursor End Line	  		=8
+
+				-- mode 2
+				W(x"FBFE20", x"F4");
+
+				-- simple palette
+				W(x"FBFE21", x"07");
+				W(x"FBFE21", x"16");
+				W(x"FBFE21", x"25");
+				W(x"FBFE21", x"34");
+				W(x"FBFE21", x"43");
+				W(x"FBFE21", x"52");
+				W(x"FBFE21", x"61");
+				W(x"FBFE21", x"70");
+
+				W(x"FBFE21", x"8F");
+				W(x"FBFE21", x"9E");
+				W(x"FBFE21", x"AD");
+				W(x"FBFE21", x"BC");
+				W(x"FBFE21", x"CB");
+				W(x"FBFE21", x"DA");
+				W(x"FBFE21", x"E9");
+				W(x"FBFE21", x"F8");
+
+				
+				W(x"FA3018", "00000000");
+				W(x"FA3020", "00000110");
+				W(x"FA3028", "00100000");
+				W(x"FA3030", "11111111");
+				W(x"FA3038", "00000011");
+				W(x"FA3040", "00001100");
+				W(x"FA3048", "00110000");
 
 				wait for 10000 us;
 
@@ -296,6 +333,7 @@ begin
 	e_hdmi:entity work.fb_HDMI
 	generic map (
 		SIM				=> true,
+		SIM_NODVI		=> true,
 		CLOCKSPEED		=> FB_CLOCKSPEED
 	)
 	port map (
