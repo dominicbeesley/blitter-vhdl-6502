@@ -29,6 +29,7 @@ use work.fishbone.all;
 entity fb_HDMI is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		SIM_NODVI							: boolean := false;
 		CLOCKSPEED							: natural
 	);
 	port(
@@ -251,13 +252,15 @@ begin
 
 	g_sim_pll:if SIM generate
 
-		p_pll_hdmi_pixel: process
-		begin
-			i_clk_hdmi_pixel <= '1';
-			wait for 18.5 ns;
-			i_clk_hdmi_pixel <= '0';
-			wait for 18.5 ns;
-		end process;
+		g_hdmi_pixel:if not SIM_NODVI generate
+			p_pll_hdmi_pixel: process
+			begin
+				i_clk_hdmi_pixel <= '1';
+				wait for 18.5 ns;
+				i_clk_hdmi_pixel <= '0';
+				wait for 18.5 ns;
+			end process;
+		end generate;
 
 		p_pll_hdmi_tmds: process
 		begin
@@ -467,42 +470,46 @@ begin
 -- DVI 
 --====================================================================
 
-	e_synch:entity work.dvi_synchro
-	port map (
+	G_DVI:IF NOT SIM_NODVI generate
+		e_synch:entity work.dvi_synchro
+		port map (
 
-		fb_syscon_i		=> fb_syscon_i,
-		CLK_48M_i		=> CLK_48M_i,
-		pixel_double_i => i_pixel_double,
+			fb_syscon_i		=> fb_syscon_i,
+			CLK_48M_i		=> CLK_48M_i,
+			pixel_double_i => i_pixel_double,
 
-		-- input signals in the local clock domain
-		VSYNC_CRTC_i	=> i_vsync_CRTC,
-		HSYNC_CRTC_i	=> i_hsync_CRTC,
-		DISEN_CRTC_i	=> i_disen_CRTC,
+			-- input signals in the local clock domain
+			VSYNC_CRTC_i	=> i_vsync_CRTC,
+			HSYNC_CRTC_i	=> i_hsync_CRTC,
+			DISEN_CRTC_i	=> i_disen_CRTC,
 
-		R_ULA_i			=> i_ULA_R,
-		G_ULA_i			=> i_ULA_G,
-		B_ULA_i			=> i_ULA_B,
+			R_ULA_i			=> i_ULA_R,
+			G_ULA_i			=> i_ULA_G,
+			B_ULA_i			=> i_ULA_B,
 
-		TTX_i				=> i_TTX,
+			TTX_i				=> i_TTX,
 
-		-- synchronised / generated / conditioned signals in DVI pixel clock domain
+			-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
-		clk_pixel_dvi => i_clk_hdmi_pixel,
+			clk_pixel_dvi => i_clk_hdmi_pixel,
 
-		VSYNC_DVI_o		=> i_vsync_dvi,
-		HSYNC_DVI_o		=> i_hsync_dvi,
-		BLANK_DVI_o		=> i_blank_dvi,
+			VSYNC_DVI_o		=> i_vsync_dvi,
+			HSYNC_DVI_o		=> i_hsync_dvi,
+			BLANK_DVI_o		=> i_blank_dvi,
 
-		R_DVI_o			=> i_R_DVI,
-		G_DVI_o			=> i_G_DVI,
-		B_DVI_o			=> i_B_DVI,
+			R_DVI_o			=> i_R_DVI,
+			G_DVI_o			=> i_G_DVI,
+			B_DVI_o			=> i_B_DVI,
 
-		debug_hsync_det_o 	=> debug_hsync_det_o,
-		debug_vsync_det_o 	=> debug_vsync_det_o,
-		debug_hsync_crtc_o	=> debug_hsync_crtc_o,
-		debug_odd_o 		=> debug_odd_o
+			debug_hsync_det_o 	=> debug_hsync_det_o,
+			debug_vsync_det_o 	=> debug_vsync_det_o,
+			debug_hsync_crtc_o	=> debug_hsync_crtc_o,
+			debug_odd_o 		=> debug_odd_o
 
-	);
+		);
+	end generate;
+
+G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 
 	-- re-register in other clock domain - TODO: remove?
 	p_r:process(i_clk_hdmi_pixel)
@@ -513,7 +520,6 @@ begin
 
 	end process;
 
-G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 	e_spirkov:hdmi
 	port map (
 		I_CLK_PIXEL => i_clk_hdmi_pixel,
@@ -550,14 +556,15 @@ G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 		clock_s => HDMI_CK_o
 	);
 
-END GENERATE;
-
 	p_snd:process(i_clk_hdmi_pixel)
 	begin
 		if rising_edge(i_clk_hdmi_pixel) then
 			i_audio <= std_logic_vector(PCM_L_i) & "000000";
 		end if;
 	end process;
+
+
+END GENERATE;
 
 --====================================================================
 -- Screen address calculations and other "sequencer stuff" - TODO: move to separate module?
