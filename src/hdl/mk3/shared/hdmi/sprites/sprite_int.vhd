@@ -55,12 +55,8 @@ entity sprite_int is
 
 		rst_i									: in	std_logic;							
 
-		clk_i									: in	std_logic;
-		clken_i								: in	std_logic;							-- this qualifies all clocks
-
-		pixel_clken_i						: in	std_logic;							-- move to next pixel must coincide with clken_i
-		horz_ctr_i							: in	unsigned(8 downto 0); 			-- counts mode 4 pixels since horz-sync
-		vert_ctr_i							: in	std_logic;
+		clk_i									: in	std_logic;							-- cpu/sequencer clock
+		clken_i								: in	std_logic;							-- this qualifies all clocks for seq/cpu
 
 		-- data interface, from sequencer
 		SEQ_D_i								: in	std_logic_vector(7 downto 0);
@@ -76,6 +72,10 @@ entity sprite_int is
 		CPU_wren_i							: in	std_logic;
 		CPU_A_i								: in	unsigned(3 downto 0);			-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
 
+		pixel_clk_i							: in  std_logic;							-- pixel clock (not necessarily same domain as cpu/sequencer)
+		pixel_clken_i						: in	std_logic;							-- move to next pixel must coincide with clken_i
+		horz_ctr_i							: in	unsigned(8 downto 0); 			-- counts mode 4 pixels since horz-sync
+		vert_ctr_i							: in	std_logic;
 
 		-- pixel data out
 		px_D_o								: out	std_logic_vector(1 downto 0);
@@ -177,6 +177,7 @@ begin
 					when 5	=> r_vert_start(7 downto 0) <= unsigned(v_cur_D);
 					when 6	=> r_vert_stop(7 downto 0)  <= unsigned(v_cur_D);
 					when 7   =>
+						-- TODO: latch h/v/etc starts until this written?!?
 						r_horz_start(8) <= v_cur_D(0);
 						r_vert_start(8) <= v_cur_D(1);
 						r_vert_stop(8)  <= v_cur_D(2);
@@ -203,17 +204,17 @@ begin
 		end if;
 	end process;
 
-	p_shr:process(clk_i, rst_i, clken_i, pixel_clken_i)
+	p_shr:process(pixel_clk_i, rst_i, pixel_clken_i)
 	begin
 		if rst_i = '1' then
 			r_spr_serial <= (others => '0');
-		elsif rising_edge(clk_i) and clken_i = '1' and pixel_clken_i = '1' then
+		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then
 			
 			if r_armed = '1' and i_horz_eq = '1' then
 				-- hit horizontal pos and we're armed
 				r_spr_serial <= r_spr_data;
 			else
-				r_spr_serial <= r_spr_serial(r_spr_serial'high-2 downto 2) & "00";
+				r_spr_serial <= r_spr_serial(r_spr_serial'high-2 downto 0) & "00";
 			end if;
 		end if;
 	end process;

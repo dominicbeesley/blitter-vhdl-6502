@@ -88,13 +88,14 @@ architecture rtl of fb_hdmi is
 
 	--=========== FISHBONE ============--
 
-	constant PERIPHERAL_COUNT 				: positive := 6;
+	constant PERIPHERAL_COUNT 				: positive := 7;
 	constant PERIPHERAL_N_MEM 				: natural := 0;
 	constant PERIPHERAL_N_VIDPROC 		: natural := 1;
 	constant PERIPHERAL_N_CRTC 			: natural := 2;
 	constant PERIPHERAL_N_I2C				: natural := 3;
 	constant PERIPHERAL_N_HDMI_CTL		: natural := 4;
 	constant PERIPHERAL_N_SEQ_CTL			: natural := 5;
+	constant PERIPHERAL_N_SPRITES			: natural := 6;
 	
 	-- intcon peripheral->controller
 	signal i_per_c2p_intcon				: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
@@ -116,6 +117,8 @@ architecture rtl of fb_hdmi is
 	signal i_hdmictl_fb_s2m				: fb_con_i_per_o_t;
 	signal i_seqctl_fb_c2p				: fb_con_o_per_i_t;
 	signal i_seqctl_fb_p2c				: fb_con_i_per_o_t;
+	signal i_sprites_fb_c2p				: fb_con_o_per_i_t;
+	signal i_sprites_fb_p2c				: fb_con_i_per_o_t;
 
 
 	-- DVI PLL
@@ -188,6 +191,10 @@ architecture rtl of fb_hdmi is
 	signal i_seq_alphaaddrfontA		: std_logic_vector(7 downto 0);
 
 	signal i_aa								: unsigned(3 downto 0);
+
+	-- sprites
+
+	signal i_sprite_pixel_cken			: std_logic;		-- this in vidproc (48MHZ domain)
 
 	component hdmi_out_altera_max10 is
 	   port (
@@ -296,7 +303,6 @@ begin
 
 		CLKEN_CRTC_o		=> i_clken_crtc,
 		RAM_D0_i				=> i_D_pxbyte,
-		RAM_D1_i				=> r_RAMD_PLANE1,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		CURSOR_i				=> i_cursor_CRTC,
@@ -309,7 +315,12 @@ begin
 
 		TTX_o					=> i_TTX,
 
-	   MODE_ATTR_i => i_seq_alphamode
+		-- model B/C extras
+	   MODE_ATTR_i 		=> i_seq_alphamode,
+		RAM_D1_i				=> r_RAMD_PLANE1,
+		
+		SPR_PX_CLKEN		=> i_sprite_pixel_cken
+
 	);
 
 
@@ -623,6 +634,48 @@ END GENERATE;
 
 	i_D_pxbyte <= 	r_RAMD_FONT when i_seq_alphamode = '1' else
 						r_RAMD_PLANE0;
+--====================================================================
+-- Sprites
+--====================================================================
+
+	e_sprites:entity work.fb_sprites
+	generic map (
+		SIM									=> SIM,
+		G_N_SPRITES							=> 8
+	)
+	port map (
+
+		-- fishbone signals for cpu/dma port
+
+		fb_syscon_i							=> fb_syscon_i,
+		fb_c2p_i								=> i_sprites_fb_c2p,
+		fb_p2c_o								=> i_sprites_fb_p2c,
+
+		-- data interface, from sequencer
+		SEQ_D_i								=> (others => '-'),
+		SEQ_wren_i							=> '0',
+		SEQ_A_i								=> (others => '0'),
+																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
+		SEQ_DATAPTR_inc_i					=> (others => '0'),
+																								-- increment pointer this clock
+		-- addresses out to sequencer
+		SEQ_DATAPTR_A_o					=> open,
+
+
+		-- vidproc / crtc signals in
+
+		pixel_clk_i							=> CLK_48M_i,
+		vsync_i								=> i_vsync_CRTC,
+		hsync_i								=> i_hsync_CRTC,
+		disen_i								=> i_disen_CRTC,
+		pixel_cken_i						=> i_sprite_pixel_cken,
+		
+		-- pixels out
+		pixel_act_o							=> open,
+		pixel_o								=> open
+	
+
+	);
 
 
 --====================================================================
@@ -673,12 +726,17 @@ END GENERATE;
 
 
 		-- official addresses:
+		-- FB FFxx - Sprites
 		-- FB FE00, FE01 - CRTC		(IX, DAT)
 		-- FB FE02, FE03 - SEQ CTL	(IX, DAT)
 		-- FB FE2x - VIDPROC
 		-- FB FEDx - i2c
 		-- FB FEEx - HDMI control
-		if i_intcon_peripheral_sel_addr(16 downto 8) = "1" & x"FE" then
+		if i_intcon_peripheral_sel_addr(16 downto 8) = "1" & x"FF" then
+			-- sprites
+			i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_SPRITES, numbits(PERIPHERAL_COUNT));
+			i_intcon_peripheral_sel_oh(PERIPHERAL_N_SPRITES) <= '1';		
+		elsif i_intcon_peripheral_sel_addr(16 downto 8) = "1" & x"FE" then
 			if i_intcon_peripheral_sel_addr(7 downto 4) = x"E" then
 				i_intcon_peripheral_sel <= to_unsigned(PERIPHERAL_N_HDMI_CTL, numbits(PERIPHERAL_COUNT));
 				i_intcon_peripheral_sel_oh(PERIPHERAL_N_HDMI_CTL) <= '1';		

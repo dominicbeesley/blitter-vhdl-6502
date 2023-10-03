@@ -60,17 +60,13 @@ entity sprites is
 		clk_i									: in	std_logic;
 		clken_i								: in	std_logic;							-- this qualifies all clocks
 
-		pixel_clken_i						: in	std_logic;							-- move to next pixel must coincide with clken_i
-		horz_ctr_i							: in	unsigned(8 downto 0); 			-- counts mode 4 pixels since horz-sync
-
 		-- data interface, from sequencer
 		SEQ_D_i								: in	std_logic_vector(7 downto 0);
 		SEQ_wren_i							: in	std_logic;
 		SEQ_A_i								: in	unsigned(numbits(G_N_SPRITES) + 3 downto 0);			
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i					: in	std_logic_vector(numbits(G_N_SPRITES)-1 downto 0);
+		SEQ_DATAPTR_inc_i					: in	std_logic_vector(G_N_SPRITES-1 downto 0);
 																								-- increment pointer this clock
-
 		-- addresses out to sequencer
 		SEQ_DATAPTR_A_o					: out t_spr_addr_array(G_N_SPRITES-1 downto 0);
 
@@ -79,11 +75,9 @@ entity sprites is
 		CPU_wren_i							: in	std_logic;
 		CPU_A_i								: in	unsigned(3 downto 0);			-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
 
-		-- pixel data out
-		px_D_o								: out	std_logic_vector(1 downto 0)
-
-
-	
+		-- pixels out
+		pixel_act_o							: out		std_logic;
+		pixel_o								: out		std_logic_vector(3 downto 0)
 
 	);
 end sprites;

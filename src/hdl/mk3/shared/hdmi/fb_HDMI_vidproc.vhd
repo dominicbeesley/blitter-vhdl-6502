@@ -60,6 +60,9 @@ entity fb_HDMI_vidproc is
 		-- Model B/C attribute in
 		MODE_ATTR_i							:  in  std_logic;
 
+		-- Model B/C sprites out
+		SPR_PX_CLKEN						: out  std_logic;
+
 		-- Video in (teletext mode)
 		R_TTX_i								:	in	std_logic;
 		G_TTX_i								:	in	std_logic;
@@ -131,7 +134,8 @@ begin
 
 		TTXT				=> TTX_o,
 
-		MODE_ATTR		=> MODE_ATTR_i
+		MODE_ATTR		=> MODE_ATTR_i,
+		SPR_PX_CLKEN	=> SPR_PX_CLKEN
 	);
 
 

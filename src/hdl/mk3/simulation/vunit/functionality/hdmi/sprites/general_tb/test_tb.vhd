@@ -243,6 +243,44 @@ begin
 			single_write(A => A,D => D,	c2p => i_fb_c2p,p2c => i_fb_p2c,syscon => i_fb_syscon);
 		end procedure;
 
+		-- big endian write of data for sprite
+		procedure W32B(A:std_logic_vector(23 downto 0); D:std_logic_vector(31 downto 0)) is
+		variable AA :unsigned(23 downto 0);
+		begin
+			AA := unsigned(A);
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(31 downto 24), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(23 downto 16), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(15 downto 8), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(7 downto 0), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+		end procedure;
+
 		procedure CRTCW(IX:natural; D:std_logic_vector(7 downto 0)) is
 		begin
 			W(x"FBFE00", std_logic_vector(to_unsigned(IX,8)));
@@ -286,7 +324,7 @@ begin
 				CRTCW(14, x"06"); --	 11 Cursor End Line	  		=8
 				CRTCW(15, x"00"); --	 11 Cursor End Line	  		=8
 
-				-- mode 2
+				-- mode 2 (test multiple quick writes)
 				W(x"FBFE20", x"F4");
 
 				-- simple palette
@@ -316,6 +354,28 @@ begin
 				W(x"FA3038", "00000011");
 				W(x"FA3040", "00001100");
 				W(x"FA3048", "00110000");
+
+				-- sprite data setup
+				W32B(x"FA2000", "00011011000000010000000011100100");
+				W32B(x"FA2002", "00011011000001110100000011100100");
+				W32B(x"FA2004", "00011011000111001101000011100100");
+				W32B(x"FA2006", "00011011011100100011010011100100");
+				W32B(x"FA2008", "00011011011100100011010011100100");
+				W32B(x"FA200A", "00011011000111001101000011100100");
+				W32B(x"FA200C", "00011011000001110100000011100100");
+				W32B(x"FA200E", "00011011000000010000000011100100");
+
+				-- setup sprite 0
+
+				W(x"FBFF08", x"00");
+				W(x"FBFF09", x"20");
+				W(x"FBFF0A", x"00");		-- sprite data at 0x2000
+
+				W(x"FBFF04", x"14");		-- horz = 20
+				W(x"FBFF05", x"0A");		-- vert = 10
+				W(x"FBFF06", x"11");		-- vert end = 17
+				W(x"FBFF07", x"00");		-- no high bits, no attach, latch 
+
 
 				wait for 10000 us;
 

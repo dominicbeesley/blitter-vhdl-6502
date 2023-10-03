@@ -141,7 +141,8 @@ entity vidproc is
 
         -- Model B/C extras
         MODE_ATTR   :   in  std_logic;                    -- when 1 use attributes from RAM_1
-        DI_RAM_1    :   in  std_logic_vector(7 downto 0) -- second plane / attributes
+        DI_RAM_1    :   in  std_logic_vector(7 downto 0); -- second plane / attributes
+        SPR_PX_CLKEN:   out std_logic                     -- always at 512 clocks a line / 8MHz
 
         );
 end entity;
@@ -173,6 +174,7 @@ architecture rtl of vidproc is
 -- Internal clock enable generation
     signal modeIs12MHz      :   std_logic;
     signal clken_pixel      :   std_logic;
+    signal rol_sprite_pixel :   std_logic_vector(5 downto 0);
     signal clken_shift      :   std_logic;
     signal clken_load       :   std_logic;
     signal clken_fetch      :   std_logic;
@@ -400,12 +402,16 @@ begin
     -- Depending on the mode, the base pixel clock is either 12MHz or 16MHz
     modeIs12MHz <= '1' when r0_teletext = '1' or nula_normal_attr_mode = '1' or nula_text_attr_mode = '1' else '0';
 
+    SPR_PX_CLKEN <= rol_sprite_pixel(rol_sprite_pixel'high);
+
     process(PIXCLK,nRESET)
     begin
         if nRESET = '0' then
 
+            rol_sprite_pixel <= "000100";
             pixen_prescale <= (others => '0');
             pixen_counter  <= (others => '0');
+            clken_pixel <= '0';
 
         elsif rising_edge(PIXCLK) then
 
@@ -424,6 +430,12 @@ begin
                 pixen_prescale <= pixen_prescale + 1;
             end if;
 
+            if r0_teletext = '1' and VGA = '1' then
+               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-2 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high downto rol_sprite_pixel'high - 1);
+            else
+               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-1 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high);
+            end if;
+ 
             if pixen_prescale = 3 then
 
                 clken_pixel <= '1';
@@ -462,6 +474,8 @@ begin
                 if clken_zero <= '0' then
                     pixen_counter  <= (others => '0');
                     pixen_prescale <= (others => '0');
+                    --TODO: align with pixels in mode 2/5 ?!? what to do in speccy etc modes?
+                    rol_sprite_pixel <= "000100";
                 end if;
                 clken_zero <= '1';
             else
