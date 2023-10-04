@@ -112,9 +112,10 @@ architecture rtl of sprites is
 	
 	-- local counter generation
 
-	signal r_prev_hsync		: std_logic;
-	signal r_horz_ctr			: unsigned(8 downto 0);
-	signal r_vert_ctr			: unsigned(8 downto 0);
+	signal r_prev_hsync				: std_logic;
+	signal r_horz_ctr					: unsigned(8 downto 0);
+	signal r_vert_ctr					: unsigned(8 downto 0);
+	signal r_horz_disarm_clken		: std_logic;				-- disarm all sprites at "end" of line, needs to be before sequencer loads, think about moving elsewhere (sequencer?)
 
 
 begin
@@ -163,7 +164,11 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 		horz_start_o						=> i_horz_start(I),
 		vert_start_o						=> i_vert_start(I),
 		vert_stop_o							=> i_vert_stop(I),
-		attach_o								=> i_attach(I)
+		attach_o								=> i_attach(I),
+
+		-- arm/disarm in 
+		horz_disarm_clken_i				=> r_horz_disarm_clken
+
 
 	);
 END GENERATE;
@@ -204,8 +209,11 @@ END GENERATE;
 			r_horz_ctr <= (others => '0');
 			r_vert_ctr <= (others => '0');
 			r_prev_hsync <= '0';
+			r_horz_disarm_clken <= '0';
 		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then			
+			r_horz_disarm_clken <= '0';
 			if (hsync_i = '1' and r_prev_hsync = '0') then
+				r_horz_disarm_clken <= '1';
 				if vsync_i = '1' then
 					r_vert_ctr <= (others => '0');
 				else

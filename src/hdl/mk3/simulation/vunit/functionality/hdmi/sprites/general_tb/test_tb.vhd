@@ -371,11 +371,13 @@ begin
 				W(x"FBFF09", x"20");
 				W(x"FBFF0A", x"00");		-- sprite data at 0x2000
 
-				W(x"FBFF04", x"14");		-- horz = 20
+				W(x"FBFF04", x"27");		-- horz = $27
 				W(x"FBFF05", x"0A");		-- vert = 10
 				W(x"FBFF06", x"11");		-- vert end = 17
 				W(x"FBFF07", x"00");		-- no high bits, no attach, latch 
 
+				-- force horizontal arm
+				W32B(x"FBFF00", "00011011111001001010010101011010");
 
 				wait for 10000 us;
 

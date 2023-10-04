@@ -86,7 +86,10 @@ entity sprite_int is
 		horz_start_o						: out	unsigned(8 downto 0);
 		vert_start_o						: out	unsigned(8 downto 0);
 		vert_stop_o							: out	unsigned(8 downto 0);
-		attach_o								: out	std_logic
+		attach_o								: out	std_logic;
+
+		-- arm/disarm in 
+		horz_disarm_clken_i					: in  std_logic
 
 	);
 end sprite_int;
@@ -130,9 +133,20 @@ begin
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			-- arm on data write to last data byte
 			-- clear on any ctl/pos change
+
+			-- TODO: sort this out to reduce logic and document
+			if horz_disarm_clken_i = '1' then
+				r_armed <= '0';
+			end if;
+
 			if SEQ_A_i(2) = '1' and SEQ_wren_i = '1' then
 				r_armed <= '0';
-			elsif SEQ_A_i = "011" then
+			elsif SEQ_A_i = "011" and SEQ_wren_i = '1' then
+				r_armed <= '1';
+			end if;
+			if CPU_A_i(2) = '1' and CPU_wren_i = '1' then
+				r_armed <= '0';
+			elsif CPU_A_i = "011" and CPU_wren_i = '1' then
 				r_armed <= '1';
 			end if;
 		end if;
@@ -187,7 +201,7 @@ begin
 					when 8	=> 
 						r_lat_data_ptr(7 downto 0) 			<= v_cur_D;
 					when 9	=> 
-						r_lat_data_ptr(7 downto 0) 			<= v_cur_D;
+						r_lat_data_ptr(15 downto 8) 			<= v_cur_D;
 					when 10	=> 
 						v_wr_dptr := true;					
 					when others => 
