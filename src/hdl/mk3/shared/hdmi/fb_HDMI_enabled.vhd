@@ -668,7 +668,7 @@ END GENERATE;
 		vsync_i								=> i_vsync_CRTC,
 		hsync_i								=> i_hsync_CRTC,
 		disen_i								=> i_disen_CRTC,
-		pixel_cken_i						=> i_sprite_pixel_cken,
+		pixel_clken_i						=> i_sprite_pixel_cken,
 		
 		-- pixels out
 		pixel_act_o							=> open,
@@ -688,6 +688,7 @@ END GENERATE;
 	i_i2c_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_I2C);
 	i_hdmictl_fb_m2s <= i_per_c2p_intcon(PERIPHERAL_N_HDMI_CTL);
 	i_seqctl_fb_c2p <= i_per_c2p_intcon(PERIPHERAL_N_SEQ_CTL);
+	i_sprites_fb_c2p <= i_per_c2p_intcon(PERIPHERAL_N_SPRITES);
 
 	i_per_p2c_intcon(PERIPHERAL_N_MEM) <= i_ram_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_VIDPROC) <= i_vidproc_fb_s2m;
@@ -695,6 +696,7 @@ END GENERATE;
 	i_per_p2c_intcon(PERIPHERAL_N_I2C) <= i_i2c_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_HDMI_CTL) <= i_hdmictl_fb_s2m;
 	i_per_p2c_intcon(PERIPHERAL_N_SEQ_CTL) <= i_seqctl_fb_p2c;
+	i_per_p2c_intcon(PERIPHERAL_N_SPRITES) <= i_sprites_fb_p2c;
 
 
 

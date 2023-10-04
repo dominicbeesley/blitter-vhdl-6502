@@ -72,10 +72,11 @@ entity sprite_int is
 		CPU_wren_i							: in	std_logic;
 		CPU_A_i								: in	unsigned(3 downto 0);			-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
 
+		-- vidproc / crtc signals in
 		pixel_clk_i							: in  std_logic;							-- pixel clock (not necessarily same domain as cpu/sequencer)
 		pixel_clken_i						: in	std_logic;							-- move to next pixel must coincide with clken_i
 		horz_ctr_i							: in	unsigned(8 downto 0); 			-- counts mode 4 pixels since horz-sync
-		vert_ctr_i							: in	std_logic;
+		vert_ctr_i							: in	unsigned(8 downto 0);
 
 		-- pixel data out
 		px_D_o								: out	std_logic_vector(1 downto 0);
