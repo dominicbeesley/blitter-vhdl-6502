@@ -65,10 +65,10 @@ entity sprites is
 		SEQ_wren_i							: in	std_logic;
 		SEQ_A_i								: in	unsigned(numbits(G_N_SPRITES) + 3 downto 0);			
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i					: in	std_logic_vector(G_N_SPRITES-1 downto 0);
-																								-- increment pointer this clock
 		-- addresses out to sequencer
 		SEQ_DATAPTR_A_o					: out t_spr_addr_array(G_N_SPRITES-1 downto 0);
+		SEQ_DATAPTR_act_o					: out std_logic_vector(G_N_SPRITES-1 downto 0);		-- indicates a request for this address
+		SEQ_DATA_REQ_o						: out std_logic;							-- toggles once per line to inform sequencer to redo data
 
 		-- data interface, from CPU
 		CPU_D_i								: in	std_logic_vector(7 downto 0);
@@ -116,7 +116,9 @@ architecture rtl of sprites is
 	signal r_horz_ctr					: unsigned(8 downto 0);
 	signal r_vert_ctr					: unsigned(8 downto 0);
 	signal r_horz_disarm_clken		: std_logic;				-- disarm all sprites at "end" of line, needs to be before sequencer loads, think about moving elsewhere (sequencer?)
-
+	signal r_vert_reload_clken		: std_logic;				-- pixel at which we reload sprite data pointers
+	-- sequencer 
+	signal r_data_req					: std_logic;
 
 begin
 
@@ -139,10 +141,10 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 		SEQ_D_i								=> SEQ_D_i,
 		SEQ_wren_i							=> i_SEQ_wren_oh(I),
 		SEQ_A_i								=> SEQ_A_i(3 downto 0),
-		SEQ_DATAPTR_inc_i					=> SEQ_DATAPTR_inc_i(I),
 
 		-- sequencer interface out
 		SEQ_DATAPTR_A_o					=> SEQ_DATAPTR_A_o(I),
+		SEQ_DATAPTR_act_o					=> SEQ_DATAPTR_act_o(I),
 
 		-- data interface, from CPU
 		CPU_D_i								=> CPU_D_i,
@@ -167,40 +169,50 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 		attach_o								=> i_attach(I),
 
 		-- arm/disarm in 
-		horz_disarm_clken_i				=> r_horz_disarm_clken
+		horz_disarm_clken_i				=> r_horz_disarm_clken,
+		vert_reload_clken_i				=> r_vert_reload_clken
 
 
 	);
 END GENERATE;
 
-	--priority encoder and "attacher" for pixels
-	p_pix_sel:process(i_px_D)
-	variable I:natural;
-	variable v_act:boolean;
-	begin
+--priority encoder and "attacher" for pixels
+p_pix_sel:process(pixel_clk_i, rst_i)
+variable I:natural;
+variable v_act:boolean;
+begin
+	if rst_i = '1' then
 		pixel_o <= (others => '0');
 		pixel_act_o <= '0';
-		I := 0;
-		v_act := false;
-		while I < G_N_SPRITES and not v_act loop
-			if i_px_D(I) /= "00" then
-				pixel_o(1 downto 0) <= i_px_D(I);
-				v_act := true;
-			end if;
-			if I mod 2 = 0 and i_attach(I) = '1' and I < G_N_SPRITES - 1 then
-				if i_px_D(I+1) /= "00" then
-					pixel_o(3 downto 2) <= i_px_D(I);
-					v_act := true;
+	elsif rising_edge(pixel_clk_i) then
+		if pixel_clken_i = '1' then
+			pixel_o <= (others => '0');
+			pixel_act_o <= '0';
+			I := 0;
+			v_act := false;
+			FOR I in 0 TO G_N_SPRITES-1 loop
+				if not v_act then
+					if i_px_D(I) /= "00" and (I mod 2 = 0 or i_attach(I-1) = '0') then
+						pixel_o(1 downto 0) <= i_px_D(I);
+						v_act := true;
+					end if;
+					if I mod 2 = 0 and i_attach(I) = '1' and I < G_N_SPRITES - 1 then
+						if i_px_D(I+1) /= "00" then
+							pixel_o(3 downto 2) <= i_px_D(I);
+							v_act := true;
+						end if;
+					end if;
 				end if;
+			end loop;
+
+			if v_act then
+				pixel_act_o <= '1';
 			end if;
-			
-			if i_attach(I) = '1' then
-				I := I + 2;
-			else
-				I := I + 1;
-			end if;
-		end loop;
-	end process;
+		end if;
+	end if;
+end process;
+
+	SEQ_DATA_REQ_o <= r_data_req;
 
 	process(rst_i, pixel_clk_i, pixel_clken_i)
 	begin
@@ -210,12 +222,17 @@ END GENERATE;
 			r_vert_ctr <= (others => '0');
 			r_prev_hsync <= '0';
 			r_horz_disarm_clken <= '0';
+			r_vert_reload_clken <= '0';
+			r_data_req <= '0';
 		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then			
 			r_horz_disarm_clken <= '0';
+			r_vert_reload_clken <= '0';
 			if (hsync_i = '1' and r_prev_hsync = '0') then
 				r_horz_disarm_clken <= '1';
+				r_data_req <= not r_data_req;
 				if vsync_i = '1' then
 					r_vert_ctr <= (others => '0');
+					r_vert_reload_clken <= '1';
 				else
 					r_vert_ctr <= r_vert_ctr + 1;
 				end if;

@@ -25,12 +25,14 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 use work.fishbone.all;
+use work.sprites_pack.all;
 
 entity fb_HDMI is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		SIM_NODVI							: boolean := false;
-		CLOCKSPEED							: natural
+		CLOCKSPEED							: natural;
+		G_N_SPRITES							: natural := 2
 	);
 	port(
 
@@ -128,7 +130,7 @@ architecture rtl of fb_hdmi is
 	--========== LOCAL VIDEO =========--
 	signal i_D_pxbyte 					: std_logic_vector(7 downto 0);
 
-	signal i_RAM_A							: std_logic_vector(16 downto 0);
+	signal r_RAM_A							: std_logic_vector(16 downto 0);
 	signal i_RAM_Q							: std_logic_vector(7 downto 0);
 
 	signal i_RAMA_PLANE0					: std_logic_vector(16 downto 0);
@@ -195,6 +197,14 @@ architecture rtl of fb_hdmi is
 	-- sprites
 
 	signal i_sprite_pixel_cken			: std_logic;		-- this in vidproc (48MHZ domain)
+	signal i_sprite_pixel_act			: std_logic;
+	signal i_sprite_pixel_dat			: std_logic_vector(3 downto 0);
+
+	signal r_SEQ_SPR_wren				: std_logic;
+	signal i_SEQ_SPR_DATA_req			: std_logic;
+	signal i_SEQ_SPR_DATAPTR_A			: t_spr_addr_array(G_N_SPRITES-1 downto 0);
+	signal i_SEQ_SPR_DATAPTR_act		: std_logic_vector(G_N_SPRITES-1 downto 0);
+	signal r_SEQ_SPR_A					: unsigned(numbits(G_N_SPRITES) + 3 downto 0);
 
 	component hdmi_out_altera_max10 is
 	   port (
@@ -319,7 +329,9 @@ begin
 	   MODE_ATTR_i 		=> i_seq_alphamode,
 		RAM_D1_i				=> r_RAMD_PLANE1,
 		
-		SPR_PX_CLKEN		=> i_sprite_pixel_cken
+		SPR_PX_CLKEN		=> i_sprite_pixel_cken,
+		SPR_PX_ACT			=> i_sprite_pixel_act,
+		SPR_PX_DAT			=> i_sprite_pixel_dat
 
 	);
 
@@ -419,7 +431,7 @@ begin
 		-- vga signals
 	
 		hdmi_ram_clk_i		=> fb_syscon_i.clk,
-		hdmi_ram_addr_i	=> i_RAM_A,
+		hdmi_ram_addr_i	=> r_RAM_A,
 		hdmi_ram_Q_o		=> i_RAM_Q
 	
 	);
@@ -607,22 +619,58 @@ END GENERATE;
 
 	p_seq:process(fb_syscon_i)
 	variable v_seq:unsigned(3 downto 0);
+	variable v_ack:std_logic;
+	variable v_spr_seq:unsigned(1 downto 0);
+	variable v_spr_ix :unsigned(numbits(G_N_SPRITES) - 1 downto 0);
+	variable v_ram_A_0:std_logic_vector(16 downto 0);
+	variable v_doing_spr:boolean;
 	begin
-		if rising_edge(fb_syscon_i.clk) then
+		if fb_syscon_i.rst = '1' then
+			v_seq := (others => '0');
+			v_ack := '0';
+			v_spr_seq := (others => '0');
+			v_spr_ix  := (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
 			if i_clken_crtc = '1' then
 				v_seq := (others => '0');
 			elsif v_seq /= "1111" then
 				v_seq := v_seq + 1;
 			end if;
 
+			
+
+			r_SEQ_SPR_wren <= '0';
 			case to_integer(v_seq) is
+				when 1 =>
+					if v_ack /= i_SEQ_SPR_DATA_req then				
+						v_ram_A_0 := i_SEQ_SPR_DATAPTR_A(to_integer(v_spr_ix))(16 downto 0);
+						v_doing_spr := true;
+					else
+						v_ram_A_0 := i_RAMA_PLANE0;
+						v_doing_spr := false;
+					end if;				
 				when 2 =>
-					i_RAM_A <= i_RAMA_PLANE0;
+					r_RAM_A <= v_ram_A_0;
+					r_SEQ_SPR_A <= v_spr_ix & "00" & v_spr_seq;
 				when 4 =>
 					r_RAMD_PLANE0 <= i_RAM_Q;
-					i_RAM_A <= i_RAMA_PLANE1;
+					r_RAM_A <= i_RAMA_PLANE1;
+					if v_doing_spr then
+						if i_SEQ_SPR_DATAPTR_act(to_integer(v_spr_ix)) = '1' then
+							r_SEQ_SPR_wren <= '1';
+						end if;
+						if v_spr_seq = 3 then
+							if to_integer(v_spr_ix) = G_N_SPRITES-1  then
+								v_ack := i_SEQ_SPR_DATA_req;
+								v_spr_ix := (others => '0');
+							else
+								v_spr_ix := v_spr_ix + 1;
+							end if;
+						end if;
+						v_spr_seq := v_spr_seq + 1;
+					end if;
 				when 6 =>
-					i_RAM_A <= i_RAMA_FONT;
+					r_RAM_A <= i_RAMA_FONT;
 					r_RAMD_PLANE1 <= i_RAM_Q;
 				when 8 =>
 					r_RAMD_FONT <= i_RAM_Q;
@@ -641,7 +689,7 @@ END GENERATE;
 	e_sprites:entity work.fb_sprites
 	generic map (
 		SIM									=> SIM,
-		G_N_SPRITES							=> 8
+		G_N_SPRITES							=> G_N_SPRITES
 	)
 	port map (
 
@@ -652,14 +700,14 @@ END GENERATE;
 		fb_p2c_o								=> i_sprites_fb_p2c,
 
 		-- data interface, from sequencer
-		SEQ_D_i								=> (others => '-'),
-		SEQ_wren_i							=> '0',
-		SEQ_A_i								=> (others => '0'),
+		SEQ_D_i								=> r_RAMD_PLANE0,
+		SEQ_wren_i							=> r_SEQ_SPR_wren,
+		SEQ_A_i								=> r_SEQ_SPR_A,
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i					=> (others => '0'),
-																								-- increment pointer this clock
 		-- addresses out to sequencer
-		SEQ_DATAPTR_A_o					=> open,
+		SEQ_DATAPTR_A_o					=> i_SEQ_SPR_DATAPTR_A,
+		SEQ_DATAPTR_act_o					=> i_SEQ_SPR_DATAPTR_act,
+		SEQ_DATA_req_o						=> i_SEQ_SPR_DATA_req,
 
 
 		-- vidproc / crtc signals in
@@ -671,8 +719,8 @@ END GENERATE;
 		pixel_clken_i						=> i_sprite_pixel_cken,
 		
 		-- pixels out
-		pixel_act_o							=> open,
-		pixel_o								=> open
+		pixel_act_o							=> i_sprite_pixel_act,
+		pixel_o								=> i_sprite_pixel_dat
 	
 
 	);

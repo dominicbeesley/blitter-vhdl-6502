@@ -131,19 +131,21 @@ begin
 			r_mode_alpha <= '0';
 			r_addr_alpha_fontA <= (others => '0');
 			r_IX <= (others => '0');
-		elsif rising_edge(fb_syscon_i.clk) and r_seq_en = '1' and r_seq_rnw = '0' then
-			if r_A = '1' then
-				-- data write
-				case to_integer(r_IX) is
-					when 0 =>
-						r_mode_alpha <= r_D_wr(0);
-					when 1 => 
-						r_addr_alpha_fontA <= r_D_wr;
-					when others =>
-						null;
-				end case;
-			else
-				r_IX <= unsigned(r_D_wr(r_IX'high downto 0));
+		elsif rising_edge(fb_syscon_i.clk) then
+			if r_seq_en = '1' and r_seq_rnw = '0' then
+				if r_A = '1' then
+					-- data write
+					case to_integer(r_IX) is
+						when 0 =>
+							r_mode_alpha <= r_D_wr(0);
+						when 1 => 
+							r_addr_alpha_fontA <= r_D_wr;
+						when others =>
+							null;
+					end case;
+				else
+					r_IX <= unsigned(r_D_wr(r_IX'high downto 0));
+				end if;
 			end if;
 		end if;
 	end process;

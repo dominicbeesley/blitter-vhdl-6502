@@ -43,11 +43,10 @@ entity fb_sprites is
 		SEQ_wren_i							: in	std_logic;
 		SEQ_A_i								: in	unsigned(numbits(G_N_SPRITES) + 3 downto 0);			
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i					: in	std_logic_vector(G_N_SPRITES-1 downto 0);
-																								-- increment pointer this clock
 		-- addresses out to sequencer
 		SEQ_DATAPTR_A_o					: out t_spr_addr_array(G_N_SPRITES-1 downto 0);
-
+		SEQ_DATAPTR_act_o					: out std_logic_vector(G_N_SPRITES-1 downto 0);		-- indicates a request for this address
+		SEQ_DATA_REQ_o						: out std_logic;							-- toggles once per line to inform sequencer to redo data
 
 		-- vidproc / crtc signals in
 
@@ -150,10 +149,10 @@ e_sprites:entity work.sprites
 		SEQ_wren_i					=> SEQ_wren_i,
 		SEQ_A_i						=> SEQ_A_i,
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i			=> SEQ_DATAPTR_inc_i,
-																								-- increment pointer this clock
 		-- addresses out to sequencer
 		SEQ_DATAPTR_A_o			=> SEQ_DATAPTR_A_o,
+		SEQ_DATAPTR_act_o			=> SEQ_DATAPTR_act_o,
+		SEQ_DATA_req_o				=> SEQ_DATA_req_o,
 
 		-- data interface, from CPU
 		CPU_D_i						=> r_d_wr,

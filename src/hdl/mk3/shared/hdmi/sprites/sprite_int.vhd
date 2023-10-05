@@ -62,10 +62,10 @@ entity sprite_int is
 		SEQ_D_i								: in	std_logic_vector(7 downto 0);
 		SEQ_wren_i							: in	std_logic;
 		SEQ_A_i								: in	unsigned(3 downto 0);			-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
-		SEQ_DATAPTR_inc_i					: in	std_logic;							-- increment pointer this clock
 
 		-- sequencer interface out
 		SEQ_DATAPTR_A_o					: out	std_logic_vector(23 downto 0);-- sprite data pointer out 
+		SEQ_DATAPTR_act_o					: out std_logic;
 
 		-- data interface, from CPU
 		CPU_D_i								: in	std_logic_vector(7 downto 0);
@@ -89,7 +89,8 @@ entity sprite_int is
 		attach_o								: out	std_logic;
 
 		-- arm/disarm in 
-		horz_disarm_clken_i					: in  std_logic
+		horz_disarm_clken_i					: in  std_logic;					-- fires once per line when all sprites should restart prior to sequencer loading new data
+		vert_reload_clken_i					: in  std_logic					-- fires once per frame when pointers should be reset
 
 	);
 end sprite_int;
@@ -105,12 +106,21 @@ architecture rtl of sprite_int is
 	signal r_vert_stop			:	unsigned(8 downto 0);
 	signal r_attach				:	std_logic;
 	signal r_lat_data_ptr		: 	std_logic_vector(15 downto 0);		-- latched data pointer (copied to r_data_ptr when high byte written)
-	signal r_data_ptr				:	std_logic_vector(23 downto 0);		-- pointer to sprite pixel data
-
+	signal r_lat_data_ptr2		: 	std_logic_vector(15 downto 0);		-- latched data pointer2 (copied to r_data_ptr2 when high byte written)
+	signal r_data_ptr				:	std_logic_vector(23 downto 0);		-- pointer to sprite pixel data as it is read
+	signal r_data_ptr2			:	std_logic_vector(23 downto 0);		-- pointer to sprite pixel data reloaded at frame restart
+	
 
 	-- combinatorials
 	signal i_horz_eq				:  std_logic;									-- '1' when horz_ctr == r_horz_start
 	signal i_serial_load			:	std_logic;									-- load the serializer at this pixel clock
+
+	-- vertical activation 
+	signal r_SEQ_DATAPTR_act	:  std_logic;
+
+	-- signal vertical restart from pixel to data clock
+	signal r_vert_req				:  std_logic;
+	signal r_vert_ack				:  std_logic;
 
 begin
 
@@ -152,11 +162,15 @@ begin
 		end if;
 	end process;
 
+	SEQ_DATAPTR_A_o <= r_data_ptr;
+
 	p_regs:process(clk_i, rst_i, clken_i)
 	variable v_cur_wren 	: boolean;
 	variable v_cur_A	  	: unsigned(SEQ_A_i'high downto SEQ_A_i'low);
 	variable v_cur_D	  	: std_logic_vector(7 downto 0);
 	variable v_wr_dptr 	: boolean;
+	variable v_wr_dptr2 	: boolean;
+	variable v_inc_dptr	: boolean;
 	begin
 		if rst_i = '1' then
 			r_horz_start <= (others => '0');
@@ -166,13 +180,20 @@ begin
 			r_spr_data <= (others => '0');
 			r_lat_data_ptr <= (others => '0');
 			r_data_ptr <= (others => '0');
+			r_lat_data_ptr2 <= (others => '0');
+			r_data_ptr2 <= (others => '0');
+			r_vert_ack <= '0';
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			
+			v_inc_dptr := false;
 			v_cur_wren := false;
 			if SEQ_wren_i = '1' then
 				v_cur_wren := true;
 				v_cur_A := SEQ_A_i;
 				v_cur_D := SEQ_D_i;
+				if v_cur_A(3 downto 2) = "00" then
+					v_inc_dptr := true;
+				end if;
 			elsif CPU_wren_i = '1' then
 				v_cur_wren := true;
 				v_cur_A := CPU_A_i;
@@ -180,6 +201,7 @@ begin
 			end if;
 
 			v_wr_dptr := false;
+			v_wr_dptr2 := false;
 			if v_cur_wren then
 				case to_integer(v_cur_A) is
 					-- data - note pixel data is left aligned, low byte first, planar (not like Amiga?)
@@ -204,17 +226,31 @@ begin
 						r_lat_data_ptr(15 downto 8) 			<= v_cur_D;
 					when 10	=> 
 						v_wr_dptr := true;					
+					when 12	=> 
+						r_lat_data_ptr2(7 downto 0) 			<= v_cur_D;
+					when 13	=> 
+						r_lat_data_ptr2(15 downto 8) 			<= v_cur_D;
+					when 14	=> 
+						v_wr_dptr2 := true;					
 					when others => 
 						null;
 				end case;
 			end if;
 
-			if v_wr_dptr then
-				r_data_ptr <= v_cur_D & r_lat_data_ptr;
-			elsif SEQ_DATAPTR_inc_i = '1' then
-				r_data_ptr <= r_data_ptr(23 downto 16) & std_logic_vector(unsigned(r_lat_data_ptr(15 downto 0)) + 1);
+			if r_vert_req /= r_vert_ack then
+				r_data_ptr <= r_data_ptr2;
+				r_vert_ack <= r_vert_req;
 			end if;
 
+			if v_wr_dptr then
+				r_data_ptr <= v_cur_D & r_lat_data_ptr;
+			elsif v_inc_dptr then
+				r_data_ptr <= r_data_ptr(23 downto 16) & std_logic_vector(unsigned(r_data_ptr(15 downto 0)) + 1);			
+			end if;
+
+			if v_wr_dptr2 then
+				r_data_ptr2 <= v_cur_D & r_lat_data_ptr2;
+			end if;
 
 		end if;
 	end process;
@@ -230,6 +266,24 @@ begin
 				r_spr_serial <= r_spr_data;
 			else
 				r_spr_serial <= r_spr_serial(r_spr_serial'high-2 downto 0) & "00";
+			end if;
+		end if;
+	end process;
+
+	SEQ_DATAPTR_act_o <= r_SEQ_DATAPTR_act;
+	p_vert:process(pixel_clk_i, rst_i, pixel_clken_i)
+	begin
+		if rst_i = '1' then
+			r_SEQ_DATAPTR_act <= '0';
+			r_vert_req <= '0';
+		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then
+			if vert_reload_clken_i = '1' then
+				r_vert_req <= not r_vert_req;
+				r_SEQ_DATAPTR_act <= '0';
+			elsif vert_ctr_i = r_vert_start and r_vert_start /= 0 then
+				r_SEQ_DATAPTR_act <= '1';
+			elsif vert_ctr_i = r_vert_stop then
+				r_SEQ_DATAPTR_act <= '0';
 			end if;
 		end if;
 	end process;

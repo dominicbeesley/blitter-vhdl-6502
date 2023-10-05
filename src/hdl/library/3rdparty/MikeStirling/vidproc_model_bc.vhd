@@ -142,7 +142,9 @@ entity vidproc is
         -- Model B/C extras
         MODE_ATTR   :   in  std_logic;                    -- when 1 use attributes from RAM_1
         DI_RAM_1    :   in  std_logic_vector(7 downto 0); -- second plane / attributes
-        SPR_PX_CLKEN:   out std_logic                     -- always at 512 clocks a line / 8MHz
+        SPR_PX_CLKEN:   out std_logic;                    -- always at 512 clocks a line / 8MHz
+        SPR_PX_DAT  :   in  std_logic_vector(3 downto 0);
+        SPR_PX_ACT  :   in  std_logic
 
         );
 end entity;
@@ -673,7 +675,9 @@ begin
                 blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
 
                 -- Output physical colour, to be used by VideoNuLA
-                if nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
+                if SPR_PX_ACT = '1' then
+                    phys_col <= SPR_PX_DAT;
+                elsif nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
                     phys_col <= palette_a;
                 else
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;
