@@ -51,7 +51,7 @@ use work.common.all;
 entity sprites is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_N_SPRITES							: natural := 8									-- maximum number of sprites
+		G_N_SPRITES							: natural := 4									-- maximum number of sprites
 	);
 	port(
 

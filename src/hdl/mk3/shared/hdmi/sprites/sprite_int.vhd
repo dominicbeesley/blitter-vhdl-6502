@@ -237,15 +237,16 @@ begin
 				end case;
 			end if;
 
-			if r_vert_req /= r_vert_ack then
-				r_data_ptr <= r_data_ptr2;
-				r_vert_ack <= r_vert_req;
-			end if;
 
 			if v_wr_dptr then
 				r_data_ptr <= v_cur_D & r_lat_data_ptr;
 			elsif v_inc_dptr then
 				r_data_ptr <= r_data_ptr(23 downto 16) & std_logic_vector(unsigned(r_data_ptr(15 downto 0)) + 1);			
+			end if;
+
+			if r_vert_req /= r_vert_ack then
+				r_data_ptr <= r_data_ptr2;
+				r_vert_ack <= r_vert_req;
 			end if;
 
 			if v_wr_dptr2 then

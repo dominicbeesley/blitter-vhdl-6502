@@ -138,6 +138,7 @@ set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites_pack.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/fb_sprites.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites.vhd
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprite_int.vhd
+set_global_assignment -name VHDL_FILE ../../shared/hdmi/vidmem_sequencer.vhd
 
 set_global_assignment -name VHDL_FILE version.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vhd

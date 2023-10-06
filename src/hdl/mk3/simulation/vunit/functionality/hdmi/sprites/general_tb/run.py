@@ -26,6 +26,7 @@ lib.add_source_file(root + "mk3/shared/hdmi/fb_hdmi_ram.vhd")
 lib.add_source_file(root + "mk3/shared/hdmi/fb_hdmi_ctl.vhd")
 lib.add_source_file(root + "mk3/shared/hdmi/fb_hdmi_seq_ctl.vhd")
 lib.add_source_file(root + "mk3/shared/hdmi/hdmi_blockram.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/vidmem_sequencer.vhd")
 
 lib.add_source_file(root + "shared/fb_i2c.vhd")
 

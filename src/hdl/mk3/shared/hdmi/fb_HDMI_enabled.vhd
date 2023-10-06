@@ -130,15 +130,11 @@ architecture rtl of fb_hdmi is
 	--========== LOCAL VIDEO =========--
 	signal i_D_pxbyte 					: std_logic_vector(7 downto 0);
 
-	signal r_RAM_A							: std_logic_vector(16 downto 0);
-	signal i_RAM_Q							: std_logic_vector(7 downto 0);
+	signal i_VIDRAM_A						: std_logic_vector(16 downto 0);
+	signal i_VIDRAM_Q						: std_logic_vector(7 downto 0);
 
-	signal i_RAMA_PLANE0					: std_logic_vector(16 downto 0);
-	signal r_RAMD_PLANE0					: std_logic_vector(7 downto 0);
-	signal i_RAMA_PLANE1					: std_logic_vector(16 downto 0);
-	signal r_RAMD_PLANE1					: std_logic_vector(7 downto 0);
-	signal i_RAMA_FONT					: std_logic_vector(16 downto 0);
-	signal r_RAMD_FONT					: std_logic_vector(7 downto 0);
+	signal i_RAMD_PLANE0					: std_logic_vector(7 downto 0);
+	signal i_RAMD_PLANE1					: std_logic_vector(7 downto 0);
 
 	signal i_clken_crtc					: std_logic;
 
@@ -192,7 +188,6 @@ architecture rtl of fb_hdmi is
 	signal i_seq_alphamode				: std_logic;
 	signal i_seq_alphaaddrfontA		: std_logic_vector(7 downto 0);
 
-	signal i_aa								: unsigned(3 downto 0);
 
 	-- sprites
 
@@ -200,11 +195,12 @@ architecture rtl of fb_hdmi is
 	signal i_sprite_pixel_act			: std_logic;
 	signal i_sprite_pixel_dat			: std_logic_vector(3 downto 0);
 
-	signal r_SEQ_SPR_wren				: std_logic;
+	signal i_SEQ_SPR_wren				: std_logic;
 	signal i_SEQ_SPR_DATA_req			: std_logic;
 	signal i_SEQ_SPR_DATAPTR_A			: t_spr_addr_array(G_N_SPRITES-1 downto 0);
 	signal i_SEQ_SPR_DATAPTR_act		: std_logic_vector(G_N_SPRITES-1 downto 0);
-	signal r_SEQ_SPR_A					: unsigned(numbits(G_N_SPRITES) + 3 downto 0);
+	signal i_SEQ_SPR_A					: unsigned(numbits(G_N_SPRITES) + 3 downto 0);
+	signal i_SEQ_SPR_D					: std_logic_vector(7 downto 0);
 
 	component hdmi_out_altera_max10 is
 	   port (
@@ -312,7 +308,6 @@ begin
 		CLK_48M_i			=> CLK_48M_i,
 
 		CLKEN_CRTC_o		=> i_clken_crtc,
-		RAM_D0_i				=> i_D_pxbyte,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		CURSOR_i				=> i_cursor_CRTC,
@@ -327,7 +322,8 @@ begin
 
 		-- model B/C extras
 	   MODE_ATTR_i 		=> i_seq_alphamode,
-		RAM_D1_i				=> r_RAMD_PLANE1,
+		RAM_D0_i				=> i_RAMD_PLANE0,
+		RAM_D1_i				=> i_RAMD_PLANE1,
 		
 		SPR_PX_CLKEN		=> i_sprite_pixel_cken,
 		SPR_PX_ACT			=> i_sprite_pixel_act,
@@ -431,8 +427,8 @@ begin
 		-- vga signals
 	
 		hdmi_ram_clk_i		=> fb_syscon_i.clk,
-		hdmi_ram_addr_i	=> r_RAM_A,
-		hdmi_ram_Q_o		=> i_RAM_Q
+		hdmi_ram_addr_i	=> i_VIDRAM_A,
+		hdmi_ram_Q_o		=> i_VIDRAM_Q
 	
 	);
 
@@ -589,99 +585,42 @@ G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 
 END GENERATE;
 
---====================================================================
--- Screen address calculations and other "sequencer stuff" - TODO: move to separate module?
---====================================================================
+	e_vidmem_seq:entity work.vidmem_sequencer
+	generic map (
+		SIM => SIM,
+		G_N_SPRITES => G_N_SPRITES
+		)
+	port map (
+		rst_i						=> fb_syscon_i.rst,
+		clk_i						=> fb_syscon_i.clk,
 
--- TODO: improve teletext detect (out from vidproc or keep MA13?)
--- TODO: mode 15/80 cols teletext
+		scroll_latch_c_i		=> scroll_latch_c_i,
+		ttxmode_i				=> i_TTX,
+
+		crtc_mem_clken_i		=> i_clken_crtc,
+		crtc_MA_i				=> i_crtc_MA,
+		crtc_RA_i				=> i_crtc_RA,
+
+		SEQ_alphamode_i		=> i_seq_alphamode,
+		SEQ_font_addr_A   	=> i_seq_alphaaddrfontA,
+
+		SEQ_SPR_DATA_req_i	=> i_SEQ_SPR_DATA_req,
+		SEQ_SPR_DATAPTR_A_i	=> i_SEQ_SPR_DATAPTR_A,
+		SEQ_SPR_DATAPTR_act_i=> i_SEQ_SPR_DATAPTR_act,
+
+		SEQ_SPR_wren_o			=> i_SEQ_SPR_wren,
+		SEQ_SPR_A_o				=> i_SEQ_SPR_A,
+		SEQ_SPR_D_o				=> i_SEQ_SPR_D,
+
+		RAM_D_i					=> i_VIDRAM_Q,
+		RAM_A_o					=> i_VIDRAM_A,
+
+		RAMD_PLANE0_o			=> i_RAMD_PLANE0,
+		RAMD_PLANE1_o			=> i_RAMD_PLANE1
+
+	);
 
 
-	-- Address translation logic for calculation of display address
-	i_aa <= unsigned(i_crtc_ma(11 downto 8)) when i_crtc_ma(12) = '0' else
-			  unsigned(i_crtc_ma(11 downto 8)) + 8 when scroll_latch_c_i = "00" else
-			  unsigned(i_crtc_ma(11 downto 8)) + 12 when scroll_latch_c_i = "01" else
-			  unsigned(i_crtc_ma(11 downto 8)) + 6 when scroll_latch_c_i = "10" else
-			  unsigned(i_crtc_ma(11 downto 8)) + 11;
-
-	i_RAMA_PLANE0 <= 	"0011111" & i_crtc_ma(9 downto 0) when i_TTX = '1' else
-							"00111" & i_crtc_ma(10 downto 0) & '0' when i_seq_alphamode = '1' else
-							"00" & std_logic_vector(i_aa(3 downto 0)) & i_crtc_ma(7 downto 0) & i_crtc_ra(2 downto 0);			
-
-	i_RAMA_PLANE1 <= 	(others => '1') when i_TTX = '1' else
-							"00111" & i_crtc_ma(10 downto 0) & '1' when i_seq_alphamode = '1' else
-							(others => '1');
-
-
-	-- in alpha mode the address of the next set of pixels looked up from font loaded at 3000
-	i_RAMA_FONT <= i_seq_alphaaddrfontA(4 downto 0) & r_RAMD_PLANE0 & i_crtc_ra(3 downto 0);
-
-
-	p_seq:process(fb_syscon_i)
-	variable v_seq:unsigned(3 downto 0);
-	variable v_ack:std_logic;
-	variable v_spr_seq:unsigned(1 downto 0);
-	variable v_spr_ix :unsigned(numbits(G_N_SPRITES) - 1 downto 0);
-	variable v_ram_A_0:std_logic_vector(16 downto 0);
-	variable v_doing_spr:boolean;
-	begin
-		if fb_syscon_i.rst = '1' then
-			v_seq := (others => '0');
-			v_ack := '0';
-			v_spr_seq := (others => '0');
-			v_spr_ix  := (others => '0');
-		elsif rising_edge(fb_syscon_i.clk) then
-			if i_clken_crtc = '1' then
-				v_seq := (others => '0');
-			elsif v_seq /= "1111" then
-				v_seq := v_seq + 1;
-			end if;
-
-			
-
-			r_SEQ_SPR_wren <= '0';
-			case to_integer(v_seq) is
-				when 1 =>
-					if v_ack /= i_SEQ_SPR_DATA_req then				
-						v_ram_A_0 := i_SEQ_SPR_DATAPTR_A(to_integer(v_spr_ix))(16 downto 0);
-						v_doing_spr := true;
-					else
-						v_ram_A_0 := i_RAMA_PLANE0;
-						v_doing_spr := false;
-					end if;				
-				when 2 =>
-					r_RAM_A <= v_ram_A_0;
-					r_SEQ_SPR_A <= v_spr_ix & "00" & v_spr_seq;
-				when 4 =>
-					r_RAMD_PLANE0 <= i_RAM_Q;
-					r_RAM_A <= i_RAMA_PLANE1;
-					if v_doing_spr then
-						if i_SEQ_SPR_DATAPTR_act(to_integer(v_spr_ix)) = '1' then
-							r_SEQ_SPR_wren <= '1';
-						end if;
-						if v_spr_seq = 3 then
-							if to_integer(v_spr_ix) = G_N_SPRITES-1  then
-								v_ack := i_SEQ_SPR_DATA_req;
-								v_spr_ix := (others => '0');
-							else
-								v_spr_ix := v_spr_ix + 1;
-							end if;
-						end if;
-						v_spr_seq := v_spr_seq + 1;
-					end if;
-				when 6 =>
-					r_RAM_A <= i_RAMA_FONT;
-					r_RAMD_PLANE1 <= i_RAM_Q;
-				when 8 =>
-					r_RAMD_FONT <= i_RAM_Q;
-				when others =>
-					null;
-			end case;
-		end if;					
-	end process;
-
-	i_D_pxbyte <= 	r_RAMD_FONT when i_seq_alphamode = '1' else
-						r_RAMD_PLANE0;
 --====================================================================
 -- Sprites
 --====================================================================
@@ -700,9 +639,9 @@ END GENERATE;
 		fb_p2c_o								=> i_sprites_fb_p2c,
 
 		-- data interface, from sequencer
-		SEQ_D_i								=> r_RAMD_PLANE0,
-		SEQ_wren_i							=> r_SEQ_SPR_wren,
-		SEQ_A_i								=> r_SEQ_SPR_A,
+		SEQ_D_i								=> i_SEQ_SPR_D,
+		SEQ_wren_i							=> i_SEQ_SPR_wren,
+		SEQ_A_i								=> i_SEQ_SPR_A,
 																								-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
 		-- addresses out to sequencer
 		SEQ_DATAPTR_A_o					=> i_SEQ_SPR_DATAPTR_A,
