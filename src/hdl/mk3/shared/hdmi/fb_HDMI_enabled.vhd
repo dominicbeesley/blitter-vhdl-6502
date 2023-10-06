@@ -128,8 +128,6 @@ architecture rtl of fb_hdmi is
 	signal i_clk_hdmi_tmds				: std_logic;
 
 	--========== LOCAL VIDEO =========--
-	signal i_D_pxbyte 					: std_logic_vector(7 downto 0);
-
 	signal i_VIDRAM_A						: std_logic_vector(16 downto 0);
 	signal i_VIDRAM_Q						: std_logic_vector(7 downto 0);
 
@@ -378,7 +376,7 @@ begin
     -- Character data input (in the bus clock domain)
     DI_CLOCK    => fb_syscon_i.clk,
     DI_CLKEN    => i_ttxt_di_clken,
-    DI          => i_D_pxbyte(6 downto 0),
+    DI          => i_RAMD_PLANE0,
 
     -- Timing inputs
     -- General line reset (not used)
