@@ -376,7 +376,7 @@ begin
     -- Character data input (in the bus clock domain)
     DI_CLOCK    => fb_syscon_i.clk,
     DI_CLKEN    => i_ttxt_di_clken,
-    DI          => i_RAMD_PLANE0,
+    DI          => i_RAMD_PLANE0(6 downto 0),
 
     -- Timing inputs
     -- General line reset (not used)
