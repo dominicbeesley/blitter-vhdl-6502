@@ -122,6 +122,9 @@ architecture rtl of sprite_int is
 	signal r_vert_req				:  std_logic;
 	signal r_vert_ack				:  std_logic;
 
+	signal r_horz_req				:  std_logic;
+	signal r_horz_ack				:  std_logic;
+
 begin
 
 	horz_start_o <= r_horz_start;
@@ -132,6 +135,19 @@ begin
 	px_D_o		 <= r_spr_serial(r_spr_serial'high downto r_spr_serial'high-1);
 
 
+	-- process to get horizontal restart from pixel clock into clk_i domain
+	p_horz_cd:process(pixel_clk_i, rst_i)
+	begin
+
+		if rst_i = '1' then
+			r_horz_req <= '0';
+		elsif rising_edge(pixel_clk_i) then
+			if horz_disarm_clken_i = '1' then
+				r_horz_req <= not r_horz_req;
+			end if;
+		end if;
+	end process;
+
 	-- horz comparator
 	i_horz_eq <= '1' when r_horz_start = horz_ctr_i else '0';
 
@@ -140,13 +156,15 @@ begin
 	begin
 		if rst_i = '1' then
 			r_armed <= '0';
+			r_horz_ack <= '0';
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			-- arm on data write to last data byte
 			-- clear on any ctl/pos change
 
 			-- TODO: sort this out to reduce logic and document
-			if horz_disarm_clken_i = '1' then
+			if r_horz_ack /= r_horz_req then
 				r_armed <= '0';
+				r_horz_ack <= r_horz_req;
 			end if;
 
 			if SEQ_A_i(2) = '1' and SEQ_wren_i = '1' then
