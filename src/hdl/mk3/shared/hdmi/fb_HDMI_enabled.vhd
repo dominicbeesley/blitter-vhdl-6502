@@ -32,7 +32,7 @@ entity fb_HDMI is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		SIM_NODVI							: boolean := false;
 		CLOCKSPEED							: natural;
-		G_N_SPRITES							: natural := 2
+		G_N_SPRITES							: natural := 4
 	);
 	port(
 
@@ -135,6 +135,7 @@ architecture rtl of fb_hdmi is
 	signal i_RAMD_PLANE1					: std_logic_vector(7 downto 0);
 
 	signal i_clken_crtc					: std_logic;
+	signal i_clken_spr					: std_logic;
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(3 downto 0);
@@ -306,6 +307,7 @@ begin
 		CLK_48M_i			=> CLK_48M_i,
 
 		CLKEN_CRTC_o		=> i_clken_crtc,
+		CLKEN_SPR_o			=> i_clken_spr,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		CURSOR_i				=> i_cursor_CRTC,
@@ -595,7 +597,7 @@ END GENERATE;
 		scroll_latch_c_i		=> scroll_latch_c_i,
 		ttxmode_i				=> i_TTX,
 
-		crtc_mem_clken_i		=> i_clken_crtc,
+		crtc_mem_clken_i		=> i_clken_spr,
 		crtc_MA_i				=> i_crtc_MA,
 		crtc_RA_i				=> i_crtc_RA,
 

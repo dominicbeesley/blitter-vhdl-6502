@@ -102,6 +102,9 @@ entity vidproc is
         -- Clock enable output to CRTC
         CLKEN_CRTC  :   out std_logic;
 
+        -- Sprite data load clock - always at 2MHz
+        CLKEN_SPR   :   out std_logic;
+
         -- Clock enable counter, so memory timing can be slaved to the video processor
         CLKEN_COUNT :   out unsigned(3 downto 0);
 
@@ -380,6 +383,11 @@ begin
     CLKEN_CRTC  <= clken_fetch;
     CLKEN_COUNT <= clken_counter;
 
+
+        -- Sprite data load clock - always at 2MHz
+    CLKEN_SPR <= CLKEN and
+                  (not clken_counter(0)) and (not clken_counter(1)) and (not clken_counter(2));
+
     process(CLOCK)
     begin
         if rising_edge(CLOCK) then
@@ -635,7 +643,6 @@ begin
         if nRESET = '0' then
             phys_col <= (others =>'0');
         elsif rising_edge(PIXCLK) then
-            if clken_pixel = '1' then
                 -- Look up dot value in the palette.  Bits are as follows:
                 -- bit 3 - FLASH
                 -- bit 2 - Not BLUE
@@ -682,7 +689,6 @@ begin
                 else
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;
                 end if;
-            end if;
         end if;
     end process;
 
