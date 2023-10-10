@@ -122,6 +122,8 @@ architecture rtl of sprites is
 
 begin
 
+assert G_N_SPRITES mod 2 = 0 report "There must be an even number of sprites" severity error;
+
 G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 	i_SEQ_wren_oh(I) <= '1' when SEQ_wren_i = '1' and SEQ_A_i(C_A_SIZE-1 downto 4) = I else '0';
 	i_CPU_wren_oh(I) <= '1' when CPU_wren_i = '1' and CPU_A_i(C_A_SIZE-1 downto 4) = I else '0';
@@ -176,41 +178,31 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 	);
 END GENERATE;
 
---priority encoder and "attacher" for pixels
-p_pix_sel:process(pixel_clk_i, rst_i)
-variable I:natural;
-variable v_act:boolean;
-begin
-	if rst_i = '1' then
-		pixel_o <= (others => '0');
-		pixel_act_o <= '0';
-	elsif rising_edge(pixel_clk_i) then
-		if pixel_clken_i = '1' then
+	p_pix_sel_tmp:process(pixel_clk_i, rst_i)
+	begin
+		if rst_i = '1' then
 			pixel_o <= (others => '0');
 			pixel_act_o <= '0';
-			I := 0;
-			v_act := false;
-			FOR I in 0 TO G_N_SPRITES-1 loop
-				if not v_act then
-					if i_px_D(I) /= "00" and (I mod 2 = 0 or i_attach(I-1) = '0') then
+		elsif rising_edge(pixel_clk_i) then
+			if pixel_clken_i = '1' then
+				pixel_act_o <= '0';
+				pixel_o <= (others => '0');
+				for I in 0 to G_N_SPRITES-1 loop
+					if I mod 2 = 0 and i_attach(I) = '1' 
+							and (i_px_D(I+1) /= "00" or i_px_D(I) /= "00") then
+						pixel_o(3 downto 2) <= i_px_D(I+1);
 						pixel_o(1 downto 0) <= i_px_D(I);
-						v_act := true;
+						pixel_act_o <= '1';
+						exit;
+					elsif i_px_D(I) /= "00" then
+						pixel_o(1 downto 0) <= i_px_D(I);
+						pixel_act_o <= '1';
+						exit;
 					end if;
-					if I mod 2 = 0 and i_attach(I) = '1' and I < G_N_SPRITES - 1 then
-						if i_px_D(I+1) /= "00" then
-							pixel_o(3 downto 2) <= i_px_D(I);
-							v_act := true;
-						end if;
-					end if;
-				end if;
-			end loop;
-
-			if v_act then
-				pixel_act_o <= '1';
+				end loop;
 			end if;
 		end if;
-	end if;
-end process;
+	end process;
 
 	SEQ_DATA_REQ_o <= r_data_req;
 
