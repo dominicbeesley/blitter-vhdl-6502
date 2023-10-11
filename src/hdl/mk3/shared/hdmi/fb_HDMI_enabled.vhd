@@ -78,7 +78,8 @@ entity fb_HDMI is
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
 		debug_hsync_crtc_o			: out std_logic;
-		debug_odd_o					: out std_logic
+		debug_odd_o					: out std_logic;
+		debug_spr_mem_clken_o		: out std_logic
 
 
 	);
@@ -527,6 +528,8 @@ begin
 
 		);
 	end generate;
+
+	debug_spr_mem_clken_o <= i_clken_spr;
 
 G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 

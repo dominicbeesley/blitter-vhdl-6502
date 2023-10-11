@@ -331,6 +331,7 @@ architecture rtl of mk3blit is
 	signal i_debug_vsync_det			: std_logic;
 	signal i_debug_hsync_crtc			: std_logic;
 	signal i_debug_odd					: std_logic;
+	signal i_debug_spr_mem_clken		: std_logic;
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
 
@@ -1007,11 +1008,11 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
-SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_sys_nIRQ & i_vga27_debug_blank;
+SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_debug_spr_mem_clken & i_vga27_debug_blank;
 SYS_AUX_io(0) 		<= not (i_vga_debug_hs xor i_vga_debug_vs);
 SYS_AUX_io(1) 		<= i_vga_debug_r(i_vga_debug_r'high);
-SYS_AUX_io(2) 		<= i_debug_odd;
-SYS_AUX_io(3) 		<= i_vga_debug_blank;
+SYS_AUX_io(2) 		<= i_debug_hsync_det;
+SYS_AUX_io(3) 		<= i_debug_vsync_det;
 
 SYS_AUX_io <= (others => 'Z');
 
@@ -1077,7 +1078,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,
 		debug_hsync_crtc_o => i_debug_hsync_crtc,
-		debug_odd_o => i_debug_odd
+		debug_odd_o => i_debug_odd,
+		debug_spr_mem_clken_o => i_debug_spr_mem_clken
 
 	);
 END GENERATE;
