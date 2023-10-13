@@ -109,6 +109,7 @@ begin
 	RAM_A_o 					<= r_RAM_A;
 	RAMD_PLANE0_o 			<= 	r_RAMD_FONT when SEQ_alphamode_i = '1' else
 										r_RAMD_PLANE0;
+	RAMD_PLANE1_o			<= r_RAMD_PLANE1;
 
 	SEQ_SPR_wren_o 		<= r_SEQ_SPR_wren;
 	SEQ_SPR_A_o				<= r_SEQ_SPR_A;
