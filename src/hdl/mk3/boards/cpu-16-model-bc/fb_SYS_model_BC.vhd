@@ -202,6 +202,7 @@ architecture rtl of fb_sys is
 	signal	r_mb_ca1_clr_req  : std_logic;		-- signal from cpu to clear interrupt (either read port A or IFR set)
 	signal   r_mb_ca1_clr_ack	: std_logic;		-- ack signal for above
 
+	signal	r_pcr_ca1			: std_logic_vector(2 downto 0);
 	signal	r_ier_ca1			: std_logic;		-- interrupt enable for CA1
 	signal   r_ifr_ca1			: std_logic;		-- interrupt status for CA1
 
@@ -271,6 +272,7 @@ begin
 
 			r_mb_ca1_clr_req <= '0';
 			r_ier_ca1 <= '0';
+			r_pcr_ca1 <= (others => '0');
 
 			r_mb_scroll_latch <= (others => '0');
 		else
@@ -358,7 +360,11 @@ begin
 								state <= idle;		
 								r_ack <= '1';	
 								-- MODEL B/C intercept IER/IFR
-								if r_sys_A(15 downto 0) = x"FE4D" then
+								if r_sys_A(15 downto 0) = x"FE41" then
+									if r_pcr_ca1(0) = '0' then
+										r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
+									end if;
+								elsif r_sys_A(15 downto 0) = x"FE4D" then
 									-- IFR
 									r_D_rd(7) <= i_D_rd(7) or (r_ier_ca1 and r_ifr_ca1);
 									r_D_rd(6 downto 2) <= i_D_rd(6 downto 2);
@@ -424,10 +430,17 @@ begin
 									end if;
 								else
 									-- MODEL B/C - intercept IFR reset
-									if r_sys_A(15 downto 0) = x"FE4D" then
+									if r_sys_A(15 downto 0) = x"FE41" then
+										if r_pcr_ca1(0) = '0' then
+											r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
+										end if;
+									elsif r_sys_A(15 downto 0) = x"FE4D" then
 										if r_D_wr(1) = '1' then
 											r_mb_ca1_clr_req <= not r_mb_ca1_clr_ack;
 										end if;
+									elsif r_sys_A(15 downto 0) = x"FE4C" then
+										-- acr set "independent"
+										r_pcr_ca1 <= r_D_wr(3 downto 1);
 									elsif r_sys_A(15 downto 0) = x"FE40" then
 										-- ORB latch -- assume DDRB is 0F
 										if r_D_wr(2 downto 0) = "100" then

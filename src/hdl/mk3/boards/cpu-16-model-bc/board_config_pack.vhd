@@ -64,7 +64,7 @@ package board_config_pack is
 		
 	constant C_CPU_BYTELANES	: positive := 4;
 	constant G_INCL_CPU_T65		: boolean := true;
-	constant G_INCL_CPU_65C02	: boolean := false;
+	constant G_INCL_CPU_65C02	: boolean := true;
 	constant G_INCL_CPU_6800	: boolean := false;
 	constant G_INCL_CPU_80188	: boolean := false;
 	constant G_INCL_CPU_65816	: boolean := true;
