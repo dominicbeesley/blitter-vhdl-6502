@@ -55,6 +55,7 @@ entity vidmem_sequencer is
 		SEQ_SPR_DATA_req_i				: in  std_logic;
 		SEQ_SPR_DATAPTR_A_i				: in	t_spr_addr_array(G_N_SPRITES-1 downto 0);
 		SEQ_SPR_DATAPTR_act_i			: in  std_logic_vector(G_N_SPRITES-1 downto 0);
+		SEQ_SPR_A_pre_i					: in  t_spr_pre_array(G_N_SPRITES-1 downto 0);
 
 		-- sprite registers out
 		SEQ_SPR_wren_o						: out	std_logic;
@@ -94,6 +95,7 @@ architecture rtl of vidmem_sequencer is
 	signal 	r_SPR_DATA_ack	: std_logic;
 	signal   r_main_seq:unsigned(3 downto 0);
 	signal   r_spr_seq:unsigned(1 downto 0);
+	signal   r_spr_pre:unsigned(1 downto 0);
 	signal   r_spr_ix :unsigned(numbits(G_N_SPRITES) - 1 downto 0);
 	signal   r_doing_spr:boolean;
 
@@ -141,6 +143,7 @@ begin
 			r_main_seq 		<= (others => '0');
 			r_SPR_DATA_ack <= '0';
 			r_spr_seq 		<= (others => '0');
+			r_spr_pre 		<= (others => '0');
 			r_spr_ix  		<= (others => '0');
 		elsif rising_edge(clk_i) then
 
@@ -149,13 +152,14 @@ begin
 				when 1 =>
 					if r_SPR_DATA_ack /= SEQ_SPR_DATA_req_i then				
 						r_ram_A <= SEQ_SPR_DATAPTR_A_i(to_integer(r_spr_ix))(16 downto 0);
+						r_spr_pre <= unsigned(SEQ_SPR_A_pre_i(to_integer(r_spr_ix)));
 						r_doing_spr <= true;
 					else
 						r_ram_A <= i_RAMA_PLANE0;
 						r_doing_spr <= false;
 					end if;				
 				when 2 =>
-					r_SEQ_SPR_A <= r_spr_ix & "00" & r_spr_seq;
+					r_SEQ_SPR_A <= r_spr_ix & r_spr_pre & r_spr_seq;
 				when 4 =>
 					r_RAMD_PLANE0 <= RAM_D_i;
 					r_RAM_A <= i_RAMA_PLANE1;

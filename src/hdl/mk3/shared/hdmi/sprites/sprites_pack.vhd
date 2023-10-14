@@ -46,6 +46,8 @@ package sprites_pack is
 
 	type t_spr_addr_array is array (natural range <>) of std_logic_vector(23 downto 0);
 
+	type t_spr_pre_array is array (natural range <>) of std_logic_vector(1 downto 0);
+
 end package;
 
 library ieee;

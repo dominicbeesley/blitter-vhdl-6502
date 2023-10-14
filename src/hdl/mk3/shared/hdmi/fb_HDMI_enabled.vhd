@@ -201,6 +201,7 @@ architecture rtl of fb_hdmi is
 	signal i_SEQ_SPR_DATAPTR_act		: std_logic_vector(G_N_SPRITES-1 downto 0);
 	signal i_SEQ_SPR_A					: unsigned(numbits(G_N_SPRITES) + 3 downto 0);
 	signal i_SEQ_SPR_D					: std_logic_vector(7 downto 0);
+	signal i_SEQ_SPR_A_pre				: t_spr_pre_array(G_N_SPRITES-1 downto 0);
 
 	component hdmi_out_altera_max10 is
 	   port (
@@ -610,6 +611,7 @@ END GENERATE;
 		SEQ_SPR_DATA_req_i	=> i_SEQ_SPR_DATA_req,
 		SEQ_SPR_DATAPTR_A_i	=> i_SEQ_SPR_DATAPTR_A,
 		SEQ_SPR_DATAPTR_act_i=> i_SEQ_SPR_DATAPTR_act,
+		SEQ_SPR_A_pre_i		=> i_SEQ_SPR_A_pre,
 
 		SEQ_SPR_wren_o			=> i_SEQ_SPR_wren,
 		SEQ_SPR_A_o				=> i_SEQ_SPR_A,
@@ -650,6 +652,7 @@ END GENERATE;
 		SEQ_DATAPTR_A_o					=> i_SEQ_SPR_DATAPTR_A,
 		SEQ_DATAPTR_act_o					=> i_SEQ_SPR_DATAPTR_act,
 		SEQ_DATA_req_o						=> i_SEQ_SPR_DATA_req,
+		SEQ_A_pre_o							=> i_SEQ_SPR_A_pre,
 
 
 		-- vidproc / crtc signals in

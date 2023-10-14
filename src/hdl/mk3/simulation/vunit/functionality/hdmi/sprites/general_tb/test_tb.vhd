@@ -281,30 +281,83 @@ begin
 			);
 		end procedure;
 
+		-- little endian write of long register
+		procedure W32(A:std_logic_vector(23 downto 0); D:std_logic_vector(31 downto 0)) is
+		variable AA :unsigned(23 downto 0);
+		begin
+			AA := unsigned(A);
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(7 downto 0), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(15 downto 8), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(23 downto 16), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(31 downto 24), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+		end procedure;
+
+		-- little endian write of long register
+		procedure W24(A:std_logic_vector(23 downto 0); D:std_logic_vector(31 downto 0)) is
+		variable AA :unsigned(23 downto 0);
+		begin
+			AA := unsigned(A);
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(7 downto 0), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(15 downto 8), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+			AA := AA + 1;
+			single_write(
+				A => std_logic_vector(AA), 
+				D => D(23 downto 16), 
+				c2p => i_fb_c2p,
+				p2c => i_fb_p2c,
+				syscon => i_fb_syscon
+			);
+		end procedure;
+
 		procedure CRTCW(IX:natural; D:std_logic_vector(7 downto 0)) is
 		begin
 			W(x"FBFE00", std_logic_vector(to_unsigned(IX,8)));
 			W(x"FBFE01", D);
 		end procedure;
-	begin
 
-		test_runner_setup(runner, runner_cfg);
-
-
-		while test_suite loop
-
-			if run("boop") then
-
-				i_SUP_RESn <= '0';
-				wait for 69 us; -- must be > pll lock time
-				i_SUP_RESn <= '1';
-
-				sim_wait_reset(
-					c2p => i_fb_c2p,
-					syscon => i_fb_syscon
-				);
-
-				-- make a tiny screen 
+		procedure INIT_SCREEN is
+		begin
+						-- make a tiny screen 
 				CRTCW(0,  x"39"); --	 0 Horizontal Total	 		=58
 				CRTCW(1,  x"0A"); --	 1 Horizontal Displayed 	=10
 				CRTCW(2,  x"1C"); --	 2 Horizontal Sync	 		=28
@@ -324,7 +377,7 @@ begin
 				CRTCW(14, x"06"); --	 11 Cursor End Line	  		=8
 				CRTCW(15, x"00"); --	 11 Cursor End Line	  		=8
 
-				-- mode 2 (test multiple quick writes)
+								-- mode 2 (test multiple quick writes)
 				W(x"FBFE20", x"F4");
 
 				-- simple palette
@@ -346,7 +399,6 @@ begin
 				W(x"FBFE21", x"E9");
 				W(x"FBFE21", x"F8");
 
-				
 				W(x"FA3018", "00000000");
 				W(x"FA3020", "00000110");
 				W(x"FA3028", "00100000");
@@ -355,6 +407,11 @@ begin
 				W(x"FA3040", "00001100");
 				W(x"FA3048", "00110000");
 
+
+		end procedure;
+
+		procedure SPRITE_DATA is
+		begin
 				-- sprite data setup
 				W32B(x"FA2000", "00011011000000010000000011100100");
 				W32B(x"FA2004", "00011011000001110100000011100100");
@@ -365,18 +422,38 @@ begin
 				W32B(x"FA2020", "00011011000001110100000011100100");
 				W32B(x"FA2024", "00011011000000010000000011100100");
 
+
+		end procedure;
+
+	begin
+
+		test_runner_setup(runner, runner_cfg);
+
+
+		while test_suite loop
+
+			if run("single sprite") then
+
+				i_SUP_RESn <= '0';
+				wait for 69 us; -- must be > pll lock time
+				i_SUP_RESn <= '1';
+
+				sim_wait_reset(
+					c2p => i_fb_c2p,
+					syscon => i_fb_syscon
+				);
+
+				INIT_SCREEN;	
+				SPRITE_DATA;			
+
 				-- setup sprite 0
 
 				W(x"FBFF08", x"00");
 				W(x"FBFF09", x"20");
 				W(x"FBFF0A", x"00");		-- sprite data at 0x2000
 
-				W(x"FBFF0C", x"00");
-				W(x"FBFF0D", x"20");
-				W(x"FBFF0E", x"00");		-- sprite to be reloaded next frame at 0x2000
 
-
-				W(x"FBFF04", x"77");		-- horz = $27
+				W(x"FBFF04", x"77");		-- horz = 119
 				W(x"FBFF05", x"0A");		-- vert = 10
 				W(x"FBFF06", x"11");		-- vert end = 17
 				W(x"FBFF07", x"00");		-- no high bits, no attach, latch 
@@ -388,8 +465,31 @@ begin
 
 				wait for 10000 us;
 
-			end if;
+			elsif run("2 in a list") then
 
+				i_SUP_RESn <= '0';
+				wait for 69 us; -- must be > pll lock time
+				i_SUP_RESn <= '1';
+
+				sim_wait_reset(
+					c2p => i_fb_c2p,
+					syscon => i_fb_syscon
+				);
+
+				INIT_SCREEN;	
+				SPRITE_DATA;			
+
+				-- setup sprite list 0
+
+				W32(x"FA2080", x"200E0A77"); -- 119x10-14  cont list
+				W32(x"FA2084", x"00FA2000"); -- sprite dataptr
+				W32(x"FA2088", x"00161270"); -- 112x18-24 end of list
+				
+				W32(x"FBFF0C", x"00FA2080"); -- list start address
+				
+				wait for 10000 us;
+
+			end if;
 
 		end loop;
 

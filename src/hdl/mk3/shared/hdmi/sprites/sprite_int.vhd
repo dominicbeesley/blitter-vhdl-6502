@@ -43,6 +43,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -66,6 +67,7 @@ entity sprite_int is
 		-- sequencer interface out
 		SEQ_DATAPTR_A_o					: out	std_logic_vector(23 downto 0);-- sprite data pointer out 
 		SEQ_DATAPTR_act_o					: out std_logic;
+		SEQ_A_pre_o							: out std_logic_vector(1 downto 0); -- 00 = data, 01 = ctl, 10 = ptr, 11 = lst(unused)
 
 		-- data interface, from CPU
 		CPU_D_i								: in	std_logic_vector(7 downto 0);
@@ -98,7 +100,7 @@ end sprite_int;
 architecture rtl of sprite_int is
 
 	-- registers
-	signal r_armed					:	std_logic;									-- indicates that the sprite is armed (either by a direct cpu load or DMA)
+	signal r_line_armed			:	std_logic;									-- indicates that the sprite is armed (either by a direct cpu load or DMA)
 	signal r_spr_data				:	std_logic_vector(31 downto 0);		-- this sprite line's bit map ready for transfer to serializer
 	signal r_spr_serial			:	std_logic_vector(31 downto 0);
 	signal r_horz_start			:	unsigned(8 downto 0);
@@ -106,17 +108,18 @@ architecture rtl of sprite_int is
 	signal r_vert_stop			:	unsigned(8 downto 0);
 	signal r_attach				:	std_logic;
 	signal r_lat_data_ptr		: 	std_logic_vector(15 downto 0);		-- latched data pointer (copied to r_data_ptr when high byte written)
-	signal r_lat_data_ptr2		: 	std_logic_vector(15 downto 0);		-- latched data pointer2 (copied to r_data_ptr2 when high byte written)
+	signal r_lat_list_ptr		: 	std_logic_vector(15 downto 0);		-- latched data pointer2 (copied to r_listinit_ptrwhen high byte written)
 	signal r_data_ptr				:	std_logic_vector(23 downto 0);		-- pointer to sprite pixel data as it is read
-	signal r_data_ptr2			:	std_logic_vector(23 downto 0);		-- pointer to sprite pixel data reloaded at frame restart
+	signal r_list_ptr				:	std_logic_vector(23 downto 0);		-- pointer to current list item (reloaded from r_listinit_ptr at start of field)
+	signal r_listinit_ptr		:	std_logic_vector(23 downto 0);		-- pointer to head of this sprite's list
 	
 
 	-- combinatorials
 	signal i_horz_eq				:  std_logic;									-- '1' when horz_ctr == r_horz_start
-	signal i_serial_load			:	std_logic;									-- load the serializer at this pixel clock
 
 	-- vertical activation 
-	signal r_SEQ_DATAPTR_act	:  std_logic;
+	signal r_vert_armed 			:  std_logic;						-- control register has been written this frame
+	signal r_vert_act				:  std_logic;						-- between v start/end and armed
 
 	-- signal vertical restart from pixel to data clock
 	signal r_vert_req				:  std_logic;
@@ -124,6 +127,11 @@ architecture rtl of sprite_int is
 
 	signal r_horz_req				:  std_logic;
 	signal r_horz_ack				:  std_logic;
+
+	type t_list_state is (idle, start, ctl, dataptr, data);
+	signal r_list_state			:  t_list_state;
+	signal r_list_cont			:  std_logic;
+	signal r_load_data_ptr		:  std_logic;
 
 begin
 
@@ -136,12 +144,12 @@ begin
 
 
 	-- process to get horizontal restart from pixel clock into clk_i domain
-	p_horz_cd:process(pixel_clk_i, rst_i)
+	p_horz_cd:process(pixel_clk_i, pixel_clken_i, rst_i)
 	begin
 
 		if rst_i = '1' then
 			r_horz_req <= '0';
-		elsif rising_edge(pixel_clk_i) then
+		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then
 			if horz_disarm_clken_i = '1' then
 				r_horz_req <= not r_horz_req;
 			end if;
@@ -155,32 +163,97 @@ begin
 	p_arm:process(clk_i, rst_i, clken_i)
 	begin
 		if rst_i = '1' then
-			r_armed <= '0';
+			r_vert_act <= '0';
+			r_line_armed <= '0';
 			r_horz_ack <= '0';
+			r_list_state <= idle;		
+			r_vert_ack <= '0';
+			r_list_ptr <= (others => '0');
+			r_load_data_ptr <= '0';		
+			r_vert_armed <= '0';		
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			-- arm on data write to last data byte
 			-- clear on any ctl/pos change
 
 			-- TODO: sort this out to reduce logic and document
 			if r_horz_ack /= r_horz_req then
-				r_armed <= '0';
+				r_line_armed <= '0';
 				r_horz_ack <= r_horz_req;
+
+				if r_vert_req /= r_vert_ack then
+					r_vert_armed <= '0';
+					r_list_ptr <= r_listinit_ptr;
+					if or_reduce(r_listinit_ptr) = '1' then
+						r_list_state <= start;
+					else
+						r_list_state <= idle;
+					end if;
+					r_vert_ack <= r_vert_req;
+					r_vert_act <= '0';
+					r_load_data_ptr <= '1';		--- always load for first in list
+				elsif vert_ctr_i = r_vert_start and r_vert_start /= 0 and r_vert_armed = '1' then
+					r_vert_act <= '1';
+				elsif vert_ctr_i = r_vert_stop then
+					r_vert_act <= '0';					
+					if r_list_cont = '1' then
+						r_list_state <= ctl;
+					else
+						r_list_state <= idle;
+					end if;
+				elsif r_list_state = start and vert_ctr_i = to_unsigned(4, vert_ctr_i'length) then
+					r_list_state <= ctl;
+				end if;
+
 			end if;
 
-			if SEQ_A_i(2) = '1' and SEQ_wren_i = '1' then
-				r_armed <= '0';
-			elsif SEQ_A_i = "011" and SEQ_wren_i = '1' then
-				r_armed <= '1';
+			if SEQ_A_i(3 downto 2) = "01" and SEQ_wren_i = '1' then
+				r_line_armed <= '0';
+			elsif SEQ_A_i = "0011" and SEQ_wren_i = '1' then
+				r_line_armed <= '1';
 			end if;
-			if CPU_A_i(2) = '1' and CPU_wren_i = '1' then
-				r_armed <= '0';
-			elsif CPU_A_i = "011" and CPU_wren_i = '1' then
-				r_armed <= '1';
+			if CPU_A_i(3 downto 2) = "01" and CPU_wren_i = '1' then
+				r_line_armed <= '0';
+			elsif CPU_A_i = "0011" and CPU_wren_i = '1' then
+				r_line_armed <= '1';
 			end if;
+
+			
+			if SEQ_A_i = "0111" and SEQ_wren_i = '1' then
+				-- ctl write
+				r_load_data_ptr <= SEQ_D_i(6);		-- TODO: move this to other process or merge processes
+				if r_load_data_ptr = '1' then		-- NB: this is from the previous control word in list!
+					r_list_state <= dataptr;
+				else
+					r_list_state <= data;
+				end if;
+				r_vert_armed <= '1';
+			elsif SEQ_A_i = "1011" and SEQ_wren_i = '1' then
+				-- dataptr write
+				r_list_state <= data;
+			end if;
+
+			if CPU_A_i = "0111" and CPU_wren_i = '1' then
+				-- ctl write
+				r_vert_armed <= '1';
+			end if;
+
+			if (SEQ_A_i(3 downto 2) = "01" or SEQ_A_i(3 downto 2) = "10") and SEQ_wren_i = '1' then
+				r_list_ptr <= r_list_ptr(23 downto 16) & std_logic_vector(unsigned(r_list_ptr(15 downto 0)) + 1);			
+			end if;
+
 		end if;
 	end process;
 
-	SEQ_DATAPTR_A_o <= r_data_ptr;
+	SEQ_DATAPTR_A_o <= r_list_ptr when r_list_state = ctl or r_list_state = dataptr else
+							 r_data_ptr;
+
+	SEQ_A_pre_o <= 	"01" when r_list_state = ctl else
+		  			"10" when r_list_state = dataptr else
+					"00";
+	SEQ_DATAPTR_act_o 
+			  <= 	'1' when r_list_state = ctl else
+		  			'1' when r_list_state = dataptr else
+					r_vert_act;
 
 	p_regs:process(clk_i, rst_i, clken_i)
 	variable v_cur_wren 	: boolean;
@@ -198,9 +271,9 @@ begin
 			r_spr_data <= (others => '0');
 			r_lat_data_ptr <= (others => '0');
 			r_data_ptr <= (others => '0');
-			r_lat_data_ptr2 <= (others => '0');
-			r_data_ptr2 <= (others => '0');
-			r_vert_ack <= '0';
+			r_lat_list_ptr <= (others => '0');
+			r_listinit_ptr <= (others => '0');
+			r_list_cont <= '0';
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			
 			v_inc_dptr := false;
@@ -236,6 +309,7 @@ begin
 						r_horz_start(8) <= v_cur_D(0);
 						r_vert_start(8) <= v_cur_D(1);
 						r_vert_stop(8)  <= v_cur_D(2);
+						r_list_cont		 <= v_cur_D(5);
 						r_attach			 <= v_cur_D(7);
 					-- little endian data pointer (todo - CPU access in Big Endian as well?)
 					when 8	=> 
@@ -245,9 +319,9 @@ begin
 					when 10	=> 
 						v_wr_dptr := true;					
 					when 12	=> 
-						r_lat_data_ptr2(7 downto 0) 			<= v_cur_D;
+						r_lat_list_ptr(7 downto 0) 			<= v_cur_D;
 					when 13	=> 
-						r_lat_data_ptr2(15 downto 8) 			<= v_cur_D;
+						r_lat_list_ptr(15 downto 8) 			<= v_cur_D;
 					when 14	=> 
 						v_wr_dptr2 := true;					
 					when others => 
@@ -255,20 +329,14 @@ begin
 				end case;
 			end if;
 
-
 			if v_wr_dptr then
 				r_data_ptr <= v_cur_D & r_lat_data_ptr;
 			elsif v_inc_dptr then
 				r_data_ptr <= r_data_ptr(23 downto 16) & std_logic_vector(unsigned(r_data_ptr(15 downto 0)) + 1);			
 			end if;
 
-			if r_vert_req /= r_vert_ack then
-				r_data_ptr <= r_data_ptr2;
-				r_vert_ack <= r_vert_req;
-			end if;
-
 			if v_wr_dptr2 then
-				r_data_ptr2 <= v_cur_D & r_lat_data_ptr2;
+				r_listinit_ptr <= v_cur_D & r_lat_list_ptr;
 			end if;
 
 		end if;
@@ -280,7 +348,7 @@ begin
 			r_spr_serial <= (others => '0');
 		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then
 			
-			if r_armed = '1' and i_horz_eq = '1' then
+			if r_line_armed = '1' and i_horz_eq = '1' then
 				-- hit horizontal pos and we're armed
 				r_spr_serial <= r_spr_data;
 			else
@@ -289,20 +357,13 @@ begin
 		end if;
 	end process;
 
-	SEQ_DATAPTR_act_o <= r_SEQ_DATAPTR_act;
 	p_vert:process(pixel_clk_i, rst_i, pixel_clken_i)
 	begin
 		if rst_i = '1' then
-			r_SEQ_DATAPTR_act <= '0';
 			r_vert_req <= '0';
 		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then
 			if vert_reload_clken_i = '1' then
 				r_vert_req <= not r_vert_req;
-				r_SEQ_DATAPTR_act <= '0';
-			elsif vert_ctr_i = r_vert_start and r_vert_start /= 0 then
-				r_SEQ_DATAPTR_act <= '1';
-			elsif vert_ctr_i = r_vert_stop then
-				r_SEQ_DATAPTR_act <= '0';
 			end if;
 		end if;
 	end process;

@@ -69,6 +69,7 @@ entity sprites is
 		SEQ_DATAPTR_A_o					: out t_spr_addr_array(G_N_SPRITES-1 downto 0);
 		SEQ_DATAPTR_act_o					: out std_logic_vector(G_N_SPRITES-1 downto 0);		-- indicates a request for this address
 		SEQ_DATA_REQ_o						: out std_logic;							-- toggles once per line to inform sequencer to redo data
+		SEQ_A_pre_o							: out t_spr_pre_array(G_N_SPRITES-1 downto 0);
 
 		-- data interface, from CPU
 		CPU_D_i								: in	std_logic_vector(7 downto 0);
@@ -147,6 +148,7 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 		-- sequencer interface out
 		SEQ_DATAPTR_A_o					=> SEQ_DATAPTR_A_o(I),
 		SEQ_DATAPTR_act_o					=> SEQ_DATAPTR_act_o(I),
+		SEQ_A_pre_o							=> SEQ_A_pre_o(I),
 
 		-- data interface, from CPU
 		CPU_D_i								=> CPU_D_i,

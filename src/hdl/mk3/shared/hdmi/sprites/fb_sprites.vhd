@@ -47,6 +47,7 @@ entity fb_sprites is
 		SEQ_DATAPTR_A_o					: out t_spr_addr_array(G_N_SPRITES-1 downto 0);
 		SEQ_DATAPTR_act_o					: out std_logic_vector(G_N_SPRITES-1 downto 0);		-- indicates a request for this address
 		SEQ_DATA_REQ_o						: out std_logic;							-- toggles once per line to inform sequencer to redo data
+		SEQ_A_pre_o							: out t_spr_pre_array(G_N_SPRITES-1 downto 0);
 
 		-- vidproc / crtc signals in
 
@@ -153,6 +154,7 @@ e_sprites:entity work.sprites
 		SEQ_DATAPTR_A_o			=> SEQ_DATAPTR_A_o,
 		SEQ_DATAPTR_act_o			=> SEQ_DATAPTR_act_o,
 		SEQ_DATA_req_o				=> SEQ_DATA_req_o,
+		SEQ_A_pre_o					=> SEQ_A_pre_o,
 
 		-- data interface, from CPU
 		CPU_D_i						=> r_d_wr,
