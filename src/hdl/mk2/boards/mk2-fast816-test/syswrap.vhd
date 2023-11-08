@@ -53,7 +53,10 @@ entity syswrap is
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
 
 		N_PHI_DLY							: natural := 2;								-- delay between phi2 and phi0 in CLOCKSPEED clocks
-		N_PHI1_START						: natural := 10								-- number of cycles into phi1 that a cycle will be requested i.e. A/RnW change here during phi1
+		N_PHI1_START						: natural := 10;								-- number of cycles into phi1 that a cycle will be requested i.e. A/RnW change here during phi1
+		P_PHI2_WR_EN						: natural := 8;								-- delay write data enable
+
+		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA" -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
 
 	);
 	port(
@@ -74,11 +77,12 @@ entity syswrap is
 		-- data access signals
 
 		W_D_i					   			: in		std_logic_vector(7 downto 0);
-		W_D_o					   			: in		std_logic_vector(7 downto 0);
+		W_D_o					   			: out		std_logic_vector(7 downto 0);
 		W_A_i	   							: in		std_logic_vector(15 downto 0);
-		W_RnW_i			   				: out		std_logic;
+		W_RnW_i			   				: in		std_logic;
 
 		W_req_i			   				: in		std_logic;
+		W_CPU_D_wr_stb_i					: in		std_logic;
 		W_ack_o								: out		std_logic
 	);
 end syswrap;
@@ -92,6 +96,13 @@ architecture rtl of syswrap is
 	signal i_cken_start 	: std_logic;
 	signal i_cken_phi2	: std_logic;
 
+	signal r_cyc			: std_logic;	-- 1 when there's an active cycle in play
+	signal r_RnW			: std_logic;
+	signal r_A				: std_logic_vector(15 downto 0);
+
+	signal i_phi2			: std_logic;
+	signal i_phi2_dly		: std_logic;
+
 begin
 
 	p_phi0_dly:process(clk_i)
@@ -101,12 +112,45 @@ begin
 		end if;
 	end process;
 	
-	SYS_PHI1_o <= not r_phi0_dly(N_PHI_DLY) and not SYS_PHI0_i;
-	SYS_PHI2_o <= r_phi0_dly(N_PHI_DLY) and SYS_PHI0_i;
+	SYS_PHI1_o 	<= not r_phi0_dly(N_PHI_DLY);
+	i_phi2 		<= r_phi0_dly(N_PHI_DLY);
+	i_phi2_dly	<= r_phi0_dly(N_PHI_DLY+P_PHI2_WR_EN);
+	SYS_PHI2_o 	<= i_phi2;
 
 	i_cken_start <= r_phi0_dly(N_PHI_DLY+N_PHI1_START-1) and not r_phi0_dly(N_PHI_DLY+N_PHI1_START-2);
 	i_cken_phi2 <= r_phi0_dly(N_PHI_DLY-1) and not r_phi0_dly(N_PHI_DLY-2);
 
-	
+	p_cyc:process(rst_i, clk_i)
+	begin
+		if rst_i = '1' then
+			r_cyc <= '0';
+
+			r_RnW <= '1';
+			r_A   <= DEFAULT_SYS_ADDR;
+		elsif rising_edge(clk_i) then
+			if i_cken_start = '1' then
+				if W_req_i = '1' then
+					r_RnW <= W_RnW_i;
+					r_A   <= W_A_i;
+					r_cyc <= '1';
+				else
+					r_RnW <= '1';
+					r_A   <= DEFAULT_SYS_ADDR;
+					r_cyc <= '0';
+				end if;
+			end if;
+		end if;
+	end process;
+
+
+	SYS_SYNC_o <= '0';	--TODO: are we bothered?
+	SYS_RnW_o  <= r_RnW;
+	SYS_A_o    <= r_A;
+
+	SYS_D_io   <= W_D_i when i_phi2 = '1' and i_phi2_dly = '1' and r_RnW = '0' else (others => 'Z');
+
+	W_ack_o 	  <= r_cyc and i_cken_phi2;	
+
+	W_D_o 	  <= SYS_D_io;
 
 end rtl;

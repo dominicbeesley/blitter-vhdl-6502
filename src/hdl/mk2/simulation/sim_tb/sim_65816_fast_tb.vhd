@@ -211,17 +211,17 @@ begin
 
 
 	e_cpu: entity work.real_65816_tb 
-	--NMOS
-	--CMOS - not really, just a bit quicker...
-	--GENERIC MAP (
-	--	dly_phi0a => 1 ns,
-	--	dly_phi0b => 1 ns,
-	--	dly_phi0c => 1 ns,
-	--	dly_phi0d => 1 ns,
-	--	dly_addr  => 10 ns, -- faster than spec!
-	--	dly_dwrite=> 40 ns,	-- dwrite must be > dhold
-	--	dly_dhold => 30 ns
-	--)
+	-- set for faster than spec as measured at 5V on mk.2 blitter
+	GENERIC MAP (
+		dly_bank	=> 30 ns,
+		hld_bank  	=> 10 ns,
+		dly_addr  	=> 30 ns,
+		dly_dwrite	=> 30 ns,
+		dly_dhold 	=> 10 ns,
+		dly_dsetup	=> 10 ns,
+		hld_EMX	 	=> 5 ns,
+		dly_EMX	 	=> 25 ns
+	)
 	PORT MAP (
 		A 			=> i_CPU_A(15 downto 0),
 		D 			=> i_CPU_D,

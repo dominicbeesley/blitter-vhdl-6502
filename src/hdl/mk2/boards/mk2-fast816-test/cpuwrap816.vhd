@@ -53,19 +53,21 @@ entity cpuwrap816 is
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
 
 		-- defaults for 8MHz conservative
-		N_CPU_PHI1							: positive := 8;
-		N_CPU_PHI2							: positive := 8;
+		N_CPU_PHI1							: positive := 4;
+		N_CPU_PHI2							: positive := 4;
 
-		P_CPU_PHI1_ADDR					: integer  := 5;			-- cycle during phi1 to sample BANK/ADDR/RnW
+		P_CPU_PHI1_ADDR					: integer  := 3;			-- cycle during phi1 to sample BANK/ADDR/RnW
 		-- these count back from end of phi2 0 will be last cycle of phi2
-		P_CPU_PHI2_STRETCH				: integer  := -3			-- cycle during phi2 when data must be ready
-
+		P_CPU_PHI2_STRETCH				: integer  := -2;			-- cycle during phi2 when data must be ready
+		P_CPU_PHI2_DATA_WR				: integer  := 3;
+		P_CPU_PHI1_DATA_RD_HLD			: integer  := 0;
+		P_CPU_PHI2_DATA_RD_SETUP		: integer  := -2
 	);
 	port(
 		clk_i										: in		std_logic;				-- fast clock
 		rst_i										: in		std_logic;
 
-		CPUSKT_A_i								: in		std_logic_vector(19 downto 0);
+		CPUSKT_A_i								: in		std_logic_vector(15 downto 0);
 		CPUSKT_D_io								: inout  std_logic_vector(7 downto 0);
 
 		CPUSKT_E_i								: in		std_logic;		
@@ -93,11 +95,12 @@ entity cpuwrap816 is
 		-- data access signals
 
 		W_D_i					   				: in		std_logic_vector(7 downto 0);
-		W_D_o					   				: in		std_logic_vector(7 downto 0);
+		W_D_o					   				: out		std_logic_vector(7 downto 0);
 		W_A_o	   								: out		std_logic_vector(23 downto 0);
 		W_RnW_o			   					: out		std_logic;
 
 		W_req_o			   					: out		std_logic;
+		W_D_wr_stb_o							: out		std_logic;
 		W_ack_i									: in		std_logic
 	);
 end cpuwrap816;
@@ -109,29 +112,127 @@ architecture rtl of cpuwrap816 is
 	signal r_CPU_PHI2			: std_logic := '0';
 
 	signal r_bank				: std_logic_vector(7 downto 0);
+	signal r_addr				: std_logic_vector(15 downto 0);
+	signal r_rnw				: std_logic;
+	signal r_req				: std_logic;
+	signal r_d_wr_stb			: std_logic;
+	signal r_d_rd_en			: std_logic;
+
+	signal i_cken_PHI2_start: std_logic;
+	signal i_cken_PHI2_end  : std_logic;
+	signal i_cken_ADDR_read : std_logic;
+	signal i_cken_STRETCH   : std_logic;
+	signal i_cken_DATA_WR	: std_logic;
+	signal i_cken_DATA_RD_s	: std_logic;
+	signal i_cken_DATA_RD_e	: std_logic;
+
+	function CKPx(offset:integer; max:natural) return natural is
+	begin
+		if offset >= 0 then
+			if (offset >= max) then
+				return max-1;
+			else
+				return offset;
+			end if;
+		else 
+			if max+offset < 0 then
+				return 0;
+			else
+				return max+offset;
+			end if;
+		end if;
+	end function;
+
+	function CKP1(offset:integer) return natural is
+	begin
+		return CKPx(offset, N_CPU_PHI1);
+	end function;
+
+	function CKP2(offset:integer) return natural is
+	begin
+		return N_CPU_PHI1 + CKPx(offset, N_CPU_PHI2);
+	end function;
 
 begin
+
+	i_cken_PHI2_start		<= r_cpu_phi_ring(CKP1(-1));
+	i_cken_PHI2_end		<= r_cpu_phi_ring(CKP2(-1));
+	i_cken_ADDR_read		<= r_cpu_phi_ring(CKP1(P_CPU_PHI1_ADDR));
+	i_cken_STRETCH			<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_STRETCH));
+	i_cken_DATA_WR			<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_DATA_WR));
+	i_cken_DATA_RD_s		<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_DATA_RD_SETUP));
+	i_cken_DATA_RD_e		<= r_cpu_phi_ring(CKP1(P_CPU_PHI1_DATA_RD_HLD));
 
 	p_phi_ring:process(rst_i, clk_i)
 	begin
 		if rising_edge(clk_i) then
-			r_cpu_phi_ring <= r_cpu_phi_ring(r_cpu_phi_ring'high-1 downto 0) & r_cpu_phi_ring(r_cpu_phi_ring'high);
+			if r_req = '1' and W_ack_i /= '1' and i_cken_STRETCH = '1' then
+				-- cycle stretch gets stuck on this cycle
+			else
+				r_cpu_phi_ring <= r_cpu_phi_ring(r_cpu_phi_ring'high-1 downto 0) & r_cpu_phi_ring(r_cpu_phi_ring'high);
+			end if;
 		end if;
 	end process;
 
 	p_phi2:process(clk_i)
 	begin
 		if rising_edge(clk_i) then
-			if r_cpu_phi_ring(N_CPU_PHI1-1) = '1' then
+			if i_cken_PHI2_start = '1' then
 				r_CPU_PHI2 <= '1';
-				r_bank <= CPUSKT_D_io;
-			elsif r_cpu_phi_ring(N_CPU_PHI1+N_CPU_PHI2-1) = '1' then
+			elsif i_cken_PHI2_end = '1' then
 				r_CPU_PHI2 <= '0';
 			end if;
 		end if;
 	end process;
 
-	
+	p_cyc_state:process(rst_i, clk_i)
+	begin
+
+		if rst_i = '1' then
+			r_bank		<= (others => '0');
+			r_addr		<= (others => '0');
+			r_rnw			<= '1';
+			r_req			<= '0';
+			r_d_wr_stb	<= '0';
+		elsif rising_edge(clk_i) then
+			if i_cken_ADDR_read = '1' then
+				-- here we start a new cycle, if required
+				r_bank 		<= CPUSKT_D_io;
+				r_addr 		<= CPUSKT_A_i;
+				r_rnw  		<= CPUSKT_RnW_i;
+				r_req  		<= CPUSKT_VPA_i or CPUSKT_VDA_i;
+				r_d_wr_stb 	<= '0';
+			end if;
+
+			if i_cken_DATA_WR = '1' then
+				r_d_wr_stb 	<= '1';
+			end if;
+		end if;
+
+	end process;
+
+	p_rd_en:process(rst_i, clk_i)
+	begin
+		if rst_i = '1' then
+			r_d_rd_en <= '0';
+		elsif rising_edge(clk_i) then
+			if i_cken_DATA_RD_s = '1' then
+				r_d_rd_en <= r_rnw;
+			end if;
+
+			if i_cken_DATA_RD_e = '1' then
+				r_d_rd_en <= '0';
+			end if;
+		end if;
+	end process;
+
+	W_A_o 			<= r_bank & r_addr;
+	W_D_o 			<= CPUSKT_D_io;
+	W_req_o 			<= r_req;
+	W_RnW_o  		<= r_rnw;
+	W_D_wr_stb_o 	<= r_d_wr_stb;
+
+
 	CPUSKT_PHI2_o  <= r_CPU_PHI2;
 	CPUSKT_nRES_o 	<= not rst_i;
 	CPUSKT_BE_o 	<= '1';
@@ -139,6 +240,7 @@ begin
 	CPUSKT_nIRQ_o  <= SYS_nIRQ_i;
 	CPUSKT_nNMI_o  <= SYS_nNMI_i;
 
-	CPUSKT_D_io <= (others => 'Z');
+	CPUSKT_D_io 	<= W_D_i when r_d_rd_en = '1' else
+							(others => 'Z');
 
 end rtl;

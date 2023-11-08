@@ -156,7 +156,7 @@ component pllmain
    );
 end component;
 
-   signal i_fast_clk           : std_logic;
+   signal i_fast_clk          : std_logic;
    signal i_pll_locked        : std_logic;
 
 	signal r_rst					: std_logic;
@@ -168,6 +168,7 @@ end component;
 
 	signal i_W_CPU_req			: std_logic;
 	signal i_W_CPU_ack			: std_logic;
+	signal i_W_CPU_D_wr_stb		: std_logic;
 
 begin
 
@@ -226,6 +227,7 @@ port map (
 		W_RnW_i			   				=> i_W_CPU_RnW,
 
 		W_req_i			   				=> i_W_CPU_req,
+		W_CPU_D_wr_stb_i					=> i_W_CPU_D_wr_stb,
 		W_ack_o								=> i_W_CPU_ack
 	);
 
@@ -240,7 +242,7 @@ port map (
 		clk_i										=> i_fast_clk,
 		rst_i										=> r_rst,
 
-		CPUSKT_A_i								=> CPUSKT_A_i,
+		CPUSKT_A_i								=> CPUSKT_A_i(15 downto 0),
 		CPUSKT_D_io								=> CPUSKT_D_io,
 
 		CPUSKT_E_i								=> CPUSKT_6EKEZnRD_i,
@@ -269,6 +271,7 @@ port map (
 		W_RnW_o			   					=> i_W_CPU_RnW,
 
 		W_req_o			   					=> i_W_CPU_req,
+		W_D_wr_stb_o							=> i_W_CPU_D_wr_stb,
 		W_ack_i									=> i_W_CPU_ack
 
 	);
