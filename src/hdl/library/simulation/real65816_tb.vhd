@@ -156,10 +156,10 @@ BEGIN
 	i_XF_dly <= i_XF AFTER hld_EMX;
 
 	E 	<= i_EF_dly when i_E_act = '1' else 
-			'X';
+			'Z';
 	MX <= i_MF_dly when i_M_act = '1' else
 			i_XF_dly when i_X_act = '1' else 
-			'X';
+			'Z';
 
 
 
@@ -182,7 +182,11 @@ BEGIN
 		VPA 		=> i_VPA,
 		VDA 		=> i_VDA,
 		MLB 		=> i_MLB,
-		VPB 		=> i_VPB
+		VPB 		=> i_VPB,
+
+		EF_o		=> i_EF,
+		XF_o		=> i_XF,
+		MF_o		=> i_MF
     );
 
 
