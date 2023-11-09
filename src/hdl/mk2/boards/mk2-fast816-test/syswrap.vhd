@@ -99,6 +99,7 @@ architecture rtl of syswrap is
 	signal r_cyc			: std_logic;	-- 1 when there's an active cycle in play
 	signal r_RnW			: std_logic;
 	signal r_A				: std_logic_vector(15 downto 0);
+	signal r_D_wr			: std_logic_vector(7 downto 0);
 
 	signal i_phi2			: std_logic;
 	signal i_phi2_dly		: std_logic;
@@ -139,17 +140,31 @@ begin
 					r_cyc <= '0';
 				end if;
 			end if;
+			if W_req_i = '0' then
+				r_cyc <= '0';
+			end if;
 		end if;
 	end process;
+
+	p_d_wr_stb:process(rst_i, clk_i)
+	begin
+		if rst_i = '1' then
+			r_D_wr <= (others => '0');
+		elsif rising_edge(clk_i) then
+			if W_CPU_D_wr_stb_i = '1' and r_cyc = '1' then
+				r_D_wr <= W_D_i;
+			end if;
+		end if;
+	end process;	
 
 
 	SYS_SYNC_o <= '0';	--TODO: are we bothered?
 	SYS_RnW_o  <= r_RnW;
 	SYS_A_o    <= r_A;
 
-	SYS_D_io   <= W_D_i when i_phi2 = '1' and i_phi2_dly = '1' and r_RnW = '0' else (others => 'Z');
+	SYS_D_io   <= r_D_wr when i_phi2 = '1' and i_phi2_dly = '1' and r_RnW = '0' else (others => 'Z');
 
-	W_ack_o 	  <= r_cyc and i_cken_phi2;	
+	W_ack_o 	  <= r_cyc and (i_cken_phi2 or (W_CPU_D_wr_stb_i and not r_RnW));	
 
 	W_D_o 	  <= SYS_D_io;
 
