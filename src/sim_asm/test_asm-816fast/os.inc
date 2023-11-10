@@ -1,0 +1,14 @@
+OSWRCH		:=	$FFEE
+OSASCI		:=	$FFE3
+OSNEWL		:=	$FFE7
+OSFILE		:=	$FFDD
+OSBYTE		:=	$FFF4
+OSARGS		:=	$FFDA
+
+OSARGS_cmdtail	:=	1
+
+
+
+OSFILE_LOAD	:=	$FF
+
+BRKV		:= 	$202
