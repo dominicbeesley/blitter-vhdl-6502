@@ -23,8 +23,11 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_65816_fast_tb is
 generic (
-		G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom";
-		G_RAMDUMPFILE: string := "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin"
+		G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm-816fast/build/mostest_fast816.rom";
+		G_RAMDUMPFILE: string := "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin";
+
+		tco_ram		: time := 45 ns;
+		RAM_IS_45	: boolean := true
 	);
 end sim_65816_fast_tb;
 
@@ -131,7 +134,8 @@ begin
 
 	e_daughter: entity work.mk2blit
 	generic map (
-		SIM => true
+		SIM => true,
+		G_RAM_IS_45	=> RAM_IS_45
 	)
 	port map (
 		CLK_48M_i							=> i_EXT_CLK_48M,
@@ -247,8 +251,8 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
-		tco => 55 ns,
-		taa => 55 ns
+		tco => tco_ram,
+		taa => tco_ram
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),

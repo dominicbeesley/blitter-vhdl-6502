@@ -53,7 +53,7 @@ entity cpuwrap816 is
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
 
 -- 8MHz
-		-- defaults for 8MHz conservative
+		-- faster A setup
 		N_CPU_PHI1							: positive := 8;
 		N_CPU_PHI2							: positive := 8;
 
@@ -64,6 +64,18 @@ entity cpuwrap816 is
 		P_CPU_PHI1_DATA_RD_HLD			: integer  := 0;
 		P_CPU_PHI2_DATA_RD_SETUP		: integer  := -3
 
+---- 8MHz
+--		-- defaults for 8MHz conservative
+--		N_CPU_PHI1							: positive := 8;
+--		N_CPU_PHI2							: positive := 8;
+--
+--		P_CPU_PHI1_ADDR					: integer  := 5;			-- cycle during phi1 to sample BANK/ADDR/RnW
+--		-- these count back from end of phi2 0 will be last cycle of phi2
+--		P_CPU_PHI2_STRETCH				: integer  := -2;			-- cycle during phi2 when data must be ready
+--		P_CPU_PHI2_DATA_WR				: integer  := 4;
+--		P_CPU_PHI1_DATA_RD_HLD			: integer  := 0;
+--		P_CPU_PHI2_DATA_RD_SETUP		: integer  := -3
+--
 -- 16MHz
 --		-- defaults for 8MHz conservative
 --		N_CPU_PHI1							: positive := 4;
@@ -175,7 +187,7 @@ begin
 	i_cken_STRETCH			<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_STRETCH));
 	i_cken_DATA_WR			<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_DATA_WR));
 	i_cken_DATA_RD_s		<= r_cpu_phi_ring(CKP2(P_CPU_PHI2_DATA_RD_SETUP));
-	i_cken_DATA_RD_e		<= r_cpu_phi_ring(CKP1(P_CPU_PHI1_DATA_RD_HLD));
+	i_cken_DATA_RD_e		<= i_cken_PHI2_end;
 
 	p_phi2:process(clk_i)
 	begin

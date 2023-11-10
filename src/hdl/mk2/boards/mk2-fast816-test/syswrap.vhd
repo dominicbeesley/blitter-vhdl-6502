@@ -78,12 +78,17 @@ entity syswrap is
 
 		W_D_i					   			: in		std_logic_vector(7 downto 0);
 		W_D_o					   			: out		std_logic_vector(7 downto 0);
-		W_A_i	   							: in		std_logic_vector(15 downto 0);
+		W_A_i	   							: in		std_logic_vector(23 downto 0);
 		W_RnW_i			   				: in		std_logic;
 
 		W_req_i			   				: in		std_logic;
 		W_CPU_D_wr_stb_i					: in		std_logic;
-		W_ack_o								: out		std_logic
+		W_ack_o								: out		std_logic;
+
+		-- other signals
+
+		romsel_o								: out		std_logic_vector(3 downto 0)
+
 	);
 end syswrap;
 
@@ -132,7 +137,7 @@ begin
 			if i_cken_start = '1' then
 				if W_req_i = '1' then
 					r_RnW <= W_RnW_i;
-					r_A   <= W_A_i;
+					r_A   <= W_A_i(15 downto 0);
 					r_cyc <= '1';
 				else
 					r_RnW <= '1';
@@ -153,6 +158,9 @@ begin
 		elsif rising_edge(clk_i) then
 			if W_CPU_D_wr_stb_i = '1' and r_cyc = '1' then
 				r_D_wr <= W_D_i;
+				if r_A = x"FE30" then
+					romsel_o <= r_D_wr(3 downto 0);
+				end if;
 			end if;
 		end if;
 	end process;	

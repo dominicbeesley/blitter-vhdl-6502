@@ -93,6 +93,7 @@ set_global_assignment -name SDC_FILE mk2blit.sdc
 set_global_assignment -name VHDL_FILE mk2blit.vhd
 set_global_assignment -name VHDL_FILE cpuwrap816.vhd
 set_global_assignment -name VHDL_FILE syswrap.vhd
+set_global_assignment -name VHDL_FILE memwrap.vhd
 set_global_assignment -name VHDL_FILE ../../../library/common.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_fast_tb -section_id eda_simulation

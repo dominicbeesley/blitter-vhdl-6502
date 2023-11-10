@@ -41,6 +41,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
 
 
@@ -51,7 +52,8 @@ entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
+		G_RAM_IS_45							: boolean := true
 	);
 	port(
 		-- crystal osc 48MHz - not fitted on blit board
@@ -161,15 +163,40 @@ end component;
 
 	signal r_rst					: std_logic;
 
-	signal i_W_CPU_D_i			: std_logic_vector(7 downto 0);
-	signal i_W_CPU_D_o			: std_logic_vector(7 downto 0);
-	signal i_W_CPU_A				: std_logic_vector(23 downto 0);
-	signal i_W_CPU_RnW			: std_logic;
+	signal i_c2p_CPU_D			: std_logic_vector(7 downto 0);
+	signal i_c2p_CPU_A			: std_logic_vector(23 downto 0);
+	signal i_c2p_CPU_RnW			: std_logic;
+	signal i_c2p_CPU_req			: std_logic;
+	signal i_c2p_CPU_D_wr_stb	: std_logic;
+	signal i_p2c_CPU_D			: std_logic_vector(7 downto 0);
+	signal i_p2c_CPU_ack			: std_logic;
 
-	signal i_W_CPU_req			: std_logic;
-	signal i_W_CPU_ack			: std_logic;
-	signal i_W_CPU_D_wr_stb		: std_logic;
+	signal i_c2p_MEM_D			: std_logic_vector(7 downto 0);
+	signal i_c2p_MEM_A			: std_logic_vector(23 downto 0);
+	signal i_c2p_MEM_RnW			: std_logic;
+	signal i_c2p_MEM_req			: std_logic;
+	signal i_c2p_MEM_D_wr_stb	: std_logic;
+	signal i_p2c_MEM_D			: std_logic_vector(7 downto 0);
+	signal i_p2c_MEM_ack			: std_logic;
 
+	signal i_c2p_SYS_D			: std_logic_vector(7 downto 0);
+	signal i_c2p_SYS_A			: std_logic_vector(23 downto 0);
+	signal i_c2p_SYS_RnW			: std_logic;
+	signal i_c2p_SYS_req			: std_logic;
+	signal i_c2p_SYS_D_wr_stb	: std_logic;
+	signal i_p2c_SYS_D			: std_logic_vector(7 downto 0);
+	signal i_p2c_SYS_ack			: std_logic;
+	
+	constant N_PER					: positive := 2;
+	constant PER_SYS				: natural  := 0;
+	constant PER_MEM				: natural  := 1;
+
+	signal	r_cyc					: std_logic;
+	signal	r_rd_mpx_ix			: unsigned(numbits(N_PER)-1 downto 0);
+	signal   r_req					: std_logic_vector(N_PER-1 downto 0);
+	signal 	i_all_ack			: std_logic_vector(N_PER-1 downto 0);
+
+	signal	i_romsel				: std_logic_vector(3 downto 0);
 begin
 
 pll:pllmain 
@@ -221,15 +248,51 @@ port map (
 
 		-- data access signals
 
-		W_D_i					   			=> i_W_CPU_D_o,
-		W_D_o					   			=> i_W_CPU_D_i,
-		W_A_i	   							=> i_W_CPU_A(15 downto 0),
-		W_RnW_i			   				=> i_W_CPU_RnW,
+		W_D_i					   			=> i_c2p_SYS_D,
+		W_A_i	   							=> i_c2p_SYS_A,
+		W_RnW_i			   				=> i_c2p_SYS_RnW,
+		W_req_i			   				=> i_c2p_SYS_req,
+		W_CPU_D_wr_stb_i					=> i_c2p_SYS_D_wr_stb,
 
-		W_req_i			   				=> i_W_CPU_req,
-		W_CPU_D_wr_stb_i					=> i_W_CPU_D_wr_stb,
-		W_ack_o								=> i_W_CPU_ack
+		W_D_o					   			=> i_p2c_SYS_D,
+		W_ack_o								=> i_p2c_SYS_ack,
+
+		-- other signals
+		romsel_o								=> i_romsel
 	);
+
+--===================================== SYS ==============================================
+
+e_memwrap:entity work.memwrap
+generic map (
+		SIM									=> SIM,
+		G_SLOW_IS_45						=> G_RAM_IS_45
+	)
+port map (
+		clk_i									=> i_fast_clk,
+		rst_i									=> r_rst,
+
+		-- motherboard signals
+
+		MEM_A_o								=> MEM_A_o,
+		MEM_D_io								=> MEM_D_io,
+		MEM_nOE_o							=> MEM_nOE_o,
+		MEM_ROM_nWE_o						=> MEM_ROM_nWE_o,
+		MEM_RAM_nWE_o						=> MEM_RAM_nWE_o,
+		MEM_ROM_nCE_o						=> MEM_ROM_nCE_o,
+		MEM_RAM0_nCE_o						=> MEM_RAM0_nCE_o,
+		-- data access signals
+
+		W_D_i					   			=> i_c2p_MEM_D,
+		W_A_i	   							=> i_c2p_MEM_A,
+		W_RnW_i			   				=> i_c2p_MEM_RnW,
+		W_req_i			   				=> i_c2p_MEM_req,
+		W_CPU_D_wr_stb_i					=> i_c2p_MEM_D_wr_stb,
+
+		W_D_o					   			=> i_p2c_MEM_D,
+		W_ack_o								=> i_p2c_MEM_ack
+	);
+
 
 --===================================== CPU ==============================================
 
@@ -265,14 +328,14 @@ port map (
 		SYS_nIRQ_i								=> SYS_nIRQ_i,
 		SYS_nNMI_i								=> SYS_nNMI_i,
 
-		W_D_i					   				=> i_W_CPU_D_i,
-		W_D_o					   				=> i_W_CPU_D_o,
-		W_A_o	   								=> i_W_CPU_A,
-		W_RnW_o			   					=> i_W_CPU_RnW,
+		W_D_o					   				=> i_c2p_CPU_D,
+		W_A_o	   								=> i_c2p_CPU_A,
+		W_RnW_o			   					=> i_c2p_CPU_RnW,
+		W_req_o			   					=> i_c2p_CPU_req,
+		W_D_wr_stb_o							=> i_c2p_CPU_D_wr_stb,
 
-		W_req_o			   					=> i_W_CPU_req,
-		W_D_wr_stb_o							=> i_W_CPU_D_wr_stb,
-		W_ack_i									=> i_W_CPU_ack
+		W_D_i					   				=> i_p2c_CPU_D,
+		W_ack_i									=> i_p2c_CPU_ack
 
 	);
 
@@ -280,18 +343,80 @@ port map (
 	CPUSKT_KnBRZnBUSREQ_o			<= '1';
 	CPUSKT_9nFIRQLnDTACK_o			<= '1';
 
+--===================================== MULTIPLEXING ==============================================
 
+	i_c2p_MEM_D					<= i_c2p_CPU_D;
+	--i_c2p_MEM_A					<= i_c2p_CPU_A;				-- this gets remapped below in p_cyc
+	i_c2p_MEM_RnW				<= i_c2p_CPU_RnW;
+	i_c2p_MEM_D_wr_stb		<= i_c2p_CPU_D_wr_stb;
+	i_c2p_MEM_req				<= r_req(PER_MEM);
+
+	i_c2p_SYS_D					<= i_c2p_CPU_D;
+	i_c2p_SYS_A					<= i_c2p_CPU_A(23 downto 0);
+	i_c2p_SYS_RnW				<= i_c2p_CPU_RnW;
+	i_c2p_SYS_D_wr_stb		<= i_c2p_CPU_D_wr_stb;
+	i_c2p_SYS_req				<= r_req(PER_SYS);
+
+	i_all_ack(PER_SYS)		<= i_p2c_SYS_ack;
+	i_all_ack(PER_MEM)		<= i_p2c_MEM_ack;
+
+	i_p2c_CPU_ack 				<=
+		and_reduce(
+				(r_req and i_all_ack)
+				or not (r_req)
+			);
+
+	i_p2c_CPU_D					<= i_p2c_MEM_D when r_rd_mpx_ix = PER_MEM else
+										i_p2c_SYS_D;
+
+	p_cyc:process(r_rst, i_fast_clk)
+	begin
+		
+		if r_rst = '1' then
+			r_cyc <= '0';
+			r_req <= (others => '0');
+			r_rd_mpx_ix <= (others => '0');
+		elsif rising_edge(i_fast_clk) then
+			if r_cyc = '0' and i_c2p_CPU_req = '1' then
+				-- start a cycle
+				i_c2p_MEM_A					<= i_c2p_CPU_A;			-- default address
+				r_cyc <= '1';
+				if unsigned(i_c2p_CPU_A(15 downto 12)) < x"8" then
+					r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
+					if i_c2p_CPU_RnW = '0' then
+						-- write to both mem and sys
+						r_req			<= (PER_MEM => '1', PER_SYS => '1', others => '0');
+					else
+						-- read from just mem
+						r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
+						r_req			<= (PER_MEM => '1', others => '0');
+					end if;
+				elsif i_romsel(3) = '1' and unsigned(i_c2p_CPU_A(15 downto 12)) >= x"8" and unsigned(i_c2p_CPU_A(15 downto 12)) < x"C" then
+					r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
+					i_c2p_MEM_A	<= "0111111" & i_romsel(2 downto 0) & i_c2p_CPU_A(13 downto 0);
+					if i_c2p_CPU_RnW = '0' then
+						-- write to both mem and sys
+						r_req			<= (PER_MEM => '1', PER_SYS => '1', others => '0');
+					else
+						-- read from just mem
+						r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
+						r_req			<= (PER_MEM => '1', others => '0');
+					end if;				
+				else
+					r_rd_mpx_ix <= to_unsigned(PER_SYS, r_rd_mpx_ix'length);
+					r_req			<= (PER_SYS => '1', others => '0');					
+				end if;
+			end if;
+
+			if i_c2p_CPU_req = '0' then
+				r_cyc <= '0';
+				r_req <= (others => '0');
+			end if;
+		end if;
+
+	end process;
 
 -- unused stuff
-
-      -- 2M RAM/256K ROM bus (45)
-      MEM_A_o                       <= (others => '0');
-      MEM_D_io                      <= (others => 'Z');
-      MEM_nOE_o                     <= '1';
-      MEM_ROM_nWE_o                 <= '1';
-      MEM_RAM_nWE_o                 <= '1';
-      MEM_ROM_nCE_o                 <= '1';
-      MEM_RAM0_nCE_o                <= '1';
       
       -- 1 bit DAC sound out stereo, aux connectors mirror main (2)
       SND_BITS_L_o                  <= '1';
