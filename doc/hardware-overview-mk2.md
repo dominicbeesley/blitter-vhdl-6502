@@ -5,8 +5,6 @@
 This document describes the firmware for the mk.2 board, for the latest mk.3 board see
         -       [Mk.3 overview](hardware-overview-mk3.md)
 
-
-
 # 1. BEEB Blitter and CPU card Mk.2 Hardware Overview
 -----------------------------------------------------
 
@@ -14,6 +12,8 @@ The Dossytronics CPU development board includes an EP4CE10 mezzanine board,
 up to 2Mb of SRAM, 256K of FlashEEPROM, an optional crystal oscillator, 
 optional cpu sockets for 6502A, 65c02, 65816, 6809, 6309, Z80, MC68008 
 processors.
+
+[Schematic](blit-cpu-mk2.pdf)
 
 An optional super-capacitor and charging circuit are provided which can back up 
 the SRAM.
@@ -231,7 +231,7 @@ decoder to a 65xx or 6x09 CPU
 * [GitHub 6809](https://github.com/hoglet67/6809Decoder)
 
 
-## P6 CPU voltage 
+## P6 CPU voltage
   [incorrectly labelled should be J7]
   [located W near top cpu sockets ]
 
