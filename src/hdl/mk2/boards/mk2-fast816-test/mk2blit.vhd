@@ -360,7 +360,7 @@ port map (
 	i_all_ack(PER_SYS)		<= i_p2c_SYS_ack;
 	i_all_ack(PER_MEM)		<= i_p2c_MEM_ack;
 
-	i_p2c_CPU_ack 				<=
+	i_p2c_CPU_ack 				<= r_cyc and
 		and_reduce(
 				(r_req and i_all_ack)
 				or not (r_req)
@@ -388,20 +388,12 @@ port map (
 						r_req			<= (PER_MEM => '1', PER_SYS => '1', others => '0');
 					else
 						-- read from just mem
-						r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
 						r_req			<= (PER_MEM => '1', others => '0');
 					end if;
 				elsif i_romsel(3) = '1' and unsigned(i_c2p_CPU_A(15 downto 12)) >= x"8" and unsigned(i_c2p_CPU_A(15 downto 12)) < x"C" then
 					r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
 					i_c2p_MEM_A	<= "0111111" & i_romsel(2 downto 0) & i_c2p_CPU_A(13 downto 0);
-					if i_c2p_CPU_RnW = '0' then
-						-- write to both mem and sys
-						r_req			<= (PER_MEM => '1', PER_SYS => '1', others => '0');
-					else
-						-- read from just mem
-						r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
-						r_req			<= (PER_MEM => '1', others => '0');
-					end if;				
+					r_req			<= (PER_MEM => '1', others => '0');
 				else
 					r_rd_mpx_ix <= to_unsigned(PER_SYS, r_rd_mpx_ix'length);
 					r_req			<= (PER_SYS => '1', others => '0');					
