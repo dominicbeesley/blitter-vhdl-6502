@@ -381,7 +381,10 @@ port map (
 				-- start a cycle
 				i_c2p_MEM_A					<= i_c2p_CPU_A;			-- default address
 				r_cyc <= '1';
-				if unsigned(i_c2p_CPU_A(15 downto 12)) < x"8" then
+				if unsigned(i_c2p_CPU_A(15 downto 12)) < x"1" then
+					r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
+					r_req			<= (PER_MEM => '1', others => '0');
+				elsif unsigned(i_c2p_CPU_A(15 downto 12)) < x"8" then
 					r_rd_mpx_ix <= to_unsigned(PER_MEM, r_rd_mpx_ix'length);
 					if i_c2p_CPU_RnW = '0' then
 						-- write to both mem and sys
