@@ -20,6 +20,10 @@ mos_handle_res:
 		ldx	#$FF
 		txs
 
+		; test 1MHz write
+		lda	#$7F
+		sta	$FCA0
+
 		; copy fast prog to RAM
 		ldx	#test_fast_prg_len-1
 @l1:		lda	test_fast_prg, X
