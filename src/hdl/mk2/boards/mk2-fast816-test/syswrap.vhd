@@ -172,7 +172,8 @@ begin
 
 	SYS_D_io   <= r_D_wr when i_phi2 = '1' and i_phi2_dly = '1' and r_RnW = '0' else (others => 'Z');
 
-	W_ack_o 	  <= r_cyc and (i_cken_phi2 or (W_CPU_D_wr_stb_i and not r_RnW));	
+	W_ack_o 	  <= r_cyc and i_cken_phi2;	
+--	W_ack_o 	  <= r_cyc and (i_cken_phi2 or (W_CPU_D_wr_stb_i and not r_RnW));	
 
 	W_D_o 	  <= SYS_D_io;
 
