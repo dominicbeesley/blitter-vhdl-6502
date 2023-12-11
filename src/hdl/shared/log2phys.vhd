@@ -1,9 +1,9 @@
 
--- ###  #  ##   #          ###  #   ## ###      ## # # ##   #  # #          #       #  ##      ### ### ### ###
---  #  # # # # # #  #      #   # # #    #      #   # # # # # # ###      ## ###     ##  # #     # # # # # # # #
---  #  # # # # # #         ##  ###  #   #       #  ### ##  ### ###     # #  #       #  # #     # # # # # # # #
---  #  # # # # # #  #      #   # #   #  #        # ### # # # # # #     ###  ##      #  # #     # # # # # # # #
---  #   #  ##   #          #   # # ##   #      ##  # # # # # # # #                 ### ##      ### ### ### ###
+
+-- TODO : URGENT 2023/12/11 - Rom E on Mk.3 is hard-coded at 1Fxxxx make all SWROMS start in
+-- BBRAM at boot and be configurable with registers to a lower number - BLTUTILs to allocate
+-- them from the heap with an aligned memory allocation call (to be added)
+
 -- Oct/22 - part done, just for ROM E on mk3
 -- Suggest adding turbo mask registers that indicates which roms to run from ChipRAM and a ChipRAM base register
 -- Add CMOS support to allow configure of Fast/Turbo/Throttled ROMS
