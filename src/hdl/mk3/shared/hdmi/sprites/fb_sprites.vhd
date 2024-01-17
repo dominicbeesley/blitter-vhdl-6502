@@ -68,7 +68,7 @@ end fb_sprites;
 architecture rtl of fb_sprites is
 	
 	-- FISHBONE wrapper signals
-	type	 per_state_t is (idle, rd, wait_d_stb);
+	type	 per_state_t is (idle, rd, wait_d_stb, wait_wr_ack);
 	signal r_per_state 					: per_state_t;
 
 	constant C_A_SIZE						: natural := numbits(G_N_SPRITES) + 4;
@@ -78,7 +78,25 @@ architecture rtl of fb_sprites is
 	signal r_d_wr_stb						: std_logic;
 	signal r_ack							: std_logic;
 
+	signal i_cpu_D_o						: std_logic_vector(7 downto 0);
+
+	signal i_wr_ack						: std_logic;
+
+	signal i_rd_D_local					: std_logic_vector(7 downto 0);
+	signal r_local							: std_logic;
+
+	signal i_horz_ctr						: unsigned(8 downto 0);
+	signal i_vert_ctr						: unsigned(8 downto 0);
+
 begin
+
+	-- read local debug signals
+	i_rd_D_local <= std_logic_vector(i_horz_ctr(7 downto 0)) when r_A(3 downto 0) = x"0" else
+					"0000000" & std_logic(i_horz_ctr(8)) 			when r_A(3 downto 0) = x"1" else
+					std_logic_vector(i_vert_ctr(7 downto 0)) 		when r_A(3 downto 0) = x"2" else
+					"0000000" & std_logic(i_vert_ctr(8)) 			when r_A(3 downto 0) = x"3" else
+					(others => '1');
+
 
 		-- FISHBONE wrapper for CPU/DMA access
 	fb_p2c_o.ack <= r_ack;
@@ -95,17 +113,17 @@ begin
 			r_A <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_ack <= '0';
-			r_d_wr_stb <= '0';
 			case r_per_state is
 				when idle =>
+					r_d_wr_stb <= '0';
 					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
 						r_A <= fb_c2p_i.A(C_A_SIZE-1 downto 0);
+						r_local <= fb_c2p_i.A(7);						-- access debug if >$80
 						if fb_c2p_i.we = '1' then
 							if fb_c2p_i.D_wr_stb = '1' then
-								r_d_wr_stb <= '1';
+								r_d_wr_stb <= not r_local;
 								r_d_wr <= fb_c2p_i.d_wr;
-								r_ack <= '1';
-								r_per_state <= idle;
+								r_per_state <= wait_wr_ack;
 							else
 								r_per_state <= wait_d_stb;
 							end if;
@@ -115,19 +133,30 @@ begin
 					end if;
 				when wait_d_stb =>
 					if fb_c2p_i.D_wr_stb = '1' then
-						r_d_wr_stb <= '1';
+						r_d_wr_stb <= not r_local;
 						r_d_wr <= fb_c2p_i.d_wr;
-						r_ack <= '1';
-						r_per_state <= idle;
+						r_per_state <= wait_wr_ack;
 					else
 						r_per_state <= wait_d_stb;
+					end if;
+				when wait_wr_ack =>
+					if i_wr_ack = '1' or r_local = '1' then
+						r_ack <= '1';
+						r_d_wr_stb <= '0';
+						r_per_state <= idle;
 					end if;
 				when rd =>
 					r_ack <= '1';
 					r_per_state <= idle;	
+					if r_local = '1' then
+						fb_p2c_o.D_Rd <= i_rd_D_local;
+					else
+						fb_p2c_o.D_Rd <= i_cpu_D_o;
+					end if;
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';
+					r_d_wr_stb <= '0';
 			end case;
 		end if;
 	end process;
@@ -160,18 +189,25 @@ e_sprites:entity work.sprites
 		CPU_D_i						=> r_d_wr,
 		CPU_wren_i					=> r_d_wr_stb,
 		CPU_A_i						=> unsigned(r_A),
+		CPU_D_o						=> i_cpu_D_o,
+		CPU_wr_ack_o				=> i_wr_ack,
 
 		-- vidproc / crtc signals in
-		pixel_clk_i							=> pixel_clk_i,
-		pixel_clken_i						=> pixel_clken_i,
-		vsync_i								=> vsync_i,
-		hsync_i								=> hsync_i,
-		disen_i								=> disen_i,
+		pixel_clk_i					=> pixel_clk_i,
+		pixel_clken_i				=> pixel_clken_i,
+		vsync_i						=> vsync_i,
+		hsync_i						=> hsync_i,
+		disen_i						=> disen_i,
 
 
 		-- pixels out
 		pixel_act_o					=> pixel_act_o,
-		pixel_o						=> pixel_o
+		pixel_o						=> pixel_o,
+
+		--debug out
+
+		horz_ctr_o					=> i_horz_ctr,
+		vert_ctr_o					=> i_vert_ctr
 
 	);
 

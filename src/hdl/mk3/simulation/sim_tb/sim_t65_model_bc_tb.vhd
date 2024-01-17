@@ -403,7 +403,7 @@ begin
 			wait for 20 us;
 			i_SUP_nRESET <= '1';
 
-			while usct < 200000 and sim_reg_halt /= '1' loop
+			while usct < 2000000 and sim_reg_halt /= '1' loop
 				wait for 10 us;
 				usct := usct + 1;
 			end loop;

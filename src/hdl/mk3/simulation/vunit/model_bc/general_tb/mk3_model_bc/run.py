@@ -16,9 +16,38 @@ lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/board_config_pack.vhd")
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/version.vhd")
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/pllmain.vhd")
 lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/fb_SYS_model_BC.vhd")
-lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/fb_cpu_log2phys_model_BC.vhd")
+lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/log2phys_model_BC.vhd")
+lib.add_source_file(root + "mk3/boards/cpu-16-model-bc/mk3blit_model_BC.vhd")
+
+
+# video / HDMI stuff
+
+lib.add_source_file(root + "mk3/shared/hdmi/dd_out.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/dvi_synchro.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_crtc.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_ctl.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_enabled.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_ram.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_seq_ctl.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/fb_HDMI_vidproc.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/hdmi_blockram.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/HDMI_pack.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/linebuffer.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/pll_hdmi.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/sprites/fb_sprites.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/sprites/sprites.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/sprites/sprites_pack.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/sprites/sprite_int.vhd")
+lib.add_source_file(root + "mk3/shared/hdmi/vidmem_sequencer.vhd")
+
+lib.add_source_file(root + "library/3rdparty/MikeStirling/vidproc_model_bc.vhd")
+lib.add_source_file(root + "library/3rdparty/MikeStirling/mc6845.vhd")
+lib.add_source_file(root + "library/3rdparty/MikeStirling/saa5050.vhd")
+lib.add_source_file(root + "library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd")
+
 
 # Base project files
+
 lib.add_source_file(root + "mk3/shared/hdmi/HDMI_pack.vhd")
 lib.add_source_file(root + "shared/firmware_info_pack.vhd")
 lib.add_source_file(root + "library/fishbone/fishbone_pack.vhd")
@@ -65,14 +94,13 @@ lib.add_source_file(root + "shared/fb_CPU_6800.vhd")
 lib.add_source_file(root + "mk3/shared/fb_CPU_80188_exp_pins.vhd")
 lib.add_source_file(root + "shared/fb_CPU_80188.vhd")
 lib.add_source_file(root + "shared/fb_cpu_con_burst.vhd")
-lib.add_source_file(root + "shared/log2phys.vhd")
 lib.add_source_file(root + "shared/fb_CPU.vhd")
+lib.add_source_file(root + "shared/fb_CPU_log2phys.vhd")
 lib.add_source_file(root + "shared/address_decode.vhd")
 lib.add_source_file(root + "mk3/shared/clocks_pll.vhd")
 lib.add_source_file(root + "shared/fb_i2c.vhd")
 lib.add_source_file(root + "mk3/shared/fb_MEM.vhd")
 lib.add_source_file(root + "shared/fb_memctl.vhd")
-lib.add_source_file(root + "mk3/shared/mk3blit.vhd")
 lib.add_source_file(root + "shared/address_decode_chipset.vhd")
 lib.add_source_file(root + "chipset/fb_chipset_pack.vhd")
 lib.add_source_file(root + "chipset/fb_chipset.vhd")
@@ -81,7 +109,10 @@ lib.add_source_file(root + "chipset/dmac_int_sound_cha.vhd")
 lib.add_source_file(root + "chipset/dac_1bit.vhd")
 lib.add_source_file(root + "chipset/dmac_int_dma.vhd")
 lib.add_source_file(root + "chipset/dmac_int_dma_cha.vhd")
-
+lib.add_source_file(root + "chipset/aeris.vhd")
+lib.add_source_file(root + "chipset/blit_addr.vhd")
+lib.add_source_file(root + "chipset/blit_int.vhd")
+lib.add_source_file(root + "chipset/blit_types.vhd")
 
 
 # Sim files

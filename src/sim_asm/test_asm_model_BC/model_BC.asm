@@ -198,9 +198,29 @@ _CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
 			.byte	$72				; 10 Cursor Start Line	  =&72	Blink=On, Speed=1/32, Line=18
 			.byte	$13				; 11 Cursor End Line	  =19
 
+
+;********* 6845 REGISTERS 0-11 FOR A tiny mode to test sprites ****************
+; made for 2MHz char clock
+; has similar length between sync and DISEN for sprite data loads but only 8 displayed chars
+; has only 2 char lines and 1 char lines either side of sync
+_CRTC_REG_TAB_DAFT:	.byte	$2f				; 0 Horizontal Total	 
+			.byte	$08				; 1 Horizontal Displayed 
+			.byte	$12				; 2 Horizontal Sync	 
+			.byte	$28				; 3 HSync Width+VSync	 =&28  VSync=2, HSync Width=8
+			.byte	$04				; 4 Vertical Total	 
+			.byte	$00				; 5 Vertial Adjust	 =0
+			.byte	$02				; 6 Vertical Displayed	 =32
+			.byte	$01				; 7 VSync Position	 =&22
+			.byte	$01				; 8 Interlace+Cursor	 =&01  Cursor=0, Display=0, Interlace=Sync
+			.byte	$07				; 9 Scan Lines/Character =8
+			.byte	$67				; 10 Cursor Start Line	  =&67	Blink=On, Speed=1/32, Line=7
+			.byte	$08				; 11 Cursor End Line	  =8
+
 mos_handle_res:
 	sei
 	cld
+	ldx	#$FF
+	txs
 
 	lda	#$40
 	sta	vec_nmi
@@ -292,7 +312,7 @@ mos_handle_res:
 
 	ldy	#$0b				; Y=11
 	ldx	#$0b
-_BCBB0:	lda	_CRTC_REG_TAB,X			; get end of 6845 registers 0-11 table
+_BCBB0:	lda	_CRTC_REG_TAB_DAFT,X		; get end of 6845 registers 0-11 table
 	sty	sheila_CRTC_ix
 	sta	sheila_CRTC_dat
 	dex					; reduce pointers
@@ -309,8 +329,9 @@ pplp:	sta	sheila_ULA_pal
 	dex
 	bne	pplp
 
-HERE:	lda	#$FF
-	sta	$FEFF
+HERE:	
+;;	lda	#$FF
+;;	sta	$FEFF
 	jmp	HERE
 
 t0_failed:
