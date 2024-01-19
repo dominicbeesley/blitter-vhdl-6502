@@ -95,7 +95,6 @@ architecture rtl of fb_cpu_t65 is
 
 	signal r_throttle_sync  : std_logic;		-- hold throttle for the rest of the instruction
 	signal i_throttle			: std_logic;		-- '1' if current throttle or sync throttle
-	signal r_throttle_waiting:std_logic;		-- '1' if we missed a clock due to throttling and waiting for phi2
 	signal r_had_phi2			: std_logic;		-- a phi2 occurred already while we were waiting for ack
 
 	signal i_wrap_cyc 		: std_logic;
@@ -135,19 +134,14 @@ begin
 	p_reg_cken:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_throttle_waiting <= '0';			
 			r_throttle_sync <= '0';
 			r_had_phi2 <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if i_t65_clken = '1' then
-				r_throttle_waiting <= '0';
 				r_had_phi2 <= '0';
 				if i_t65_SYNC = '1' then
 					r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
 				end if;
-			elsif r_cpu_clk(0) = '1' and (i_throttle = '1' and wrap_i.cpu_2MHz_phi2_clken = '0') then
-				-- we missed the normal clock due to throttle
-				r_throttle_waiting <= '1'; -- set flag to go when we get phi2
 			elsif r_cpu_clk(0) = '1' and wrap_i.cpu_2MHz_phi2_clken = '1' then
 				-- we were waiting for an ack when a phi2 happened
 				r_had_phi2 <= '1';
@@ -157,10 +151,10 @@ begin
 
 
 	i_t65_clken <= '1' when 
-							(
-									(r_cpu_clk(0) = '1' and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1')) -- cpu clock coincident with phi2
-							or      (r_throttle_waiting = '1' and wrap_i.cpu_2MHz_phi2_clken = '1') -- we missed above but are waiting
-							) and (		
+							
+							r_cpu_clk(0) = '1' 
+							and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1') 
+							and (		
 									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
