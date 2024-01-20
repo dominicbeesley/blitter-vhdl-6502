@@ -144,8 +144,9 @@ architecture rtl of fb_cpu_65816 is
 
 	signal r_fbreset_prev	: std_logic := '0';
 
-	signal r_throttle			: std_logic;
-	signal r_had_sys_phi2 	: std_logic;
+	signal r_throttle_sync  : std_logic;		-- hold throttle for the rest of the instruction
+	signal i_throttle			: std_logic;		-- '1' if current throttle or sync throttle
+	signal r_had_phi2			: std_logic;		-- a phi2 occurred already while we were waiting for ack
 
 
 	-- port b
@@ -173,6 +174,11 @@ architecture rtl of fb_cpu_65816 is
 begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
+
+	-- this will go active either for ever if BLTURBO T or at some point during
+	-- the current cycle if BLTURBO R and may stay active to next SYNC
+	i_throttle <= r_throttle_sync or wrap_i.throttle_cpu_2MHz;
+
 
 	e_pinmap:entity work.fb_cpu_65816_exp_pins
 	port map(
@@ -252,7 +258,7 @@ begin
 			end if;
 
 			if wrap_i.cpu_2MHz_phi2_clken = '1' then
-				r_had_sys_phi2 <= '1';
+				r_had_phi2 <= '1';
 			end if;
 
 			case r_state is
@@ -292,12 +298,12 @@ begin
 
 
 						if  wrap_i.noice_debug_inhibit_cpu = '0' and
-						 	fb_syscon_i.rst = '0' and
-						 	wrap_i.cpu_halt = '0' and
-						 	i_vma = '1' then
-								r_cyc <= '1';
-								r_D_WR_stb <= '0';
-								r_rdy_ctup <= (others => '0');
+						 		fb_syscon_i.rst = '0' and
+						 		wrap_i.cpu_halt = '0' and
+						 		i_vma = '1' then
+							r_cyc <= '1';
+							r_D_WR_stb <= '0';
+							r_rdy_ctup <= (others => '0');
 							r_inihib <= '0';
 						else
 							r_inihib <= '1';
@@ -321,9 +327,7 @@ begin
 						r_substate <= r_substate - 1;
 					end if;
 
-					r_had_sys_phi2 <= '0';
-					r_throttle <= wrap_i.throttle_cpu_2MHz;
-
+					r_had_phi2 <= '0';
 
 				when phi2 =>
 
@@ -339,6 +343,9 @@ begin
 							r_substate <= SUBSTATEMAX_8;
 							r_cyc <= '0';
 							r_D_WR_stb <= '0';
+							if i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
+								r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
+							end if;
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -358,7 +365,7 @@ begin
 				r_state <= phi1;
 				r_substate <= SUBSTATEMAX_8;
 				r_PHI0 <= '0';				
-				r_throttle <= wrap_i.throttle_cpu_2MHz;
+				r_throttle_sync <= '0';
 			end if;
 			r_fbreset_prev <= fb_syscon_i.rst;
 
@@ -375,7 +382,7 @@ begin
 				(	(i_CPUSKT_RnW_c2b = '0' and wrap_i.rdy = '1') or 
 					r_rdy_ctup >= SUBSTATE_D_8) 
 		) and
-		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
+		(i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1')
 
 			else
 				'0';
