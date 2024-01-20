@@ -58,7 +58,7 @@ entity fb_cpu_65816_exp_pins is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;	
 
-		-- local z80 wrapper signals to/from CPU expansion port 
+		-- local 65816 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_BE_b2c							: in std_logic;
 		CPUSKT_PHI0_b2c						: in std_logic;
