@@ -273,8 +273,9 @@ begin
 						if r_cpu_hlt = '0' then
 							if i_boot = '1' then
 								if i_CPUSKT_D_c2b(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
-									if i_CPUSKT_VPB_c2b = '0' and i_CPUSKT_6E_c2b = '0' then
-										-- vector pull in Native mode - get from 008Fxx
+									if i_CPUSKT_VPB_c2b = '0' and unsigned(i_CPUSKT_A_c2b(4 downto 0)) <= 16#19# then
+										-- vector pull in Native mode or "new" ABORT/COP
+										-- get from 008Fxx
 										r_log_A <= x"008F" & i_CPUSKT_A_c2b(7 downto 0);
 									else
 										-- bank 0 maps to FF in boot mode

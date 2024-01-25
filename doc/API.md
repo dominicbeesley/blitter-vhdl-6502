@@ -377,21 +377,26 @@ behave more or less identically to a 6502 except it may run faster. This is
 known as "65816 boot mode".
 
 The 65816 also has a "native" mode which unlocks some of its extended
-functions but also requires a new set of hardware vectors. However, these
-would clash with locations in the 6502 MOS and so there is an extra
-logical mapping which redirects these vectors to chip RAM such that 
-the vectors in native mode are fetched from L00FFxx to 00 8Fxx in ChipRAM. 
+functions but also requires a new set of hardware vectors. In additions there
+are new hardware and software vectors in emulation mode for the ABORT 
+interrupt and the COP instruction.
+
+These new vectors addresses clash with locations in the 6502 MOS OS function
+entry table so there is an extra logical mapping which redirects these vectors 
+to chip RAM such that the vectors in native mode are fetched from L00FFxx to 
+00 8Fxx in ChipRAM. The emulation mode vectors for irq, nmi and reset still
+map to FF FFFx in boot mode - for maximum compatibility with 6502 code.
+
 This is an experimental feature but has been used with some success in 
 getting Communicator 65816 BASIC to run in native mode on an unmodified MOS.
 
 Each time the hardware is reset the logical to physical mapping will
-revert to this "boot mode". However it is possible to remap the 
-
-It is possible to remap the 65816 to use a "flatter" memory map where
-the bank register maps directly to the Physical bank *except* for bank
-FF which will go through a MOS compatible logical to physical mapping. This
-has not been widely used and may change in future. To exit boot mode
-write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) see [below](#ff-fe31-swmos)
+revert to this "boot mode". However it is possible to  remap the 65816 to 
+use a "flatter" memory map where the bank register maps directly to 
+the Physical bank *except* for bank FF which will go through a MOS compatible
+logical to physical mapping. This has not been widely used and may change in
+future. To exit boot mode write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) 
+see [below](#ff-fe31-swmos)
 
 
 ## Motorolla M68K series
