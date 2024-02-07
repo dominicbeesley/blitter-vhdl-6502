@@ -160,10 +160,8 @@ the CPU.
 It is possible using the [Lowmem Turbo](#TODO) register to configure
 the logical to physical mapping to remap this area to faster chip ram
 
-see [](#TODO FE37 regsiter)
-see [](#TODO link BLTURBO command)
-
-
+see [Low Memory Turbo](#ff-fe37-low-memory-turbo)
+see [*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO)
 
 ### Sideways ROM/RAM
 
@@ -207,12 +205,12 @@ restricted to running at 2MHz.
 
 If running from EEPROM or BBRAM the memory will be accessed at either 45ns 
 or 55ns with additional overhead of address mapping and arbitration the 
-maximum speed of most CPUs will be held to around 6.5Mhz (this may vary/change)
+maximum speed of most CPUs will be held to around 6.5Mhz (this will change)
+
+Each ROM can optionally be throttled by setting a bit in the [Per-ROM throttle 
+register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO)
 
 #### BBC B
-
-TODO: This may well need to change!? Any thoughts?
-
 
 ##### BBC MAP 0
 
@@ -327,8 +325,9 @@ This is useful for debugging the MOS ROM using NoIce and is also used to
 make a "flat" 64K RAM map for running non-MOS operating systems such as 
 Flex for the 6800, 6809 or 6309.
 
-The BLTURBO command can also be used to copy a ROM based MOS to ram and
-run from there to provide a speed boost.
+The [BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
+command can also be used to copy a ROM based MOS to ram and run from there to 
+provide a speed boost.
 
 See also: Registers [FF FE31 SWROM](#ff-fe31-swmos), [FF FE32 SWMOS save register](#ff-fe32-swmos-save-register)
 
@@ -604,7 +603,7 @@ translation *is* performed
  | FF FE30      | ROM paging register            
  | FF FE31      | Sideways MOS/NoIce control
  | FF FE32      | Sideways MOS/NoIce restore
- | FF FE35      | Debug register 
+ | FF FE33,5    | Per ROM throttle
  | FF FE36      | Memory aux control 1      
  | FF FE37      | "Low Mem Turbo" register.
  | FF FE3E..3F  | Mk.2 config registers (deprecated)
@@ -751,7 +750,7 @@ All other bits should be left alone (they may be non-zero) for future
 expansion.
 
 
-### FF FEF3, FF FEF5 Throttle per ROM
+### FF FE33, FF FE35 Throttle per ROM
 
 Certain sideways ROMs may misbehave if they are allowed to run faster than
 2MHz. By default ROMs on the Blitter will run faster than this depending on 
