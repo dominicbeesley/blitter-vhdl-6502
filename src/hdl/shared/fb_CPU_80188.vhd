@@ -102,6 +102,7 @@ architecture rtl of fb_cpu_80188 is
 	signal r_cyc				: std_logic;
 	signal r_wrap_ack			: std_logic;
 	signal r_d_wr_stb			: std_logic;
+	signal r_instr_fetch		: std_logic;
 
 	signal i_CPUSKT_nTEST_b2c	: std_logic;
 	signal i_CPUSKT_X1_b2c		: std_logic;
@@ -252,6 +253,7 @@ begin
 	END GENERATE;		
 	wrap_o.D_wr_stb			<= (others => r_d_wr_stb);
 	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch    	<= r_instr_fetch;
 
 
 	i_CPU_CLK_posedge <= '1' when r_CLK_meta(r_CLK_meta'high) = '0' and r_CLK_meta(r_CLK_meta'high - 1) = '1' else
@@ -281,6 +283,7 @@ begin
 			r_wrap_ack <= '0';
 			r_state <= idle;
 			r_SRDY <= '0';
+			r_instr_fetch <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_wrap_ack <= '0';
 			case r_state is
@@ -288,6 +291,7 @@ begin
 					if i_CPU_CLK_posedge = '1' and i_CPUSKT_ALE_c2b = '1' then
 						-- check cycle type
 						v_start_mem_cycle := false;
+						r_instr_fetch <= '0';
 						case i_CPUSKT_nS_c2b is
 							when "000" => 
 								r_state <= IntAck;	
@@ -309,6 +313,7 @@ begin
 								r_we <= '0';
 								r_log_A <= i_mem_addr;
 								v_start_mem_cycle := true;
+								r_instr_fetch <= '1';
 							when "110" =>
 								r_state <= ActWrite;
 								r_we <= '1';

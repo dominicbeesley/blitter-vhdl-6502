@@ -68,6 +68,7 @@ package fb_CPU_pack is
 		D_wr							: std_logic_vector((8 * C_CPU_BYTELANES)-1 downto 0);
 		D_wr_stb						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 		rdy_ctdn						: t_rdy_ctdn;
+		instr_fetch					: std_logic;
 
 		noice_debug_5c				: std_logic;						-- A 5C instruction is being fetched (qualify with clken below)
 		noice_debug_cpu_clken	: std_logic;						-- clken and cpu rdy

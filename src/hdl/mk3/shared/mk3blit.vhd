@@ -300,6 +300,7 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
 	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
@@ -602,7 +603,8 @@ END GENERATE;
 
 		boot_65816_o						=> i_boot_65816,
 
-		rom_throttle_map_o				=> i_rom_throttle_map
+		rom_throttle_map_o				=> i_rom_throttle_map,
+		rom_autohazel_map_o				=> i_rom_autohazel_map
 	);
 
 
@@ -720,6 +722,7 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
+		rom_autohazel_map_i				=> i_rom_autohazel_map,
 
 		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,

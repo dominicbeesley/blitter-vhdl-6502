@@ -108,6 +108,7 @@ architecture rtl of fb_cpu_z180 is
 	signal r_A_log				: std_logic_vector(23 downto 0);
 	signal i_A_log				: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
+	signal r_instr_fetch		: std_logic;
 
 
 	signal i_CPUSKT_EXTAL_b2c		: std_logic;
@@ -210,6 +211,7 @@ begin
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	--wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go much earlier!?
   	wrap_o.rdy_ctdn		<= to_unsigned(5, RDY_CTDN_LEN);
+  	wrap_o.instr_fetch 	<= r_instr_fetch;
 
 	-- Z180 memory map notes: TODO: move this to wiki/doc folder
 	--
@@ -304,6 +306,7 @@ begin
 				r_int0ack <= '0';
 
 				r_A_log <=	i_A_log;
+				r_instr_fetch <= not(i_CPUSKT_nM1_c2b) and not(i_CPUSKT_nMREQ_c2b);
 
 				r_WE <= i_nRD_dly;
 			elsif i_nMREQ_dly = '1' and i_nIOREQ_dly = '1' then

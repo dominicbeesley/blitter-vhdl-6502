@@ -84,6 +84,9 @@ entity log2phys is
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
 		rom_throttle_act_o				: out std_logic;
 
+		rom_autohazel_map_i				: in  std_logic_vector(15 downto 0);
+
+
 		-- memctl signals in
 		jim_en_i								: in  std_logic;		-- local jim override
 		swmos_shadow_i						: in	std_logic;		-- shadow mos from SWRAM slot #8
@@ -93,6 +96,7 @@ entity log2phys is
 
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
+		instruction_fetch_i				: in  std_logic;		-- qualify current cycle as an instruction fetch
 		-- mapped address
 		A_o									: out std_logic_vector(23 downto 0)
 
@@ -104,7 +108,12 @@ architecture rtl of log2phys is
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
 
-	signal r_rom_throttle_cur : std_logic;		-- set to '1' when the currently select ROM is throttled
+	signal i_rom_acc		: std_logic;
+
+	signal r_rom_throttle_cur : std_logic;		-- set to '1' when the currently selected ROM is throttled
+	signal r_rom_autohazel_cur : std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
+	signal r_instr_autohazel_cur : std_logic; -- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
+	signal i_autohazel 			: std_logic; 	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
@@ -113,7 +122,7 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_pagrom_A <= x"FF" & "10";
-			if cfg_swram_enable_i = '1' then
+			if cfg_swram_enable_i = '1' and fb_syscon_i.rst = '0' then
 				if map0n1 then
 					if sys_ROMPG_i(3 downto 0) = x"E" and G_MK3 then -- special turbo ROM
 						r_pagrom_A <= x"1F" & "00";
@@ -137,8 +146,10 @@ begin
 				end if;	
 
 				r_rom_throttle_cur <= rom_throttle_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
+				r_rom_autohazel_cur <= rom_autohazel_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
 			else			
 				r_rom_throttle_cur <= '0';
+				r_rom_autohazel_cur <= '0';
 			end if;
 		end if;
 	end process;
@@ -167,13 +178,14 @@ begin
 		end if;
 	end process;
 
-
-	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur)
+	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur, i_autohazel)
 	begin
 		A_o <= A_i;
 		rom_throttle_act_o <= '0';
+		i_rom_acc <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
+				i_rom_acc <= '1';
 				A_o <= r_pagrom_A & A_i(13 downto 0);
 				rom_throttle_act_o <= r_rom_throttle_cur; -- throttle accesses to current ROM if needed, TODO: consider making this for whole instruction from ROM using SYNC?
 			elsif A_i(15 downto 8) = x"FD" then
@@ -185,9 +197,14 @@ begin
 					and A_i(15 downto 8) /= x"FD"
 					and A_i(15 downto 8) /= x"FE" then -- MOS access
 				if noice_debug_shadow_i = '1' and A_i(13 downto 12) = "00" then
-						A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow RAM from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
+					A_o <= x"7E8" & A_i(11 downto 0);				-- NOICE shadow RAM from hidden slot #4 of map 0		7E 8000 - 7E 8FFF
+				else
+					if i_autohazel = '1' and A_i(13) = '0' then
+						-- Hazel from 00 C000-DFFF
+						A_o <= x"00" & "110" & A_i(12 downto 0);
 					else
 						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
+					end if;
 				end if;
 			elsif A_i(15) = '0' and turbo_lo_mask_i(to_integer(unsigned(A_i(14 downto 12)))) = '1' then
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF
@@ -195,5 +212,24 @@ begin
 
 		end if;
 	end process p_A0;
+
+	i_autohazel <= r_rom_autohazel_cur and i_rom_acc when instruction_fetch_i = '1' else
+						r_instr_autohazel_cur;
+
+	p_instr:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_instr_autohazel_cur <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if instruction_fetch_i = '1' then
+				if i_rom_acc = '1' then
+					r_instr_autohazel_cur <= r_rom_autohazel_cur;
+				else
+					r_instr_autohazel_cur <= '0';
+				end if;
+			end if;
+		end if;
+	end process;
+
 
 end rtl;

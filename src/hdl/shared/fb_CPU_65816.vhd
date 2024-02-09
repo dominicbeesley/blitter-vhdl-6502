@@ -139,6 +139,7 @@ architecture rtl of fb_cpu_65816 is
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 	signal r_A_meta			: std_logic_vector(23 downto 0);
+	signal r_instr_fetch		: std_logic;
 
 	signal i_ack				: std_logic;
 
@@ -229,6 +230,7 @@ begin
 	wrap_o.lane_req 			<= ( 0 => '1', others => '0');
 	wrap_o.we	  				<= not(i_CPUSKT_RnW_c2b);
 	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
+	wrap_o.instr_fetch		<= r_instr_fetch;
 
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
@@ -289,6 +291,8 @@ begin
 								-- not boot mode map direct
 								r_log_A <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;
 							end if;
+
+							r_instr_fetch <= i_CPUSKT_VPA_c2b and i_CPUSKT_VDA_c2b;
 						end if;
 
 						if r_A_meta = i_CPUSKT_D_c2b & i_CPUSKT_A_c2b then
