@@ -606,6 +606,7 @@ translation *is* performed
  | FF FE33,5    | Per ROM throttle
  | FF FE36      | Memory aux control 1      
  | FF FE37      | "Low Mem Turbo" register.
+ | FF FE38,9    | Per ROM auto-hazel
  | FF FE3E..3F  | Mk.2 config registers (deprecated)
 
 Note: the registers at FE3x may be moved to a different location in future
@@ -789,6 +790,18 @@ current contents of the relevant memory are copied to chipRam first.
 
 See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command.
+
+### FF FE38..39 - Auto-hazel
+
+When this bit is set the "Auto-Hazel" mapping is applied, that is the 
+MOS at C000-DFFF is overlaid by RAM whenever a ROM is selected whose 
+bit in this register is a '1'. The ROM at FF C000-DFFF is overlaid with
+memory from physical address 00 C000-00 DFFF when Auto-Hazel is active.
+
+The "auto" part of the auto-hazel is that the remapping of the C000-DFFF
+region only occurs when an instruction is being executed in a marked ROM.
+This is done to ensure maximum compatibility with existing Model B/B+ software
+which expects MOS font data at C000 and Hazel capable ROMs.
 
 ### FF FE3E..3F - Old Mk.2 firmware config registers
 
