@@ -202,6 +202,7 @@ begin
 	END GENERATE;	
 	wrap_o.D_wr_stb		<= (0 => r_DD_ring(T_MAX_DD), others => '0');
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch   <= '0'; -- no way of knowing? TODO: work out instruction fetches?
 
 
 

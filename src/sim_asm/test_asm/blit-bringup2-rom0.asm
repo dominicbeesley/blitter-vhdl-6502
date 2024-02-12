@@ -540,6 +540,13 @@ blitcolres	:= $100
 I2C_TEST_ADDR	:= $A2
 
 
+hazel_test_rom_code:
+	lda	$C000
+	jsr	hazel_test_rom_code_rts	; this will call into MOS rom from potentially hazel'd ROM
+hazel_test_rom_code_rts:
+	rts
+hazel_test_rom_code_len := *-hazel_test_rom_code
+
 i2cwait:
 	bit	jim_I2C_STAT
 	bmi	i2cwait
@@ -568,7 +575,10 @@ mos_handle_res:
 	sta	fred_JIM_DEVNO
 	lda 	#0
 	sta 	fred_JIM_PAGE_HI	
+	lda	#$C0
 	sta 	fred_JIM_PAGE_LO
+	lda	#0
+	sta	JIM
 	inc	JIM
 	inc	JIM
 	inc	JIM
@@ -578,12 +588,22 @@ mos_handle_res:
 	sta	$200
 	inc	$200
 
-	; test SW RAM r/w
-	lda	#14
+	; test SW RAM r/w and auto-hazel
+	lda	#0
 	sta	$FE30
-	lda	#17
-	sta	$8000
-	lda	$8000
+
+	ldy	#hazel_test_rom_code_len
+@hlp1:	lda	hazel_test_rom_code-1,Y
+	sta	$8000-1, Y
+	dey
+	bne	@hlp1
+
+	lda	#1
+	sta	$FE38			; set rom 0 as auto-hazel
+	jsr	$8000			; should return 3 (set above)
+	lda	#0			; set rom 0 as no hazel
+	sta	$FE38
+	jsr	$8000			; should return 0 from font data
 
 
 	; SOUND test

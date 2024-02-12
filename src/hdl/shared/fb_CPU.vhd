@@ -94,6 +94,7 @@ entity fb_cpu is
 		throttle_cpu_2MHz_i					: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
 
 
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
@@ -485,6 +486,7 @@ architecture rtl of fb_cpu is
 
 	signal i_fb_c2p_log			: fb_con_o_per_i_t;
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
+	signal i_fb_c2p_extra_instr_fetch : std_logic;		-- extra signal to qualify a cycle as an instruction fetch
 
 	-----------------------------------------------------------------------------
 	-- cpu mapping signals
@@ -689,6 +691,7 @@ begin
 		D_wr_i				=> i_wrap_o_cur_act.D_wr,
 		D_wr_stb_i			=> i_wrap_o_cur_act.D_wr_stb,
 		rdy_ctdn_i			=> i_wrap_o_cur_act.rdy_ctdn,
+		instr_fetch_i		=> i_wrap_o_cur_act.instr_fetch,
 	
 		-- return to wrappers
 	
@@ -703,7 +706,9 @@ begin
 		fb_syscon_i			=> fb_syscon_i,
 	
 		fb_con_c2p_o		=> i_fb_c2p_log,
-		fb_con_p2c_i		=> i_fb_p2c_log
+		fb_con_p2c_i		=> i_fb_p2c_log,
+
+		fb_con_c2pinstr_fetch_o		=> i_fb_c2p_extra_instr_fetch
 	
 	);
 	
@@ -725,6 +730,7 @@ begin
 		-- controller interface from the cpu
 		fb_con_c2p_i							=> i_fb_c2p_log,
 		fb_con_p2c_o							=> i_fb_p2c_log,
+		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch,
 
 		fb_per_c2p_o							=> fb_c2p_o,
 		fb_per_p2c_i							=> fb_p2c_i,
@@ -748,6 +754,7 @@ begin
 		swmos_shadow_i							=> swmos_shadow_i,
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
+		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
 		rom_throttle_act_o					=> i_rom_throttle_act,
 

@@ -61,6 +61,7 @@ entity fb_cpu_log2phys is
 		-- controller interface from the cpu
 		fb_con_c2p_i							: in fb_con_o_per_i_t;
 		fb_con_p2c_o							: out	fb_con_i_per_o_t;
+		fb_con_extra_instr_fetch_i				: in std_logic;
 
 		fb_per_c2p_o							: out fb_con_o_per_i_t;
 		fb_per_p2c_i							: in	fb_con_i_per_o_t;
@@ -84,6 +85,7 @@ entity fb_cpu_log2phys is
 		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
 		rom_throttle_act_o					: out std_logic;
 
 		-- noice signals
@@ -289,9 +291,12 @@ begin
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
 		rom_throttle_map_i				=> rom_throttle_map_i,
+		rom_autohazel_map_i				=> rom_autohazel_map_i,
 		rom_throttle_act_o				=> i_rom_throttle_act,
 
 		A_i									=> fb_con_c2p_i.A,
+		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
+
 		A_o									=> i_phys_A
 	);
 

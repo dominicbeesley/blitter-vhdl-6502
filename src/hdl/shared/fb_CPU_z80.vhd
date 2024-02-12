@@ -104,6 +104,7 @@ architecture rtl of fb_cpu_z80 is
 	signal r_A_log				: std_logic_vector(23 downto 0);
 	signal i_A_log				: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
+	signal r_instr_fetch		: std_logic;
 
 
 	signal i_CPUSKT_CLK_b2c			: std_logic;
@@ -182,6 +183,7 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go earlier!?
+	wrap_o.instr_detch  <= r_instr_fetch;
   		
 
 	-- Z80 memory map notes: TODO: move this to wiki/doc folder
@@ -263,6 +265,7 @@ begin
 					r_cyc <= '1';
 
 					r_A_log <=	i_A_log;
+					r_instr_fetch <= not(i_CPUSKT_nM1_c2b) and not(i_CPUSKT_nMREQ_c2b);
 
 					r_WE <= i_CPUSKT_nRD_c2b;
 				elsif i_CPUSKT_nMREQ_c2b = '1' and i_CPUSKT_nIOREQ_c2b = '1' then

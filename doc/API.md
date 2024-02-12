@@ -596,17 +596,18 @@ Note: When reading this address range direct from  CPUs with a larger
 address space than 64k (i.e. 65816, 68K, x86) the logical to physical
 translation *is* performed
 
- | Phys Address | Contents                                             
- |--------------|------------------------------------------------------
- | FF FCFD..FF  | JIM device and paging
- | FF FE05      | Electron ROM paging            
- | FF FE30      | ROM paging register            
- | FF FE31      | Sideways MOS/NoIce control
- | FF FE32      | Sideways MOS/NoIce restore
- | FF FE33,5    | Per ROM throttle
- | FF FE36      | Memory aux control 1      
- | FF FE37      | "Low Mem Turbo" register.
- | FF FE3E..3F  | Mk.2 config registers (deprecated)
+| Phys Address | Contents                                    |API|Sub|    
+|--------------|------------------------------------------------------
+| FF FCFD..FF  | JIM device and paging                       |   |   |
+| FF FE05      | Electron ROM paging                         |   |   |
+| FF FE30      | ROM paging register                         |   |   |
+| FF FE31      | Sideways MOS/NoIce control                  |   |   |
+| FF FE32      | Sideways MOS/NoIce restore                  |   |   |
+| FF FE33,5    | Per ROM throttle                            | 1 | 2 |
+| FF FE36      | Memory aux control 1                        |   |   |
+| FF FE37      | "Low Mem Turbo" register.                   |   |   |
+| FF FE38,9    | Per ROM auto-hazel                          | 1 | 3 |
+| FF FE3E..3F  | Mk.2 config registers (deprecated)          |   |   |
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -751,6 +752,7 @@ expansion.
 
 
 ### FF FE33, FF FE35 Throttle per ROM
+API/Sub : 1/2
 
 Certain sideways ROMs may misbehave if they are allowed to run faster than
 2MHz. By default ROMs on the Blitter will run faster than this depending on 
@@ -789,6 +791,19 @@ current contents of the relevant memory are copied to chipRam first.
 
 See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command.
+
+### FF FE38..39 - Auto-hazel
+API/Sub : 1/3
+
+When this bit is set the "Auto-Hazel" mapping is applied, that is the 
+MOS at C000-DFFF is overlaid by RAM whenever a ROM is selected whose 
+bit in this register is a '1'. The ROM at FF C000-DFFF is overlaid with
+memory from physical address 00 C000-00 DFFF when Auto-Hazel is active.
+
+The "auto" part of the auto-hazel is that the remapping of the C000-DFFF
+region only occurs when an instruction is being executed in a marked ROM.
+This is done to ensure maximum compatibility with existing Model B/B+ software
+which expects MOS font data at C000 and Hazel capable ROMs.
 
 ### FF FE3E..3F - Old Mk.2 firmware config registers
 
@@ -836,27 +851,30 @@ and terminated by two zero bytes:
 
 More strings may be added in future
 
-### Configuration switches
+### Configuration Information
 
 The boot-time configuration is read from the on-board configuration switches
 (or build time options for firmware versions that do not support the function)
 and presented in page FC 0080 onwards
 
+This page contains information relating to the API level of the board and
+the configuration settings as set by the user.
+
 ```
  | address      | Contents                                             |
  |--------------|------------------------------------------------------|
  | FC 0080      | API Level                                            |
- |              | If this byte is 0 or FF then the firmware is older   |
+ |              | If this byte is 0 or FF then the firmware is API 0   |
  |              | and the rest of the information in this page is not  |
  |              | valid. Current Value = 1                             | 
  |--------------|------------------------------------------------------|
- | FC 0081      | Board/firmware level                                 |
+ | FC 0081      | Board Type                                 |
  |              | - 0 - 1MHz Paula                                     |
  |              | - 1 - Mk.1 Blitter                                   |
  |              | - 2 - Mk.2 Blitter                                   |
  |              | - 3 - Mk.3 Blitter                                   |
  |--------------|------------------------------------------------------|
- | FC 0082      | API Sub level (usually 0)                            |
+ | FC 0082      | API Sub level                                        |
  |--------------|------------------------------------------------------|
  | FC 0083      | - reserved -                                         |
  |--------------|------------------------------------------------------|
@@ -868,6 +886,26 @@ and presented in page FC 0080 onwards
 
 [1] The configuration bits are read at boot time. Unused bits should be masked out
 as future firmwares will likely utilize these bits
+
+#### API 0
+
+Prior to the API/Sub registers being introduced it was not possible to 
+query the capabilities of the board. API 0 builds are deprecated and 
+may stop being supported altogether.
+
+#### API > 1
+
+The table below shows the features introduced at each API level. 
+
+Tables elsewhere in this document may include API/Sub columns and these
+indicate the API level at which a feature was introduced.
+
+
+| API | Sub | Description                                            |
+|-----|-----|--------------------------------------------------------|
+|  1  |  0  | API level/sublevel registers introduced                |
+|  1  |  1  | Added new CPU types, per-ROM throttle registers        |
+|  1  |  2  | Auto-hazel for Model B / Elk                           |
 
 #### Configuration bits
 
@@ -907,25 +945,33 @@ The capabilities of the current firmware build are exposed in API>0 at these
 locations the capabilities describe which devices and functions are available
 in the current build
 
- | address     | bit # | descriptions                   |
- |-------------|-------|--------------------------------|
- | FC 0088     | 0     | Chipset                        |
- |             | 1     | DMA                            |
- |             | 2     | Blitter                        |
- |             | 3     | Aeris                          |
- |             | 4     | i2c                            |
- |             | 5     | Paula sound                    |
- |             | 6     | HDMI framebuffer               |
- |             | 7     | T65 soft CPU                   |
- | FC 0089     | 0     | 65C02 hard CPU                 |
- |             | 1     | 6800 hard CPU                  |
- |             | 2     | 80188 hard CPU                 |
- |             | 3     | 65816 hard CPU                 |
- |             | 4     | 6x09 hard CPU                  |
- |             | 5     | Z80 hard CPU                   |
- |             | 6     | 68008 hard CPU                 |
- |             | 7     | 680x0 hard CPU                 |
- | FC 008A..8F | *     | - reserved - all bits read 0   |
+ | address     | bit # | descriptions                   |API|Sub|
+ |-------------|-------|--------------------------------|---|---|
+ | FC 0088     | 0     | Chipset                        | 1 | 0 |
+ |             | 1     | DMA                            | 1 | 0 |
+ |             | 2     | Blitter                        | 1 | 0 |
+ |             | 3     | Aeris                          | 1 | 0 |
+ |             | 4     | i2c                            | 1 | 0 |
+ |             | 5     | Paula sound                    | 1 | 0 |
+ |             | 6     | HDMI framebuffer               | 1 | 0 |
+ |             | 7     | T65 soft CPU                   | 1 | 0 |
+ | FC 0089     | 0     | 65C02 hard CPU                 | 1 | 0 |
+ |             | 1     | 6800 hard CPU                  | 1 | 0 |
+ |             | 2     | 80188 hard CPU                 | 1 | 0 |
+ |             | 3     | 65816 hard CPU                 | 1 | 0 |
+ |             | 4     | 6x09 hard CPU                  | 1 | 0 |
+ |             | 5     | Z80 hard CPU                   | 1 | 0 |
+ |             | 6     | 68008 hard CPU                 | 1 | 0 |
+ |             | 7     | 680x0 hard CPU                 | 1 | 0 |
+ | FC 008A     | 0     | ARM2 hard CPU                  | 1 | 1 |
+ |             | 1     | Z180 hard CPU                  | 1 | 1 |
+ |             | 2     | George Foot Supershadow        | 1 | 1 |
+ |             | 3     | 0                              | 1 | 1 |
+ |             | 4     | 0                              | 1 | 1 |
+ |             | 5     | 0                              | 1 | 1 |
+ |             | 6     | 0                              | 1 | 1 |
+ |             | 7     | 0                              | 1 | 1 |
+ | FC 008B..8F | *     | - reserved - all bits read 0   |
 
 
 # The NoIce debugger

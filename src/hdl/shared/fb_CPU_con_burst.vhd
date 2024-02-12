@@ -66,6 +66,7 @@ port (
 	D_wr_i				: in std_logic_vector((8 * G_BYTELANES)-1 downto 0);
 	D_wr_stb_i			: in std_logic_vector(G_BYTELANES-1 downto 0);			-- unlike fishbone this must stay asserted until the end of the cycle!
 	rdy_ctdn_i			: in t_rdy_ctdn;
+	instr_fetch_i		: in std_logic;
 
 	-- return to wrappers
 
@@ -80,7 +81,8 @@ port (
 	fb_syscon_i			: in fb_syscon_t;
 
 	fb_con_c2p_o		: out fb_con_o_per_i_t;
-	fb_con_p2c_i		: in	fb_con_i_per_o_t
+	fb_con_p2c_i		: in	fb_con_i_per_o_t;
+	fb_con_c2pinstr_fetch_o : out std_logic -- qualify current cycle as an instruction fetch
 
 );
 end fb_cpu_con_burst;
@@ -89,6 +91,7 @@ end fb_cpu_con_burst;
 architecture rtl of fb_cpu_con_burst is
 
 	signal r_cyc			: std_logic;
+	signal r_instr_fetch	: std_logic;
 
 	signal r_tx_mas		: std_logic_vector(G_BYTELANES-1 downto 0);
 	signal r_rx_mas		: std_logic_vector(G_BYTELANES-1 downto 0);
@@ -165,6 +168,7 @@ begin
 			r_tx_mas <= (others => '1');
 			r_A <= (others => '0');	
 			r_wait_d_stb <= '0';
+			r_instr_fetch <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			if r_cyc = '0' and cyc_i = '1' then
@@ -172,6 +176,7 @@ begin
 				r_A <= A_i;
 				r_wait_d_stb <= '0';
 				r_D_wr_stb <= D_wr_stb_i;
+				r_instr_fetch <= instr_fetch_i;
 			elsif r_cyc = '1' then
 				if (fb_con_p2c_i.stall = '0' and or_reduce(i_tx_cur) = '1') or r_wait_d_stb = '1' then
 					if we_i = '0' or or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb)) = '1' then
@@ -239,6 +244,7 @@ begin
 	fb_con_c2p_o.we <= we_i;
 	fb_con_c2p_o.rdy_ctdn <= rdy_ctdn_i;
 	fb_con_c2p_o.D_wr_stb <= or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb));
+	fb_con_c2pinstr_fetch_o <= r_instr_fetch;
 
 	p_d_wr_mux:process(D_wr_i, i_tx_cur)
 	variable i:natural;

@@ -98,6 +98,7 @@ architecture rtl of fb_cpu_68008 is
 	signal i_A_log				: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
 	signal r_D_wr_stb			: std_logic;
+	signal r_instr_fetch		: std_logic;
 	signal i_cyc_ack_i		: std_logic;
 
 	-- signal to cpu that cycle is about to finish
@@ -202,7 +203,8 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_wr_stb, others => '0');
 	wrap_o.rdy_ctdn		<= to_unsigned((C_CLKD2_10 * 2), t_rdy_ctdn'length);
-  	
+  	wrap_o.instr_fetch   <= r_instr_fetch;
+
 	i_cyc_ack_i 			<= wrap_i.ack;
 
 	-- either DS is low or 8 bit
@@ -283,7 +285,8 @@ begin
 			r_A_log <= (others => '0');
 			r_noice_clken <= '0';
 			r_state <= reset0;
-			r_A_log <= (others => '0');			
+			r_A_log <= (others => '0');	
+			r_instr_fetch <= '0';		
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_noice_clken <= '0';
 			
@@ -291,6 +294,12 @@ begin
 				when idle =>
 					if i_nAS_m = '0' then
 						-- start of cycle
+						if i_CPUSKT_FC1_c2b = '1' and i_CPUSKT_FC0_c2b = '0' and i_RnW_m = '1' then
+							r_instr_fetch <= '1';
+						else
+							r_instr_fetch <= '0';						
+						end if;
+						'0';						
 						if i_RnW_m = '1' then
 							r_state <= rd;
 							r_cyc <= '1';

@@ -118,6 +118,7 @@ architecture rtl of fb_cpu_65c02 is
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
+	signal r_instr_fetch		: std_logic;
 
 	signal i_ack				: std_logic;
 
@@ -209,6 +210,7 @@ begin
 	END GENERATE;	
 	wrap_o.D_wr_stb			<= ( 0 => r_D_WR_stb, others => '0');
 	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch		<= r_instr_fetch;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -243,6 +245,7 @@ begin
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
 							r_log_A <= x"FF" & i_CPUSKT_A_c2b;
+							r_instr_fetch <= i_CPUSKT_SYNC_c2b;
 						end if;
 
 
