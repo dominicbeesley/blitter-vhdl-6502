@@ -41,6 +41,18 @@
 --
 ----------------------------------------------------------------------------------
 
+
+-- This table should be updated when new features are introduced and the corresponding
+-- information in API.md updated
+--
+-- | API | Sub | Description                                            |
+-- |-----|-----|--------------------------------------------------------|
+-- |  1  |  0  | API level/sublevel registers introduced                |
+-- |  1  |  1  | Added new CPU types                                    |
+-- |  1  |  2  | per-ROM throttle registers                             |
+-- |  1  |  3  | Auto-hazel for Model B / Elk                           |
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -50,8 +62,7 @@ package firmware_info_pack is
 	type firmware_board_level is (PAULA, MK1, MK2, MK3);
 
 	constant FW_API_level : std_logic_vector(7 downto 0) := x"01";
-	constant FW_API_sublevel : std_logic_vector(7 downto 0) := x"02";
-
+	constant FW_API_sublevel : std_logic_vector(7 downto 0) := x"03";
 
 end firmware_info_pack;
 
