@@ -146,11 +146,10 @@ begin
 				end if;	
 
 				r_rom_throttle_cur <= rom_throttle_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
-				r_rom_autohazel_cur <= rom_autohazel_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
 			else			
 				r_rom_throttle_cur <= '0';
-				r_rom_autohazel_cur <= '0';
 			end if;
+			r_rom_autohazel_cur <= rom_autohazel_map_i(to_integer(unsigned(sys_ROMPG_i(3 downto 0))));
 		end if;
 	end process;
 
