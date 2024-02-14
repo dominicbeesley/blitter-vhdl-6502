@@ -510,6 +510,12 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
+		SD_CS_o			=> SD_CS_o,
+		SD_CLK_o			=> SD_CLK_o,
+		SD_MOSI_o		=> SD_MOSI_o,
+		SD_MISO_i		=> SD_MISO_i,
+		SD_DET_i			=> SD_DET_i,
+
 		snd_dat_o		=> i_dac_sample,
 		snd_dat_change_clken_o => open
 
@@ -544,6 +550,9 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_dac_snd_pwm <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
+	SD_CS_o <= 'Z';
+	SD_CLK_o <= 'Z';
+	SD_MOSI_o <= 'Z';
 END GENERATE;
 
 	SND_R_o <= i_dac_snd_pwm;
@@ -1001,9 +1010,6 @@ SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
 SYS_AUX_io <= (others => 'Z');
 
 
-SD_CS_o <= '1';
-SD_CLK_o <= '1';
-SD_MOSI_o <= '1';
 
 
 

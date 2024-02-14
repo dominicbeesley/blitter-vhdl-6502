@@ -948,11 +948,11 @@ in the current build
  | address     | bit # | descriptions                   |API|Sub|
  |-------------|-------|--------------------------------|---|---|
  | FC 0088     | 0     | Chipset                        | 1 | 0 |
- |             | 1     | DMA                            | 1 | 0 |
- |             | 2     | Blitter                        | 1 | 0 |
- |             | 3     | Aeris                          | 1 | 0 |
- |             | 4     | i2c                            | 1 | 0 |
- |             | 5     | Paula sound                    | 1 | 0 |
+ |             | 1     | Chipset + DMA                  | 1 | 0 |
+ |             | 2     | Chipset + Blitter              | 1 | 0 |
+ |             | 3     | Chipset + Aeris                | 1 | 0 |
+ |             | 4     | Chipset + i2c                  | 1 | 0 |
+ |             | 5     | Chipset + Paula sound          | 1 | 0 |
  |             | 6     | HDMI framebuffer               | 1 | 0 |
  |             | 7     | T65 soft CPU                   | 1 | 0 |
  | FC 0089     | 0     | 65C02 hard CPU                 | 1 | 0 |
@@ -966,9 +966,9 @@ in the current build
  | FC 008A     | 0     | ARM2 hard CPU                  | 1 | 1 |
  |             | 1     | Z180 hard CPU                  | 1 | 1 |
  |             | 2     | George Foot Supershadow        | 1 | 1 |
- |             | 3     | 0                              | 1 | 1 |
- |             | 4     | 0                              | 1 | 1 |
- |             | 5     | 0                              | 1 | 1 |
+ |             | 3     | Fast RAM @ 10ns (else 45ns)    | 1 | 1 |
+ |             | 4     | Slow RAM @ 45ns (else 55ns)    | 1 | 1 |
+ |             | 5     | Chipset + SDCARD / SPI         | 1 | 4 |
  |             | 6     | 0                              | 1 | 1 |
  |             | 7     | 0                              | 1 | 1 |
  | FC 008B..8F | *     | - reserved - all bits read 0   |
