@@ -7,6 +7,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_misc.all;
 
+library std;
+use std.textio.all;
+
 library work;
 use work.fishbone.all;
 use work.common.all;
@@ -20,6 +23,9 @@ architecture rtl of test_tb is
 	constant CLOCKSPEED : natural := 128;
 	constant CLOCK_PER : time := (1000000/CLOCKSPEED) * 1 ps;
 
+	signal i_CPHA : std_logic;
+	signal i_CPOL : std_logic;
+
 	signal i_fb_syscon : fb_syscon_t;
 	signal i_fb_con_c2p : fb_con_o_per_i_t;
 	signal i_fb_con_p2c : fb_con_i_per_o_t;
@@ -29,6 +35,60 @@ architecture rtl of test_tb is
 	signal i_SPI_MOSI	: std_logic;
 	signal i_SPI_MISO	: std_logic;
 	signal i_SPI_DET	: std_logic;
+
+	constant MAX_STR_LEN : positive := 16;
+	signal   test_string_ix : positive := 1;
+	signal 	test_string_rd	: string(1 to MAX_STR_LEN);
+
+	procedure assign_string(signal sret: out string; s:string) is
+	variable l : integer := s'length;
+	begin
+		sret <= (1 to MAX_STR_LEN => character'val(16#FF#));
+		if l > 0 then
+			if l > MAX_STR_LEN then
+				l := MAX_STR_LEN;
+			end if;
+			sret(1 to l) <= s;
+		end if;
+	end procedure;
+
+	procedure monitor(
+		lbl :string;
+		signal cs: in std_logic;
+		signal clk: in std_logic;
+		signal data : in std_logic
+		) is
+	variable i : integer;
+	variable d : std_logic_vector(7 downto 0);
+	begin
+		
+		l_outer:	loop
+			if cs /= '0' then
+				wait until cs = '0';
+			end if;
+
+			for i in 1 to 8 loop
+				if (i_CPOL xor i_CPHA) = '0' then
+					wait until rising_edge(clk) or cs = '1';
+				else
+					wait until falling_edge(clk) or cs = '1';
+				end if;
+
+				if cs = '1' then
+					if i > 1 then
+						report lbl & " finished early";
+					end if;
+					next l_outer;
+				end if;
+
+				d := d(6 downto 0) & data;
+			end loop;
+
+			report lbl & " got 0x" & to_hstring(unsigned(d));
+
+		end loop;	
+
+	end procedure;
 
 	procedure sim_wait_reset 
 	(
@@ -244,6 +304,7 @@ begin
 
 	p_main:process
 	variable v_time:time;
+	variable D : std_logic_vector(7 downto 0);
 	begin
 
 		test_runner_setup(runner, runner_cfg);
@@ -252,9 +313,38 @@ begin
 
 			if run("simple_write") then
 
+				i_CPOL <= '0';
+				i_CPHA <= '0';
+				assign_string(test_string_rd, "HELLO THERE");
+
 				-- simple single read, with no a_stb delay
 				sim_wait_reset(i_fb_con_c2p);
-				single_write(x"000000", i_fb_con_c2p, x"A5");
+
+				single_write(x"000000", i_fb_con_c2p, x"00");
+				single_write(x"000001", i_fb_con_c2p, x"28");
+				
+
+				single_write(x"000003", i_fb_con_c2p, x"A5");
+
+				wait for 20 us;
+
+				single_write(x"000002", i_fb_con_c2p, x"5A");
+
+				wait for 20 us;
+
+				single_write(x"000003", i_fb_con_c2p, x"FF");
+
+				wait for 20 us;
+
+				single_read(x"000003", i_fb_con_c2p, D);
+
+				wait for 20 us;
+
+				single_read(x"000003", i_fb_con_c2p, D);
+
+				wait for 20 us;
+
+				single_read(x"000003", i_fb_con_c2p, D);
 
 				wait for 100 us;
 
@@ -286,6 +376,57 @@ begin
 		SPI_DET_i							=> i_SPI_DET
 
 	);
+
+
+	p_test_string_rd:process
+	variable i : integer;
+	variable d : std_logic_vector(7 downto 0);
+	begin
+
+		if i_SPI_CS(0) /= '0' then
+			wait until i_SPI_CS(0) = '0';
+		end if;
+
+		if test_string_ix > MAX_STR_LEN then
+			d := x"FF";
+		else
+			d := std_logic_vector(to_unsigned(character'pos(test_string_rd(test_string_ix)), 8));
+		end if;
+
+		for i in 0 to 7 loop
+
+			wait for 4 ns;
+
+			i_SPI_MISO <= d(7);
+			d := d(6 downto 0) & '1';
+
+			wait until i_SPI_CLK = '1' or i_SPI_CS(0) = '1';
+			if i_SPI_CS(0) = '1' then 
+				exit;
+			end if;
+
+			if i = 0 then
+				test_string_ix <= test_string_ix + 1;
+			end if;
+
+			wait until i_SPI_CLK = '0' or i_SPI_CS(0) = '1';
+			if i_SPI_CS(0) = '1' then 
+				exit;
+			end if;
+
+		end loop;
+
+	end process;
+
+	p_mon_mosi:process
+	begin
+		monitor("MOSI", i_SPI_CS(0), i_SPI_CLK, i_SPI_MOSI);
+	end process;
+
+	p_mon_miso:process
+	begin
+		monitor("MISO", i_SPI_CS(0), i_SPI_CLK, i_SPI_MISO);
+	end process;
 
 
 end rtl;

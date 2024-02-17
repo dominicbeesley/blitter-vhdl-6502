@@ -265,6 +265,10 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
+	signal i_SD_CS							: std_logic;
+	signal i_SD_CLK						: std_logic;
+	signal i_SD_MOSI						: std_logic;
+
 	-----------------------------------------------------------------------------
 	-- sound signals
 	-----------------------------------------------------------------------------
@@ -510,9 +514,9 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-		SD_CS_o			=> SD_CS_o,
-		SD_CLK_o			=> SD_CLK_o,
-		SD_MOSI_o		=> SD_MOSI_o,
+		SD_CS_o			=> i_SD_CS,
+		SD_CLK_o			=> i_SD_CLK,
+		SD_MOSI_o		=> i_SD_MOSI,
 		SD_MISO_i		=> SD_MISO_i,
 		SD_DET_i			=> SD_DET_i,
 
@@ -520,6 +524,11 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		snd_dat_change_clken_o => open
 
 	);
+
+	SD_CS_o <= i_SD_CS;
+	SD_CLK_o <= i_SD_CLK;
+	SD_MOSI_o <= i_SD_MOSI;
+	
 
 	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
@@ -1001,7 +1010,7 @@ LED_o(1) <= not i_debug_SYS_VIA_block;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
-SYS_AUX_o			<= "0" & i_debug_80188_state;
+SYS_AUX_o		<= (i_SD_CS, i_SD_CLK, i_SD_MOSI, SD_MISO_i);
 SYS_AUX_io(0) <= i_vga_debug_hs;
 SYS_AUX_io(1) <= i_vga_debug_vs;
 SYS_AUX_io(2) <= i_noice_debug_opfetch;

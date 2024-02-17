@@ -266,7 +266,7 @@ architecture rtl of fb_chipset is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		DEFAULT_SPEED						: natural := 400000							-- default SPI bus speed in Hz
+		PRESCALE								: positive := 4								-- prescaler to apply before clock divider
 	);
 	port(
 
@@ -656,10 +656,11 @@ GSDCARD: IF G_INCL_CS_SDCARD GENERATE
 	i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
 
-	e_fb_eeprom:fb_spi
+	e_fb_sdcard:fb_spi
 	generic map (
 		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
+		CLOCKSPEED							=> CLOCKSPEED,
+		PRESCALE								=> 4
 	)
 	port map (
 
