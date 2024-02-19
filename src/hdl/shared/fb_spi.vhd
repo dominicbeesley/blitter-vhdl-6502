@@ -55,13 +55,13 @@
 --				|					|	    1 : CPOL   The SPI clock polarity
 --				|					|	    0 : CPHA   The SPI clock / data phase
 -- ---------+--------------+-------------------------------------------------------------------------
--- DIV      |  Write       |  Clock divider - 1 default = 0 i.e. 256
+-- DIV=1    |  Write       |  Clock divider - 1 default = 0 i.e. 256
 -- ---------+--------------+-------------------------------------------------------------------------
---	DAT 2  	|	Read			|	Read current shift register value, reset CS
---				|	Write			|	Write data latch, start a shift and reset CS after the shift 
---	DAT 3  	|	Read			|	Read current shift register value, and shift out data in data latch, 
+--	SHIFT=2 	|	Read			|	Read current shift register value, do not start another shift
+--	WRITE=2	|	Write			|	Write data latch, start a shift and reset CS after the shift 
+--	READ_O=3 |	Read			|	Read current shift register value, and shift out data in data latch, 
 --          |              |  leave CS active after the shift is completed
---				|	Write			|	Write data latch, start a shift, leave CS active after the shift is 
+--	WRITEO=3	|	Write			|	Write data latch, start a shift, leave CS active after the shift is 
 --          |              |  complete
 
 
@@ -167,7 +167,7 @@ architecture rtl of fb_spi is
 
 begin
 
-	i_stat_busy <= '1' when r_state_spi /= idle else '0';
+	i_stat_busy <= '1' when r_state_spi /= idle or r_req_req /= r_req_ack else '0';
 
 
 	fb_p2c_o.rdy <= r_con_ack and fb_c2p_i.cyc;
@@ -349,7 +349,7 @@ begin
 						r_ctl_cpol <= fb_c2p_i.D_wr(1);
 						r_ctl_cpha <= fb_c2p_i.D_wr(0);
 					elsif fb_c2p_i.A(1 downto 0) = "01" then
-						-- control register write
+						-- clock divider register write
 						r_req_reset <= '1';				-- reset spi state machine and nCS
 						r_ctl_div <= fb_c2p_i.D_wr;
 					else
