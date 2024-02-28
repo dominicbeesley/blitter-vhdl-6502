@@ -89,17 +89,20 @@ end fb_cpu_68008_exp_pins;
 architecture rtl of fb_cpu_68008_exp_pins is
 begin
 
-	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 		<= CPUSKT_VPA_b2c;
-	wrap_exp_o.CPUSKT_9Q 					<= '1';
-	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 		<= '1';
-	wrap_exp_o.CPUSKT_PHI09EKZCLK 		<= CPUSKT_CLK_b2c;
-	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT	<= CPUSKT_nHALT_b2c;
-	wrap_exp_o.CPUSKT_nIRQKnIPL1			<= CPUSKT_nIPL1_b2c;
-	wrap_exp_o.CPUSKT_nNMIKnIPL02			<= CPUSKT_nIPL02_b2c;
-	wrap_exp_o.CPUSKT_nRES					<= CPUSKT_nRES_b2c;
-	wrap_exp_o.CPUSKT_9nFIRQLnDTACK		<= CPUSKT_nDTACK_b2c;
-	wrap_exp_o.CPUSKT_D						<=	CPUSKT_D_b2c;
-	wrap_exp_o.CPU_D_RnW 					<= BUF_D_RnW_b2c;
+	wrap_exp_o.CPUSKT_6BE9TSCKnVPA 			<= CPUSKT_VPA_b2c;
+	wrap_exp_o.CPUSKT_9Q 						<= '1';
+	wrap_exp_o.CPUSKT_KnBRZnBUSREQ 			<= '1';
+	wrap_exp_o.CPUSKT_PHI09EKZCLK 			<= CPUSKT_CLK_b2c;
+	wrap_exp_o.CPUSKT_RDY9KnHALTZnWAIT		<= CPUSKT_nHALT_b2c;
+	wrap_exp_o.CPUSKT_nIRQKnIPL1				<= CPUSKT_nIPL1_b2c;
+	wrap_exp_o.CPUSKT_nNMIKnIPL02				<= CPUSKT_nIPL02_b2c;
+	wrap_exp_o.CPUSKT_nRES						<= CPUSKT_nRES_b2c;
+	wrap_exp_o.CPUSKT_9nFIRQLnDTACK			<= CPUSKT_nDTACK_b2c;
+	wrap_exp_o.CPUSKT_D							<=	CPUSKT_D_b2c;
+	wrap_exp_o.CPU_D_RnW 						<= BUF_D_RnW_b2c;
+	wrap_exp_o.CPUSKT_PHI16ABRT9BSKnDS		<= '1';
+	wrap_exp_o.CPUSKT_PHI16ABRT9BSKnDS_nOE	<= '1';
+
 
 	CPUSKT_E_c2b		<= wrap_exp_i.CPUSKT_6EKEZnRD;
 	CPUSKT_nBG_c2b		<= wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK;

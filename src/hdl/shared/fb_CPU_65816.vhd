@@ -157,6 +157,7 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_nIRQ_b2c	: std_logic;
 	signal i_CPUSKT_nNMI_b2c	: std_logic;
 	signal i_CPUSKT_nRES_b2c	: std_logic;
+	signal i_CPUSKT_nABORT_b2c	: std_logic;
 	signal i_BUF_D_RnW_b2c		: std_logic;
 
 	-- port d
@@ -195,6 +196,7 @@ begin
 		CPUSKT_nIRQ_b2c		=> i_CPUSKT_nIRQ_b2c,
 		CPUSKT_nNMI_b2c		=> i_CPUSKT_nNMI_b2c,
 		CPUSKT_nRES_b2c		=> i_CPUSKT_nRES_b2c,
+		CPUSKT_nABORT_b2c		=> i_CPUSKT_nABORT_b2c,
 		CPUSKT_D_b2c			=> wrap_i.D_rd(7 downto 0),
 
 		BUF_D_RnW_b2c			=> i_BUF_D_RnW_b2c,
@@ -401,6 +403,8 @@ begin
 	i_CPUSKT_PHI0_b2c <= r_PHI0;
 	
 	i_CPUSKT_nRES_b2c <= not r_cpu_res;
+
+	i_CPUSKT_nABORT_b2c <= '1';
 	
 	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
   	

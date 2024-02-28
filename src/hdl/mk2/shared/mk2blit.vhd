@@ -119,7 +119,7 @@ entity mk2blit is
 		CPUSKT_6EKEZnRD_i							: in		std_logic;		
 		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i		: in		std_logic;
 		CPUSKT_RnWZnWR_i							: in		std_logic;
-		CPUSKT_PHI16ABRT9BSKnDS_i				: in		std_logic;		-- 6ABRT is actually an output but pulled up on the board
+		CPUSKT_PHI16ABRT9BSKnDS_io				: inout	std_logic;		-- 6ABRT is actually an output but pulled up on the board
 		CPUSKT_PHI26VDAKFC0ZnMREQ_i			: in		std_logic;
 		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i			: in		std_logic;
 		CPUSKT_VSS6VPB9BAKnAS_i					: in		std_logic;
@@ -740,13 +740,16 @@ END GENERATE;
 	i_wrap_exp_i.CPUSKT_6EKEZnRD						<= CPUSKT_6EKEZnRD_i;
 	i_wrap_exp_i.CPUSKT_C6nML9BUSYKnBGZnBUSACK	<= CPUSKT_C6nML9BUSYKnBGZnBUSACK_i;
 	i_wrap_exp_i.CPUSKT_RnWZnWR						<= CPUSKT_RnWZnWR_i;
-	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_i;
+	i_wrap_exp_i.CPUSKT_PHI16ABRT9BSKnDS			<= CPUSKT_PHI16ABRT9BSKnDS_io;
 	i_wrap_exp_i.CPUSKT_PHI26VDAKFC0ZnMREQ			<= CPUSKT_PHI26VDAKFC0ZnMREQ_i;
 	i_wrap_exp_i.CPUSKT_SYNC6VPA9LICKFC2ZnM1		<= CPUSKT_SYNC6VPA9LICKFC2ZnM1_i;
 	i_wrap_exp_i.CPUSKT_VSS6VPB9BAKnAS				<= CPUSKT_VSS6VPB9BAKnAS_i;
 	i_wrap_exp_i.CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ	<= CPUSKT_nSO6MX9AVMAKFC1ZnIOREQ_i;
 	i_wrap_exp_i.CPUSKT_D 								<= CPUSKT_D_io;
 	i_wrap_exp_i.CPUSKT_A 								<= CPUSKT_A_i;
+
+	CPUSKT_PHI16ABRT9BSKnDS_io <= i_wrap_exp_o.CPUSKT_PHI16ABRT9BSKnDS when i_wrap_exp_o.CPUSKT_PHI16ABRT9BSKnDS_nOE = '0' else
+											'Z';
 
 	CPUSKT_6BE9TSCKnVPA_o		<= i_wrap_exp_o.CPUSKT_6BE9TSCKnVPA;
 	CPUSKT_9Q_o						<= i_wrap_exp_o.CPUSKT_9Q;
