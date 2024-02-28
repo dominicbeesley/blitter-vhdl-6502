@@ -59,6 +59,8 @@ package fb_CPU_exp_pack is
 		CPUSKT_nRES								:		std_logic;
 		CPUSKT_9nFIRQLnDTACK					:		std_logic;
 		CPUSKT_D									:		std_logic_vector(7 downto 0);
+		CPUSKT_PHI16ABRT9BSKnDS				:     std_logic;
+		CPUSKT_PHI16ABRT9BSKnDS_nOE		:		std_logic;
 
 		-- control signals for cpu core on a per wrapper basis
 		CPU_D_RnW								:		std_logic;
@@ -77,7 +79,9 @@ package fb_CPU_exp_pack is
 		CPUSKT_nRES								=> '0',
 		CPUSKT_9nFIRQLnDTACK					=> 'Z',
 		CPUSKT_D									=> (others => '-'),
-		CPU_D_RnW								=> '1'
+		CPU_D_RnW								=> '1',
+		CPUSKT_PHI16ABRT9BSKnDS				=> '1',
+		CPUSKT_PHI16ABRT9BSKnDS_nOE		=> '1'
 	);
 
 
