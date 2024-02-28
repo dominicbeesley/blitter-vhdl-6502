@@ -183,7 +183,7 @@ begin
 	END GENERATE;
 	wrap_o.D_wr_stb		<= (0 => r_D_WR_stb, others => '0');
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;		-- TODO: this could go earlier!?
-	wrap_o.instr_detch  <= r_instr_fetch;
+	wrap_o.instr_fetch  <= r_instr_fetch;
   		
 
 	-- Z80 memory map notes: TODO: move this to wiki/doc folder
