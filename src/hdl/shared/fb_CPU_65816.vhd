@@ -157,8 +157,13 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_nIRQ_b2c	: std_logic;
 	signal i_CPUSKT_nNMI_b2c	: std_logic;
 	signal i_CPUSKT_nRES_b2c	: std_logic;
-	signal i_CPUSKT_nABORT_b2c	: std_logic;
 	signal i_BUF_D_RnW_b2c		: std_logic;
+
+	signal r_CPUSKT_nABORT_b2c	: std_logic;
+	signal r_debug_nmi_ack		: std_logic;
+	-- TODO: look to merge with stuff in memctl?
+	signal r_WDM					: std_logic;		-- a WDM instruction opcode has been seen, request an abort
+
 
 	-- port d
 
@@ -196,7 +201,7 @@ begin
 		CPUSKT_nIRQ_b2c		=> i_CPUSKT_nIRQ_b2c,
 		CPUSKT_nNMI_b2c		=> i_CPUSKT_nNMI_b2c,
 		CPUSKT_nRES_b2c		=> i_CPUSKT_nRES_b2c,
-		CPUSKT_nABORT_b2c		=> i_CPUSKT_nABORT_b2c,
+		CPUSKT_nABORT_b2c		=> r_CPUSKT_nABORT_b2c,
 		CPUSKT_D_b2c			=> wrap_i.D_rd(7 downto 0),
 
 		BUF_D_RnW_b2c			=> i_BUF_D_RnW_b2c,
@@ -350,8 +355,12 @@ begin
 							r_substate <= SUBSTATEMAX_8;
 							r_cyc <= '0';
 							r_D_WR_stb <= '0';
+							r_wdm <= '0';
 							if i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
 								r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
+								if i_CPUSKT_D_c2b = x"42" then
+									r_wdm <= '1';
+								end if;
 							end if;
 						end if;
 					else
@@ -373,6 +382,7 @@ begin
 				r_substate <= SUBSTATEMAX_8;
 				r_PHI0 <= '0';				
 				r_throttle_sync <= '0';
+				r_WDM <= '0';
 			end if;
 			r_fbreset_prev <= fb_syscon_i.rst;
 
@@ -394,7 +404,27 @@ begin
 			else
 				'0';
 
+	p_abort:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_CPUSKT_nABORT_b2c <= '1';
+			r_debug_nmi_ack <= '1';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if r_state = phi1 and r_substate = SUBSTATE_A_8 then							
+				if wrap_i.noice_debug_nmi_n = '1' then
+					r_debug_nmi_ack <= '1';
+				end if;
 
+				if (wrap_i.noice_debug_nmi_n = '0' and r_debug_nmi_ack = '1') or r_WDM = '1' then
+					r_debug_nmi_ack <= '1';
+					r_CPUSKT_nABORT_b2c <= '0';
+				else
+					r_CPUSKT_nABORT_b2c <= '1';
+				end if;
+
+			end if;
+		end if;
+	end process;
 
 	i_vma <= i_CPUSKT_VPA_c2b or i_CPUSKT_VDA_c2b;
 
@@ -404,9 +434,8 @@ begin
 	
 	i_CPUSKT_nRES_b2c <= not r_cpu_res;
 
-	i_CPUSKT_nABORT_b2c <= '1';
 	
-	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.nmi_n;
   	
 	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
 
