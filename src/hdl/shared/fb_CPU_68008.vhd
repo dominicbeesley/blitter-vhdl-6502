@@ -299,7 +299,6 @@ begin
 						else
 							r_instr_fetch <= '0';						
 						end if;
-						'0';						
 						if i_RnW_m = '1' then
 							r_state <= rd;
 							r_cyc <= '1';
