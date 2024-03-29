@@ -108,7 +108,8 @@ architecture rtl of log2phys is
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
 
-	signal i_rom_acc		: std_logic;
+	signal i_rom_acc		: std_logic;		-- current address is accessing rom
+	signal i_nmi_acc		: std_logic;		-- current address is accessing NMI region
 
 	signal r_rom_throttle_cur : std_logic;		-- set to '1' when the currently selected ROM is throttled
 	signal r_rom_autohazel_cur : std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
@@ -182,6 +183,7 @@ begin
 		A_o <= A_i;
 		rom_throttle_act_o <= '0';
 		i_rom_acc <= '0';
+		i_nmi_acc <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
 				i_rom_acc <= '1';
@@ -209,6 +211,10 @@ begin
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF
 			end if;
 
+			if A_i(15 downto 8) = x"0D" then
+				i_nmi_acc <= '1';
+			end if;
+
 		end if;
 	end process p_A0;
 
@@ -221,7 +227,9 @@ begin
 			r_instr_autohazel_cur <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if instruction_fetch_i = '1' then
-				if i_rom_acc = '1' then
+				if i_nmi_acc = '1' then
+					r_instr_autohazel_cur <= r_rom_autohazel_cur;
+				elsif i_rom_acc = '1' then
 					r_instr_autohazel_cur <= r_rom_autohazel_cur;
 				else
 					r_instr_autohazel_cur <= '0';
