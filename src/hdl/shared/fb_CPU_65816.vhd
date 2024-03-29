@@ -416,7 +416,7 @@ begin
 				end if;
 
 				if (wrap_i.noice_debug_nmi_n = '0' and r_debug_nmi_ack = '1') or r_WDM = '1' then
-					r_debug_nmi_ack <= '1';
+					r_debug_nmi_ack <= '0';
 					r_CPUSKT_nABORT_b2c <= '0';
 				else
 					r_CPUSKT_nABORT_b2c <= '1';
