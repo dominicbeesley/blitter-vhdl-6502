@@ -289,6 +289,7 @@ architecture rtl of mk3blit is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic;
+	signal i_65816_bool_act				: std_logic;
 
 	signal i_throttle_cpu_2MHz			: std_logic;
 
@@ -773,7 +774,8 @@ END GENERATE;
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
-		debug_80188_state_o				=> i_debug_80188_state
+		debug_80188_state_o				=> i_debug_80188_state,
+		debug_65816_boot_act_o			=> i_65816_bool_act
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
@@ -996,7 +998,7 @@ SYS_AUX_o			<= "0" & i_debug_80188_state;
 SYS_AUX_io(0) <= i_vga_debug_hs;
 SYS_AUX_io(1) <= i_vga_debug_vs;
 SYS_AUX_io(2) <= i_noice_debug_opfetch;
-SYS_AUX_io(3) <= i_debug_wrap_cpu_cyc;
+SYS_AUX_io(3) <= i_65816_bool_act;
 
 SYS_AUX_io <= (others => 'Z');
 

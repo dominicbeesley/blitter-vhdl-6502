@@ -84,7 +84,8 @@ entity fb_cpu_65816 is
 		boot_65816_i							: in		std_logic;
 
 		debug_vma_o								: out		std_logic;
-		debug_addr_meta_o						: out		std_logic
+		debug_addr_meta_o						: out		std_logic;
+		debug_65816_boot_act_o				: out std_logic
 
 );
 end fb_cpu_65816;
@@ -182,9 +183,12 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
+	debug_65816_boot_act_o	<= i_boot;
+
 	-- this will go active either for ever if BLTURBO T or at some point during
 	-- the current cycle if BLTURBO R and may stay active to next SYNC
 	i_throttle <= r_throttle_sync or wrap_i.throttle_cpu_2MHz;
+
 
 
 	e_pinmap:entity work.fb_cpu_65816_exp_pins
@@ -463,6 +467,7 @@ begin
 	end process;
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
+	-- NOTE: This allows too instruction in the previous mode before switching - not one!
 	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
 				 r_boot_65816_dly(2);
 
