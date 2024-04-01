@@ -455,7 +455,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_boot_65816_dly <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
+			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' and i_ack = '1' then
 				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i;
 			end if;
 		end if;
