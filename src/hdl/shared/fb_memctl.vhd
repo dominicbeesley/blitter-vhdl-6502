@@ -67,7 +67,7 @@ entity fb_memctl is
 
 		swmos_shadow_o						: out	std_logic;		-- shadow mos from SWRAM slot #8
 
-		boot_65816_o						: out std_logic;
+		boot_65816_o						: out std_logic_vector(1 downto 0);
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				: out	std_logic;		-- debugger is forcing a cpu NMI
@@ -138,7 +138,7 @@ architecture rtl of fb_memctl is
 	signal	r_swmos_save_written_en		: 	std_logic;
 	signal	r_swmos_save_written_ack	: 	std_logic;
 
-	signal   r_65816_boot					: 	std_logic;
+	signal   r_65816_boot					: 	std_logic_vector(1 downto 0);
 
 	signal	r_throttle_cpu_2MHz			: 	std_logic;
 	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
@@ -182,8 +182,7 @@ begin
 								r_noice_debug_act
 							& 	r_noice_debug_5C
 							& 	r_65816_boot
-							&	'0'
-							&  	r_noice_debug_en
+							&  r_noice_debug_en
 							&	r_noice_debug_shadow
 							&	'0'
 							&	r_swmos_shadow 
@@ -217,7 +216,7 @@ begin
 				r_turbo_lo <= (others => '0');
 				r_swmos_save_written_en <= '0';
 				r_swmos_debug_written_en <= '0';
-				r_65816_boot <= '1';	
+				r_65816_boot <= "10";	
 				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
 					r_throttle_cpu_2MHz <= '0';
@@ -273,7 +272,7 @@ begin
 						when 1 =>
 							r_swmos_shadow <= fb_c2p_i.D_wr(0);
 							r_noice_debug_en <= fb_c2p_i.D_wr(3);
-							r_65816_boot <= fb_c2p_i.D_wr(5);
+							r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
 							r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
 							r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
 						when 2 => 

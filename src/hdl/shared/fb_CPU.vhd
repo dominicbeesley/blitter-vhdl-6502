@@ -136,7 +136,7 @@ entity fb_cpu is
 
 		-- cpu specific signals
 
-		boot_65816_i							: in 	std_logic;
+		boot_65816_i							: in 	std_logic_vector(1 downto 0);
 
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
@@ -329,7 +329,7 @@ architecture rtl of fb_cpu is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic;
+		boot_65816_i							: in		std_logic_vector(1 downto 0);
 
 		debug_vma_o								: out		std_logic;
 

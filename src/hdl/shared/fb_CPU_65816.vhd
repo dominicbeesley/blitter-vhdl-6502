@@ -81,7 +81,11 @@ entity fb_cpu_65816 is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic;
+		boot_65816_i							: in		std_logic_vector(1 downto 0);
+		-- boot settings:
+		--	10		logical page FF maps to logical page 00, any change takes 2 instructions to complete to allow jump
+		--	00		pages map direct, any change takes 2 instructions to complete to allow jump
+		--	x1		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch
 
 		debug_vma_o								: out		std_logic;
 		debug_addr_meta_o						: out		std_logic;
@@ -460,7 +464,7 @@ begin
 			r_boot_65816_dly <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' and i_ack = '1' then
-				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i;
+				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i(1);
 			end if;
 		end if;
 
@@ -468,8 +472,9 @@ begin
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
 	-- NOTE: This allows too instruction in the previous mode before switching - not one!
-	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
-				 r_boot_65816_dly(2);
+	i_boot <= 	i_CPUSKT_6E_c2b when boot_65816_i(0) = '1' else
+					r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
+				 	r_boot_65816_dly(2);
 
 
 --=======================================================================================

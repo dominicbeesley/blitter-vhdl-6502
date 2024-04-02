@@ -281,7 +281,7 @@ architecture rtl of mk2blit is
 	signal i_chipset_cpu_halt			: std_logic;
 	signal i_chipset_cpu_int			: std_logic;
 
-	signal i_boot_65816					: std_logic;
+	signal i_boot_65816					: std_logic_vector(1 downto 0);
 
 	signal i_throttle_cpu_2MHz			: std_logic;
 
