@@ -645,7 +645,7 @@ This register controls the various MOS mapping options
  | 1      | - reserved -
  | 2      | SWMOS_DEBUG 
  | 3  #   | SWMOS_DEBUG_EN
- | 4      | - reserved -
+ | 4      | 65816 boot
  | 5      | 65816 boot
  | 6      | SWMOS_DEBUG_5C
  | 7      | SWMOS_DEBUG_ACT
@@ -682,19 +682,28 @@ use OR or AND to set/clear bits rather than writing direct.
 
    See [Noice Debugger](#the-noice-debugger) below
 
- * **65816 boot** In 65816 mode when this bit is set then the 65816 accesses 
-   to logical CPU bank 0 will have the same mapping applied as the 64k address
-   space of the 65x02 processors, accesses to bank CPU logical bank FF will 
-   also access the MOS logical memory map. 
+ * **65816 boot** In 65816 mode these bits control the 65816 access 
+   to logical CPU bank 0 
+
+   In "boot" mode the 65816 will see the motherboard in bank 0 i.e. bank FF
+   will be mirrored in bank 0 with all logical addresses applied as if the
+   processor were an 8bit 65xx
 
    Additionally in boot mode when the CPU is executing in "native mode" hardware
    vector accesses (VPB pin == '0' and E pin = '0') will be made from *physical
-   address* 00 8Fxx
+   address* 00 8Fxx as will the extra vectors for the emulation mode (cop/abort)
 
-   When this bit is cleared logical banks 00..FE map direct to a physical address
-   and FF goes through the MOS logical mapping
+    | bit 5..4 | Description
+    |----------|----------------------------------------------------------------
+    | "00"     | Addresses mapped direct, no remapping, throttle applies in all modes
+    | "01"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in all modes
+    | "10"     | logical Bank FF maps onto logical bank 00 in all modes only, throttle applies in all modes
+    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, turbo applies in emulation mode only
 
-   This bit is reset to '1' on reset to enter boot mode.
+
+   Note: changes to the memory mapping take 2 cycles to complete to allow a 
+   jump to follow the instruction performing the swap to continue in another bank.
+
 
  * **SWMOS_DEBUG_5C** This bit indicates that debug mode was entered due to a 
    5C opcode being executed (as opposed to a debug button NMI).
