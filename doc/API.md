@@ -608,6 +608,7 @@ translation *is* performed
 | FF FE37      | "Low Mem Turbo" register.                   |   |   |
 | FF FE38,9    | Per ROM auto-hazel                          | 1 | 3 |
 | FF FE3E..3F  | Mk.2 config registers (deprecated)          |   |   |
+| FF FE3E..3F  | 65816 MOS/RAM window **dev/test**           | 1 | 4 |
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -815,6 +816,20 @@ Information about the old registers is contained in the [Old Mk.2 Firmware
 Documentaton.md] file.
 
 
+### FF FE3E..3F - 65816 RAM window                  
+
+Using the registers at these locations it is possible to remap the memory 
+that is usually seen by the 6502/65816 at FF Exxx to any 4k region in 
+physical memory. This mapping is only visible from emu/boot mode 
+
+The bottom 4 bits of FE3E are ignored and should be set to 0
+These bits are reset to map to the MOS rom at boot (dependent on the memi/swmos/mosram/map)
+
+The mapping is only updated when the high order register is written
+
+These registers are WRITE ONLY and will continue to return the mk.2 config bits for now
+
+
 ## Boot Time Configuration 
 
 **Blitter only**
@@ -905,7 +920,9 @@ indicate the API level at which a feature was introduced.
 |-----|-----|--------------------------------------------------------|
 |  1  |  0  | API level/sublevel registers introduced                |
 |  1  |  1  | Added new CPU types, per-ROM throttle registers        |
-|  1  |  2  | Auto-hazel for Model B / Elk                           |
+|  1  |  2  | Per-rom throttle                                       |
+|  1  |  3  | Auto-hazel for Model B / Elk                           |
+|  1  |  4  | 65816 MOS/RAM window **dev**                           |
 
 #### Configuration bits
 
