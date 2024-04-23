@@ -85,7 +85,8 @@ entity fb_cpu_65816 is
 		-- boot settings:
 		--	10		logical page FF maps to logical page 00, any change takes 2 instructions to complete to allow jump
 		--	00		pages map direct, any change takes 2 instructions to complete to allow jump
-		--	x1		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch
+		--	01		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch
+		-- 11		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch ignore Throttle in native mode
 
 		debug_vma_o								: out		std_logic;
 		debug_addr_meta_o						: out		std_logic;
@@ -191,7 +192,8 @@ begin
 
 	-- this will go active either for ever if BLTURBO T or at some point during
 	-- the current cycle if BLTURBO R and may stay active to next SYNC
-	i_throttle <= r_throttle_sync or wrap_i.throttle_cpu_2MHz;
+	i_throttle <= '0' when boot_65816_i = "11" and i_CPUSKT_6E_c2b = '0' else
+								  r_throttle_sync or wrap_i.throttle_cpu_2MHz;
 
 
 
