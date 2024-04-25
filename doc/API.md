@@ -31,7 +31,7 @@ below. The following sections describe these in more detail.
  |--------------------------|-----------------------|
  | $00 0000 - $7F FFFF      | ChipRAM               | 
  | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
- | $C0 0000 - $F9 FFFF      | Undefined do not use  |
+ | $C0 0000 - $F9 FFFF      | Undefined do not use  | !!!! Used by 65816 for access to SYS without log mapping
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
  | $FB FE00 - $FB FFFF      | HDMI registers        | 
  | $FC 0000 - $FC FFFF      | Debug/Version info    | 
