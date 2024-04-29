@@ -822,10 +822,13 @@ Using the registers at these locations it is possible to remap the memory
 that is usually seen by the 6502/65816 at FF Exxx to any 4k region in 
 physical memory. This mapping is only visible from emu/boot mode 
 
-The bottom 4 bits of FE3E are ignored and should be set to 0
+The bottom 3 bits of FE3E are ignored and should be set to 0
 These bits are reset to map to the MOS rom at boot (dependent on the memi/swmos/mosram/map)
 
 The mapping is only updated when the high order register is written
+
+The mapping is the base address, and lies on any **2K** boundary to allow for the
+window to be set such that strings of data up to 2K can be allowed to straddle
 
 These registers are WRITE ONLY and will continue to return the mk.2 config bits for now
 

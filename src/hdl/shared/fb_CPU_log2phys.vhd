@@ -92,7 +92,12 @@ entity fb_cpu_log2phys is
 		noice_debug_shadow_i					: in std_logic;
 
 		-- debug signals
-		debug_SYS_VIA_block_o				: out std_logic
+		debug_SYS_VIA_block_o				: out std_logic;
+
+		-- 65816/model-C extras
+		window_65816_i						: in	std_logic_vector(12 downto 0);
+		window_65816_wr_en_i				: in	std_logic
+
 
 	);
 end fb_cpu_log2phys;
@@ -297,7 +302,12 @@ begin
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
 
-		A_o									=> i_phys_A
+		A_o									=> i_phys_A,
+
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		
 	);
 
 	debug_SYS_VIA_block_o <= i_SYS_VIA_block;
