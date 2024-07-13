@@ -120,7 +120,8 @@ architecture rtl of fb_cpu_65816 is
 	constant SUBSTATEMAX_8	: t_substate := to_unsigned(7, t_substate'length);
 
 	-- address latch state:
-	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
+--	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
+	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(7, t_substate'length);		-- HOG: SLOWER
 
 	constant SUBSTATE_A_META: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
 

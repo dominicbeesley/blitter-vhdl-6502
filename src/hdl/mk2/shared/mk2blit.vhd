@@ -283,6 +283,7 @@ architecture rtl of mk2blit is
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
 	signal i_debug_65816_boot_act		: std_logic;
+	signal i_debug_65816_addr_meta		: std_logic;
 	signal i_window_65816				: std_logic_vector(12 downto 0);
 	signal i_window_65816_wr_en		: std_logic;
 
@@ -727,6 +728,7 @@ END GENERATE;
 		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
+		debug_65816_addr_meta_o				=> i_debug_65816_addr_meta,
 
 		debug_65816_vma_o					=> i_debug_65816_vma,
 
@@ -892,8 +894,8 @@ i_hsync <= CFG_io(15);
 i_vsync <= CFG_io(14);
 
 CFG_io(6) <= i_debug_sys_D_dir;
-CFG_io(9) <= i_wrap_exp_o.CPU_D_RnW;
-CFG_io(10) <= i_debug_wrap_cyc;
+CFG_io(9) <= i_wrap_exp_o.CPUSKT_PHI09EKZCLK;
+CFG_io(10) <= i_debug_65816_addr_meta;
 
 LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(3) when i_fb_syscon.rst_state = powerup else
