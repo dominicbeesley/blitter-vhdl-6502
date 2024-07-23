@@ -42,7 +42,7 @@ interface in such a way that is not compatible with the Blitter. An updated
 
 In this example a simple user-port MMFS solution is used. Other options
 that have been widely tested are:
- * ADFS (Disc and Winchester)
+ * ADFS (Disc and Winchester) \[Not Pi 1MHz\]
  * 1770 DFS
  * 8271 DFS
  * HOSTFS
