@@ -452,29 +452,29 @@ The Big-Endian start address of the channel E bitmap data
 
 ### FE FC78..9 STRIDE A
 
-The "stride" of the bitmap is the number of mask bytes that are to be skipped 
-over at the end of a line
+The "stride" of the bitmap is the number of mask bytes per line of the source
+data
 
 ### FE FC7A..B STRIDE B
 
-The "stride" of the bitmap is the number of bitmap data bytes that are to be 
-skipped over at the end of a line.
+The "stride" of the bitmap is the number of bitmap data bytes per line of the
+source data
 
 ### FE FC7C..D STRIDE C
 
-The "stride" of the bitmap is the number of bitmap data bytes that are to be 
-skipped over at the end of a line.
+The "stride" of the bitmap is the number of bytes in a line of bitmap data
+on the screen
 
 In cell mode this stride is only applied at the end of a character row and 
-should be set to the character row width in bytes - 8.
+should be set to the character row width in bytes.
 
 ### FE FC7E..F STRIDE D
 
-The "stride" of the bitmap is the number of bitmap data bytes that are to be 
-skipped over at the end of a line.
+The "stride" of the bitmap is the number of bytes in a line of bitmap data
+on the screen
 
 In cell mode this stride is only applied at the end of a character row and 
-should be set to the character row width in bytes - 8.
+should be set to the character row width in bytes.
 
 ### FE FCA0..2 ADDR C/D MIN
 
