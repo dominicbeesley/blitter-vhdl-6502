@@ -189,13 +189,78 @@ cycles from the DMAC and will slow down the transfer accordingly.
 A Blitter is a device for quickly transferring and manipulating bitmap 
 graphics.
 
+The Blitter described here is based closely on the Amiga Original Chipset
+Blitter. Before reading the following descriptions it is strongly recommended
+that you become familiar with the [Blitter Section of the Amiga Developer Docs](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0118.html).
 
-TODO: write this up
-TODO: consider new register layout
+The Blitter operates in a very similar fashion to the Amiga Blitter but there
+are some differences:
+
+## Caveats and warnings
+
+This is preliminary documentation and the Blitter registers are subject to
+change. It is likely that future versions of the firmware may change the
+register definitions.
+
+In particular feedback would be welcomed on the ordering and adjacency of the
+registers for ease of updating.
+
+Likely changes:
+ - merge ADDR C/D registers - there is little point in having both
+ - add a data C register to allow fast VDU 4 text plotting using the blitter
+
+With changes likely it is recommended that developers write code in such
+a way that it will be easy to change the register layout with the minimum of
+upheaval.
 
 
-Dataflow overview
------------------
+## Main differences
+
+### Planar vs Packed
+
+The Amiga video memory is arranged as a number of bit-planes where each pixel
+is represented by 1 bit in each plane. Several planes can be used together to
+give multiple colours. On the BBC Micro colours are represented by packing 
+several pixels into each byte of memory. It is assumed that the reader is 
+familiar with the layout of pixel data with in a byte in each BBC screen mode.
+The Blitter has facilities, not present on the Amiga, for "exploding" the mask
+data such that 1 bit per pixel masks can be used with 1,2 or 4 bits per pixel 
+bitmap data.
+
+### Linear vs 6845
+
+The Amiga's bit-planes are linear and are read left to right, top to bottom
+with increasing address. The BBC Micro uses a more convoluted memory scheme
+imposed by the MC6845 CRTC. The Blitter can be configured to plot either in
+a linear fashion or to generate addresses for the C and D channels that 
+proceed in a left to right, top to bottom manner whilst catering for the 
+8 byte character cells used on the BBC Micro. Not source bitmaps and masks
+are always stored in a linear layout.
+
+### Extra E channel
+
+The Blitter contains an extra E channel which can be configured to save the 
+previous contents of the screen or destination bitmap as it is read in via 
+the C channel. This can be used to plot then un-plot BOBs
+
+### Collision detection
+
+A feature for collision detection has been added which detects any non-zero
+data destined for channel D (even when channel D is not enabled). This is an
+experimental feature, its main use being to detect overlap between two 
+shifted bit masks.
+
+### Temporal interleaving
+
+On the Amiga there is a strict ordering of reads/writes to/from each channel
+and these may be interleaved as the Amiga Blitter is pipelined. The Blitter
+described here in general proceeds in an A-C-B-D or A-C-B-E-D manner, though
+the A channel will be only read as it is needed i.e. in a 4 bits per pixel 
+mode it will only be accessed for every 4th cycle as channel A data are
+always 1bpp.
+
+
+## Dataflow overview
 
 ```
                           +-----------+      +-----------+      +-----------+
@@ -240,6 +305,186 @@ Dataflow overview
                           | exploder  +--+          +---------+  +---------+
                           +-----------+
 ```
+
+In general data flows as on the Amiga, masks are read from channel A, bitmap
+data are read from channel B, existing screen/destination bitmap data from
+channel C and combined destination data written back on channel D. The extra
+channel E can be configured to save channel C data as it is read.
+
+
+## Registers
+
+Base Address : $FE FC60, $FE FCA0
+
+The Blitter is accessed either using a 24 bit address capable CPU (i.e. 65816) 
+or by using the JIM paging interface.
+
+NOTE: all addresses are in Big-Endian form. i.e. the most-significant byte first
+
+### FE FC60 - BLITCON
+
+The BLITCON register is used to start the Blitter's operation and is written
+twice, the first time with the top-bit clear is used to configure which of the
+5 channels will participate in the action. And the second write with the top
+bit set will start the Blit action and configure the bit-per-pixel mode and the
+collision, wrap and line mode settings. (Line mode is detailed further on in this
+document).
+
+#### Writing BLITCON
+
+For the 1st write with top bit clear:
+
+| Bits  | description
+|-------|----------------------------------------------------
+| 7     | 0 - to configure channels / line axes
+| 6     | unused, set to 0
+| 5     | unused, set to 0      line mode CCW
+| 4     | Use channel E
+| 3     | Use channel D
+| 2     | Use channel C
+| 1     | Use channel B
+| 0     | Use channel A
+
+For the 2nd write (and reads back)
+
+| Bits  | description
+|-------|----------------------------------------------------
+| 7     | 1 - start blit
+| 6     | Cell mode - CRTC character cell addressing on channels C, D
+| 5..4  | Bits per pixel (see below)
+| 3     | Line mode (set to 0 for Blit)
+| 2     | Collision set to 0, will get set to 1 for non-zero channel D data
+| 1     | Wrap - when set the extended registers for MIN/MAX addresses will be applied to channels C,D
+| 0     | unused - set to 0 (IRQ?)
+
+Bits per pixel
+
+| 5..4  | Mode
+|-------|----------------------------
+| 00    | 1 bpp - 2 colour 
+| 01    | 2 bpp - 4 colour
+| 10    | 4 bpp - 16 colour
+| 11    | 8 bpp - 256 colour (future)
+
+The BPP setting is used to "explode" the data as they are read from the A 
+register. This allows masks to be always stored in 1bpp mode.
+
+#### Reading BLITCON
+
+Once the Blit has started the cpu should poll for the blit being finished by 
+reading back BLITCON and checking bit 7
+
+
+### FE FC61 - FUNCGEN
+
+The function generator controls how the data from channels A, B and C are 
+combined before being written to channel D. 
+
+The Blitter's FUNCGEN works on channels in the same way as the Amiga except 
+mask data are "exploded" i.e. each bit is repeated BPP times.
+
+The function generator is described in detail in the [Amiga Reference Manual](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011C.html). The [Venn Diagram](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011E.html) description is helpful.
+
+### FE FC62 - WIDTH
+
+Width in bytes of the sprite minus 1
+
+### FE FC63 - HEIGHT
+
+Height in pixels of the sprite minus 1
+
+### FE FC64 - SHIFT
+
+The Blitter can shift the data read into the A and B registers to the right
+by a number of bits to allow sprites to be plotted at any pixel location. 
+
+For non-zero shifts the sprite's width should be set to 1 byte wider and the
+edges masked off with the MASK FIRST and MASK LAST registers.
+
+There are two shifts that are specified one for the A register (which is always
+1 bpp) and another for the B register which may be 1,2,4 or 8 bpp.
+
+Bits 2..0 specify the A channel shift
+Bits 6..4 specify the B channel shift
+
+### FE FC65 - MASK FIRST
+
+This value is anded with the shifted channel A data on the first byte read in
+each line is used to mask out unwanted left-hand bits. If not needed set to
+$FF
+
+### FE FC66 - MASK 
+
+This value is anded with the shifted channel A data on the last byte read in
+each line is used to mask out unwanted left-hand bits. If not needed set to
+$FF
+
+### FE FC67 - DATA A 
+
+If the EXEC A flag is not set this register can be set to apply a mask pattern
+to the plotted bitmap, otherwise this register will be updated by the Blitter
+as it reads the mask from memory
+
+### FE FC68..A - ADDR A
+
+The Big-Endian start address of the mask data
+
+### FE FC6B - DATA B 
+
+If the EXEC B flag is not set this register can be set to plot a solid colour
+through the mask
+
+### FE FC6C..E - ADDR B
+
+The Big-Endian start address of the channel B bitmap data
+
+### FE FC6F..71 - ADDR C
+
+The Big-Endian start address of the channel C bitmap data
+
+### FE FC72..74 - ADDR D
+
+The Big-Endian start address of the channel D bitmap data
+
+### FE FC75..77 - ADDR E
+
+The Big-Endian start address of the channel E bitmap data
+
+### FE FC78..9 STRIDE A
+
+The "stride" of the bitmap is the number of mask bytes that are to be skipped 
+over at the end of a line
+
+### FE FC7A..B STRIDE B
+
+The "stride" of the bitmap is the number of bitmap data bytes that are to be 
+skipped over at the end of a line.
+
+### FE FC7C..D STRIDE C
+
+The "stride" of the bitmap is the number of bitmap data bytes that are to be 
+skipped over at the end of a line.
+
+In cell mode this stride is only applied at the end of a character row and 
+should be set to the character row width in bytes - 8.
+
+### FE FC7E..F STRIDE D
+
+The "stride" of the bitmap is the number of bitmap data bytes that are to be 
+skipped over at the end of a line.
+
+In cell mode this stride is only applied at the end of a character row and 
+should be set to the character row width in bytes - 8.
+
+### FE FCA0..2 ADDR C/D MIN
+
+In WRAP mode, if the C or D addresses are incremented above the MAX address
+then they will wrap to this MIN address
+
+### FE FCA3..5 ADDR C/D MAX
+
+In WRAP mode, if the C or D addresses are incremented above this MAX address
+then they will wrap to the MIN address
 
 
 
