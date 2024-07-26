@@ -560,11 +560,11 @@ begin
 		elsif r_BLTCON_mode = "01" then
 			case r_shift_B(1 downto 0) is
 				when "01" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(1 downto 0) & r_cha_B_data(7 downto 2);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(4) & r_cha_B_data(7 downto 5) & r_cha_B_data_pre(0) & r_cha_B_data(3 downto 1);
 				when "10" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(3 downto 0) & r_cha_B_data(7 downto 4);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(5 downto 4) & r_cha_B_data(7 downto 6) & r_cha_B_data_pre(1 downto 0) & r_cha_B_data(3 downto 2);
 				when "11" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(5 downto 0) & r_cha_B_data(7 downto 6);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(6 downto 4) & r_cha_B_data(7) & r_cha_B_data_pre(2 downto 0) & r_cha_B_data(3);
 				when others =>
 					i_cha_B_data_shifted <= r_cha_B_data;
 			end case;
