@@ -790,10 +790,10 @@ begin
 						r_cha_A_first <= false;
 					end if;
 				end if;
-			elsif fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA then
-				i_cha_A_last_mask <= i_cha_A_last;	
 			elsif r_blit_state = sFinish then
 				cpu_halt_o <= '0';		
+			elsif (fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA) or (i_accA_state_next = sMemAccA and r_BLTCON_execA = '0') then
+				i_cha_A_last_mask <= i_cha_A_last;	
 			end if;
 		end if;
 	end process;
