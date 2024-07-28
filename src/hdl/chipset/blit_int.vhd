@@ -971,7 +971,7 @@ begin
 					when A_MASK_LAST | A_N_MASK_LAST=>
 						r_mask_last <= r_per_d_wr;
 					when A_DATA_A | A_N_DATA_A=>
-						r_cha_A_data_pre <= r_cha_A_data(6 downto 0);			
+						r_cha_A_data_pre <= r_per_d_wr(6 downto 0);
 						r_cha_A_data <= r_per_d_wr;
 
 					when A_ADDR_A + 0 | A_N_ADDR_A + 2 =>
@@ -981,7 +981,7 @@ begin
 					when A_ADDR_A + 2 | A_N_ADDR_A + 0 =>
 						r_cha_A_addr(7 downto 0) <= r_per_d_wr;			
 					when A_DATA_B | A_N_DATA_B=>
-						r_cha_B_data_pre <= r_cha_B_data (6 downto 0);
+						r_cha_B_data_pre <= r_per_d_wr(6 downto 0);
 						r_cha_B_data <= r_per_d_wr;
 					when A_ADDR_B + 0 | A_N_ADDR_B + 2 =>
 						r_cha_B_addr(23 downto 16) <= r_per_d_wr;
