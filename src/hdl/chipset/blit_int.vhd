@@ -117,27 +117,28 @@ entity fb_dmac_blit is
 
    -- note addresses are odd to cater for extended registers at $A0 and baseic at $60
 
-	constant	A_BLTCON 		: integer := 16#00#;
-	constant	A_FUNCGEN 		: integer := 16#01#;
-	constant	A_WIDTH	 		: integer := 16#02#;
-	constant	A_HEIGHT 		: integer := 16#03#;
-	constant	A_SHIFT			: integer := 16#04#;
-	constant	A_MASK_FIRST	: integer := 16#05#;
-	constant	A_MASK_LAST 	: integer := 16#06#;
-	constant	A_DATA_A 		: integer := 16#07#;
-	constant	A_ADDR_A 		: integer := 16#08#;
-	constant	A_DATA_B 		: integer := 16#0B#;
-	constant	A_ADDR_B 		: integer := 16#0C#;
-	constant	A_ADDR_C 		: integer := 16#0F#;
-	constant	A_ADDR_D 		: integer := 16#12#;
-	constant	A_ADDR_E 		: integer := 16#15#;
-	constant	A_STRIDE_A		: integer := 16#18#;
-	constant	A_STRIDE_B		: integer := 16#1A#;
-	constant	A_STRIDE_C		: integer := 16#1C#;
-	constant	A_STRIDE_D		: integer := 16#1E#;
+	constant	A_BLTCON 		: integer := 16#60#;
+	constant	A_FUNCGEN 		: integer := 16#61#;
+	constant	A_WIDTH	 		: integer := 16#62#;
+	constant	A_HEIGHT 		: integer := 16#63#;
+	constant	A_SHIFT			: integer := 16#64#;
+	constant	A_MASK_FIRST	: integer := 16#65#;
+	constant	A_MASK_LAST 	: integer := 16#66#;
+	constant	A_DATA_A 		: integer := 16#67#;
+	constant	A_ADDR_A 		: integer := 16#68#;
+	constant	A_DATA_B 		: integer := 16#6B#;
+	constant	A_ADDR_B 		: integer := 16#6C#;
+	constant	A_ADDR_C 		: integer := 16#6F#;
+	constant	A_ADDR_D 		: integer := 16#72#;
+	constant	A_ADDR_E 		: integer := 16#75#;
+	constant	A_STRIDE_A		: integer := 16#78#;
+	constant	A_STRIDE_B		: integer := 16#7A#;
+	constant	A_STRIDE_C		: integer := 16#7C#;
+	constant	A_STRIDE_D		: integer := 16#7E#;
 
-	constant A_ADDR_D_MIN	: integer := 16#40#;
-	constant A_ADDR_D_MAX	: integer := 16#43#;
+	constant A_ADDR_D_MIN	: integer := 16#A0#;
+	constant A_ADDR_D_MAX	: integer := 16#A3#;
+
 end fb_dmac_blit;
 
 architecture Behavioral of fb_dmac_blit is
@@ -169,7 +170,7 @@ architecture Behavioral of fb_dmac_blit is
 	type		per_state_t			is (idle, wait_d_stb, rd);
 
 	signal	r_per_state				: per_state_t;
-	signal	r_per_addr				: std_logic_vector(6 downto 0);
+	signal	r_per_addr				: std_logic_vector(7 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr_stb			: std_logic;
@@ -1245,7 +1246,7 @@ begin
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= not fb_per_c2p_i.A(6) & "0" & fb_per_c2p_i.A(4 downto 0);
+						r_per_addr <= fb_per_c2p_i.A(7 downto 0);
 						if fb_per_c2p_i.we = '0' then
 							r_per_state <= rd;
 						else
