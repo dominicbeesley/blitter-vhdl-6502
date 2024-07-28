@@ -216,6 +216,11 @@ upheaval.
 
 ## Main differences
 
+### Byte vs Word
+
+All operations of the Blitter described here are byte-based whereas on the 
+Amiga the Blitter operates on 16 bit words.
+
 ### Planar vs Packed
 
 The Amiga video memory is arranged as a number of bit-planes where each pixel
@@ -226,6 +231,10 @@ familiar with the layout of pixel data with in a byte in each BBC screen mode.
 The Blitter has facilities, not present on the Amiga, for "exploding" the mask
 data such that 1 bit per pixel masks can be used with 1,2 or 4 bits per pixel 
 bitmap data.
+
+The packing of pixels on the BBC Micro depends on how many bits per pixel
+a mode has. It is assumed the reader is familiar with BBC Micro screen memory
+layout and pixel formats.
 
 ### Linear vs 6845
 
@@ -260,7 +269,82 @@ mode it will only be accessed for every 4th cycle as channel A data are
 always 1bpp.
 
 
+## How the Blitter works
+
+The Blitter is a device for quickly copying and combining bitmap data from one 
+or more bitmap locations to the screen or another bitmap. 
+
+### Address generators
+
+The Blitter contains a set of Address generators that can be used to step 
+through bitmapped data. In general the address generators are initialised with
+and address and step through the data in a left-to-right, top-to-bottom fashion
+as each byte's worth of data are transferred. At the end of each row of pixel 
+data the address is further updated by applying a "stride" to the address.
+
+Depending on whether the address is to be generated for a linear bitmap or a 
+character cell-based layout (like the BBC Micro screen RAM). The address generator
+works differently:
+
+Linear:
+  * along a pixel row : A = A + 1
+  * at the end of each row : A = A + STRIDE - WIDTH + 1
+
+Cell:
+  * along a pixel row : A = A + 8 
+  * at the end of each row:
+    * if A MOD 8 = 7 : A = A + STRIDE - 8 * WIDTH + 1
+    * else : A = A - WIDTH + 1
+
+Therefore in linear mode the stride should be set to the bitmap data stride in 
+bytes but in cell mode set to the size of in bytes of a character cell.
+
+There can be up to 5 address generators in play at one time. In general the
+C and D address generators tend to stay in step with each other though as 
+channel C/D tend to both point at the destination screen RAM/destination 
+bitmap.
+
+### Channels
+
+There are 5 channels in the Blitter. 
+
+#### Channel A
+
+This channel is always interpreted as a 1bpp bitmap data and is usally used
+for the mask channel for a sprite (i.e. to determine which pixels to plot)
+or as a font mask when plotting text.
+
+Channel A masks are "exploded" to the destination mode's number of bits per
+pixel as they are used.
+
+#### Channel B
+
+This channel usually contains the source pixels of the sprite to be copied
+and should be in the same format as the pixels for the mode in question.
+
+When plotting a solid colour or a font through a channel A mask this channel
+channel can be set to a single colour and the address generator turned off.
+
+#### Channel C
+
+This channel can be used to read the existing contents of the destination
+screen/bitmap data before combining with data from Channels A/B. The data from
+this channel can also be sent on to Channel E unmodified to allow the saving
+of the destination content so that it can be restored later.
+
+#### Channel D 
+
+This channel is the destination for the blit, usally the screen but can be
+another bitmap.
+
+#### Channel E
+
+Data from Channel C can be streamed direct to Channel E to allow the saving
+of the previous contents.
+
 ## Dataflow overview
+
+The diagram below shows how the data from the different channels flow.
 
 ```
                           +-----------+      +-----------+      +-----------+
@@ -278,20 +362,20 @@ always 1bpp.
                              |     |      |     |     |               |
  +------------+           +--v-----v--+   |  +--v-----v--+            |
  |®shift A    +-----------+» shift A  |   +--+» shift B  |            |
- +------------+           |      top8 |      |      top8 |            |
+ +------------+           |    left 8 |      |    left 8 |            |
                           +-----------+      +-----------+            |
                                    |                  |               |
  +------------+                 +--+                  |     +---------+
  |®1st mask   +--------+        |                     |     |         |
  +------------+        |  +-----v-----+               |     |         |
- |§1st mask   +------+ +-->   Apply   |               |     |         |
- +------------+      +---->   Masks   |               |     |         |
+                       +-->   Apply   |               |     |         |
+                          |   Masks   |               |     |         |
                      +---->           |               |     |         |
- +------------+      | +-->           |           +---v-----v---+     |
- |®last mask  +------+ |  +-----------+           |             |     |
- +------------+        |        |                 |             |     |
- |§last mask  +--------+        |        +-------->  Function   |     |
- +------------+                 |        |        |  Generator  |     |
+ +------------+      |    |           |           +---v-----v---+     |
+ |®last mask  +------+    +-----------+           |             |     |
+ +------------+                 |                 |             |     |
+                                |        +-------->  Function   |     |
+                                |        |        |  Generator  |     |
                                 |        |        |             |     |
  +------------+           +-----v-----+  |        |             |     |
  |§slice#     +----------->   Slice   |  |        +-------------+     |
@@ -311,17 +395,39 @@ data are read from channel B, existing screen/destination bitmap data from
 channel C and combined destination data written back on channel D. The extra
 channel E can be configured to save channel C data as it is read.
 
+### Function Generator
+
+
 
 ## Registers
 
-Base Address : $FE FC60, $FE FCA0
+When accessing the Blitter Chip there are two sets of register address 
+locations that may be used:
+* The lower address range FE FC00..30 are best suited to little-endian 
+  architectures (6502,65816,x86,ARM) and the address pointers are 4 byte 
+  word aligned to suite ARM. 
+* There is a mirrored set of address registers at FE FC60-80, A0-AF which
+  is better suited to big-endian architectures (such as 6809, 68008 etc)
+
+As of July 2024 the little-endian register set has some convenience features
+to make programming the Blitter more efficient that are not yet available
+in the big-endian scheme. These differences are noted below and marked 
+CONVENIENCE for clarity.
+
+These register locations may change in future firmware revisions and it is
+recommended that developers code in a way that makes it relatively simple
+to change these locations should the need arise.
+
+Base Address : $FE FC60, $FE FCA0 - BIG ENDIAN
+Base Address : $FE FC00 - LITTLE ENDIAN
 
 The Blitter is accessed either using a 24 bit address capable CPU (i.e. 65816) 
 or by using the JIM paging interface.
 
-NOTE: all addresses are in Big-Endian form. i.e. the most-significant byte first
+### BLITCON 
 
-### FE FC60 - BLITCON
+  * FE FC60 - BIG ENDIAN
+  * FE FC00 - LITTLE ENDIAN
 
 The BLITCON register is used to start the Blitter's operation and is written
 twice, the first time with the top-bit clear is used to configure which of the
@@ -375,7 +481,10 @@ Once the Blit has started the cpu should poll for the blit being finished by
 reading back BLITCON and checking bit 7
 
 
-### FE FC61 - FUNCGEN
+### FUNCGEN 
+
+ * FE FC61 - BIG ENDIAN
+ * FE FC01 - LITTLE ENDIAN
 
 The function generator controls how the data from channels A, B and C are 
 combined before being written to channel D. 
@@ -385,15 +494,44 @@ mask data are "exploded" i.e. each bit is repeated BPP times.
 
 The function generator is described in detail in the [Amiga Reference Manual](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011C.html). The [Venn Diagram](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011E.html) description is helpful.
 
-### FE FC62 - WIDTH
+### MASK FIRST
 
-Width in bytes of the sprite minus 1
+  * FE FC65 - BIG ENDIAN
+  * FE FC02 - LITTLE ENDIAN
 
-### FE FC63 - HEIGHT
+This value is anded with the shifted channel A data on the first byte read in
+each line is used to mask out unwanted left-hand bits. If not needed set to
+$FF
+
+### MASK LAST
+
+  * FE FC66 - BIG ENDIAN
+  * FE FC03 - LITTLE ENDIAN
+
+This value is anded with the shifted channel A data on the last byte read in
+each line is used to mask out unwanted left-hand bits. If not needed set to
+$FF
+
+### WIDTH
+
+  * FE FC62 - BIG ENDIAN
+  * FE FC04 - LITTLE ENDIAN
+
+Width in bytes of the sprite - 1. The width can be 1..256, note that this is 
+measured a bytes horizontally i.e. not as the 6845 addresses in character 
+cells so is sufficient for all BBC Modes including proposed 4MHz modes.
+
+### HEIGHT
+  * FE FC63 - BIG ENDIAN
+  * FE FC05 - LITTLE ENDIAN
 
 Height in pixels of the sprite minus 1
 
-### FE FC64 - SHIFT
+### SHIFT
+
+  * FE FC64 - SHIFT A/B BIGENDIAN
+  * FE FC06 - SHIFT A - LITTLE ENDIAN
+  * FE FC07 - SHIFT B - LITTLE ENDIAN
 
 The Blitter can shift the data read into the A and B registers to the right
 by a number of bits to allow sprites to be plotted at any pixel location. 
@@ -404,88 +542,171 @@ edges masked off with the MASK FIRST and MASK LAST registers.
 There are two shifts that are specified one for the A register (which is always
 1 bpp) and another for the B register which may be 1,2,4 or 8 bpp.
 
+In the big-endian mode:
 Bits 2..0 specify the A channel shift
 Bits 6..4 specify the B channel shift
 
-### FE FC65 - MASK FIRST
+In big-endian mode both shifts must be set
 
-This value is anded with the shifted channel A data on the first byte read in
-each line is used to mask out unwanted left-hand bits. If not needed set to
-$FF
+In the little-endian mode the A and B registers are separate for CONVENIENCE.
 
-### FE FC66 - MASK 
+It is usually the case that the B shift is the same as the A shift or that the
+B shift is (A shift) MODULO (2<<BPP). Poking the A shift to SHIFT A will also
+set SHIFT B to that value. The top BPP-1 bits of shift B are ignored therefore
+in most situations it is only necessary to set SHIFT A. 
 
-This value is anded with the shifted channel A data on the last byte read in
-each line is used to mask out unwanted left-hand bits. If not needed set to
-$FF
+### STRIDE A
 
-### FE FC67 - DATA A 
+  * FE FC78..9 - BIG ENDIAN 
+  * FE FC08..9 - LITTLE ENDIAN
+
+The "stride" of the bitmap is the number of mask bytes per line of the source
+data.
+
+### STRIDE B
+ 
+  * FE FC7A..B - BIG ENDIAN
+  * FE FC0A..B - LITTLE ENDIAN
+
+The "stride" of the bitmap is the number of bitmap data bytes per line of the
+source data
+
+### STRIDE C
+
+  * FE FC7C..D - BIG ENDIAN
+  * FE FC0C..D - LITTLE ENDIAN
+
+The "stride" of the bitmap is the number of bytes in a line of bitmap data
+on the screen
+
+In cell mode this stride is only applied at the end of a character row and 
+should be set to the character row width in bytes.
+
+For CONVENIENCE in the little-endian registers scheme setting STRIDE C will
+also set STRIDE D as these are almost always the same.
+
+### STRIDE D
+
+  * FE FC7E..F - BIG ENDIAN
+  * FE FC0E..F - LITTLE ENDIAN
+
+The "stride" of the bitmap is the number of bytes in a line of bitmap data
+on the screen
+
+In cell mode this stride is only applied at the end of a character row and 
+should be set to the character row width in bytes.
+
+For CONVENIENCE in the little-endian registers scheme setting STRIDE C will
+also set STRIDE D as these are almost always the same.
+
+### ADDR A
+
+  * FE FC68..A - BIG ENDIAN
+  * FE FC10..3 - LITTLE ENDIAN
+
+The start address of the mask data if Exec A is in force. 
+
+It is usually permissible to set the address with a 32 bit write (overwriting) 
+the DATA A register as only one of ADDR A or DATA A need be initialised.
+
+### DATA A 
+
+  * FE FC67 - BIG ENDIAN
+  * FE FC13 - LITTLE ENDIAN
 
 If the EXEC A flag is not set this register can be set to apply a mask pattern
 to the plotted bitmap, otherwise this register will be updated by the Blitter
 as it reads the mask from memory
 
-### FE FC68..A - ADDR A
+### ADDR B
 
-The Big-Endian start address of the mask data
+  * FE FC6C..6E - BIG ENDIAN
+  * FE FC14..16 - LITTLE ENDIAN
 
-### FE FC6B - DATA B 
+The start address of the channel B bitmap data if EXEC B is in force.
+
+It is usually permissible to set the address with a 32 bit write (overwriting) 
+the DATA B register as only one of ADDR B or DATA B need be initialised.
+
+### DATA B 
+  
+  * FE FC6B - BIG ENDIAN
+  * FE FC17 - LITTLE ENDIAN
 
 If the EXEC B flag is not set this register can be set to plot a solid colour
-through the mask
+through the mask. Setting this register explicitly sets the current and previous
+channel B registers (see section on shifting).
 
-### FE FC6C..E - ADDR B
+### ADDR C
 
-The Big-Endian start address of the channel B bitmap data
+  * FE FC6F..71 - BIG ENDIAN
+  * FE FC18..1A - LITTLE ENDIAN
 
-### FE FC6F..71 - ADDR C
+The start address of the channel C bitmap data
 
-The Big-Endian start address of the channel C bitmap data
+It is usually permissible to set the address with a 32 bit write (overwriting) 
+the DATA C register as only one of ADDR C or DATA C need be initialised.
 
-### FE FC72..74 - ADDR D
+As a CONVENIENCE setting the ADDR C register also sets the ADDR D register
+as these are almost always the same.
 
-The Big-Endian start address of the channel D bitmap data
+### DATA C
 
-### FE FC75..77 - ADDR E
+  * N/A - BIG ENDIAN
+  * FE FC1B - LITTLE ENDIAN
 
-The Big-Endian start address of the channel E bitmap data
+If the EXEC C flag is not set this register can be set to plot a solid colour
+through the mask. 
 
-### FE FC78..9 STRIDE A
+### ADDR D
 
-The "stride" of the bitmap is the number of mask bytes per line of the source
-data
+  * FE FC72..74 - BIG ENDIAN
+  * FE FC1C..1E - LITTLE ENDIAN
 
-### FE FC7A..B STRIDE B
+The start address of the channel D (destination) bitmap data
 
-The "stride" of the bitmap is the number of bitmap data bytes per line of the
-source data
+As a CONVENIENCE setting the ADDR C register also sets the ADDR D register
+as these are almost always the same.
 
-### FE FC7C..D STRIDE C
+### ADDR E
 
-The "stride" of the bitmap is the number of bytes in a line of bitmap data
-on the screen
+  * FE FC75..77 - BIG ENDIAN
+  * FE FC20..22 - LITTLE ENDIAN
 
-In cell mode this stride is only applied at the end of a character row and 
-should be set to the character row width in bytes.
+The start address of the channel E (save) bitmap data
 
-### FE FC7E..F STRIDE D
+### ADDR C/D MIN
 
-The "stride" of the bitmap is the number of bytes in a line of bitmap data
-on the screen
-
-In cell mode this stride is only applied at the end of a character row and 
-should be set to the character row width in bytes.
-
-### FE FCA0..2 ADDR C/D MIN
+  * FE FCA0..A2 - BIG ENDIAN
+  * FE FC24..26 - LITTLE ENDIAN
 
 In WRAP mode, if the C or D addresses are incremented above the MAX address
 then they will wrap to this MIN address
 
-### FE FCA3..5 ADDR C/D MAX
+### ADDR C/D MAX
+
+  * FE FCA3..A5 - BIG ENDIAN
+  * FE FC28..2A - LITTLE ENDIAN
 
 In WRAP mode, if the C or D addresses are incremented above this MAX address
 then they will wrap to the MIN address
 
+
+
+
+
+
+
+## Missing features
+
+ * There is a proposal for a top-to-bottom and right-to-left plotting
+   mode to allow overlapping blits. i.e. scroll a small part of a the
+   screen. Currently this would require two blits, via an off-screen 
+   buffer
+
+
+
+===================================================================================================================================
 
 
 Line Drawing Mode
