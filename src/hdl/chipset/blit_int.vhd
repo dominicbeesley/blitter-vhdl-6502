@@ -963,6 +963,7 @@ begin
 						r_shift_B <= r_per_d_wr(6 downto 4);
 					when A_N_SHIFT_A =>
 						r_shift_A <= r_per_d_wr(2 downto 0);
+						r_shift_B <= r_per_d_wr(2 downto 0);				-- convenience poke
 					when A_N_SHIFT_B => 
 						r_shift_B <= r_per_d_wr(2 downto 0);
 					when A_MASK_FIRST | A_N_MASK_FIRST=>
@@ -990,12 +991,23 @@ begin
 						r_cha_B_addr(7 downto 0) <= r_per_d_wr;	
 					when A_N_DATA_C =>
 						r_cha_C_data <= r_per_d_wr;
-					when A_ADDR_C + 0 | A_N_ADDR_C + 2 =>
+					when A_ADDR_C + 0 =>
 						r_cha_C_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_C + 1 | A_N_ADDR_C + 1 =>
+					when A_ADDR_C + 1 =>
 						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_C + 2 | A_N_ADDR_C + 0 =>
+					when A_ADDR_C + 2 =>
 						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
+
+					when A_N_ADDR_C + 0 =>
+						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
+						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			-- convenience
+					when A_N_ADDR_C + 1 =>
+						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
+						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			-- convenience
+					when A_N_ADDR_C + 2 =>
+						r_cha_C_addr(23 downto 16) <= r_per_d_wr;			
+						r_cha_D_addr(23 downto 16) <= r_per_d_wr;			-- convenience
+
 					when A_ADDR_D + 0 | A_N_ADDR_D + 2 =>
 						r_cha_D_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_D + 1 | A_N_ADDR_D + 1 =>
@@ -1013,15 +1025,23 @@ begin
 					when A_STRIDE_A + 1 | A_N_STRIDE_A + 0 =>
 						r_cha_A_stride(7 downto 0) <= r_per_d_wr;
 					when A_STRIDE_B + 0 | A_N_STRIDE_B + 1 =>
-						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_B_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
 					when A_STRIDE_B + 1 | A_N_STRIDE_B + 0 =>
 						r_cha_B_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_C + 0 | A_N_STRIDE_C + 1 =>
-						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
-					when A_STRIDE_C + 1 | A_N_STRIDE_C + 0 =>
+					when A_STRIDE_C + 0 =>
+						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+					when A_STRIDE_C + 1  =>
 						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
+
+					when A_N_STRIDE_C + 0 =>
+						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
+						r_cha_D_stride(7 downto 0) <= r_per_d_wr; -- convenience
+					when A_N_STRIDE_C + 1  =>
+						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0); -- convenience
+
 					when A_STRIDE_D + 0 | A_N_STRIDE_D + 1 =>
-						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
+						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
 					when A_STRIDE_D + 1 | A_N_STRIDE_D + 0 =>
 						r_cha_D_stride(7 downto 0) <= r_per_d_wr;
 
