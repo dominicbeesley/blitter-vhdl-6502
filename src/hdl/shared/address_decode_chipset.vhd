@@ -96,6 +96,10 @@ begin
 			elsif (a = x"6" or a = x"7" or a = x"A") and G_INCL_CS_BLIT then -- official address 6,7,A
 				peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_BLIT, peripheral_sel_o'length);
 				peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_BLIT) <= '1';
+			elsif (a = x"0" or a = x"1" or a = x"2") and G_INCL_CS_BLIT then 
+				-- new blitter ABI
+				peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_BLIT, peripheral_sel_o'length);
+				peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_BLIT) <= '1';
 			else
 			--TODO: investigate - making BLITTER default here causes sparkles in DEMO65 and 
 			--crashes and random wrong tiles in ADVENT65
