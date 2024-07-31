@@ -490,7 +490,7 @@ The function generator controls how the data from channels A, B and C are
 combined before being written to channel D. 
 
 The Blitter's FUNCGEN works on channels in the same way as the Amiga except 
-mask data are "exploded" i.e. each bit is repeated BPP times.
+mask data are "exploded" i.e. each bit is repeated BPP times, left-justified.
 
 The function generator is described in detail in the [Amiga Reference Manual](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011C.html). The [Venn Diagram](https://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011E.html) description is helpful.
 
