@@ -1083,7 +1083,7 @@ begin
 		)
 	begin
 		case to_integer(unsigned(r_per_addr)) is
-			when A_BLTCON =>
+			when A_BLTCON | A_N_BLTCON =>
 				i_per_D_rd <= r_BLTCON_act 
 							& r_BLTCON_cell
 							& r_BLTCON_mode
