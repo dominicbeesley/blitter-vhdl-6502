@@ -269,6 +269,11 @@ mode it will only be accessed for every 4th cycle as channel A data are
 always 1bpp.
 
 
+### Area fill
+
+As the BBC Micro scren memory is not bit-planar implementing an area fill as
+available on the Amiga is non-trivial and has not been attempted.
+
 ## How the Blitter works
 
 The Blitter is a device for quickly copying and combining bitmap data from one 
@@ -699,10 +704,23 @@ then they will wrap to the MIN address
 
 ## Missing features
 
+ * IRQ - there should be a method for generating an IRQ when a blit
+   is finished to allow the Blitter to operate independently of the 
+   CPU. However, at present, the Blitter takes precedence over the 
+   CPU instead. 
+
+ * Channel B cell mode - there should be an option to set Channel B
+   to operate in cell mode to allow screen-to-screen scrolls, screen
+   to sprite blits.
+
+ * Temporal ordering - propose changing ordering to more closely match
+   amiga i.e. A0-B0-C0-x-A1-B1-C1-D0-D1 to allow intra-byte shifts
+   without overwriting next byte's content.
+
  * There is a proposal for a top-to-bottom and right-to-left plotting
    mode to allow overlapping blits. i.e. scroll a small part of a the
    screen. Currently this would require two blits, via an off-screen 
-   buffer
+   buffer (c.f. Amiga descending mode)
 
 
 
