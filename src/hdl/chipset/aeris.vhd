@@ -76,9 +76,13 @@ entity fb_dmac_aeris is
 		dbg_state_o							: out		std_logic_vector(3 downto 0)
 
 	);
-	constant A_CONTROL			: integer := 0;
-	constant	A_PROGSTART 		: integer := 1;
-	constant	A_PC			 		: integer := 4;
+	constant A_CONTROL			: integer := 16#00#;
+	constant	A_PROGSTART 		: integer := 16#01#;
+	constant	A_PC			 		: integer := 16#04#;
+
+	constant A_N_CONTROL			: integer := 16#10#;
+	constant	A_N_PROGSTART 		: integer := 16#14#;
+	constant	A_N_PC			 	: integer := 16#18#;
 end fb_dmac_aeris;
 
 architecture Behavioral of fb_dmac_aeris is
@@ -87,7 +91,7 @@ architecture Behavioral of fb_dmac_aeris is
 	type		per_strate_t		is (idle, wait_d_stb, rd);
 
 	signal	r_per_state				: per_strate_t;
-	signal	r_per_addr				: std_logic_vector(2 downto 0);
+	signal	r_per_addr				: std_logic_vector(4 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal 	r_per_ack				: std_logic;
 	signal 	r_per_D_wr				: std_logic_vector(7 downto 0);
@@ -610,14 +614,14 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_per_D_wr_stb = '1' then 
 				case to_integer(unsigned(r_per_addr)) is
-					when A_CONTROL =>
+					when A_CONTROL | A_N_CONTROL=>
 						r_ctl_wait_cyc <= r_per_D_wr(7);
 						r_ctl_feedback <= r_per_D_wr(3 downto 0);
-					when A_PROGSTART =>
+					when A_PROGSTART + 0 | A_N_PROGSTART + 2 =>
 						r_prog_base(23 downto 16) <= r_per_D_wr;
-					when A_PROGSTART + 1 =>
+					when A_PROGSTART + 1 | A_N_PROGSTART + 1 =>
 						r_prog_base(15 downto 8) <= r_per_D_wr;
-					when A_PROGSTART + 2 =>
+					when A_PROGSTART + 2 | A_N_PROGSTART + 0 =>
 						r_prog_base(7 downto 0) <= r_per_D_wr;
 					when others =>
 						null;
@@ -630,19 +634,19 @@ begin
 	p_regs_rd:process(r_per_addr, r_prog_base, r_pc, r_ctl_wait_cyc, r_ctl_feedback)	
 	begin
 		case to_integer(unsigned(r_per_addr)) is
-			when A_CONTROL =>
+			when A_CONTROL | A_N_CONTROL =>
 				i_per_D_rd <= r_ctl_wait_cyc & "000" & r_ctl_feedback;
-			when A_PROGSTART =>
+			when A_PROGSTART + 0 | A_N_PROGSTART + 2 =>
 				i_per_D_rd <= r_prog_base(23 downto 16);
-			when A_PROGSTART + 1 =>
+			when A_PROGSTART + 1 | A_N_PROGSTART + 1=>
 				i_per_D_rd <= r_prog_base(15 downto 8);
-			when A_PROGSTART + 2 =>
+			when A_PROGSTART + 2 | A_N_PROGSTART + 0 =>
 				i_per_D_rd <= r_prog_base(7 downto 0);
-			when A_PC =>
+			when A_PC + 0 | A_N_PC + 2=>
 				i_per_D_rd <= r_prog_base(23 downto 16);
-			when A_PC + 1 =>
+			when A_PC + 1 | A_N_PC + 1=>
 				i_per_D_rd <= r_pc(15 downto 8);
-			when A_PC + 2 =>
+			when A_PC + 2 | A_N_PC + 0 =>
 				i_per_D_rd <= r_pc(7 downto 0);
 			when others =>
 				i_per_D_rd <= (others => '-');
@@ -665,7 +669,7 @@ begin
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= fb_per_c2p_i.A(2 downto 0);
+						r_per_addr <= fb_per_c2p_i.A(9) & '0' & fb_per_c2p_i.A(2 downto 0);
 						if fb_per_c2p_i.we = '0' then
 							r_per_state <= rd;
 						else
