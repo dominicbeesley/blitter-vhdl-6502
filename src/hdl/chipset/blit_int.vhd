@@ -135,33 +135,32 @@ entity fb_dmac_blit is
 	constant	A_STRIDE_B		: integer := 16#7A#;
 	constant	A_STRIDE_C		: integer := 16#7C#;
 	constant	A_STRIDE_D		: integer := 16#7E#;
-
 	constant A_ADDR_D_MIN	: integer := 16#A0#;
 	constant A_ADDR_D_MAX	: integer := 16#A3#;
 
 	-- NEW ABI: cater for little-endian pokes and 4 byte aligned access for ARM
-	constant	A_N_BLTCON 		: integer := 16#00#;
-	constant	A_N_FUNCGEN 	: integer := 16#01#;
-	constant	A_N_MASK_FIRST	: integer := 16#02#;
-	constant	A_N_MASK_LAST 	: integer := 16#03#;
-	constant	A_N_WIDTH	 	: integer := 16#04#;
-	constant	A_N_HEIGHT 		: integer := 16#05#;
-	constant	A_N_SHIFT_A		: integer := 16#06#;
-	constant	A_N_SHIFT_B		: integer := 16#07#;
-	constant	A_N_STRIDE_A	: integer := 16#08#;
-	constant	A_N_STRIDE_B	: integer := 16#0A#;
-	constant	A_N_STRIDE_C	: integer := 16#0C#;
-	constant	A_N_STRIDE_D	: integer := 16#0E#;
-	constant	A_N_ADDR_A 		: integer := 16#10#;
-	constant	A_N_DATA_A 		: integer := 16#13#;
-	constant	A_N_ADDR_B 		: integer := 16#14#;
-	constant	A_N_DATA_B 		: integer := 16#17#;
-	constant	A_N_ADDR_C 		: integer := 16#18#;
-	constant	A_N_DATA_C 		: integer := 16#1B#;
-	constant	A_N_ADDR_D 		: integer := 16#1C#;
-	constant	A_N_ADDR_E 		: integer := 16#20#;
-	constant A_N_ADDR_D_MIN	: integer := 16#24#;
-	constant A_N_ADDR_D_MAX	: integer := 16#28#;
+	constant	A_N_BLTCON 		: integer := 16#200#;
+	constant	A_N_FUNCGEN 	: integer := 16#201#;
+	constant	A_N_MASK_FIRST	: integer := 16#202#;
+	constant	A_N_MASK_LAST 	: integer := 16#203#;
+	constant	A_N_WIDTH	 	: integer := 16#204#;
+	constant	A_N_HEIGHT 		: integer := 16#205#;
+	constant	A_N_SHIFT_A		: integer := 16#206#;
+	constant	A_N_SHIFT_B		: integer := 16#207#;
+	constant	A_N_STRIDE_A	: integer := 16#208#;
+	constant	A_N_STRIDE_B	: integer := 16#20A#;
+	constant	A_N_STRIDE_C	: integer := 16#20C#;
+	constant	A_N_STRIDE_D	: integer := 16#20E#;
+	constant	A_N_ADDR_A 		: integer := 16#210#;
+	constant	A_N_DATA_A 		: integer := 16#213#;
+	constant	A_N_ADDR_B 		: integer := 16#214#;
+	constant	A_N_DATA_B 		: integer := 16#217#;
+	constant	A_N_ADDR_C 		: integer := 16#218#;
+	constant	A_N_DATA_C 		: integer := 16#21B#;
+	constant	A_N_ADDR_D 		: integer := 16#21C#;
+	constant	A_N_ADDR_E 		: integer := 16#220#;
+	constant A_N_ADDR_D_MIN	: integer := 16#224#;
+	constant A_N_ADDR_D_MAX	: integer := 16#228#;
 
 
 end fb_dmac_blit;
@@ -195,7 +194,7 @@ architecture Behavioral of fb_dmac_blit is
 	type		per_state_t			is (idle, wait_d_stb, rd);
 
 	signal	r_per_state				: per_state_t;
-	signal	r_per_addr				: std_logic_vector(7 downto 0);
+	signal	r_per_addr				: std_logic_vector(9 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr_stb			: std_logic;
@@ -1303,7 +1302,7 @@ begin
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= fb_per_c2p_i.A(7 downto 0);
+						r_per_addr <= fb_per_c2p_i.A(9) & '0' & fb_per_c2p_i.A(7 downto 0);
 						if fb_per_c2p_i.we = '0' then
 							r_per_state <= rd;
 						else
