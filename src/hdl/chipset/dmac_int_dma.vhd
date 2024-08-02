@@ -72,10 +72,11 @@ entity fb_DMAC_int_dma is
 		dma_halt_i							: in		STD_LOGIC
 	 );
 
-	 constant	A_CHA_SEL		: integer := 15;
 end fb_DMAC_int_dma;
 
 architecture Behavioral of fb_DMAC_int_dma is
+
+	constant	A_CHA_SEL		: std_logic_vector(3 downto 0) := x"F";
 
 	constant PADBITS				: std_logic_vector(7-NUMBITS(G_CHANNELS) downto 0) := (others => '0');
 
@@ -99,11 +100,12 @@ architecture Behavioral of fb_DMAC_int_dma is
 
 begin
 
+
 	int_o <= or_reduce(i_child_int);
 	cpu_halt_o <= or_reduce(i_child_cpu_halt);
 
 	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
-	i_reg_sel_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = x"F" 
+	i_reg_sel_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = A_CHA_SEL 
 					else '0';
 	i_reg_ack <= '1' when (r_per_state = idle and i_cyc_start = '1' and i_reg_sel_sel = '1' and (fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1')) -- can ack on idle
 								  or (r_per_state = sel_wr_wait and fb_per_c2p_i.D_wr_stb = '1') 
@@ -164,6 +166,8 @@ begin
 		end if;
 	end process;
 	
+	--TODO: to save resources move register decoding and fishbone stuff to this level
+	-- as only one selected
 	g_cha: for I in 0 to G_CHANNELS-1 generate
 
 		e_cha_1: entity work.fb_DMAC_int_dma_cha

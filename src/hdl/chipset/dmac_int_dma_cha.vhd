@@ -70,16 +70,28 @@ entity fb_DMAC_int_dma_cha is
 
 	 );
 
-	 -- sound
-	 constant   A_CTL					: integer := 0;
-	 constant	A_SRC_ADDR_BANK	: integer := 1;	 
-	 constant   A_SRC_ADDR			: integer := 2; 
-	 constant   A_DEST_ADDR_BANK	: integer := 4; 
-	 constant   A_DEST_ADDR			: integer := 5; 
-	 constant   A_COUNT				: integer := 7;
-	 constant 	A_DATA				: integer := 9;
-	 constant 	A_CTL2				: integer := 10;
-	 constant 	A_PAUSE_VAL			: integer := 11;
+	-- original big-endian 
+	 constant   A_CTL					: integer := 16#00#;
+	 constant	A_SRC_ADDR_BANK	: integer := 16#01#;	 
+	 constant   A_SRC_ADDR			: integer := 16#02#; 
+	 constant   A_DEST_ADDR_BANK	: integer := 16#04#; 
+	 constant   A_DEST_ADDR			: integer := 16#05#; 
+	 constant   A_COUNT				: integer := 16#07#;
+	 constant 	A_DATA				: integer := 16#09#;
+	 constant 	A_CTL2				: integer := 16#0A#;
+	 constant 	A_PAUSE_VAL			: integer := 16#0B#;
+
+	-- NEW ABI: cater for little-endian pokes and 4 byte aligned access for ARM
+	 constant   A_N_SRC_ADDR		: integer := 16#10#; 
+	 constant	A_N_SRC_ADDR_BANK	: integer := 16#12#;	 
+	 constant   A_N_DEST_ADDR		: integer := 16#14#; 
+	 constant   A_N_DEST_ADDR_BANK: integer := 16#16#; 
+	 constant   A_N_COUNT			: integer := 16#18#;	-- poking count 32 bit will poke data but doesn't matter
+	 constant 	A_N_DATA				: integer := 16#1A#;
+	 constant 	A_N_CTL				: integer := 16#1C#;
+	 constant 	A_N_CTL2				: integer := 16#1D#;
+	 constant 	A_N_PAUSE_VAL		: integer := 16#1E#;
+
 
 end fb_DMAC_int_dma_cha;
 
@@ -156,7 +168,7 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	end;
 
 	signal	r_per_state				: per_State_t;
-	signal	r_per_addr				: std_logic_vector(3 downto 0);
+	signal	r_per_addr				: std_logic_vector(4 downto 0);		-- mangled address to cater for LE/BE (LE if bit 4 set)
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_rd				: std_logic_vector(7 downto 0);
 	signal 	r_per_ack				: std_logic;
@@ -415,7 +427,7 @@ begin
 				when idle =>
 					r_per_had_d_wr_stb <= '0';
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= fb_per_c2p_i.A(3 downto 0);
+						r_per_addr <= (not fb_per_c2p_i.A(9)) & fb_per_c2p_i.A(3 downto 0);
 						if fb_per_c2p_i.we = '1' then
 							r_per_state <= wr;
 							if fb_per_c2p_i.D_wr_stb = '1' then
@@ -540,40 +552,40 @@ begin
 			if r_per_state = wr and r_per_had_d_wr_stb = '1' then
 
 				case to_integer(unsigned(r_per_addr)) is
-					when A_CTL =>
+					when A_CTL | A_N_CTL=>
 						r_ctl_act <= fb_per_c2p_i.D_wr(7);
 						r_ctl_extend <= fb_per_c2p_i.D_wr(5);
 						r_ctl_halt <= fb_per_c2p_i.D_wr(4);
 						r_ctl_step_src <= to_step(fb_per_c2p_i.D_wr(1 downto 0));
 						r_ctl_step_dest <= to_step(fb_per_c2p_i.D_wr(3 downto 2));
 						r_ctl2_if <= '0';
-					when A_SRC_ADDR_BANK =>
+					when A_SRC_ADDR_BANK | A_N_SRC_ADDR_BANK =>
 						r_src_addr_bank <= fb_per_c2p_i.D_wr(7 downto 0);
-					when A_SRC_ADDR =>
+					when A_SRC_ADDR + 0 | A_N_SRC_ADDR + 1=>
 						r_src_addr(15 downto 8) <= fb_per_c2p_i.D_wr;
-					when A_SRC_ADDR + 1=>
+					when A_SRC_ADDR + 1 | A_N_SRC_ADDR + 0=>
 						r_src_addr(7 downto 0) <= fb_per_c2p_i.D_wr;
-					when A_DEST_ADDR_BANK =>
+					when A_DEST_ADDR_BANK | A_N_DEST_ADDR_BANK =>
 						r_dest_addr_bank <= fb_per_c2p_i.D_wr(7 downto 0);
-					when A_DEST_ADDR =>
+					when A_DEST_ADDR + 0 | A_N_DEST_ADDR + 1 =>
 						r_dest_addr(15 downto 8) <= fb_per_c2p_i.D_wr;
-					when A_DEST_ADDR + 1 =>
+					when A_DEST_ADDR + 1 | A_N_DEST_ADDR + 0 =>
 						r_dest_addr(7 downto 0) <= fb_per_c2p_i.D_wr;
-					when A_COUNT =>
+					when A_COUNT + 0 | A_N_COUNT + 1 =>
 						r_count(15 downto 8) <= UNSIGNED(fb_per_c2p_i.D_wr);
 						r_count_finish <= '0';
-					when A_COUNT + 1 =>
+					when A_COUNT + 1 | A_N_COUNT + 0 =>
 						r_count(7 downto 0) <= UNSIGNED(fb_per_c2p_i.D_wr);
 						r_count_finish <= '0';
-					when A_DATA =>
+					when A_DATA | A_N_DATA =>
 						r_data(15 downto 8) <= fb_per_c2p_i.D_wr;
 						r_data(7 downto 0) <= fb_per_c2p_i.D_wr;
-					when A_CTL2 =>
+					when A_CTL2 | A_N_CTL2 =>
 						r_ctl2_if <= '0';												-- TODO : move to a read reg?
 						r_ctl2_ie <= fb_per_c2p_i.D_wr(1);
 						r_ctl2_pause <= fb_per_c2p_i.D_wr(0);
 						r_ctl2_stepsize <= bits2stepsize(fb_per_c2p_i.D_wr(3 downto 2));
-					when A_PAUSE_VAL =>
+					when A_PAUSE_VAL | A_N_PAUSE_VAL =>
 						r_pause_val <= fb_per_c2p_i.D_wr;
 					when others => null;
 				end case;
@@ -608,31 +620,31 @@ begin
 									& r_ctl_halt
 									& to_std_logic_vector(r_ctl_step_dest) 
 									& to_std_logic_vector(r_ctl_step_src);
-			when A_SRC_ADDR_BANK =>
+			when A_SRC_ADDR_BANK | A_N_SRC_ADDR_BANK =>
 				i_per_D_rd <= r_src_addr_bank;
-			when A_SRC_ADDR =>
+			when A_SRC_ADDR + 0 | A_N_SRC_ADDR + 1 =>
 				i_per_D_rd <= r_src_addr(15 downto 8);
-			when A_SRC_ADDR + 1 =>
+			when A_SRC_ADDR + 1 | A_N_SRC_ADDR + 0 =>
 				i_per_D_rd <= r_src_addr(7 downto 0);
-			when A_DEST_ADDR_BANK =>
+			when A_DEST_ADDR_BANK | A_N_DEST_ADDR_BANK =>
 				i_per_D_rd <= r_dest_addr_bank;
-			when A_DEST_ADDR =>
+			when A_DEST_ADDR + 0 | A_N_DEST_ADDR + 1 =>
 				i_per_D_rd <= r_dest_addr(15 downto 8);
-			when A_DEST_ADDR + 1 =>
+			when A_DEST_ADDR + 1 | A_N_DEST_ADDR + 0 =>
 				i_per_D_rd <= r_dest_addr(7 downto 0);
-			when A_COUNT =>
+			when A_COUNT + 0 | A_N_COUNT + 1 =>
 				i_per_D_rd <= std_logic_vector(r_count(15 downto 8));
-			when A_COUNT + 1 =>
+			when A_COUNT + 1 | A_N_COUNT + 0 =>
 				i_per_D_rd <= std_logic_vector(r_count(7 downto 0));
-			when A_DATA =>
+			when A_DATA | A_N_DATA =>
 				i_per_D_rd <= r_data(15 downto 8);
-			when A_CTL2 =>
+			when A_CTL2 | A_N_CTL2 =>
 				i_per_D_rd <= r_ctl2_if
 								 & "000"
 								 & stepsize2bits(r_ctl2_stepsize)
 								 & r_ctl2_ie
 								 & r_ctl2_pause;
-			when A_PAUSE_VAL =>
+			when A_PAUSE_VAL | A_N_PAUSE_VAL=>
 				i_per_D_rd <= r_pause_val;
 			when others => 
 				i_per_D_rd <= (others => '-');
