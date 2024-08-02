@@ -427,7 +427,7 @@ begin
 				when idle =>
 					r_per_had_d_wr_stb <= '0';
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= (not fb_per_c2p_i.A(9)) & fb_per_c2p_i.A(3 downto 0);
+						r_per_addr <= fb_per_c2p_i.A(9) & fb_per_c2p_i.A(3 downto 0);
 						if fb_per_c2p_i.we = '1' then
 							r_per_state <= wr;
 							if fb_per_c2p_i.D_wr_stb = '1' then
