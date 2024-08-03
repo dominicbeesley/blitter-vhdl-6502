@@ -432,7 +432,7 @@ or by using the JIM paging interface.
 ### BLITCON 
 
   * FE FC60 - BIG ENDIAN
-  * FE FC00 - LITTLE ENDIAN
+  * FE FE00 - LITTLE ENDIAN
 
 The BLITCON register is used to start the Blitter's operation and is written
 twice, the first time with the top-bit clear is used to configure which of the
@@ -489,7 +489,7 @@ reading back BLITCON and checking bit 7
 ### FUNCGEN 
 
  * FE FC61 - BIG ENDIAN
- * FE FC01 - LITTLE ENDIAN
+ * FE FE01 - LITTLE ENDIAN
 
 The function generator controls how the data from channels A, B and C are 
 combined before being written to channel D. 
@@ -502,7 +502,7 @@ The function generator is described in detail in the [Amiga Reference Manual](ht
 ### MASK FIRST
 
   * FE FC65 - BIG ENDIAN
-  * FE FC02 - LITTLE ENDIAN
+  * FE FE02 - LITTLE ENDIAN
 
 This value is anded with the shifted channel A data on the first byte read in
 each line is used to mask out unwanted left-hand bits. If not needed set to
@@ -511,7 +511,7 @@ $FF
 ### MASK LAST
 
   * FE FC66 - BIG ENDIAN
-  * FE FC03 - LITTLE ENDIAN
+  * FE FE03 - LITTLE ENDIAN
 
 This value is anded with the shifted channel A data on the last byte read in
 each line is used to mask out unwanted left-hand bits. If not needed set to
@@ -520,7 +520,7 @@ $FF
 ### WIDTH
 
   * FE FC62 - BIG ENDIAN
-  * FE FC04 - LITTLE ENDIAN
+  * FE FE04 - LITTLE ENDIAN
 
 Width in bytes of the sprite - 1. The width can be 1..256, note that this is 
 measured a bytes horizontally i.e. not as the 6845 addresses in character 
@@ -528,15 +528,15 @@ cells so is sufficient for all BBC Modes including proposed 4MHz modes.
 
 ### HEIGHT
   * FE FC63 - BIG ENDIAN
-  * FE FC05 - LITTLE ENDIAN
+  * FE FE05 - LITTLE ENDIAN
 
 Height in pixels of the sprite minus 1
 
 ### SHIFT
 
   * FE FC64 - SHIFT A/B BIGENDIAN
-  * FE FC06 - SHIFT A - LITTLE ENDIAN
-  * FE FC07 - SHIFT B - LITTLE ENDIAN
+  * FE FE06 - SHIFT A - LITTLE ENDIAN
+  * FE FE2A - SHIFT B - LITTLE ENDIAN
 
 The Blitter can shift the data read into the A and B registers to the right
 by a number of bits to allow sprites to be plotted at any pixel location. 
@@ -563,7 +563,7 @@ in most situations it is only necessary to set SHIFT A.
 ### STRIDE A
 
   * FE FC78..9 - BIG ENDIAN 
-  * FE FC08..9 - LITTLE ENDIAN
+  * FE FE08..9 - LITTLE ENDIAN
 
 The "stride" of the bitmap is the number of mask bytes per line of the source
 data.
@@ -571,7 +571,7 @@ data.
 ### STRIDE B
  
   * FE FC7A..B - BIG ENDIAN
-  * FE FC0A..B - LITTLE ENDIAN
+  * FE FE0A..B - LITTLE ENDIAN
 
 The "stride" of the bitmap is the number of bitmap data bytes per line of the
 source data
@@ -579,7 +579,7 @@ source data
 ### STRIDE C
 
   * FE FC7C..D - BIG ENDIAN
-  * FE FC0C..D - LITTLE ENDIAN
+  * FE FE0C..D - LITTLE ENDIAN
 
 The "stride" of the bitmap is the number of bytes in a line of bitmap data
 on the screen
@@ -593,7 +593,7 @@ also set STRIDE D as these are almost always the same.
 ### STRIDE D
 
   * FE FC7E..F - BIG ENDIAN
-  * FE FC0E..F - LITTLE ENDIAN
+  * FE FE28..9 - LITTLE ENDIAN
 
 The "stride" of the bitmap is the number of bytes in a line of bitmap data
 on the screen
@@ -607,7 +607,7 @@ also set STRIDE D as these are almost always the same.
 ### ADDR A
 
   * FE FC68..A - BIG ENDIAN
-  * FE FC10..3 - LITTLE ENDIAN
+  * FE FE10..3 - LITTLE ENDIAN
 
 The start address of the mask data if Exec A is in force. 
 
@@ -617,7 +617,7 @@ the DATA A register as only one of ADDR A or DATA A need be initialised.
 ### DATA A 
 
   * FE FC67 - BIG ENDIAN
-  * FE FC13 - LITTLE ENDIAN
+  * FE FE13 - LITTLE ENDIAN
 
 If the EXEC A flag is not set this register can be set to apply a mask pattern
 to the plotted bitmap, otherwise this register will be updated by the Blitter
@@ -626,7 +626,7 @@ as it reads the mask from memory
 ### ADDR B
 
   * FE FC6C..6E - BIG ENDIAN
-  * FE FC14..16 - LITTLE ENDIAN
+  * FE FE14..16 - LITTLE ENDIAN
 
 The start address of the channel B bitmap data if EXEC B is in force.
 
@@ -636,7 +636,7 @@ the DATA B register as only one of ADDR B or DATA B need be initialised.
 ### DATA B 
   
   * FE FC6B - BIG ENDIAN
-  * FE FC17 - LITTLE ENDIAN
+  * FE FE17 - LITTLE ENDIAN
 
 If the EXEC B flag is not set this register can be set to plot a solid colour
 through the mask. Setting this register explicitly sets the current and previous
@@ -645,7 +645,7 @@ channel B registers (see section on shifting).
 ### ADDR C
 
   * FE FC6F..71 - BIG ENDIAN
-  * FE FC18..1A - LITTLE ENDIAN
+  * FE FE18..1A - LITTLE ENDIAN
 
 The start address of the channel C bitmap data
 
@@ -658,7 +658,7 @@ as these are almost always the same.
 ### DATA C
 
   * N/A - BIG ENDIAN
-  * FE FC1B - LITTLE ENDIAN
+  * FE FE1B - LITTLE ENDIAN
 
 If the EXEC C flag is not set this register can be set to plot a solid colour
 through the mask. 
@@ -666,7 +666,7 @@ through the mask.
 ### ADDR D
 
   * FE FC72..74 - BIG ENDIAN
-  * FE FC1C..1E - LITTLE ENDIAN
+  * FE FE2C..2E - LITTLE ENDIAN
 
 The start address of the channel D (destination) bitmap data
 
@@ -676,14 +676,14 @@ as these are almost always the same.
 ### ADDR E
 
   * FE FC75..77 - BIG ENDIAN
-  * FE FC20..22 - LITTLE ENDIAN
+  * FE FE1C..1E - LITTLE ENDIAN
 
 The start address of the channel E (save) bitmap data
 
 ### ADDR C/D MIN
 
   * FE FCA0..A2 - BIG ENDIAN
-  * FE FC24..26 - LITTLE ENDIAN
+  * FE FE20..23 - LITTLE ENDIAN
 
 In WRAP mode, if the C or D addresses are incremented above the MAX address
 then they will wrap to this MIN address
@@ -691,7 +691,7 @@ then they will wrap to this MIN address
 ### ADDR C/D MAX
 
   * FE FCA3..A5 - BIG ENDIAN
-  * FE FC28..2A - LITTLE ENDIAN
+  * FE FE24..27 - LITTLE ENDIAN
 
 In WRAP mode, if the C or D addresses are incremented above this MAX address
 then they will wrap to the MIN address
@@ -777,6 +777,19 @@ BLTCON:MODE(1) 1-LEFT/UP,0-RIGHT/DN     DIRMIN        1   ; when set to 1 effect
 FIRST_A                                 PXMASK_NEXT   8   ; used internally
 ```
 
+# The PAULA Sound Chip
+
+To save duplication please read the [Paula SOUND chipset](sound.md) document.
+
+# The DMA controller
+
+The DMA controller is a chip that can perform various memory move and load
+operations. 
+
+
+## DMA Registers
+
+
 
 
 # The Aeris
@@ -793,16 +806,31 @@ Vertical ticks are raster lines after VS
 
 ## Aeris Registers
 
-FE FCB0 +
+This "chip" is very much experimental and is subject to change without notice.
 
-      0     Control Register
-              bit 7 - act, when set will start program at next vsync
-              bit 6 - interrupt, may be used to cause an interrupt
-              bit 3..0 - may be used to pass data from Aeris program to CPU
+### Control Register
+* FE FCB0 - BIG ENDIAN
+* FE FEB0 - LITTLE ENDIAN
 
-      1..3  Base Address, 24 bit memory address of program.
+~~~
+  bit 7 - act, when set will start program at next vsync
+  bit 6 - interrupt, may be used to cause an interrupt
+  bit 3..0 - may be used to pass data from Aeris program to CPU
+~~~
+
+### Program Address
+* FE FCB1 - BIG ENDIAN
+* FE FEB4 - LITTLE ENDIAN
 
 
+### Program Counter
+* FE FCB4 - BIG ENDIAN
+* FE FEB8 - LITTLE ENDIAN
+
+
+Program Base Address, 24 bit memory address of program.
+
+## Notes
 
 The chip is idle until the Control Register's top bit is set at which point it 
 will wait for the next VSYNC and then start executing the program. Subsequent 
