@@ -5,7 +5,8 @@ Rough notes on accessing the Paula chipset hardware direct
 
 ~~~~
 JIM Dev no: &D0 (Paula) &D1 (Blitter/cpu)
-JIM Base address: $FE FC80
+JIM Base address: $FE FC80 (Big Endian)
+JIM Base address: $FE FE80 (Little Endian) - only on builds after Aug '24
 ~~~~
 
 The Dossytronics CPU/Blitter and 1M Paula cards both use new jim space API for
@@ -26,12 +27,16 @@ using the paging registers at &FCFD (most significant) and &FCFE
 is not recommended due to the fact that it will slow the system down more.
 
 The registers for the sound chipset are accessed also through JIM by accessing 
-the address space range at $FE FC80-FC8F in jim memory i.e. to write the 
+the address space range at $FE FE80-FE8F in jim memory i.e. to write the 
 channel select register in BASIC the following sequence should be used.
+
+\[Note: the registers in this document are suitable for use on a little-endian
+BASIC (6502, z80, etc) on big-endian systems you should substitute the registers
+as appropriate\]
 
 ~~~~
 10DEVNO=&D1:?&EE=DEVNO:?&FCFF=DEVNO:REM - access device and set shadow register
-20?&FCFE=80:?&FCFD=&FE: REM - set jim page to $FE FCxx
+20?&FCFE=&FE:?&FCFD=&FE: REM - set jim page to $FE FExx - little endian
 30?&FD8F=0: REM - select channel 0
 ~~~~
 
@@ -43,25 +48,44 @@ Each channel can be set to output a static value by setting its data register
 loop) or can be programmed to play a sound sample from memory using DMA 
 techniques
 
-~~~~
+
+*Big Endian Register Addresses*
+~~~
   Address       Purpose
   -------       -------
-  BASE + 0      Sound data read/write current sample
-  BASE + 1/2/3  Source base address (big endian 24 bit address)
-  BASE + 4/5    Sample "period" - see below
-  BASE + 6/7    Length - 1
-  BASE + 8      Status/Control
-  BASE + 9      Volume 
-  BASE + 10/11  Repeat offset
-  BASE + 12     Peak 
-  BASE + F      Channel select, setting this register maps in the lower 0-9 
-                registers for the selected channel. When setting this register
-                unused bits (2-7) should be 0, when reading this register
-                future firmwares may set other bits.
+  FE FC80       Unused as of Aug '24
+  FE FC81..3    Source base address (big endian 24 bit address)
+  FE FC84..5    Sample "period" - see below
+  FE FC86..7    Length - 1
+  FE FC88       Status/Control
+  FE FC89       Volume 
+  FE FC8A..B    Repeat offset
+  FE FC8C       Peak 
+  FE FC8D       Read/Write current sample value
+  FE FC8E       Overall volume control
+  FE FC8F       Channel select
+~~~
 
-  Control register bits
-  ---------------------
+*Little Endian Register Addresses*
+~~~
+  Address       Purpose
+  -------       -------
+  FE FE80       Channel select
+  FE FE81       Overall volume
+  FE FE82       Read/Write current sample value
+  FE FE83       Peak 
+  FE FE84..5    Repeat offset
+  FE FE86       Volume 
+  FE FE87       Status/Control
+  FE FE88..9    Length - 1
+  FE FE8A..B    Sample "period" - see below
+  FE FE8C..E    Source base address (big endian 24 bit address)
+  FE FE8F       Unused
+~~~
 
+
+*Control register bits*
+~~~
   7   -   ACT : (set this bit to 1 to initiate/test for completion)
   6   -   n/a
   5   -   n/a
@@ -78,6 +102,15 @@ techniques
        be repeated beginning at the offset in BASE+10/11
 ~~~~
 
+*Channel select register*
+
+The current 4-channel firmware only uses bits 1..0 you should leave the other
+bits set to 0 except that you may set the channel select register to FF to
+probe how many channels are available. The number available may then be read
+back. Other writes with bits 7..2 set are reserved.
+
+*Sample clock*
+
 The clock for playing samples is a nominal 3,546,895Hz (as on a PAL Amiga). 
 The "period" describes the number of PAL clocks that should pass between each
 sample being loaded (via DMA)
@@ -87,22 +120,22 @@ and sets channel 0 to repeatedly play the sound
 
 ~~~~
    10 REM BLIT SOUND
-   20 DEVNO%=&D0 : REM JIM device number for 1MHz Paula (use &D1 for blitter board)
-   30 snd%=&FD80:sndjim%=&FEFC
+   20 DEVNO%=&D1 : REM JIM device number for Blitter 
+   30 snd%=&FD80:sndjim%=&FEFE:sambase%=&020000
    40 SL%=32:SR%=1000:SP%=3546895/(SR%*SL%):REM calculate period
    50 BUF%=&FD00:
    60 ?&EE=DEVNO%:?&FCFF=DEVNO%:REM enable JIM for 1m board
-   70 ?&FCFD=&01:?&FCFE=&00:REM set jim base addr = $010000
-   80 FORI%=0TOSL%-1:BUF%?I%=127*SIN(2*PI*I%/SL%):NEXT:REM sinewave in JIM
+   70 ?&FCFD=sambase% DIV &10000:?&FCFE=sambase% DIV &100:REM set jim base addr to sample (assume page aligned)
+   80 FORI%=0TOSL%-1:BUF%?I%=120*SIN(2*PI*I%/SL%):NEXT:REM sinewave in JIM
    85 REM JIM to point at sound device area
    86 ?&FCFD=sndjim% DIV 256:?&FCFE=sndjim%
-   90 snd%?&F=0:snd%?&E=255:REM cha=0,master vol=255
-  100 snd%?&1=&01:snd%?&2=&00:snd%?&3=&00:REM sample address $010000
-  110 snd%?&4=SP%DIV256:snd%?&5=SP%:REM sound "period"
-  120 snd%?&6=(SL%-1)/256:snd%?&7=SL%-1:REM sample len-1
-  130 snd%?&9=255:REM channel vol max
-  140 snd%?&A=0:snd%?&B=0:REM repeat from start of sample
-  150 snd%?&8=&81:REM play, repeat
+   90 snd%?&0=0:snd%?&1=255:REM cha=0,master vol=255
+  100 snd%!&C=sambase%
+  110 snd%?&A=SP%:snd%?&B=SP%DIV&100:REM sound "period"
+  120 snd%?&8=SL%-1:snd%?&9=(SL%-1)DIV&100:REM sample len-1
+  130 snd%?&6=255:REM channel vol max
+  140 snd%?&4=0:snd%?&5=0:REM repeat from start of sample
+  150 snd%?&7=&81:REM play, repeat
 ~~~~
 
 ~~~~
@@ -129,3 +162,6 @@ setting the control register to 0
   100 snd%?&8=0:REM stop
 ~~~~
 
+For information on using the high-level API for playing sounds please see
+the document [SoundQuickstart.md](https://github.com/dominicbeesley/blitter-65xx-code/blob/main/doc/SoundQuickstart.md) 
+in the 6502 support software repository.
