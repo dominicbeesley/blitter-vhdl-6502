@@ -37,7 +37,7 @@ A set of tools for testing the on-board devices of the Blitter
 
 https://github.com/dominicbeesley/blitter-65xx-code/tree/main/src/tools65
 
-## modplay.ssd
+## paula.ssd
 
 Demo ProTracker player shift-break to start
 
@@ -51,7 +51,7 @@ A scroller demo shift-break or \*EXEC !BOOT to run
 
 https://github.com/dominicbeesley/blitter-65xx-code/tree/main/src/demos/scroll1
 
-## advent65.ssd
+## adventure.ssd
 
 A demo game using the Blitter - best played with an analogue joystick start with !BOOT
 after loading R.CLIB to slot #1
@@ -69,6 +69,11 @@ A scroller demo with large fonts that uses Aeries (ensure jump leads fitted)
 	\*SRLOAD R.CLIB 1
 
 Then shift-break
+
+## examblit.ssd
+
+A set of BASIC programs that demonstrate how to program the blitter. These are
+suitable for running in 6502 BASIC.
 
 https://github.com/dominicbeesley/blitter-65xx-code/tree/main/src/demos/bigfonts
 

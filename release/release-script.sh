@@ -8,8 +8,10 @@ BUILDDIR=./release/ssd
 mkdir -p ${BUILDDIR}
 
 HOSTFS=~/hostfs
+CODE65=/mnt/c/Users/Dominic/Documents/GitHub/blitter-65xx-code/build/ssds
 
-SSDS="roms65 tools65 demo65 advent65 bigfonts roms69 modplay z80 bas816"
+SSDS_65="roms65 tools65 demo65 adventure bigfonts examblit paula"
+SSDS="z80 bas816 roms69"
 
 ROMS65_SRC=${HOSTFS}/roms65
 ROMS65_ITEMS="ADFSH30.inf MOS120.M.inf BLMMFS.rom.inf BLTUTIL.inf OSTEST.M.inf basic2.rom.inf BASIC432.rom.inf SWMMFS.rom.inf"
@@ -43,6 +45,7 @@ BAS816_SRC=${HOSTFS}/bas816_blit
 BAS816_ITEMS="BAS816.inf CLOCKSP.inf RUNB816.inf _21BOOT.inf"
 BAS816_OPT4=3
 
+rm ${BUILDDIR}/*
 
 for ssd in ${SSDS}; do
 	echo "SSD: ${ssd}"
@@ -68,7 +71,13 @@ for ssd in ${SSDS}; do
 	done;
 done
 
-for ssd in ${SSDS}; do
+for ssd in ${SSDS_65}; do
+
+	cp ${CODE65}/${ssd}.ssd ${BUILDDIR}/${ssd}.ssd
+
+done;
+
+for ssd in ${SSDS} ${SSDS_65}; do
 	echo "SSD: ${ssd}"
 	_SSD=${BUILDDIR}/${ssd}.ssd
 	dfs info ${_SSD}
