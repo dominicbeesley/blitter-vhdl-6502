@@ -224,18 +224,6 @@ This is preliminary documentation and the Blitter registers are subject to
 change. It is likely that future versions of the firmware may change the
 register definitions.
 
-In particular feedback would be welcomed on the ordering and adjacency of the
-registers for ease of updating.
-
-Likely changes:
- - merge ADDR C/D registers - there is little point in having both
- - add a data C register to allow fast VDU 4 text plotting using the blitter
-
-With changes likely it is recommended that developers write code in such
-a way that it will be easy to change the register layout with the minimum of
-upheaval.
-
-
 ## Main differences
 
 ### Byte vs Word
