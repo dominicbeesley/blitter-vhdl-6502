@@ -3,9 +3,11 @@
 # make a release zip
 # expects built items in following locations
 
-BUILDDIR=./release/ssd
+BUILDDIR=./release
 
 mkdir -p ${BUILDDIR}
+mkdir -p ${BUILDDIR}/ssd
+mkdir -p ${BUILDDIR}/fpga
 
 HOSTFS=~/hostfs
 CODE65=/mnt/c/Users/Dominic/Documents/GitHub/blitter-65xx-code/build/ssds
@@ -46,10 +48,12 @@ BAS816_ITEMS="BAS816.inf CLOCKSP.inf RUNB816.inf _21BOOT.inf"
 BAS816_OPT4=3
 
 rm ${BUILDDIR}/*
+rm ${BUILDDIR}/ssd/*
+rm ${BUILDDIR}/fpga/*
 
 for ssd in ${SSDS}; do
 	echo "SSD: ${ssd}"
-	_SSD=${BUILDDIR}/${ssd}.ssd
+	_SSD=${BUILDDIR}/ssd/${ssd}.ssd
 	_U=$(echo ${ssd} | tr '[:lower:]' '[:upper:]')
 	_SRC_X=${_U}_SRC
 	_SRC=${!_SRC_X}
@@ -73,16 +77,18 @@ done
 
 for ssd in ${SSDS_65}; do
 
-	cp ${CODE65}/${ssd}.ssd ${BUILDDIR}/${ssd}.ssd
+	cp ${CODE65}/${ssd}.ssd ${BUILDDIR}/ssd/${ssd}.ssd
 
 done;
 
 for ssd in ${SSDS} ${SSDS_65}; do
 	echo "SSD: ${ssd}"
-	_SSD=${BUILDDIR}/${ssd}.ssd
+	_SSD=${BUILDDIR}/ssd/${ssd}.ssd
 	dfs info ${_SSD}
 done;
 
 cp release-files.md ${BUILDDIR}
+cp /mnt/c/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk2/boards/mk2/output_files/mk2blit.jic ${BUILDDIR}/fpga
+cp /mnt/c/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/mk3/boards/cpu-16-max/output_files/mk3_16_max.pof ${BUILDDIR}/fpga
 
 tar -cvzf release-$(date +%Y-%m-%d).tgz ${BUILDDIR}/*
