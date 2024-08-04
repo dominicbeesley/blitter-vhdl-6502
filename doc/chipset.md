@@ -15,8 +15,9 @@ Note: all chipset addresses registers work with *physical adddresses* care shoul
 # The DMAC
 
 Physical Base address: 
-**FE FC90** - BIG ENDIAN
-**FE FE90** - LITTLE ENDIAN
+
+* **FE FC90** - BIG ENDIAN
+* **FE FE90** - LITTLE ENDIAN
 
 The DMAC or DMA controller is a simple device for reading/writing bytes 
 from/to hardware registers or memory at high speed or tied to certain
