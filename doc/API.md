@@ -35,7 +35,8 @@ below. The following sections describe these in more detail.
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
  | $FB FE00 - $FB FFFF      | HDMI registers        | 
  | $FC 0000 - $FC FFFF      | Debug/Version info    | 
- | $FE FC00 - $FE FCFF      | Chipset registers     | 
+ | $FE FC00 - $FE FCFF      | Chipset registers BE  | 
+ | $FE FE00 - $FE FEFF      | Chipset registers LE  | 
  | $FF 0000 - $FF FFFF      | Motherboard           |
 
 The Physical memory map is used when:

@@ -138,7 +138,14 @@ architecture Behavioral of fb_DMAC_int_sound is
 
 	signal	i_cur_cha_addr				: unsigned(23 downto 0);
 	signal	i_cur_cha_addr_offs		: unsigned(15 downto 0);
+
+	signal	i_A							: std_logic_vector(23 downto 0); -- little/big endian flipped address
 begin
+
+	-- little endian address order swap
+	i_A(23 downto 4) <= (others => '0');
+	i_A(3 downto 0)  <= fb_per_c2p_i.A(3 downto 0) when fb_per_c2p_i.A(9) = '0' else -- big endian
+			 not fb_per_c2p_i.A(3 downto 0);
 
 	p_snd_tgl:process(snd_clk_i)
 	begin
@@ -207,9 +214,9 @@ begin
 
 	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
 
-	i_reg_sel_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = A_CHA_SEL
+	i_reg_sel_sel <= '1' when i_A(3 downto 0) = A_CHA_SEL
 					else '0';
-	i_reg_vol_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = A_OVR_VOL
+	i_reg_vol_sel <= '1' when i_A(3 downto 0) = A_OVR_VOL
 					else '0';
 	i_reg_ack	 <= '1' when (
 											r_per_state = idle and 
@@ -363,7 +370,7 @@ begin
 				i_cha_fb_per_c2p(I) <= (
 					cyc => 		fb_per_c2p_i.cyc and b2s(I = r_cha_sel),
 					we => 		fb_per_c2p_i.we,
-					A => 			fb_per_c2p_i.A,
+					A => 			i_A,
 					A_stb => 	fb_per_c2p_i.A_stb,
 					D_wr => 		fb_per_c2p_i.D_wr,
 					D_wr_stb => fb_per_c2p_i.D_wr_stb,

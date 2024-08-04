@@ -303,7 +303,7 @@ architecture rtl of fb_chipset is
 	-----------------------------------------------------------------------------
 
 	-- chipset c2p intcon to peripheral sel
-	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(7 downto 0);
+	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(9 downto 0);
 		-- NOTE: plus 1 for dummy channel for "no peripheral"
 	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);  -- address decoded selected peripheral
 	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET downto 0);	-- address decoded selected peripherals as one-hot		
@@ -395,7 +395,7 @@ begin
 	generic map (
 		SIM => SIM,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1, -- NOTE: +1 for unsel
-		G_ADDRESS_WIDTH => 8
+		G_ADDRESS_WIDTH => 10
 	)
 	port map (
 		fb_syscon_i 		=> fb_syscon_i,
