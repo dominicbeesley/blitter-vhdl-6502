@@ -14,7 +14,9 @@ Note: all chipset addresses registers work with *physical adddresses* care shoul
 
 # The DMAC
 
-Physical Base address: **FE FC90**
+Physical Base address: 
+**FE FC90** - BIG ENDIAN
+**FE FE90** - LITTLE ENDIAN
 
 The DMAC or DMA controller is a simple device for reading/writing bytes 
 from/to hardware registers or memory at high speed or tied to certain
@@ -30,6 +32,8 @@ a count register is set to indicate the number of bytes to transfer and the
 control register set to increment or decrement the source/destination after 
 each cycle. 
 
+Registers - BIG ENDIAN
+
 | Offset   | Name             
 |----------|------------------
 |  0       | Control          
@@ -41,6 +45,23 @@ each cycle.
 |  B       | Pause value
 |  C..E    | - reserved -
 |  +F      | Channel select, setting this register maps in the lower 0-9  registers for the selected channel. When setting this register unused bits (2-7) should be 0, when reading this register future firmwares may set other bits.
+
+Registers - LITTLE ENDIAN
+
+| Offset   | Name             
+|----------|------------------
+|  0..2    | Source physical address
+|  4..6    | Destination physical address
+|  8..9    | Count - 1
+|  A       | Data 
+|  C       | Control          
+|  D       | Control 2 register - this should be set before the main control register
+|  E       | Pause value
+|  +F      | Channel select, setting this register maps in the lower 0-9  registers for the selected channel. When setting this register unused bits (2-7) 
+
+
+should be 0, when reading this register future firmwares may set other bits.
+
 
 ## DMAC Control register
 
