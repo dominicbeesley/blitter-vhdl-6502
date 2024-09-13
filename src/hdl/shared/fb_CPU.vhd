@@ -523,6 +523,8 @@ architecture rtl of fb_cpu is
 	signal r_do_sys_via_block		: std_logic;
 
 	signal i_rom_throttle_act		: std_logic; -- qualifies the current cycle as being to/from a ROM slot that is throttled
+
+	signal i_sys_via_blocker_en	: std_logic;
 begin
 
 	-- ================================================================================================ --
@@ -650,6 +652,25 @@ begin
 		end if;
 	end process;
 
+	p_blk_en:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if throttle_cpu_2MHz_i = '0' and (
+				r_cpu_en_t65 = '1' or
+					(
+						r_hard_cpu_en = '1' and (
+							r_cpu_en_65816 = '1' or
+							r_cpu_en_65c02 = '1'
+						)
+					)
+				) then
+				i_sys_via_blocker_en <= '1';
+			else
+				i_sys_via_blocker_en <= '0';
+			end if;
+		end if;
+	end process;
+
 	-- ================================================================================================ --
 	-- NMI registration 
 	-- ================================================================================================ --
@@ -747,6 +768,9 @@ begin
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
 		cfg_mosram_i							=> cfg_mosram_i,
 		cfg_swromx_i							=> cfg_swromx_i,
+
+		-- SYS VIA slowdown enable
+		sys_via_blocker_en_i					=> i_sys_via_blocker_en,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,

@@ -81,6 +81,9 @@ entity fb_cpu_log2phys is
 		JIM_page_i								: in std_logic_vector(15 downto 0);
 		jim_en_i									: in std_logic;		-- jim enable, this is handled here 
 
+		-- SYS VIA slowdown enable
+		sys_via_blocker_en_i					: in std_logic;
+
 		-- memctl signals
 		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
@@ -90,6 +93,7 @@ entity fb_cpu_log2phys is
 
 		-- noice signals
 		noice_debug_shadow_i					: in std_logic;
+
 
 		-- debug signals
 		debug_SYS_VIA_block_o				: out std_logic
@@ -255,6 +259,7 @@ begin
 		fb_syscon_i => fb_syscon_i,
 		cfg_sys_type_i => cfg_sys_type_i,
 		clken => i_sysvia_clken,
+		enable_i => sys_via_blocker_en_i,
 		A_i => i_phys_A,
 		RnW_i => not fb_con_c2p_i.we,
 		SYS_VIA_block_o => i_SYS_VIA_block
