@@ -204,7 +204,7 @@ end generate;
 		end generate;
 	END GENERATE;
 
-	-- stall is always async
+	-- stall is always combinatorial
 	p_stall:process(i_cyc, i_cyc_grant_ix, r_state)
 	variable I:natural;
 	begin
