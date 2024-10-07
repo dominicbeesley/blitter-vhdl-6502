@@ -760,6 +760,8 @@ command.
 All other bits should be left alone (they may be non-zero) for future
 expansion.
 
+This setting may be ignored in non-boot mode 651816 operation, see the FF FE31 SWMOS 
+register for details.
 
 ### FF FE33, FF FE35 Throttle per ROM
 API/Sub : 1/2
