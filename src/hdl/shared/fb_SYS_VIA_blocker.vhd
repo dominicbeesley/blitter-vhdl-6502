@@ -59,12 +59,10 @@ entity fb_sys_via_blocker is
 
 		fb_syscon_i							: in		fb_syscon_t;
 		
-      cfg_sys_type_i                : in     sys_type;
-
       clken									: in		std_logic;
-		A_i									: in		std_logic_vector(23 downto 0);
 		RnW_i									: in		std_logic;
 		enable_i								: in		std_logic;
+		sys_via_reg_sel_i					: in		std_logic;
 
 		SYS_VIA_block_o					: out		std_logic
 
@@ -82,11 +80,7 @@ architecture rtl of fb_sys_via_blocker is
 
 begin
 
-	i_iorb_cs <= '1' when (
-		A_i(23 downto 4) = x"FFFE4" or 
-		A_i(23 downto 4) = x"FFFE6"
-		) and cfg_sys_type_i /= SYS_ELK else
-			'0';
+	i_iorb_cs <= sys_via_reg_sel_i;
 
 			-- hold block throughout a cycle where selected and timeout active
 	SYS_VIA_block_o <= r_iorb_block and (

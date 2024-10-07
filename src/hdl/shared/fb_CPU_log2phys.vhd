@@ -120,10 +120,13 @@ architecture rtl of fb_cpu_log2phys is
 	signal i_SYS_VIA_block			: std_logic;
 	signal r_done_r_d_wr_stb		: std_logic;
 
-	signal i_sysvia_clken			: std_logic;
+	signal i_sys_via_clken			: std_logic;
+	signal i_sys_via_reg_sel		: std_logic;
 
 	signal i_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
 	signal r_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
+
+
 
 begin
 
@@ -257,15 +260,14 @@ begin
 		)
 	port map (
 		fb_syscon_i => fb_syscon_i,
-		cfg_sys_type_i => cfg_sys_type_i,
-		clken => i_sysvia_clken,
+		clken => i_sys_via_clken,
 		enable_i => sys_via_blocker_en_i,
-		A_i => i_phys_A,
+		sys_via_reg_sel_i => i_sys_via_reg_sel,
 		RnW_i => not fb_con_c2p_i.we,
 		SYS_VIA_block_o => i_SYS_VIA_block
 		);
 
-	i_sysvia_clken <= '1' when r_state = idle and fb_con_c2p_i.a_stb = '1' else
+	i_sys_via_clken <= '1' when r_state = idle and fb_con_c2p_i.a_stb = '1' else
 							'0';
 
 
@@ -302,7 +304,8 @@ begin
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
 
-		A_o									=> i_phys_A
+		A_o									=> i_phys_A,
+		sys_via_reg_sel_o					=> i_sys_via_reg_sel
 	);
 
 	debug_SYS_VIA_block_o <= i_SYS_VIA_block;

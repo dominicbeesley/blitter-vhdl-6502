@@ -663,7 +663,7 @@ begin
 							r_cpu_en_65c02 = '1'
 						)
 					)
-				) then
+				) and cfg_sys_type_i /= SYS_ELK then
 				i_sys_via_blocker_en <= '1';
 			else
 				i_sys_via_blocker_en <= '0';

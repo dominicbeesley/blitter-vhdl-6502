@@ -98,7 +98,8 @@ entity log2phys is
 		A_i									: in	std_logic_vector(23 downto 0);
 		instruction_fetch_i				: in  std_logic;		-- qualify current cycle as an instruction fetch
 		-- mapped address
-		A_o									: out std_logic_vector(23 downto 0)
+		A_o									: out std_logic_vector(23 downto 0);
+		sys_via_reg_sel_o					: out std_logic		-- '1' when sys_via address
 
 	);
 end log2phys;
@@ -118,6 +119,9 @@ architecture rtl of log2phys is
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
+
+	sys_via_reg_sel_o <= '1' when A_i(23 downto 4) = x"FFFE6" or A_i(23 downto 4) = x"FFFE4" else
+								'0';
 
 	p_romadd:process(fb_syscon_i)
 	begin
