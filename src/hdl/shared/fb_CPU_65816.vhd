@@ -321,7 +321,7 @@ begin
 
 						if  wrap_i.noice_debug_inhibit_cpu = '0' and
 						 		fb_syscon_i.rst = '0' and
-						 		wrap_i.cpu_halt = '0' and
+						 		r_cpu_hlt = '0' and
 						 		i_vma = '1' then
 							r_cyc <= '1';
 							r_D_WR_stb <= '0';
