@@ -48,10 +48,10 @@ use work.common.all;
 
 entity fb_intcon_one_to_many is
 	generic (
-		SIM					: boolean := false;
-		G_PERIPHERAL_COUNT		: POSITIVE;
-		G_ARB_ROUND_ROBIN : boolean := false;
-		G_ADDRESS_WIDTH	: POSITIVE 						-- width of the address that we care about
+		SIM									: boolean := false;
+		G_PERIPHERAL_COUNT				: POSITIVE;
+		G_ADDRESS_WIDTH					: POSITIVE;						-- width of the address that we care about
+		G_REGISTER_CONTROLLER_P2C		: boolean := false
 	);
 	port (
 
@@ -113,6 +113,21 @@ begin
 		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
 	end generate;
 
+	g_reg_out_p2c:IF G_REGISTER_CONTROLLER_P2C generate
+	-- signals back from selected peripheral to controllers
+	p_p2c_shared:process(fb_syscon_i.clk)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if r_state /= idle then
+				i_s2m <= fb_per_p2c_i(to_integer(r_peripheral_sel_ix));
+			else
+				i_s2m <= fb_p2c_unsel;
+			end if;
+		end if;
+	end process;
+	end generate;
+
+	g_out_p2c:IF NOT G_REGISTER_CONTROLLER_P2C generate
 	-- signals back from selected peripheral to controllers
 	p_p2c_shared:process(r_peripheral_sel_ix, fb_per_p2c_i, r_state)
 	begin
@@ -122,6 +137,8 @@ begin
 			i_s2m <= fb_p2c_unsel;
 		end if;
 	end process;
+	end generate;
+
 
 	fb_con_p2c_o.D_rd 		<= i_s2m.D_rd;
 	fb_con_p2c_o.rdy		 	<= i_s2m.rdy;
