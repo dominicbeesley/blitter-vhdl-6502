@@ -84,6 +84,11 @@ set_global_assignment -name EDA_TEST_BENCH_NAME sim_t65_tb -section_id eda_simul
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_t65_tb
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_t65_tb -section_id sim_t65_tb
 
+source ../../simulation/sim_tb/sim_picorv32.qsf
+set_global_assignment -name EDA_TEST_BENCH_NAME sim_picorv32_tb -section_id eda_simulation
+set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_picorv32_tb -section_id sim_picorv32_tb
+
 source ../../simulation/sim_tb/sim_65816.qsf
 set_global_assignment -name EDA_TEST_BENCH_NAME sim_65816_tb -section_id eda_simulation
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_65816_tb
@@ -166,6 +171,7 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_Pack.v
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_MCode.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/picorv32/picorv32.v
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
@@ -175,6 +181,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_VERSION.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_exp_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_t65.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_picorv32.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_6x09_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_6x09.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_65816_exp_pins.vhd
@@ -220,7 +227,7 @@ set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
 set_global_assignment -name TOP_LEVEL_ENTITY mk3blit
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_picorv32_tb -section_id eda_simulation
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 
