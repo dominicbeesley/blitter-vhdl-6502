@@ -281,7 +281,7 @@ begin
 		mem_la_write				=> open,
 		mem_la_addr					=> open,
 		mem_la_wdata 				=> open,
-		mem_la_wstrb 				=> open,
+		mem_la_wstrb 				=> open,				-- TODO: contact author of picorv32 about making a mem_la_rstrb from this or changing to byte selects and we
 
 		-- Pico Co-Processor Interface (PCPI)
 		pcpi_valid					=> open,
