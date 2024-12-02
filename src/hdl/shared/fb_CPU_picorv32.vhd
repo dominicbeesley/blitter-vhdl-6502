@@ -150,15 +150,17 @@ architecture rtl of fb_cpu_picorv32 is
 	signal i_rv_wdata			: std_logic_vector(31 downto 0);
 	signal i_rv_wstrb			: std_logic_vector(3 downto 0);
 
+	signal i_rv_mem_la_wrstb: std_logic_vector(3 downto 0);   -- need to look ahead to get byte lanes
+
 	signal i_rv_res_n			: std_logic;
 	signal i_rv_nmi_n			: std_logic;
 
 	signal r_wrap_cyc			: std_logic;
 	signal r_lane_req			: std_logic_vector(3 downto 0);
 	signal r_we					: std_logic;
-	signal r_wdata				: std_logic_vector(31 downto 0);
 	signal r_instr				: std_logic;
-
+	signal r_latch_rstrb		: std_logic_vector(3 downto 0);
+	signal r_addr				: std_logic_vector(23 downto 0);
 
 	type state_t is (idle, rd, wr, goidle);
 
@@ -171,12 +173,12 @@ begin
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
 	wrap_o.BE				<= '0';
-	wrap_o.A 				<= i_rv_addr(23 downto 0);
+	wrap_o.A 				<= r_addr;
 	wrap_o.cyc				<= r_wrap_cyc;
 	wrap_o.lane_req   	<= r_lane_req;
 	wrap_o.rdy_ctdn   	<= RDY_CTDN_MIN;
 	wrap_o.we	 			<= r_we;
-	wrap_o.D_WR				<= r_wdata;
+	wrap_o.D_WR				<= i_rv_wdata;
 	wrap_o.D_WR_stb 		<= r_lane_req;
 	wrap_o.instr_fetch  	<= r_instr;
 
@@ -185,8 +187,23 @@ begin
 	i_rv_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
 						'0';
 
+	p_rstrb:process(fb_syscon_i)
+	begin
+		-- here we synthesize a byte lane mask for reads
+		-- as mem_la_wrstb always has correct bits sets 
+		-- (for both reads and writes)
+		if fb_syscon_i.rst = '1' then
+			r_latch_rstrb <= "0000";
+		elsif rising_edge(fb_syscon_i.clk) then
+			if i_rv_mem_valid = '0' then
+				r_latch_rstrb <= i_rv_mem_la_wrstb;
+			end if;
+		end if;
+	end process;
 
 	p_state:process(fb_syscon_i)
+	variable v_lanes : std_logic_vector(3 downto 0);
+	variable v_add2  : std_logic_vector(1 downto 0);
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -203,14 +220,35 @@ begin
 							-- read cycle
 							r_instr <= i_rv_mem_instr;
 							r_we <= '0';
-							r_lane_req <= "1111";
+							v_lanes :=  r_latch_rstrb;
 							r_state <= rd;
 						else
 							-- write cycle
 							r_we <= '1';
-							r_lane_req <= i_rv_wstrb;
+							v_lanes := i_rv_wstrb;
 							r_state <= wr;
 						end if;
+
+						r_lane_req <= v_lanes;
+						if v_lanes(0) = '1' then
+							-- either full word or 1st byte
+							v_add2 := "00";
+						elsif v_lanes(1) = '1' then
+						   -- must be 2nd byte
+							v_add2 := "01";
+						elsif v_lanes(2) = '1' then
+						   -- must be 3rd byte or top halfword
+							v_add2 := "10";
+						elsif v_lanes(3) = '1' then
+						   -- must be 4th byte
+							v_add2 := "11";
+						else
+							-- this shouldn't happen!
+							v_add2 := "00";	
+						end if;
+						r_addr <= i_rv_addr(23 downto 2) & v_add2;
+							
+
 					end if;
 				when rd =>
 					if wrap_i.ack = '1' then
@@ -281,7 +319,7 @@ begin
 		mem_la_write				=> open,
 		mem_la_addr					=> open,
 		mem_la_wdata 				=> open,
-		mem_la_wstrb 				=> open,				-- TODO: contact author of picorv32 about making a mem_la_rstrb from this or changing to byte selects and we
+		mem_la_wstrb 				=> i_rv_mem_la_wrstb,	-- TODO: contact author of picorv32 about making a mem_la_rstrb from this or changing to byte selects and we
 
 		-- Pico Co-Processor Interface (PCPI)
 		pcpi_valid					=> open,
