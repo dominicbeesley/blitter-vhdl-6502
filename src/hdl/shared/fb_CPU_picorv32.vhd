@@ -149,6 +149,7 @@ architecture rtl of fb_cpu_picorv32 is
 	signal r_rv_rdata			: std_logic_vector(31 downto 0);
 	signal i_rv_wdata			: std_logic_vector(31 downto 0);
 	signal i_rv_wstrb			: std_logic_vector(3 downto 0);
+	signal i_rv_irq			: std_logic_vector(31 downto 0);
 
 	signal i_rv_mem_la_wrstb: std_logic_vector(3 downto 0);   -- need to look ahead to get byte lanes
 
@@ -207,6 +208,11 @@ begin
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
+			r_instr <= '0';
+			r_wrap_cyc <= '0';
+			r_we <= '0';
+			r_addr <= (others => '0');
+			r_rv_mem_ready <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 			r_rv_mem_ready <= '0';
@@ -271,6 +277,13 @@ begin
 		end if;
 	end process;
 
+	i_rv_irq <= (
+		3 => not wrap_i.nmi_n,
+		4 => not wrap_i.irq_n,
+		5 => not wrap_i.noice_debug_nmi_n,
+		others => '0'
+		);
+
 
 	e_cpu:picorv32 generic map (
 		ENABLE_COUNTERS			=> true,
@@ -289,16 +302,16 @@ begin
 		ENABLE_MUL					=> true,
 		ENABLE_FAST_MUL			=> false,
 		ENABLE_DIV					=> true,
-		ENABLE_IRQ					=> false,
+		ENABLE_IRQ					=> true,
 		ENABLE_IRQ_QREGS			=> true,
 		ENABLE_IRQ_TIMER			=> true,
 		ENABLE_TRACE				=> false,
 		REGS_INIT_ZERO				=> false,
-		MASKED_IRQ					=> x"00000000",
-		LATCHED_IRQ					=> x"ffffffff",
+		MASKED_IRQ					=> x"ffffffc0",
+		LATCHED_IRQ					=> x"ffffffef",	-- don't latch IRQ!
 		PROGADDR_RESET				=> x"fffffff8",
 		PROGADDR_IRQ				=> x"fffffffc",
-		STACKADDR					=> x"00000200"
+		STACKADDR					=> x"00010000"
 	)
 	port map (
 		clk							=> fb_syscon_i.clk,
@@ -332,7 +345,7 @@ begin
 		pcpi_ready					=> '-',
 
 		-- IRQ Interface
-		irq							=> (others => '0'),
+		irq							=> i_rv_irq,
 		eoi 							=> open,
 
 
