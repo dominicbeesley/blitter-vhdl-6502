@@ -236,6 +236,7 @@ begin
 						end if;
 
 						r_lane_req <= v_lanes;
+						--TODO: check what actually happens on misaligned transfers and possibly allow?
 						if v_lanes(0) = '1' then
 							-- either full word or 1st byte
 							v_add2 := "00";
