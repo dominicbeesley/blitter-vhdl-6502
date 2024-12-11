@@ -309,7 +309,7 @@ begin
 		ENABLE_TRACE				=> false,
 		REGS_INIT_ZERO				=> false,
 		MASKED_IRQ					=> x"ffffffc0",
-		LATCHED_IRQ					=> x"ffffffef",	-- don't latch IRQ!
+		LATCHED_IRQ					=> x"ffffffcf",	-- don't latch IRQ or debug!
 		PROGADDR_RESET				=> x"fffffff8",
 		PROGADDR_IRQ				=> x"fffffffc",
 		STACKADDR					=> x"00010000"
