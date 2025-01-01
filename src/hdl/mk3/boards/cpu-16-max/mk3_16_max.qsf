@@ -171,7 +171,38 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_Pack.v
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_MCode.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65_ALU.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
-set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/picorv32/picorv32.v
+
+set_global_assignment -name SEARCH_PATH ../../../library/3rdparty/hazard3
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_alu.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_branchcmp.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_muldiv_seq.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_mul_fast.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_onehot_encode.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority_dynamic.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_priority_encode.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/arith/hazard3_shift_barrel.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/cdc/hazard3_apb_async_bridge.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/cdc/hazard3_reset_sync.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/cdc/hazard3_sync_1bit.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/dm/hazard3_dm.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/dm/hazard3_sbus_to_ahb.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/dtm/hazard3_ecp5_jtag_dtm.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm_core.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_core.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_cpu_1port.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_csr.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_decode.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_frontend.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_instr_decompress.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_irq_ctrl.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_pmp.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_power_ctrl.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_regfile_1w2r.v
+set_global_assignment -name VERILOG_FILE ../../../library/3rdparty/hazard3/hazard3_triggers.v
+
+
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
