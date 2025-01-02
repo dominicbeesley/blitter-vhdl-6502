@@ -3,13 +3,31 @@
 TEST_PROG = 0x10000
 
 
-#include "custom_ops.S"
 
 start:
-//		picorv32_waitirq_insn(zero)
-		picorv32_maskirq_insn(zero, zero)
 
 		addi 	sp,zero,0x200		// setup a MOSsy stack
+
+		li		a0, 0xdeadbeef
+		li		a1, 0x1234
+
+		sw		a0, 8(a1)			// write deadbeef => 123C 
+		sh		a0, 2(a1)			// write beef     => 1236
+		sh		a0, 2(a1)			// write beef     => 1236
+		sb		a0, 5(a1)			// write ef       => 1239
+		
+		lb		a0, 8(a1)			// read  ef		  => 123C
+		sb		a0, 0(a1)			// write ef		  => 1234
+		lb		a0, 9(a1)			// 
+		sb		a0, 1(a1)			//
+		lb		a0, 10(a1)			//
+		sb		a0, 2(a1)			//
+		lb		a0, 11(a1)			//
+		sb		a0, 3(a1)			//
+
+		lw		a0, 0(a1)
+		sw		a0, 12(a1)
+
 		
 		la		a0, TEST_PROG
 		la		a1, test_progr
@@ -31,13 +49,7 @@ here:	j here
 
 		.align(4)
 handleirq:
-		picorv32_getq_insn(t0, q1);
-		andi t0,t0,~2
-		picorv32_setq_insn(q1, t0);
-		la	t0, there		
-		picorv32_setq_insn(q0, t0);
-		c.nop
-		picorv32_retirq_insn();
+
 there:
 
 		sw	a0,12(sp)

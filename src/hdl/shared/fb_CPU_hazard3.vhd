@@ -90,15 +90,26 @@ architecture rtl of fb_cpu_hazard3 is
 
 	signal i_pwrup_req_tieback : std_logic;
 
-	signal r_rv_mem_ready	: std_logic;
 
-	signal r_wrap_cyc			: std_logic;
-	signal r_lane_req			: std_logic_vector(3 downto 0);
-	signal r_we					: std_logic;
-	signal r_instr				: std_logic;
-	signal r_addr				: std_logic_vector(23 downto 0);
+	signal r_wrap_cyc					: std_logic;
+	signal r_lane_req					: std_logic_vector(3 downto 0);
+	signal r_lane_wrstb				: std_logic_vector(3 downto 0);
+	signal r_we							: std_logic;
+	signal r_instr						: std_logic;
+	signal r_addr						: std_logic_vector(23 downto 0);
+	signal r_rv_mem_ready			: std_logic;
+	signal r_wrap_wdata				: std_logic_vector(31 downto 0);
 
-	type state_t is (idle, rd, wr);
+	-- from addr phase to controller
+	signal r_next_wrap_cyc			: std_logic;
+	signal r_next_lane_req			: std_logic_vector(3 downto 0);
+	signal r_next_we					: std_logic;
+	signal r_next_instr				: std_logic;
+	signal r_next_addr				: std_logic_vector(23 downto 0);
+	signal r_rv_addr_ready			: std_logic;
+
+
+	type state_t is (idle, rd, wr, goidle);
 
 	signal r_state				: state_t;
 
@@ -372,20 +383,78 @@ begin
 
 	wrap_o.BE				<= '0';
 	wrap_o.A 				<= r_addr;
-	wrap_o.cyc				<= r_wrap_cyc and not wrap_i.ack;
+	wrap_o.cyc				<= r_wrap_cyc;
 	wrap_o.lane_req   	<= r_lane_req;
 	wrap_o.rdy_ctdn   	<= RDY_CTDN_MIN;
 	wrap_o.we	 			<= r_we;
-	wrap_o.D_WR				<= i_rv_wdata;
-	wrap_o.D_WR_stb 		<= r_lane_req;
+	wrap_o.D_WR				<= r_wrap_wdata;
+	wrap_o.D_WR_stb 		<= r_lane_wrstb;
 	wrap_o.instr_fetch  	<= r_instr;
 
 	i_rv_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
 						'0';
 
-	p_state:process(fb_syscon_i)
+	-- handle address phase of AHB5 bus
+	p_addr:process(fb_syscon_i)
 	variable v_add2  : std_logic_vector(1 downto 0);
-	variable v_addr_phase : boolean;
+	begin
+
+		if fb_syscon_i.rst = '1' then
+			r_next_wrap_cyc <= '0';
+			r_next_lane_req <= (others => '0');
+			r_next_we <= '0';
+			r_next_instr <= '0';
+			r_next_addr <= (others => '0');
+			r_rv_addr_ready <= '1';
+		elsif rising_edge(fb_syscon_i.clk) then
+
+			if i_rv_hready = '1' then
+				if i_rv_htrans(1) = '1' then
+					r_next_wrap_cyc <= '1';
+					if i_rv_write = '0' then
+						-- read cycle
+						r_next_instr <= not i_rv_hprot(0);
+						r_next_we <= '0';
+					else
+						-- write cycle
+						r_next_instr <= '0';
+						r_next_we <= '1';
+					end if;
+
+					case i_rv_hsize is
+						when "000" =>
+							v_add2 := i_rv_addr(1 downto 0);
+							case i_rv_addr(1 downto 0) is
+								when "00" => r_next_lane_req <= "0001";
+								when "01" => r_next_lane_req <= "0010";
+								when "10" => r_next_lane_req <= "0100";
+								when others => r_next_lane_req <= "1000";
+							end case;
+						when "001" =>
+							v_add2 := i_rv_addr(1) & '0';
+							if i_rv_addr(1) = '1' then
+								r_next_lane_req <= "1100";
+							else
+								r_next_lane_req <= "0011";
+							end if;
+						when others => 
+							v_add2 := "00";
+							r_next_lane_req <= "1111";
+					end case;						
+
+					r_next_addr <= i_rv_addr(23 downto 2) & v_add2;
+					r_rv_addr_ready <= '0';
+				else
+					r_next_wrap_cyc <= '0';
+					r_rv_addr_ready <= '1';
+				end if;
+			end if;
+		end if;
+
+	end process;
+
+	-- handle controller state
+	p_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -394,63 +463,47 @@ begin
 			r_we <= '0';
 			r_addr <= (others => '0');
 			r_rv_mem_ready <= '0';
+			r_lane_req <= (others => '0');
+			r_lane_wrstb <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 			r_rv_mem_ready <= '0';
-			v_addr_phase := false;
-			case r_state is 
-				when idle => 
-					v_addr_phase := true;
+			case r_state is
+				when idle =>
+					if r_next_wrap_cyc = '1' then
+						r_wrap_cyc <= '1';
+						r_addr <= r_next_addr;
+						r_we <= r_next_we;
+						r_instr <= r_next_instr;
+						r_lane_req <= r_next_lane_req;
+						if r_next_we = '0' then
+							r_state <= rd;
+						else
+							r_state <= wr;
+							r_rv_mem_ready <= '1';
+						end if;
+					end if;
 				when rd =>
 					if wrap_i.ack = '1' then
+						r_state <= goidle;
 						r_rv_mem_ready <= '1';
 						r_rv_rdata <= wrap_i.D_rd;
-						r_state <= idle;
-						r_wrap_cyc <= '0';						
-						v_addr_phase := true;
+						r_wrap_cyc <= '0';
 					end if;
 				when wr =>
+					r_lane_wrstb <= r_lane_req;
+					if r_rv_mem_ready = '1' then
+						r_wrap_wdata <= i_rv_wdata;
+					end if;
 					if wrap_i.ack = '1' then
-						r_rv_mem_ready <= '1';
-						r_state <= idle;
-						r_wrap_cyc <= '0';						
-						v_addr_phase := true;
+						r_state <= goidle;
+						r_wrap_cyc <= '0';
 					end if;
 				when others => 
 					r_state <= idle;
-					r_wrap_cyc <= '0';					
+					r_wrap_cyc <= '0';
 			end case;
 
-			if v_addr_phase then
-				if i_rv_htrans(1) = '1' then
-					r_instr <= '0';
-					r_wrap_cyc <= '1';
-					if i_rv_write = '0' then
-						-- read cycle
-						r_instr <= not i_rv_hprot(0);
-						r_we <= '0';
-						r_state <= rd;
-					else
-						-- write cycle
-						r_we <= '1';
-						r_state <= wr;
-					end if;
-
-					case i_rv_hsize is
-						when "000" =>
-							v_add2 := i_rv_addr(1 downto 0);
-							r_lane_req <= "0001";
-						when "001" =>
-							v_add2 := i_rv_addr(1) & '0';
-							r_lane_req <= "0011";
-						when others => 
-							v_add2 := "00";
-							r_lane_req <= "1111";
-					end case;						
-
-					r_addr <= i_rv_addr(23 downto 2) & v_add2;
-				end if;
-			end if;
 		end if;
 	end process;
 
@@ -461,9 +514,7 @@ begin
 		others => '0'
 		);
 
-	i_rv_hready <= '1' when r_rv_mem_ready else
-						'1' when r_state = idle else
-						'0';
+	i_rv_hready <= r_rv_mem_ready or r_rv_addr_ready;
 
 	e_cpu:hazard3_cpu_1port
 	generic map (
