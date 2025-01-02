@@ -14,9 +14,9 @@
 // So there is sometimes timing benefit to a dedicated branch comparator.
 
 module hazard3_branchcmp #(
-`include "hazard3_config.vh"
+`include "../hazard3_config.vh"
 ,
-`include "hazard3_width_const.vh"
+`include "../hazard3_width_const.vh"
 ) (
 	input  wire [W_ALUOP-1:0] aluop,
 	input  wire [W_DATA-1:0]  op_a,
@@ -24,7 +24,7 @@ module hazard3_branchcmp #(
 	output wire               cmp
 );
 
-`include "hazard3_ops.vh"
+`include "../hazard3_ops.vh"
 
 wire [W_DATA-1:0] diff = op_a - op_b;
 

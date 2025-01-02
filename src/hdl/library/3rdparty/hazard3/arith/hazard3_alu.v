@@ -6,9 +6,9 @@
 `default_nettype none
 
 module hazard3_alu #(
-`include "hazard3_config.vh"
+`include "../hazard3_config.vh"
 ,
-`include "hazard3_width_const.vh"
+`include "../hazard3_width_const.vh"
 ) (
 	input  wire [W_ALUOP-1:0] aluop,
 	input  wire [6:0]         funct7_32b,
@@ -19,7 +19,7 @@ module hazard3_alu #(
 	output wire               cmp
 );
 
-`include "hazard3_ops.vh"
+`include "../hazard3_ops.vh"
 
 // ----------------------------------------------------------------------------
 // Fiddle around with add/sub, comparisons etc (all related).
@@ -63,7 +63,7 @@ wire shift_arith = aluop == ALUOP_SRA;
 wire shift_rotate = |EXTENSION_ZBB & (aluop == ALUOP_ROR || aluop == ALUOP_ROL);
 
 hazard3_shift_barrel #(
-`include "hazard3_config_inst.vh"
+`include "../hazard3_config_inst.vh"
 ) shifter (
 	.din         (op_a),
 	.shamt       (op_b[4:0]),

@@ -11,9 +11,9 @@
 `default_nettype none
 
 module hazard3_mul_fast #(
-`include "hazard3_config.vh"
+`include "../hazard3_config.vh"
 ,
-`include "hazard3_width_const.vh"
+`include "../hazard3_width_const.vh"
 ) (
 	input  wire               clk,
 	input  wire               rst_n,
@@ -27,7 +27,7 @@ module hazard3_mul_fast #(
 	output reg               result_vld
 );
 
-`include "hazard3_ops.vh"
+`include "../hazard3_ops.vh"
 
 localparam XLEN = W_DATA;
 

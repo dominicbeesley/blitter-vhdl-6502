@@ -18,9 +18,9 @@
 `default_nettype none
 
 module hazard3_muldiv_seq #(
-`include "hazard3_config.vh"
+`include "../hazard3_config.vh"
 ,
-`include "hazard3_width_const.vh"
+`include "../hazard3_width_const.vh"
 ) (
 	input  wire               clk,
 	input  wire               rst_n,
@@ -36,7 +36,7 @@ module hazard3_muldiv_seq #(
 	output wire               result_vld
 );
 
-`include "hazard3_ops.vh"
+`include "../hazard3_ops.vh"
 
 //synthesis translate_off
 generate if (|(MULDIV_UNROLL & (MULDIV_UNROLL - 1)) || ~|MULDIV_UNROLL)

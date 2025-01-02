@@ -10,9 +10,9 @@
 `default_nettype none
 
 module hazard3_shift_barrel #(
-`include "hazard3_config.vh"
+`include "../hazard3_config.vh"
 ,
-`include "hazard3_width_const.vh"
+`include "../hazard3_width_const.vh"
 ) (
 	input wire [W_DATA-1:0]  din,
 	input wire [W_SHAMT-1:0] shamt,
