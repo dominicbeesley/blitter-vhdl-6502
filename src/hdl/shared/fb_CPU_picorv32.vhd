@@ -84,6 +84,7 @@ architecture rtl of fb_cpu_picorv32 is
 	signal r_rv_rdata			: std_logic_vector(31 downto 0);
 	signal i_rv_wdata			: std_logic_vector(31 downto 0);
 	signal i_rv_irq			: std_logic_vector(2 downto 0);
+	signal i_rv_hready		: std_logic;
 
 	signal i_rv_res_n			: std_logic;
 
@@ -97,7 +98,7 @@ architecture rtl of fb_cpu_picorv32 is
 	signal r_instr				: std_logic;
 	signal r_addr				: std_logic_vector(23 downto 0);
 
-	type state_t is (idle, rd, wr, goidle);
+	type state_t is (idle, rd, wr);
 
 	signal r_state				: state_t;
 
@@ -371,7 +372,7 @@ begin
 
 	wrap_o.BE				<= '0';
 	wrap_o.A 				<= r_addr;
-	wrap_o.cyc				<= r_wrap_cyc;
+	wrap_o.cyc				<= r_wrap_cyc and not wrap_i.ack;
 	wrap_o.lane_req   	<= r_lane_req;
 	wrap_o.rdy_ctdn   	<= RDY_CTDN_MIN;
 	wrap_o.we	 			<= r_we;
@@ -384,6 +385,7 @@ begin
 
 	p_state:process(fb_syscon_i)
 	variable v_add2  : std_logic_vector(1 downto 0);
+	variable v_addr_phase : boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -395,57 +397,60 @@ begin
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 			r_rv_mem_ready <= '0';
-
+			v_addr_phase := false;
 			case r_state is 
 				when idle => 
-					if i_rv_htrans /= "00" then
-						r_instr <= '0';
-						r_wrap_cyc <= '1';
-						if i_rv_write then
-							-- read cycle
-							r_instr <= not i_rv_hprot(0);
-							r_we <= '0';
-							r_state <= rd;
-						else
-							-- write cycle
-							r_we <= '1';
-							r_state <= wr;
-						end if;
-
-						case i_rv_hsize is
-							when "000" =>
-								v_add2 := i_rv_addr(1 downto 0);
-								r_lane_req <= "0001";
-							when "001" =>
-								v_add2 := i_rv_addr(1) & '0';
-								r_lane_req <= "0011";
-							when others => 
-								v_add2 := "00";
-								r_lane_req <= "1111";
-						end case;						
-
-						r_addr <= i_rv_addr(23 downto 2) & v_add2;
-							
-
-					end if;
+					v_addr_phase := true;
 				when rd =>
 					if wrap_i.ack = '1' then
 						r_rv_mem_ready <= '1';
 						r_rv_rdata <= wrap_i.D_rd;
-						r_state <= goidle;
+						r_state <= idle;
 						r_wrap_cyc <= '0';						
+						v_addr_phase := true;
 					end if;
 				when wr =>
 					if wrap_i.ack = '1' then
 						r_rv_mem_ready <= '1';
-						r_state <= goidle;
+						r_state <= idle;
 						r_wrap_cyc <= '0';						
+						v_addr_phase := true;
 					end if;
-
 				when others => 
 					r_state <= idle;
 					r_wrap_cyc <= '0';					
 			end case;
+
+			if v_addr_phase then
+				if i_rv_htrans(1) = '1' then
+					r_instr <= '0';
+					r_wrap_cyc <= '1';
+					if i_rv_write = '0' then
+						-- read cycle
+						r_instr <= not i_rv_hprot(0);
+						r_we <= '0';
+						r_state <= rd;
+					else
+						-- write cycle
+						r_we <= '1';
+						r_state <= wr;
+					end if;
+
+					case i_rv_hsize is
+						when "000" =>
+							v_add2 := i_rv_addr(1 downto 0);
+							r_lane_req <= "0001";
+						when "001" =>
+							v_add2 := i_rv_addr(1) & '0';
+							r_lane_req <= "0011";
+						when others => 
+							v_add2 := "00";
+							r_lane_req <= "1111";
+					end case;						
+
+					r_addr <= i_rv_addr(23 downto 2) & v_add2;
+				end if;
+			end if;
 		end if;
 	end process;
 
@@ -456,40 +461,42 @@ begin
 		others => '0'
 		);
 
-
+	i_rv_hready <= '1' when r_rv_mem_ready else
+						'1' when r_state = idle else
+						'0';
 
 	e_cpu:hazard3_cpu_1port
---	generic map (
---      RESET_VECTOR        	=> x"fffffff8",
---      MTVEC_INIT          	=> x"fffffffc",
---
---      EXTENSION_A				=> false,
---      EXTENSION_C				=> true,
---      EXTENSION_M				=> true,
---      EXTENSION_ZBA			=> false,
---      EXTENSION_ZBB			=> false,
---      EXTENSION_ZBC			=> false,
---      EXTENSION_ZBS			=> false,
---      EXTENSION_ZBKB			=> false,
---      EXTENSION_ZCB			=> false,
---      EXTENSION_ZCMP			=> false,
---      EXTENSION_ZIFENCEI	=> false,
---
---      EXTENSION_XH3BEXTM 	=> false,
---      EXTENSION_XH3IRQ 		=> false,
---      EXTENSION_XH3PMPM 	=> false,
---      EXTENSION_XH3POWER 	=> false,
---
---      CSR_M_MANDATORY		=> true,
---      CSR_M_TRAP				=> true,
---      CSR_COUNTER				=> false,
---
---      U_MODE 					=> false,
---
---      NUM_IRQS 				=> 3,
---
---      IRQ_PRIORITY_BITS 	=> 1
---	)
+	generic map (
+      RESET_VECTOR        	=> x"fffffff8",
+      MTVEC_INIT          	=> x"fffffffc",
+
+      EXTENSION_A				=> false,
+      EXTENSION_C				=> true,
+      EXTENSION_M				=> true,
+      EXTENSION_ZBA			=> false,
+      EXTENSION_ZBB			=> false,
+      EXTENSION_ZBC			=> false,
+      EXTENSION_ZBS			=> false,
+      EXTENSION_ZBKB			=> false,
+      EXTENSION_ZCB			=> false,
+      EXTENSION_ZCMP			=> false,
+      EXTENSION_ZIFENCEI	=> false,
+
+      EXTENSION_XH3BEXTM 	=> false,
+      EXTENSION_XH3IRQ 		=> false,
+      EXTENSION_XH3PMPM 	=> false,
+      EXTENSION_XH3POWER 	=> false,
+
+      CSR_M_MANDATORY		=> true,
+      CSR_M_TRAP				=> true,
+      CSR_COUNTER				=> false,
+
+      U_MODE 					=> false,
+
+      NUM_IRQS 				=> 3,
+
+      IRQ_PRIORITY_BITS 	=> 1
+	)
 	port map (
 		-- Global signals
          clk                        => fb_syscon_i.clk,
@@ -514,7 +521,7 @@ begin
          hmastlock                  => open,
          hmaster                    => open,
          hexcl                      => open,
-         hready                     => r_rv_mem_ready,
+         hready                     => i_rv_hready,
          hresp                      => '0',
          hexokay                    => '1',
          hwdata                     => i_rv_wdata,
