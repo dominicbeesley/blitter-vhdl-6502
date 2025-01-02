@@ -2,11 +2,22 @@
 
 TEST_PROG = 0x10000
 
+misa = 0x301
+mepc = 0x341
+mcause = 0x342
+mtvec = 0x305
 
 
 start:
 
 		addi 	sp,zero,0x200		// setup a MOSsy stack
+
+		csrrs	a0, misa, x0
+		sw		a0, 0(sp)
+
+		la		a0, irqvecs + 1
+		csrrw	x0, mtvec, a0
+
 
 		li		a0, 0xdeadbeef
 		li		a1, 0x1234
@@ -49,6 +60,11 @@ here:	j here
 
 		.align(4)
 handleirq:
+		csrrs	a0, mcause, x0
+		sw		a0, 0(sp)
+		csrrs	a0, mepc, x0
+		sw		a0, 4(sp)
+
 
 there:
 
@@ -60,6 +76,34 @@ there:
 
 
 		j	there
+
+		.align(4)
+irqvecs:
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+		j	handleirq
+
 
 test_progr:
 		c.nop
