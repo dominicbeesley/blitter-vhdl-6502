@@ -2,10 +2,10 @@
 
 TEST_PROG = 0x10000
 
-misa = 0x301
-mepc = 0x341
-mcause = 0x342
-mtvec = 0x305
+//misa = 0x301
+//mepc = 0x341
+//mcause = 0x342
+//mtvec = 0x305
 
 
 start:

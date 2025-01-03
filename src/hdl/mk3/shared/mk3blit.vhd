@@ -256,6 +256,7 @@ architecture rtl of mk3blit is
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
 																							-- use fb_syscon.clk
+	signal i_clk_32M						: std_logic;							-- used in hazard3 core if present
 	signal i_clk_lock						: std_logic;							-- indicates whether the main pll is locked
 	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
@@ -372,6 +373,7 @@ begin
 
 		clk_fish_o							=> i_clk_fish_128M,
 		clk_snd_o							=> i_clk_snd,
+		clk_32_o								=> i_clk_32M,
 
 		clk_lock_o							=> i_clk_lock,
 
@@ -747,6 +749,10 @@ END GENERATE;
 		noice_debug_cpu_clken_o			=> i_noice_debug_cpu_clken,
 		noice_debug_A0_tgl_o				=> i_noice_debug_A0_tgl,
 		noice_debug_opfetch_o			=> i_noice_debug_opfetch,
+
+		
+		-- optional clocks for riscv / hazard3
+		clk_32m_i							=> i_clk_32M,
 
 
 		-- extra memory map control signals

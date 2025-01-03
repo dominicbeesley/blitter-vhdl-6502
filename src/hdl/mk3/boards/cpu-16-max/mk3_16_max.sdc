@@ -56,6 +56,10 @@ create_generated_clock -name {snd_pll} -duty_cycle 50/1 -multiply_by 80 -divide_
 	-master_clock {CLK_48M} \
 	[get_pins "$MAINPLL|clk[1]"] 
 
+create_generated_clock -name {clock_32} -duty_cycle 50/1 -multiply_by 2 -divide_by 3 \
+	-source [get_pins "$MAINPLL|inclk[0]"] \
+	-master_clock {CLK_48M} \
+	[get_pins "$MAINPLL|clk[2]"] 
 
 
 #**************************************************************

@@ -64,7 +64,11 @@ entity fb_cpu_hazard3 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- cpu clock
+
+		clk_32M_i								: in std_logic
 
 	);
 end fb_cpu_hazard3;
@@ -86,7 +90,7 @@ architecture rtl of fb_cpu_hazard3 is
 	signal i_rv_irq			: std_logic_vector(2 downto 0);
 	signal i_rv_hready		: std_logic;
 
-	signal i_rv_res_n			: std_logic;
+	signal r_rv_res_n			: std_logic;
 
 	signal i_pwrup_req_tieback : std_logic;
 
@@ -109,7 +113,7 @@ architecture rtl of fb_cpu_hazard3 is
 	signal r_rv_addr_ready			: std_logic;
 
 
-	type state_t is (idle, rd, wr, goidle);
+	type state_t is (idle, rd, wr_start, wr, rd_end);
 
 	signal r_state				: state_t;
 
@@ -225,6 +229,31 @@ component hazard3_cpu_1port is
 -- software's access to memory.
 -- Requires: CSR_M_TRAP.
       U_MODE : boolean := false;
+
+
+-- PMP_REGIONS: Number of physical memory protection regions, or 0 for no PMP.
+-- PMP is more useful if U mode is supported, but this is not a requirement.
+	PMP_REGIONS : boolean := false;
+
+-- PMP_GRAIN: This is the "G" parameter in the privileged spec. Minimum PMP
+-- region size is 1 << (G + 2) bytes.  If G > 0, PMCFG.A can not be set to
+-- NA4 (will get set to OFF instead). If G > 1, the G - 1 LSBs of pmpaddr are
+-- read-only-0 when PMPCFG.A is OFF, and read-only-1 when PMPCFG.A is NAPOT.
+	PMP_GRAIN : natural := 0;
+
+-- PMPADDR_HARDWIRED: If a bit is 1, the corresponding region's pmpaddr and
+-- pmpcfg registers are read-only. PMP_GRAIN is ignored on hardwired regions.
+-- It's recommended to make hardwired regions the highest-numbered, so they
+-- can be overridden by lower-numbered regions.
+--parameter PMP_HARDWIRED       = {(PMP_REGIONS > 0 ? PMP_REGIONS : 1){1'b0}},
+
+-- PMPADDR_HARDWIRED_ADDR: Values of pmpaddr registers whose PMP_HARDWIRED
+-- bits are set to 1. Non-hardwired regions reset to all-zeroes.
+--parameter PMP_HARDWIRED_ADDR  = {(PMP_REGIONS > 0 ? PMP_REGIONS : 1){32'h0}},
+
+-- PMPCFG_RESET_VAL: Values of pmpcfg registers whose PMP_HARDWIRED bits are
+-- set to 1. Non-hardwired regions reset to all zeroes.
+--parameter PMP_HARDWIRED_CFG   = {(PMP_REGIONS > 0 ? PMP_REGIONS : 1){8'h00}},
 
 
 -- DEBUG_SUPPORT: Support for run/halt and instruction injection from an
@@ -391,22 +420,30 @@ begin
 	wrap_o.D_WR_stb 		<= r_lane_wrstb;
 	wrap_o.instr_fetch  	<= r_instr;
 
-	i_rv_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
-						'0';
+	p_res_reg:process(all)
+	begin
+		if rising_edge(clk_32M_i) then
+			if cpu_en_i = '0' then
+				r_rv_res_n <= '0';
+			else
+				r_rv_res_n <= not fb_syscon_i.rst;
+			end if;
+		end if;
+	end process;
 
 	-- handle address phase of AHB5 bus
-	p_addr:process(fb_syscon_i)
+	p_addr:process(r_rv_res_n, clk_32M_i)
 	variable v_add2  : std_logic_vector(1 downto 0);
 	begin
 
-		if fb_syscon_i.rst = '1' then
+		if r_rv_res_n = '0' then
 			r_next_wrap_cyc <= '0';
 			r_next_lane_req <= (others => '0');
 			r_next_we <= '0';
 			r_next_instr <= '0';
 			r_next_addr <= (others => '0');
 			r_rv_addr_ready <= '1';
-		elsif rising_edge(fb_syscon_i.clk) then
+		elsif rising_edge(clk_32M_i) then
 
 			if i_rv_hready = '1' then
 				if i_rv_htrans(1) = '1' then
@@ -455,6 +492,7 @@ begin
 
 	-- handle controller state
 	p_state:process(fb_syscon_i)
+	variable vr_prev_32M:std_logic;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -465,11 +503,14 @@ begin
 			r_rv_mem_ready <= '0';
 			r_lane_req <= (others => '0');
 			r_lane_wrstb <= (others => '0');
+			vr_prev_32M := '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			
-			r_rv_mem_ready <= '0';
+
 			case r_state is
 				when idle =>
+					r_rv_mem_ready <= '0';
+					r_lane_wrstb <= (others => '0');
 					if r_next_wrap_cyc = '1' then
 						r_wrap_cyc <= '1';
 						r_addr <= r_next_addr;
@@ -479,30 +520,42 @@ begin
 						if r_next_we = '0' then
 							r_state <= rd;
 						else
-							r_state <= wr;
+							r_state <= wr_start;
 							r_rv_mem_ready <= '1';
 						end if;
 					end if;
 				when rd =>
 					if wrap_i.ack = '1' then
-						r_state <= goidle;
+						r_state <= rd_end;
 						r_rv_mem_ready <= '1';
 						r_rv_rdata <= wrap_i.D_rd;
 						r_wrap_cyc <= '0';
 					end if;
-				when wr =>
-					r_lane_wrstb <= r_lane_req;
-					if r_rv_mem_ready = '1' then
-						r_wrap_wdata <= i_rv_wdata;
+				when rd_end =>
+					r_wrap_cyc <= '0';
+					if clk_32M_i = '1' and vr_prev_32M = '0' then
+						r_state <= idle;
+						r_rv_mem_ready <= '0';
 					end if;
+				when wr_start =>
+					if clk_32M_i = '1' and vr_prev_32M = '0' then
+						r_lane_wrstb <= r_lane_req;
+						r_wrap_wdata <= i_rv_wdata;
+						r_rv_mem_ready <= '0';
+						r_state <= wr;
+					end if;
+				when wr => 
 					if wrap_i.ack = '1' then
-						r_state <= goidle;
+						r_state <= idle;
 						r_wrap_cyc <= '0';
 					end if;
 				when others => 
 					r_state <= idle;
 					r_wrap_cyc <= '0';
+					r_rv_mem_ready <= '0';
 			end case;
+
+			vr_prev_32M := clk_32M_i;
 
 		end if;
 	end process;
@@ -550,9 +603,9 @@ begin
 	)
 	port map (
 		-- Global signals
-         clk                        => fb_syscon_i.clk,
-         clk_always_on              => fb_syscon_i.clk,
-         rst_n                      => i_rv_res_n,
+         clk                        => clk_32M_i,
+         clk_always_on              => clk_32M_i,
+         rst_n                      => r_rv_res_n,
 
 
    -- Power control signals
@@ -606,7 +659,8 @@ begin
          dbg_sbus_rdata             => open,
 
    -- Level-sensitive interrupt sources
-         irq                        => i_rv_irq,
+--         irq                        => i_rv_irq,
+         irq                        => (others => '0'),
          soft_irq                   => '0',
          timer_irq                  => '0'
 	);

@@ -22,8 +22,8 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_hazard3_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../../../sim_asm/test_hazard3/build/test.rom"
---	G_MOSROMFILE : string := "C:/Users/Dominic/Documents/GitHub/blitter-riscv-code/build/roms/testmos/testmos.mos"
+--	G_MOSROMFILE : string := "../../../../../../sim_asm/test_hazard3/build/test.rom"
+	G_MOSROMFILE : string := "C:/Users/Dominic/Documents/GitHub/blitter-riscv-code/build/roms/testmos/testmos.mos"
 	);
 end sim_hazard3_tb;
 

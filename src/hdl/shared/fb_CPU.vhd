@@ -125,6 +125,9 @@ entity fb_cpu is
 		noice_debug_A0_tgl_o					: out	std_logic;		-- 1 when current A0 is different to previous fetched
 		noice_debug_opfetch_o				: out	std_logic;		-- this cycle is an opcode fetch
 
+		-- optional clocks for riscv / hazard3
+		clk_32m_i								: in std_logic;	
+
 		-- direct CPU control signals from system
 		nmi_n_i									: in	std_logic;
 		irq_n_i									: in	std_logic;
@@ -210,7 +213,11 @@ architecture rtl of fb_cpu is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- cpu clock
+
+		clk_32m_i								: in std_logic
 
 	);
 	end component;
@@ -901,7 +908,9 @@ ghazard3: IF G_INCL_CPU_HAZARD3 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_RISCV),
-		wrap_i									=> i_wrap_i
+		wrap_i									=> i_wrap_i,
+
+		clk_32m_i								=> clk_32m_i
 
 	);
 
