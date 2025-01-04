@@ -102,6 +102,8 @@ architecture rtl of fb_cpu_hazard3 is
 	signal r_instr						: std_logic;
 	signal r_addr						: std_logic_vector(23 downto 0);
 	signal r_rv_mem_ready			: std_logic;
+	signal r_rv_mem_ready_req		: std_logic; -- request for mem_ready signal from 128M process
+	signal r_rv_mem_ready_ack		: std_logic; -- acknowledge end of mem_ready cycle when ack=req
 	signal r_wrap_wdata				: std_logic_vector(31 downto 0);
 
 	-- from addr phase to controller
@@ -113,7 +115,7 @@ architecture rtl of fb_cpu_hazard3 is
 	signal r_rv_addr_ready			: std_logic;
 
 
-	type state_t is (idle, rd, wr_start, wr, rd_end);
+	type state_t is (idle, rd, wr_start, wr2, wr, rd_end);
 
 	signal r_state				: state_t;
 
@@ -490,9 +492,23 @@ begin
 
 	end process;
 
+	p_ready:process(r_rv_res_n, clk_32M_i)
+	begin
+		if r_rv_res_n = '0' then
+			r_rv_mem_ready <= '0';
+			r_rv_mem_ready_ack <= '0';
+		elsif rising_edge(clk_32M_i) then
+			if r_rv_mem_ready_req /= r_rv_mem_ready_ack and r_rv_mem_ready = '0' then
+				r_rv_mem_ready <= '1';
+			elsif r_rv_mem_ready_req /= r_rv_mem_ready_ack and r_rv_mem_ready = '1' then
+				r_rv_mem_ready <= '0';
+				r_rv_mem_ready_ack <= r_rv_mem_ready_req;
+			end if;
+		end if;
+	end process;
+
 	-- handle controller state
 	p_state:process(fb_syscon_i)
-	variable vr_prev_32M:std_logic;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -500,62 +516,60 @@ begin
 			r_wrap_cyc <= '0';
 			r_we <= '0';
 			r_addr <= (others => '0');
-			r_rv_mem_ready <= '0';
+			r_rv_mem_ready_req <= '0';
 			r_lane_req <= (others => '0');
 			r_lane_wrstb <= (others => '0');
-			vr_prev_32M := '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 
 			case r_state is
 				when idle =>
-					r_rv_mem_ready <= '0';
 					r_lane_wrstb <= (others => '0');
 					if r_next_wrap_cyc = '1' then
-						r_wrap_cyc <= '1';
 						r_addr <= r_next_addr;
 						r_we <= r_next_we;
 						r_instr <= r_next_instr;
 						r_lane_req <= r_next_lane_req;
 						if r_next_we = '0' then
 							r_state <= rd;
+							r_wrap_cyc <= '1';
 						else
 							r_state <= wr_start;
-							r_rv_mem_ready <= '1';
+							r_rv_mem_ready_req <= not r_rv_mem_ready_ack;		-- signal req for write data
 						end if;
 					end if;
 				when rd =>
 					if wrap_i.ack = '1' then
 						r_state <= rd_end;
-						r_rv_mem_ready <= '1';
+						r_rv_mem_ready_req <= not r_rv_mem_ready_ack;		-- signal end
 						r_rv_rdata <= wrap_i.D_rd;
 						r_wrap_cyc <= '0';
 					end if;
 				when rd_end =>
 					r_wrap_cyc <= '0';
-					if clk_32M_i = '1' and vr_prev_32M = '0' then
+					if r_rv_mem_ready_req = r_rv_mem_ready_ack then
 						r_state <= idle;
-						r_rv_mem_ready <= '0';
 					end if;
 				when wr_start =>
-					if clk_32M_i = '1' and vr_prev_32M = '0' then
+					if r_rv_mem_ready_req = r_rv_mem_ready_ack then
+						r_state <= wr2;
 						r_lane_wrstb <= r_lane_req;
 						r_wrap_wdata <= i_rv_wdata;
-						r_rv_mem_ready <= '0';
-						r_state <= wr;
+						r_wrap_cyc <= '1';
 					end if;
+				when wr2 =>
+					r_state <= wr;
 				when wr => 
 					if wrap_i.ack = '1' then
 						r_state <= idle;
 						r_wrap_cyc <= '0';
+						r_lane_wrstb <= (others => '0');
 					end if;
 				when others => 
 					r_state <= idle;
 					r_wrap_cyc <= '0';
-					r_rv_mem_ready <= '0';
 			end case;
 
-			vr_prev_32M := clk_32M_i;
 
 		end if;
 	end process;
