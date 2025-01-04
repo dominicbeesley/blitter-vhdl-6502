@@ -115,7 +115,7 @@ architecture rtl of fb_cpu_hazard3 is
 	signal r_rv_addr_ready			: std_logic;
 
 
-	type state_t is (idle, rd, wr_start, wr2, wr, rd_end);
+	type state_t is (idle, rd, wr_start, wr, rd_end);
 
 	signal r_state				: state_t;
 
@@ -552,18 +552,18 @@ begin
 					end if;
 				when wr_start =>
 					if r_rv_mem_ready_req = r_rv_mem_ready_ack then
-						r_state <= wr2;
-						r_lane_wrstb <= r_lane_req;
-						r_wrap_wdata <= i_rv_wdata;
+						r_state <= wr;
 						r_wrap_cyc <= '1';
+						r_lane_wrstb <= r_lane_req;		
+					else
+						r_wrap_wdata <= i_rv_wdata;							-- latch data before end of "data ready" cycle
 					end if;
-				when wr2 =>
-					r_state <= wr;
 				when wr => 
 					if wrap_i.ack = '1' then
 						r_state <= idle;
 						r_wrap_cyc <= '0';
 						r_lane_wrstb <= (others => '0');
+						r_wrap_wdata <= x"4A433043";
 					end if;
 				when others => 
 					r_state <= idle;
