@@ -673,8 +673,7 @@ begin
          dbg_sbus_rdata             => open,
 
    -- Level-sensitive interrupt sources
---         irq                        => i_rv_irq,
-         irq                        => (others => '0'),
+         irq                        => i_rv_irq,
          soft_irq                   => '0',
          timer_irq                  => '0'
 	);
