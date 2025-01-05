@@ -64,10 +64,10 @@ architecture Behavioral of LS74244 is
 	signal nOE_B_dly : std_logic;
 begin
 
-	nOE_A_dly <= nOE_A after toe;
-	nOE_B_dly <= nOE_B after toe;
+	nOE_A_dly <= transport nOE_A after toe;
+	nOE_B_dly <= transport nOE_B after toe;
 
-	Q <= to_stdlogicvector(to_bitvector(D)) after tprop when nOE_A_dly = '0' and  nOE_B_dly = '0' else (others => 'Z') after tprop;
+	Q <= transport to_stdlogicvector(to_bitvector(D)) after tprop when nOE_A_dly = '0' and  nOE_B_dly = '0' else (others => 'Z') after tprop;
 	
 	
 end Behavioral;
