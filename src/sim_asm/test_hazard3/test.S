@@ -12,6 +12,18 @@ start:
 
 		addi 	sp,zero,0x200		// setup a MOSsy stack
 
+
+		// test some 1MHz access stuff
+
+		li		a0, 0xA5
+		sb		a0, 0xFFFFFCF0(zero)
+		lb		a0, 0xFFFFFCF3(zero)
+		sb		a0, 0xFFFFFCF0(zero)
+		lb		a0, 0xFFFFFCF3(zero)
+
+
+		// set up irq vectors stuff
+
 		csrrs	a0, misa, x0
 		sw		a0, 0(sp)
 

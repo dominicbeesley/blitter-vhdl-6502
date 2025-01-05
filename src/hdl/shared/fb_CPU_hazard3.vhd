@@ -601,7 +601,7 @@ begin
       EXTENSION_ZIFENCEI	=> false,
 
       EXTENSION_XH3BEXTM 	=> false,
-      EXTENSION_XH3IRQ 		=> false,
+      EXTENSION_XH3IRQ 		=> true,
       EXTENSION_XH3PMPM 	=> false,
       EXTENSION_XH3POWER 	=> false,
 
