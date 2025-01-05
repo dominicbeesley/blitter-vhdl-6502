@@ -112,26 +112,6 @@ architecture Behavioral of sim_SYS_tb is
 	signal   i_MHz1_dbuf_nOE		: std_logic;
 
 
-	TYPE keeptable_t IS ARRAY (std_logic'LOW TO std_logic'HIGH) OF std_logic;
-
-	CONSTANT keeptable : keeptable_t := (
-                         'Z',  -- 'U'
-                         'Z',  -- 'X'
-                         'L',  -- '0'
-                         'H',  -- '1'
-                         'Z',  -- 'Z'
-                         'Z',  -- 'W'
-                         'Z',  -- 'L'
-                         'Z',  -- 'H'
-                         'Z'   -- '-'
-                        );
-
-	function keep(signal v : in std_logic) return std_logic is
-	begin
-  		return keeptable(v);
-	end;
-
-
 begin
 
 	SYS_nIRQ_o <= MHZ1_nIRQ_i;
@@ -162,22 +142,7 @@ begin
 		nOE_B			=> '0'
 	);
 
-	KA:for i in 7 downto 0 
-	generate
-		pkeep:process 
-		variable v_t:time;
-		variable tmp:std_logic;
-		begin
-			tmp := keep(SYS_D_io(I));
-			wait on SYS_D_io'transaction until v_t /= now;
-			v_t := now;
-			SYS_D_io(I) <= 'Z';
-			wait for 0 ns;
-			SYS_D_io(I) <= tmp;
-		end process;
-	end generate KA;
-
-
+	
 	g_sys_buf:IF G_MK3 GENERATE
 		BRD_D_BUF: BLOCK
 		signal i_SYS_D1 : std_logic_vector(7 downto 0);
@@ -190,33 +155,11 @@ begin
 				ttr	=> 6 ns
 				)
 			port map (
-				A => i_SYS_D1,
+				A => i_SYS_D,
 				B => SYS_D_io,
 				dirA2BnB2a => SYS_BUF_D_DIR_i,
 				nOE => SYS_BUF_D_nOE_i
 				);
-
-			-- try and do a bidirectional assign - this models bus holds
-			GA:FOR I IN 7 downto 0 GENERATE
-
-				p:process
-				variable v_t:time;
-				variable presv:boolean;
-				begin
-					wait on i_SYS_D(I)'transaction, i_SYS_D1(I)'transaction until v_t /= now;
-
-					v_t := now;
-
-
-					i_SYS_D1(I) <= 'Z';
-					i_SYS_D(I)  <= 'Z';
-					wait for 0 ns;
-
-					i_SYS_D1(I) <= i_SYS_D(I);
-					i_SYS_D(I)  <= i_SYS_D1(I);
-					wait for 0 ns;
-				end process;
-			END GENERATE GA;
 		
 		END BLOCK;
 
@@ -228,17 +171,14 @@ begin
 		--SYS_D_io 	<= 	i_SYS_D;
 		--i_SYS_D 		<= 	SYS_D_io;
 
-		-- try and do a bidirectional assign - this models bus holds
 		GA:FOR I IN 7 downto 0 GENERATE
 
 			p:process
 			variable v_t:time;
-			variable presv:boolean;
 			begin
 				wait on i_SYS_D(I)'transaction, SYS_D_io(I)'transaction until v_t /= now;
 
 				v_t := now;
-
 
 				SYS_D_io(I) <= 'Z';
 				i_SYS_D(I)  <= 'Z';
@@ -250,6 +190,15 @@ begin
 			end process;
 		END GENERATE GA;
 	END GENERATE;
+
+
+	e_keep_D:entity work.buskeep
+	generic map (
+		WIDTH => 8
+	)
+	port map (
+		D_io => i_SYS_D
+	);
 
 
 	-- model the 74LVC4245 on the address lines
