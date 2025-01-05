@@ -60,7 +60,8 @@ entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
+		G_DWRITE_HOLD						: natural := 6									-- hold write data on system bus for this many cycles
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -282,6 +283,9 @@ architecture rtl of mk3blit is
 	signal i_SYS_RnW						: std_logic;
 	signal i_SYS_A							: std_logic_vector(15 downto 0);
 	signal i_SYS_PHI2						: std_logic;
+	signal i_SYS_PHI2_dly_nOE			: std_logic;							-- used to extend the gating of the data bus
+
+	signal i_BUF_D_nOE					: std_logic;
 
 	-----------------------------------------------------------------------------
 	-- cpu control signals
@@ -636,18 +640,31 @@ END GENERATE;
 		debug_mem_a_stb_o					=> i_debug_mem_a_stb
 	);
 
+	e_bus_oe_dly:entity work.metadelay
+	generic map (
+		N => MAX(0,G_DWRITE_HOLD-3)		-- need here to make sure we hold data in fb_SYS for at least as long as nOE delay
+		)
+	port map (
+		clk => i_fb_syscon.clk,
+		i => i_SYS_PHI2,
+		o => i_SYS_PHI2_dly_nOE
+		);
+
+
+	i_BUF_D_nOE <= not i_SYS_PHI2 and not i_SYS_PHI2_dly_nOE;
 
 	SYS_RnW_o <= i_SYS_RnW;
 	SYS_A_o <= i_SYS_A;
 	SYS_PHI2_o <= i_SYS_PHI2;
-	SYS_BUF_D_nOE_o <= '0';
+	SYS_BUF_D_nOE_o <= i_BUF_D_nOE;
 	SYS_BUF_D_DIR_o <= i_SYS_RnW;
 
 	e_fb_sys: entity work.fb_sys
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
-		G_JIM_DEVNO => G_JIM_DEVNO
+		G_JIM_DEVNO => G_JIM_DEVNO,
+		G_DWRITE_HOLD => G_DWRITE_HOLD
 	)
 	port map (
       cfg_sys_type_i                => r_cfg_sys_type,
