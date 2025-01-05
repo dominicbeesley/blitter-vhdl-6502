@@ -60,7 +60,9 @@ entity fb_sys is
 																	-- prove to be safest, 1 seems to work ok on test
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0);
 		-- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
-		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA" -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
+		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA"; -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
+
+		G_DWRITE_HOLD						: natural := 4 -- number of fast cycles of hold for data writes
 
 	);
 	port(
@@ -186,6 +188,8 @@ architecture rtl of fb_sys is
 	signal	r_had_d_stb			: std_logic;
 	signal	r_d_wr				: std_logic_vector(7 downto 0);
 
+	signal  i_write				: std_logic;
+	signal  i_write_dly			: std_logic;
 
 begin
 
@@ -205,7 +209,36 @@ begin
 	jim_en_o <= r_JIM_en;
 	jim_page_o <= r_JIM_page;
 
-	SYS_D_io <= r_sys_d when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else
+	i_write <= '1' when r_sys_RnW = '0' and (i_gen_phi2 = '1' or SYS_PHI0_i = '1') else '0';
+
+	g_no_write_hold:if G_DWRITE_HOLD = 0 generate
+	begin
+		i_write_dly <= i_write;
+	end generate;
+
+	g_write_hold:if G_DWRITE_HOLD > 0 generate
+	begin
+		b_write_hold:block
+		signal i_write2 : std_logic;
+		begin
+			
+			e_wd:entity work.metadelay
+			generic map (
+				N => G_DWRITE_HOLD
+				)
+			port map (
+				clk => fb_syscon_i.clk,
+				i => i_write,
+				o => i_write2
+				);
+
+			i_write_dly <= i_write or i_write2;
+		end block;
+	end generate;
+
+
+
+	SYS_D_io <= r_sys_d when i_write_dly else
 					(others => 'Z');
 	SYS_RnW_o <= r_sys_RnW;
 
