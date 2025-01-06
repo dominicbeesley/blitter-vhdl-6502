@@ -575,9 +575,9 @@ begin
 	end process;
 
 	i_rv_irq <= (
-		2 => not wrap_i.nmi_n,
-		1 => not wrap_i.irq_n,
-		0 => not wrap_i.noice_debug_nmi_n,
+		2 => not wrap_i.noice_debug_nmi_n,
+		1 => not wrap_i.nmi_n,
+		0 => not wrap_i.irq_n,
 		others => '0'
 		);
 

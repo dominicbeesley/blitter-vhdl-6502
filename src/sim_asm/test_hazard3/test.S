@@ -49,7 +49,7 @@ start:
 
 		// set up the H3 custom irq controller
 
-		li	t0, (0xFF00<<16)|(0)
+		li	t0, (0xFF0<<16)|(0)
 		csrrw	x0, hazard3_csr_meipra, t0
 
 		li	t0, (7<<16)|(0)
@@ -141,8 +141,6 @@ no_more_irqs:
 
 		.align(4)
 _external_irq_table:
-		j		service_bad
-		.align(2)
 		j		service_irq
 		.align(2)
 		j		service_nmi
