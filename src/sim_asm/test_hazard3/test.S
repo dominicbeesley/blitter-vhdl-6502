@@ -34,7 +34,7 @@ start:
 
 		li		a0, 0x10
 		sb		a0, 0xFFFFFC40(zero)
-		li		a0, 0x40
+		li		a0, 0x11
 		sb		a0, 0xFFFFFC41(zero)
 
 
@@ -145,8 +145,9 @@ _external_irq_table:
 		.align(2)
 		j		service_nmi
 		.align(2)
-		j		service_debug
-		.align(2)
+service_nmi:
+		sb		x0, 0xFFFFFC41(zero)
+		ret
 
 service_bad:
 		j		service_bad
@@ -159,9 +160,6 @@ si_l:	addi	a0, a0, -1
 		bnez	a0, si_l
 
 		sb		x0, 0xFFFFFC40(zero)
-		ret
-service_nmi:
-		sb		x0, 0xFFFFFC41(zero)
 		ret
 service_debug:
 		j		service_debug
