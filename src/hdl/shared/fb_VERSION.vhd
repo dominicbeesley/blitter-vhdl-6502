@@ -75,7 +75,7 @@ architecture rtl of fb_version is
 	signal	r_A		: std_logic_vector(7 downto 0);
 	signal	r_Q		: std_logic_vector(7 downto 0);
 
-	signal	i_cap_bits : std_logic_vector(20 downto 0);
+	signal	i_cap_bits : std_logic_vector(22 downto 0);
 
 	function to_std(b: boolean) return std_ulogic is
 	begin
