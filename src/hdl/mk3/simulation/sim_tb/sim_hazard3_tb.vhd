@@ -84,7 +84,22 @@ architecture Behavioral of sim_hazard3_tb is
 	signal	i_i2c_write_rq			: std_logic;
 	signal	i_i2c_write_data		: std_logic_vector(7 downto 0);
 
+	signal	i_MHZ1_E_o				: std_logic;
+	signal	i_MHZ1_nRST_o			: std_logic;
+	signal	i_MHZ1_nPGFC_o			: std_logic;
+	signal	i_MHZ1_nPGFD_o			: std_logic;
+	signal	i_MHZ1_A_o				: std_logic_vector(7 downto 0);
+	signal	i_MHZ1_RnW_o			: std_logic;
+	signal	i_MHZ1_D_io				: std_logic_vector(7 downto 0);
+	signal	i_MHZ1_nIRQ_i			: std_logic;
+	signal	i_MHZ1_nNMI_i			: std_logic;
+
 begin
+
+	i_MHZ1_D_io <= (others => 'Z');
+	i_MHZ1_nIRQ_i <= 'H';
+	i_MHZ1_nNMI_i <= 'H';
+
 	
 	e_SYS:entity work.sim_SYS_tb
 	generic map (
@@ -106,6 +121,17 @@ begin
 
 		SYS_BUF_D_nOE_i		=> i_SYS_BUF_D_nOE,
 		SYS_BUF_D_DIR_i		=> i_SYS_BUF_D_DIR,
+
+		MHZ1_E_o					=> i_MHZ1_E_o,
+		MHZ1_nRST_o				=> i_MHZ1_nRST_o,
+		MHZ1_nPGFC_o			=> i_MHZ1_nPGFC_o,
+		MHZ1_nPGFD_o			=> i_MHZ1_nPGFD_o,
+		MHZ1_A_o					=> i_MHZ1_A_o,
+		MHZ1_RnW_o				=> i_MHZ1_RnW_o,
+		MHZ1_D_io				=> i_MHZ1_D_io,
+		MHZ1_nIRQ_i				=> i_MHZ1_nIRQ_i,
+		MHZ1_nNMI_i				=> i_MHZ1_nNMI_i,
+
 
 		hsync_o					=> i_hsync,
 		vsync_o					=> i_vsync,
@@ -428,5 +454,36 @@ begin
 			wait;
 	end process;
 
+
+	-- phoney interrupt sources hanging off 1MHz bus
+	
+
+	e_phoney_irq:entity work.sim_bbc_interruptor
+	generic map (
+		ADDR => x"40"
+		)
+	port map (
+		E => i_MHZ1_E_o,
+		RnW => i_MHZ1_RnW_o,
+		nCS => i_MHZ1_nPGFC_o,
+		nRST => i_MHZ1_nRST_o,
+		A => i_MHZ1_A_o,
+		D => i_MHZ1_D_io,
+		nINT => i_MHZ1_nIRQ_i
+		);
+
+	e_phoney_nmi:entity work.sim_bbc_interruptor
+	generic map (
+		ADDR => x"41"
+		)
+	port map (
+		E => i_MHZ1_E_o,
+		RnW => i_MHZ1_RnW_o,
+		nCS => i_MHZ1_nPGFC_o,
+		nRST => i_MHZ1_nRST_o,
+		A => i_MHZ1_A_o,
+		D => i_MHZ1_D_io,
+		nINT => i_MHZ1_nNMI_i
+		);
 
 end;
