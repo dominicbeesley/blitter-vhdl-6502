@@ -142,17 +142,30 @@ begin
 	);
 
 
-	-- config pins
+	-- config pins to run from 9 X
+--	i_exp_PORTG <= (
+--		2 downto 0 => "111" -- Model B
+--	,	3 => '0' -- t65
+--	,	4 => '1' -- swromx off
+--	,	5 => '1' -- mosram off
+--	,  6 => '1' -- memi off (enable mem)
+--	,  7 => '0' -- aux - enable riscv softcore
+--	,	8 => '1' -- spare
+--	, 11 downto 9 => "101" -- hard cpu speed 8MHz
+--		);
+
+	-- config pins to run from mosram
 	i_exp_PORTG <= (
 		2 downto 0 => "111" -- Model B
 	,	3 => '0' -- t65
 	,	4 => '1' -- swromx off
-	,	5 => '1' -- mosram off
+	,	5 => '0' -- mosram ON
 	,  6 => '1' -- memi off (enable mem)
 	,  7 => '0' -- aux - enable riscv softcore
 	,	8 => '1' -- spare
 	, 11 downto 9 => "101" -- hard cpu speed 8MHz
 		);
+
 
 	i_exp_PORTF <= (
 		3 downto 0 => "1100" -- 65816,
@@ -300,8 +313,17 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram0.bin",
-		tco => 45 ns,
-		taa => 45 ns
+		romfile => "C:/Users/Dominic/Documents/GitHub/blitter-riscv-code/build/HAZARD3/roms/mos/mos.mos",
+		romfile_offset => 16#1CC000#,
+		tco => 10 ns,
+		taa => 10 ns,
+		toh => 2 ns,		
+		tohz => 3 ns,  
+		thz => 3 ns,
+		tolz => 3 ns,
+		tlz => 3 ns,
+		toe => 4.5 ns,
+		twed => 6.5 ns		
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),

@@ -43,8 +43,8 @@ start:
 		csrrs	a0, misa, x0
 		sw		a0, 0(sp)
 
-		//la		a0, irqvecs + 1
-		la		a0, handle_trap			//NOT VECTORED!
+		la		a0, irqvecs + 1
+		//la		a0, handle_trap			//NOT VECTORED!
 		csrrw	x0, mtvec, a0
 
 		// set up the H3 custom irq controller
@@ -164,7 +164,7 @@ si_l:	addi	a0, a0, -1
 service_debug:
 		j		service_debug
 
-		.align(4)
+		.align(6)
 handle_trap:
   		// Save caller saves and exception return state whilst IRQs are disabled.
   		// We can't be pre-empted during this time, but if a higher-priority IRQ
@@ -199,6 +199,90 @@ test_progr:
 
 		ret
 test_progr_end:
+
+		.align(8)
+irqvecs:
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+		j	handle_trap
+		.align(2)
+
 
 		.section reset, "x", @progbits
 reset_hw:
