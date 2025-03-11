@@ -62,14 +62,18 @@ end LS74245;
 architecture Behavioral of LS74245 is
 	signal	dirA2BnB2A_dly		: std_logic;
 	signal	nOE_dly				: std_logic;
-		
+	signal   i_A2B					: std_logic_vector(7 downto 0);
+	signal   i_B2A					: std_logic_vector(7 downto 0);
 begin
 
-	dirA2BnB2A_dly <= dirA2BnB2A after ttr;
-	nOE_dly <= nOE after toe;
+	dirA2BnB2A_dly <= transport dirA2BnB2A after ttr;
+	nOE_dly <= transport nOE after toe;
 
-	B <= to_stdlogicvector(to_bitvector(A)) after tprop when dirA2BnB2A_dly = '1' and nOE_dly = '0' else (others => 'Z') after tprop;
-	A <= to_stdlogicvector(to_bitvector(B)) after tprop when dirA2BnB2A_dly = '0' and nOE_dly = '0' else (others => 'Z') after tprop;
+	i_A2B <= transport to_stdlogicvector(to_bitvector(A)) after tprop;
+	i_B2A <= transport to_stdlogicvector(to_bitvector(B)) after tprop;
+
+	B <= i_A2B when dirA2BnB2A_dly = '1' and nOE_dly = '0' else (others => 'Z') after tprop;
+	A <= i_B2A when dirA2BnB2A_dly = '0' and nOE_dly = '0' else (others => 'Z') after tprop;
 	
 	
 end Behavioral;
