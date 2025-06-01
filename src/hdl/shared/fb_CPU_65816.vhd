@@ -81,10 +81,16 @@ entity fb_cpu_65816 is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic;
+		boot_65816_i							: in		std_logic_vector(1 downto 0);
+		-- boot settings:
+		--	10		logical page FF maps to logical page 00, any change takes 2 instructions to complete to allow jump
+		--	00		pages map direct, any change takes 2 instructions to complete to allow jump
+		--	01		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch
+		-- 11		logical page FF maps to 00 in Emu mode, direct map otherwise, immediate change on emu switch ignore Throttle in native mode
 
 		debug_vma_o								: out		std_logic;
-		debug_addr_meta_o						: out		std_logic
+		debug_addr_meta_o						: out		std_logic;
+		debug_65816_boot_act_o				: out std_logic
 
 );
 end fb_cpu_65816;
@@ -139,13 +145,15 @@ architecture rtl of fb_cpu_65816 is
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
 	signal r_A_meta			: std_logic_vector(23 downto 0);
+	signal r_instr_fetch		: std_logic;
 
 	signal i_ack				: std_logic;
 
 	signal r_fbreset_prev	: std_logic := '0';
 
-	signal r_throttle			: std_logic;
-	signal r_had_sys_phi2 	: std_logic;
+	signal r_throttle_sync  : std_logic;		-- hold throttle for the rest of the instruction
+	signal i_throttle			: std_logic;		-- '1' if current throttle or sync throttle
+	signal r_had_phi2			: std_logic;		-- a phi2 occurred already while we were waiting for ack
 
 
 	-- port b
@@ -156,6 +164,12 @@ architecture rtl of fb_cpu_65816 is
 	signal i_CPUSKT_nNMI_b2c	: std_logic;
 	signal i_CPUSKT_nRES_b2c	: std_logic;
 	signal i_BUF_D_RnW_b2c		: std_logic;
+
+	signal r_CPUSKT_nABORT_b2c	: std_logic;
+	signal r_debug_nmi_ack		: std_logic;
+	-- TODO: look to merge with stuff in memctl?
+	signal r_WDM					: std_logic;		-- a WDM instruction opcode has been seen, request an abort
+
 
 	-- port d
 
@@ -174,6 +188,15 @@ begin
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
 
+	debug_65816_boot_act_o	<= i_boot;
+
+	-- this will go active either for ever if BLTURBO T or at some point during
+	-- the current cycle if BLTURBO R and may stay active to next SYNC
+	i_throttle <= '0' when boot_65816_i = "11" and i_CPUSKT_6E_c2b = '0' else
+								  r_throttle_sync or wrap_i.throttle_cpu_2MHz;
+
+
+
 	e_pinmap:entity work.fb_cpu_65816_exp_pins
 	port map(
 		-- cpu wrapper signals
@@ -188,6 +211,7 @@ begin
 		CPUSKT_nIRQ_b2c		=> i_CPUSKT_nIRQ_b2c,
 		CPUSKT_nNMI_b2c		=> i_CPUSKT_nNMI_b2c,
 		CPUSKT_nRES_b2c		=> i_CPUSKT_nRES_b2c,
+		CPUSKT_nABORT_b2c		=> r_CPUSKT_nABORT_b2c,
 		CPUSKT_D_b2c			=> wrap_i.D_rd(7 downto 0),
 
 		BUF_D_RnW_b2c			=> i_BUF_D_RnW_b2c,
@@ -223,6 +247,7 @@ begin
 	wrap_o.lane_req 			<= ( 0 => '1', others => '0');
 	wrap_o.we	  				<= not(i_CPUSKT_RnW_c2b);
 	wrap_o.D_wr(7 downto 0)	<=	i_CPUSKT_D_c2b;	
+	wrap_o.instr_fetch		<= r_instr_fetch;
 
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
@@ -252,7 +277,7 @@ begin
 			end if;
 
 			if wrap_i.cpu_2MHz_phi2_clken = '1' then
-				r_had_sys_phi2 <= '1';
+				r_had_phi2 <= '1';
 			end if;
 
 			case r_state is
@@ -267,8 +292,9 @@ begin
 						if r_cpu_hlt = '0' then
 							if i_boot = '1' then
 								if i_CPUSKT_D_c2b(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
-									if i_CPUSKT_VPB_c2b = '0' and i_CPUSKT_6E_c2b = '0' then
-										-- vector pull in Native mode - get from 008Fxx
+									if i_CPUSKT_VPB_c2b = '0' and unsigned(i_CPUSKT_A_c2b(4 downto 0)) <= 16#19# then
+										-- vector pull in Native mode or "new" ABORT/COP
+										-- get from 008Fxx
 										r_log_A <= x"008F" & i_CPUSKT_A_c2b(7 downto 0);
 									else
 										-- bank 0 maps to FF in boot mode
@@ -282,6 +308,8 @@ begin
 								-- not boot mode map direct
 								r_log_A <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;
 							end if;
+
+							r_instr_fetch <= i_CPUSKT_VPA_c2b and i_CPUSKT_VDA_c2b;
 						end if;
 
 						if r_A_meta = i_CPUSKT_D_c2b & i_CPUSKT_A_c2b then
@@ -292,12 +320,12 @@ begin
 
 
 						if  wrap_i.noice_debug_inhibit_cpu = '0' and
-						 	fb_syscon_i.rst = '0' and
-						 	wrap_i.cpu_halt = '0' and
-						 	i_vma = '1' then
-								r_cyc <= '1';
-								r_D_WR_stb <= '0';
-								r_rdy_ctup <= (others => '0');
+						 		fb_syscon_i.rst = '0' and
+						 		r_cpu_hlt = '0' and
+						 		i_vma = '1' then
+							r_cyc <= '1';
+							r_D_WR_stb <= '0';
+							r_rdy_ctup <= (others => '0');
 							r_inihib <= '0';
 						else
 							r_inihib <= '1';
@@ -321,9 +349,7 @@ begin
 						r_substate <= r_substate - 1;
 					end if;
 
-					r_had_sys_phi2 <= '0';
-					r_throttle <= wrap_i.throttle_cpu_2MHz;
-
+					r_had_phi2 <= '0';
 
 				when phi2 =>
 
@@ -339,6 +365,13 @@ begin
 							r_substate <= SUBSTATEMAX_8;
 							r_cyc <= '0';
 							r_D_WR_stb <= '0';
+							r_wdm <= '0';
+							if i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
+								r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
+								if i_CPUSKT_D_c2b = x"42" then
+									r_wdm <= '1';
+								end if;
+							end if;
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -358,7 +391,8 @@ begin
 				r_state <= phi1;
 				r_substate <= SUBSTATEMAX_8;
 				r_PHI0 <= '0';				
-				r_throttle <= wrap_i.throttle_cpu_2MHz;
+				r_throttle_sync <= '0';
+				r_WDM <= '0';
 			end if;
 			r_fbreset_prev <= fb_syscon_i.rst;
 
@@ -375,12 +409,32 @@ begin
 				(	(i_CPUSKT_RnW_c2b = '0' and wrap_i.rdy = '1') or 
 					r_rdy_ctup >= SUBSTATE_D_8) 
 		) and
-		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
+		(i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1')
 
 			else
 				'0';
 
+	p_abort:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_CPUSKT_nABORT_b2c <= '1';
+			r_debug_nmi_ack <= '1';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if r_state = phi1 and r_substate = SUBSTATE_A_8 then							
+				if wrap_i.noice_debug_nmi_n = '1' then
+					r_debug_nmi_ack <= '1';
+				end if;
 
+				if (wrap_i.noice_debug_nmi_n = '0' and r_debug_nmi_ack = '1') or r_WDM = '1' then
+					r_debug_nmi_ack <= '0';
+					r_CPUSKT_nABORT_b2c <= '0';
+				else
+					r_CPUSKT_nABORT_b2c <= '1';
+				end if;
+
+			end if;
+		end if;
+	end process;
 
 	i_vma <= i_CPUSKT_VPA_c2b or i_CPUSKT_VDA_c2b;
 
@@ -389,8 +443,9 @@ begin
 	i_CPUSKT_PHI0_b2c <= r_PHI0;
 	
 	i_CPUSKT_nRES_b2c <= not r_cpu_res;
+
 	
-	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+	i_CPUSKT_nNMI_b2c <= wrap_i.nmi_n;
   	
 	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
 
@@ -410,16 +465,18 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_boot_65816_dly <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
-				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i;
+			if r_state = phi2 and r_substate = 0 and i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' and i_ack = '1' then
+				r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i(1);
 			end if;
 		end if;
 
 	end process;
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
-	i_boot <= r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
-				 r_boot_65816_dly(2);
+	-- NOTE: This allows too instruction in the previous mode before switching - not one!
+	i_boot <= 	i_CPUSKT_6E_c2b when boot_65816_i(0) = '1' else
+					r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
+				 	r_boot_65816_dly(2);
 
 
 --=======================================================================================

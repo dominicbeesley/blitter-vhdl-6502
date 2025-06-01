@@ -18,6 +18,8 @@ optional configuration EEPROM, and optional cpu plug-in cards for additional
 CPU cards i.e. 6502/65c02, 65816, 6809, 6309, Z80, MC68008, MC68000 etc 
 processors.
 
+[Schematic](blit-cpu-mk2.pdf)
+
 The board can be configured to plug into any 6502 or 65816 socket but it is 
 primarily designed for the BBC micro, Electron or Master CPU socket and is
 powered either by the cpu socket or via an auxilliary +5V regulated supply.

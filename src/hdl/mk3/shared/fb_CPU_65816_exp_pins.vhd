@@ -58,7 +58,7 @@ entity fb_cpu_65816_exp_pins is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;	
 
-		-- local z80 wrapper signals to/from CPU expansion port 
+		-- local 65816 wrapper signals to/from CPU expansion port 
 
 		CPUSKT_BE_b2c							: in std_logic;
 		CPUSKT_PHI0_b2c						: in std_logic;
@@ -66,6 +66,7 @@ entity fb_cpu_65816_exp_pins is
 		CPUSKT_nIRQ_b2c						: in std_logic;
 		CPUSKT_nNMI_b2c						: in std_logic;
 		CPUSKT_nRES_b2c						: in std_logic;
+		CPUSKT_nABORT_b2c						: in std_logic;
 		CPUSKT_D_b2c							: in std_logic_vector(7 downto 0);
 
 		BUF_D_RnW_b2c							: in std_logic;
@@ -91,7 +92,7 @@ begin
 	wrap_exp_o.PORTA_DIR <= not BUF_D_RnW_b2c;
 
 	wrap_exp_o.PORTB(0) <= CPUSKT_BE_b2c;
-	wrap_exp_o.PORTB(1) <= '1';
+	wrap_exp_o.PORTB(1) <= CPUSKT_nABORT_b2c;
 	wrap_exp_o.PORTB(2) <= CPUSKT_PHI0_b2c;
 	wrap_exp_o.PORTB(3) <= CPUSKT_RDY_b2c;
 	wrap_exp_o.PORTB(4) <= CPUSKT_nIRQ_b2c;

@@ -77,7 +77,7 @@ entity fb_DMAC_int_sound_cha is
 	 );
 
 	 -- sound
-	 constant	A_DATA			: integer := 0;
+	 constant	A_DATA			: integer := 13;				-- used to be at 0 but moved to avoid pops when poking 32 bit address
 	 constant	A_ADDR			: integer := 1;
 	 constant	A_PERIOD			: integer := 4;
 	 constant	A_LEN				: integer := 6;

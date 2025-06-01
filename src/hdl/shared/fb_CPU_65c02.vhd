@@ -118,13 +118,15 @@ architecture rtl of fb_cpu_65c02 is
 	signal r_inihib			: std_logic;		-- '1' throughout an inhibited cycle
 
 	signal r_log_A				: std_logic_vector(23 downto 0);
+	signal r_instr_fetch		: std_logic;
 
 	signal i_ack				: std_logic;
 
 	signal r_fbreset_prev	: std_logic := '0';
 
-	signal r_throttle			: std_logic;
-	signal r_had_sys_phi2 	: std_logic;
+	signal r_throttle_sync  : std_logic;		-- hold throttle for the rest of the instruction
+	signal i_throttle			: std_logic;		-- '1' if current throttle or sync throttle
+	signal r_had_phi2			: std_logic;		-- a phi2 occurred already while we were waiting for ack
 
 
 	-- port b
@@ -162,6 +164,9 @@ begin
 	end process;
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity error;
+	-- this will go active either for ever if BLTURBO T or at some point during
+	-- the current cycle if BLTURBO R and may stay active to next SYNC
+	i_throttle <= r_throttle_sync or wrap_i.throttle_cpu_2MHz;
 
 	e_pinmap:entity work.fb_cpu_65c02_exp_pins
 	port map(
@@ -205,6 +210,7 @@ begin
 	END GENERATE;	
 	wrap_o.D_wr_stb			<= ( 0 => r_D_WR_stb, others => '0');
 	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch		<= r_instr_fetch;
 
 	p_phi0_dly:process(fb_syscon_i)
 	begin
@@ -228,7 +234,7 @@ begin
 			end if;
 
 			if wrap_i.cpu_2MHz_phi2_clken = '1' then
-				r_had_sys_phi2 <= '1';
+				r_had_phi2 <= '1';
 			end if;
 
 			case r_state is
@@ -239,12 +245,13 @@ begin
 						if r_cpu_hlt = '0' then
 							-- not boot mode map direct
 							r_log_A <= x"FF" & i_CPUSKT_A_c2b;
+							r_instr_fetch <= i_CPUSKT_SYNC_c2b;
 						end if;
 
 
 						if  wrap_i.noice_debug_inhibit_cpu = '0' and
 							 fb_syscon_i.rst = '0' and
-							 wrap_i.cpu_halt = '0' then
+							 r_cpu_hlt = '0' then
 							r_cyc <= '1';
 							r_D_WR_stb <= '0';
 							r_rdy_ctup <= (others => '0');
@@ -275,9 +282,7 @@ begin
 						r_substate <= r_substate - 1;
 					end if;
 
-					r_had_sys_phi2 <= '0';
-					r_throttle <= wrap_i.throttle_cpu_2MHz;
-
+					r_had_phi2 <= '0';
 
 				when phi2 =>
 
@@ -298,6 +303,9 @@ begin
 							end if;
 							r_cyc <= '0';
 							r_D_WR_stb <= '0';
+							if i_CPUSKT_SYNC_c2b = '1' then
+								r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
+							end if;
 						end if;
 					else
 						r_substate <= r_substate - 1;
@@ -317,7 +325,7 @@ begin
 				r_state <= phi1;
 				r_substate <= SUBSTATEMAX_4;
 				r_PHI0 <= '0';				
-				r_throttle <= wrap_i.throttle_cpu_2MHz;
+				r_throttle_sync <= '0';
 			end if;
 			r_fbreset_prev <= fb_syscon_i.rst;
 
@@ -335,7 +343,7 @@ begin
 			(r_rdy_ctup >= SUBSTATE_D_4 and r_cfg_8MHz = '0') or
 			(r_rdy_ctup >= SUBSTATE_D_8 and r_cfg_8MHz = '1') 
 		) and
-		(r_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_sys_phi2 = '1')
+		(i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1')
 
 			else
 				'0';

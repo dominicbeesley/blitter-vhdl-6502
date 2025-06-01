@@ -24,12 +24,12 @@ below
 |---------------|---------------|---------------|--------------------|
 | Brown		| Ground	| Any top row	| Any bottom row J56 |
 | Red		| LED power	| 3v3-rightmost | * see note         |
-| Orange	| Debug button  | CFG7		| AUX_io6 J16        |
-| Yellow	| t65		| CFG0		| G3 J56	     |
-| Green		| swromx	| CFG4		| G4 J56	     |
-| Blue		| mosram	| CFG5		| G5 J56	     |
-| Purple	| memi		| CFG8		| G6 J56	     |
-| Grey		| aux		| -		| -		     |
+| Yellow	| Debug button  | CFG7		| AUX_io6 J16        |
+| Blue  	| t65		| CFG0		| G3 J56	     |
+| Gray		| swromx	| CFG4		| G4 J56	     |
+| Black		| mosram	| CFG5		| G5 J56	     |
+| Red    2  	| memi		| CFG8		| G6 J56	     |
+| Yellow 2	| aux		| -		| -		     |
 
 
 Note: The aux connector is for future expansion and should be left unconnected

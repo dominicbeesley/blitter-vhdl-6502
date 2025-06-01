@@ -64,6 +64,7 @@ entity fb_sys_via_blocker is
       clken									: in		std_logic;
 		A_i									: in		std_logic_vector(23 downto 0);
 		RnW_i									: in		std_logic;
+		enable_i								: in		std_logic;
 
 		SYS_VIA_block_o					: out		std_logic
 
@@ -98,7 +99,7 @@ begin
 			r_iorb_block <= '0';
 			r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_iorb_cs = '1' and clken = '1' and RnW_i = '0' then
+			if i_iorb_cs = '1' and clken = '1' and RnW_i = '0' and enable_i = '1' then
 				r_iorb_block_ctdn <= to_unsigned(C_IORB_BODGE_MAX, r_iorb_block_ctdn'length);
 				r_iorb_block <= '1';
 			elsif r_iorb_block = '1' then

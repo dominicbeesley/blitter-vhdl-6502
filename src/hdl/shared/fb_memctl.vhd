@@ -67,7 +67,7 @@ entity fb_memctl is
 
 		swmos_shadow_o						: out	std_logic;		-- shadow mos from SWRAM slot #8
 
-		boot_65816_o						: out std_logic;
+		boot_65816_o						: out std_logic_vector(1 downto 0);
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				: out	std_logic;		-- debugger is forcing a cpu NMI
@@ -87,6 +87,7 @@ entity fb_memctl is
 		-- cput throttle
 		throttle_cpu_2MHz_o				: out std_logic;
 		rom_throttle_map_o				: out std_logic_vector(15 downto 0);
+		rom_autohazel_map_o				: out std_logic_vector(15 downto 0);
 
 		-- fishbone signals
 
@@ -130,22 +131,25 @@ architecture rtl of fb_memctl is
 	signal	r_noice_state					:	noice_state_t;
 
 	signal	r_noice_debug_written_val	: 	std_logic;
-	signal	r_swmos_debug_written_en		: 	std_logic;
-	signal	r_swmos_debug_written_ack		: 	std_logic;
+	signal	r_swmos_debug_written_en	: 	std_logic;
+	signal	r_swmos_debug_written_ack	: 	std_logic;
 
 
 	signal	r_swmos_save_written_en		: 	std_logic;
 	signal	r_swmos_save_written_ack	: 	std_logic;
 
-	signal   r_65816_boot					: 	std_logic;
+	signal   r_65816_boot					: 	std_logic_vector(1 downto 0);
 
-	signal	r_throttle_cpu_2MHz				: 	std_logic;
-	signal	r_rom_throttle_map				: std_logic_vector(15 downto 0);
+	signal	r_throttle_cpu_2MHz			: 	std_logic;
+	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
+
+	signal   r_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 begin
 
 	throttle_cpu_2MHz_o <= r_throttle_cpu_2MHz;
 	rom_throttle_map_o <= r_rom_throttle_map;
+	rom_autohazel_map_o <= r_rom_autohazel_map;
 
 	boot_65816_o <= r_65816_boot;
 
@@ -178,8 +182,7 @@ begin
 								r_noice_debug_act
 							& 	r_noice_debug_5C
 							& 	r_65816_boot
-							&	'0'
-							&  	r_noice_debug_en
+							&  r_noice_debug_en
 							&	r_noice_debug_shadow
 							&	'0'
 							&	r_swmos_shadow 
@@ -196,6 +199,10 @@ begin
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 14 else
 							not(cfgbits_i(15 downto 8))
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 15 else
+							r_rom_autohazel_map(7 downto 0)
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 8 else
+							r_rom_autohazel_map(15 downto 8)
+								when unsigned(fb_c2p_i.A(3 downto 0)) = 9 else
 							x"A5";
 
 	p_fb_state:process(fb_syscon_i)
@@ -209,7 +216,8 @@ begin
 				r_turbo_lo <= (others => '0');
 				r_swmos_save_written_en <= '0';
 				r_swmos_debug_written_en <= '0';
-				r_65816_boot <= '1';	
+				r_65816_boot <= "10";	
+				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
 					r_throttle_cpu_2MHz <= '0';
 					r_rom_throttle_map <= (others => '0');
@@ -248,7 +256,11 @@ begin
 				elsif v_dowrite then
 					fb_state <= idle;
 					r_con_ack <= '1';
-					case to_integer(unsigned(fb_c2p_i.A(2 downto 0))) is
+					case to_integer(unsigned(fb_c2p_i.A(3 downto 0))) is
+						when 8 =>
+							r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
+						when 9 =>
+							r_rom_autohazel_map(15 downto 8) <= fb_c2p_i.D_wr;
 						when 7 =>
 							r_turbo_lo <= fb_c2p_i.D_wr;
 						when 6 =>
@@ -260,7 +272,7 @@ begin
 						when 1 =>
 							r_swmos_shadow <= fb_c2p_i.D_wr(0);
 							r_noice_debug_en <= fb_c2p_i.D_wr(3);
-							r_65816_boot <= fb_c2p_i.D_wr(5);
+							r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
 							r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
 							r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
 						when 2 => 

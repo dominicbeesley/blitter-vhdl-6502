@@ -272,6 +272,7 @@ begin
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;		
 	wrap_o.rdy_ctdn			<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch		<= '0';					-- TODO: No AutoHazel for 6809/6309 as native mode buggers up LIC
 
 	i_D_wr_stb <= 	r_DD_ring(T_tDD_3) when r_cfg_3_5_MHz = '1' else
 						r_DD_ring(T_tDD_2);
@@ -296,7 +297,6 @@ begin
 						r_log_A <= x"FF" & i_CPUSKT_A_c2b;
 					end if;
 					r_we <= not(i_CPUSKT_RnW_c2b);
-
 				end if;
 			elsif r_cyc = '1' and r_wrap_ack = '1' then
 				r_cyc <= '0';

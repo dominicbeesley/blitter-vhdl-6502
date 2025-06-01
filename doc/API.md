@@ -31,11 +31,12 @@ below. The following sections describe these in more detail.
  |--------------------------|-----------------------|
  | $00 0000 - $7F FFFF      | ChipRAM               | 
  | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
- | $C0 0000 - $F9 FFFF      | Undefined do not use  |
+ | $C0 0000 - $F9 FFFF      | Undefined do not use  | !!!! Used by 65816 for access to SYS without log mapping
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
  | $FB FE00 - $FB FFFF      | HDMI registers        | 
  | $FC 0000 - $FC FFFF      | Debug/Version info    | 
- | $FE FC00 - $FE FCFF      | Chipset registers     | 
+ | $FE FC00 - $FE FCFF      | Chipset registers BE  | 
+ | $FE FE00 - $FE FEFF      | Chipset registers LE  | 
  | $FF 0000 - $FF FFFF      | Motherboard           |
 
 The Physical memory map is used when:
@@ -160,10 +161,8 @@ the CPU.
 It is possible using the [Lowmem Turbo](#TODO) register to configure
 the logical to physical mapping to remap this area to faster chip ram
 
-see [](#TODO FE37 regsiter)
-see [](#TODO link BLTURBO command)
-
-
+see [Low Memory Turbo](#ff-fe37-low-memory-turbo)
+see [*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO)
 
 ### Sideways ROM/RAM
 
@@ -207,12 +206,12 @@ restricted to running at 2MHz.
 
 If running from EEPROM or BBRAM the memory will be accessed at either 45ns 
 or 55ns with additional overhead of address mapping and arbitration the 
-maximum speed of most CPUs will be held to around 6.5Mhz (this may vary/change)
+maximum speed of most CPUs will be held to around 6.5Mhz (this will change)
+
+Each ROM can optionally be throttled by setting a bit in the [Per-ROM throttle 
+register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO)
 
 #### BBC B
-
-TODO: This may well need to change!? Any thoughts?
-
 
 ##### BBC MAP 0
 
@@ -327,8 +326,9 @@ This is useful for debugging the MOS ROM using NoIce and is also used to
 make a "flat" 64K RAM map for running non-MOS operating systems such as 
 Flex for the 6800, 6809 or 6309.
 
-The BLTURBO command can also be used to copy a ROM based MOS to ram and
-run from there to provide a speed boost.
+The [BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
+command can also be used to copy a ROM based MOS to ram and run from there to 
+provide a speed boost.
 
 See also: Registers [FF FE31 SWROM](#ff-fe31-swmos), [FF FE32 SWMOS save register](#ff-fe32-swmos-save-register)
 
@@ -377,21 +377,26 @@ behave more or less identically to a 6502 except it may run faster. This is
 known as "65816 boot mode".
 
 The 65816 also has a "native" mode which unlocks some of its extended
-functions but also requires a new set of hardware vectors. However, these
-would clash with locations in the 6502 MOS and so there is an extra
-logical mapping which redirects these vectors to chip RAM such that 
-the vectors in native mode are fetched from L00FFxx to 00 8Fxx in ChipRAM. 
+functions but also requires a new set of hardware vectors. In additions there
+are new hardware and software vectors in emulation mode for the ABORT 
+interrupt and the COP instruction.
+
+These new vectors addresses clash with locations in the 6502 MOS OS function
+entry table so there is an extra logical mapping which redirects these vectors 
+to chip RAM such that the vectors in native mode are fetched from L00FFxx to 
+00 8Fxx in ChipRAM. The emulation mode vectors for irq, nmi and reset still
+map to FF FFFx in boot mode - for maximum compatibility with 6502 code.
+
 This is an experimental feature but has been used with some success in 
 getting Communicator 65816 BASIC to run in native mode on an unmodified MOS.
 
 Each time the hardware is reset the logical to physical mapping will
-revert to this "boot mode". However it is possible to remap the 
-
-It is possible to remap the 65816 to use a "flatter" memory map where
-the bank register maps directly to the Physical bank *except* for bank
-FF which will go through a MOS compatible logical to physical mapping. This
-has not been widely used and may change in future. To exit boot mode
-write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) see [below](#ff-fe31-swmos)
+revert to this "boot mode". However it is possible to  remap the 65816 to 
+use a "flatter" memory map where the bank register maps directly to 
+the Physical bank *except* for bank FF which will go through a MOS compatible
+logical to physical mapping. This has not been widely used and may change in
+future. To exit boot mode write a 0 to bit 5 of FF FE31 (L00FE31 in boot mode) 
+see [below](#ff-fe31-swmos)
 
 
 ## Motorolla M68K series
@@ -592,17 +597,18 @@ Note: When reading this address range direct from  CPUs with a larger
 address space than 64k (i.e. 65816, 68K, x86) the logical to physical
 translation *is* performed
 
- | Phys Address | Contents                                             
- |--------------|------------------------------------------------------
- | FF FCFD..FF  | JIM device and paging
- | FF FE05      | Electron ROM paging            
- | FF FE30      | ROM paging register            
- | FF FE31      | Sideways MOS/NoIce control
- | FF FE32      | Sideways MOS/NoIce restore
- | FF FE35      | Debug register 
- | FF FE36      | Memory aux control 1      
- | FF FE37      | "Low Mem Turbo" register.
- | FF FE3E..3F  | Mk.2 config registers (deprecated)
+| Phys Address | Contents                                    |API|Sub|    
+|--------------|------------------------------------------------------
+| FF FCFD..FF  | JIM device and paging                       |   |   |
+| FF FE05      | Electron ROM paging                         |   |   |
+| FF FE30      | ROM paging register                         |   |   |
+| FF FE31      | Sideways MOS/NoIce control                  |   |   |
+| FF FE32      | Sideways MOS/NoIce restore                  |   |   |
+| FF FE33,5    | Per ROM throttle                            | 1 | 2 |
+| FF FE36      | Memory aux control 1                        |   |   |
+| FF FE37      | "Low Mem Turbo" register.                   |   |   |
+| FF FE38,9    | Per ROM auto-hazel                          | 1 | 3 |
+| FF FE3E..3F  | Mk.2 config registers (deprecated)          |   |   |
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -640,7 +646,7 @@ This register controls the various MOS mapping options
  | 1      | - reserved -
  | 2      | SWMOS_DEBUG 
  | 3  #   | SWMOS_DEBUG_EN
- | 4      | - reserved -
+ | 4      | 65816 boot
  | 5      | 65816 boot
  | 6      | SWMOS_DEBUG_5C
  | 7      | SWMOS_DEBUG_ACT
@@ -677,19 +683,28 @@ use OR or AND to set/clear bits rather than writing direct.
 
    See [Noice Debugger](#the-noice-debugger) below
 
- * **65816 boot** In 65816 mode when this bit is set then the 65816 accesses 
-   to logical CPU bank 0 will have the same mapping applied as the 64k address
-   space of the 65x02 processors, accesses to bank CPU logical bank FF will 
-   also access the MOS logical memory map. 
+ * **65816 boot** In 65816 mode these bits control the 65816 access 
+   to logical CPU bank 0 
+
+   In "boot" mode the 65816 will see the motherboard in bank 0 i.e. bank FF
+   will be mirrored in bank 0 with all logical addresses applied as if the
+   processor were an 8bit 65xx
 
    Additionally in boot mode when the CPU is executing in "native mode" hardware
    vector accesses (VPB pin == '0' and E pin = '0') will be made from *physical
-   address* 00 8Fxx
+   address* 00 8Fxx as will the extra vectors for the emulation mode (cop/abort)
 
-   When this bit is cleared logical banks 00..FE map direct to a physical address
-   and FF goes through the MOS logical mapping
+    | bit 5..4 | Description
+    |----------|----------------------------------------------------------------
+    | "00"     | Addresses mapped direct, no remapping, throttle applies in all modes
+    | "01"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in all modes
+    | "10"     | logical Bank FF maps onto logical bank 00 in all modes only, throttle applies in all modes
+    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, turbo applies in emulation mode only
 
-   This bit is reset to '1' on reset to enter boot mode.
+
+   Note: changes to the memory mapping take 2 cycles to complete to allow a 
+   jump to follow the instruction performing the swap to continue in another bank.
+
 
  * **SWMOS_DEBUG_5C** This bit indicates that debug mode was entered due to a 
    5C opcode being executed (as opposed to a debug button NMI).
@@ -745,8 +760,11 @@ command.
 All other bits should be left alone (they may be non-zero) for future
 expansion.
 
+This setting may be ignored in non-boot mode 651816 operation, see the FF FE31 SWMOS 
+register for details.
 
-### FF FEF3, FF FEF5 Throttle per ROM
+### FF FE33, FF FE35 Throttle per ROM
+API/Sub : 1/2
 
 Certain sideways ROMs may misbehave if they are allowed to run faster than
 2MHz. By default ROMs on the Blitter will run faster than this depending on 
@@ -785,6 +803,19 @@ current contents of the relevant memory are copied to chipRam first.
 
 See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command.
+
+### FF FE38..39 - Auto-hazel
+API/Sub : 1/3
+
+When this bit is set the "Auto-Hazel" mapping is applied, that is the 
+MOS at C000-DFFF is overlaid by RAM whenever a ROM is selected whose 
+bit in this register is a '1'. The ROM at FF C000-DFFF is overlaid with
+memory from physical address 00 C000-00 DFFF when Auto-Hazel is active.
+
+The "auto" part of the auto-hazel is that the remapping of the C000-DFFF
+region only occurs when an instruction is being executed in a marked ROM.
+This is done to ensure maximum compatibility with existing Model B/B+ software
+which expects MOS font data at C000 and Hazel capable ROMs.
 
 ### FF FE3E..3F - Old Mk.2 firmware config registers
 
@@ -832,27 +863,30 @@ and terminated by two zero bytes:
 
 More strings may be added in future
 
-### Configuration switches
+### Configuration Information
 
 The boot-time configuration is read from the on-board configuration switches
 (or build time options for firmware versions that do not support the function)
 and presented in page FC 0080 onwards
 
+This page contains information relating to the API level of the board and
+the configuration settings as set by the user.
+
 ```
  | address      | Contents                                             |
  |--------------|------------------------------------------------------|
  | FC 0080      | API Level                                            |
- |              | If this byte is 0 or FF then the firmware is older   |
+ |              | If this byte is 0 or FF then the firmware is API 0   |
  |              | and the rest of the information in this page is not  |
  |              | valid. Current Value = 1                             | 
  |--------------|------------------------------------------------------|
- | FC 0081      | Board/firmware level                                 |
+ | FC 0081      | Board Type                                 |
  |              | - 0 - 1MHz Paula                                     |
  |              | - 1 - Mk.1 Blitter                                   |
  |              | - 2 - Mk.2 Blitter                                   |
  |              | - 3 - Mk.3 Blitter                                   |
  |--------------|------------------------------------------------------|
- | FC 0082      | API Sub level (usually 0)                            |
+ | FC 0082      | API Sub level                                        |
  |--------------|------------------------------------------------------|
  | FC 0083      | - reserved -                                         |
  |--------------|------------------------------------------------------|
@@ -864,6 +898,26 @@ and presented in page FC 0080 onwards
 
 [1] The configuration bits are read at boot time. Unused bits should be masked out
 as future firmwares will likely utilize these bits
+
+#### API 0
+
+Prior to the API/Sub registers being introduced it was not possible to 
+query the capabilities of the board. API 0 builds are deprecated and 
+may stop being supported altogether.
+
+#### API > 1
+
+The table below shows the features introduced at each API level. 
+
+Tables elsewhere in this document may include API/Sub columns and these
+indicate the API level at which a feature was introduced.
+
+
+| API | Sub | Description                                            |
+|-----|-----|--------------------------------------------------------|
+|  1  |  0  | API level/sublevel registers introduced                |
+|  1  |  1  | Added new CPU types, per-ROM throttle registers        |
+|  1  |  2  | Auto-hazel for Model B / Elk                           |
 
 #### Configuration bits
 
@@ -903,25 +957,33 @@ The capabilities of the current firmware build are exposed in API>0 at these
 locations the capabilities describe which devices and functions are available
 in the current build
 
- | address     | bit # | descriptions                   |
- |-------------|-------|--------------------------------|
- | FC 0088     | 0     | Chipset                        |
- |             | 1     | DMA                            |
- |             | 2     | Blitter                        |
- |             | 3     | Aeris                          |
- |             | 4     | i2c                            |
- |             | 5     | Paula sound                    |
- |             | 6     | HDMI framebuffer               |
- |             | 7     | T65 soft CPU                   |
- | FC 0089     | 0     | 65C02 hard CPU                 |
- |             | 1     | 6800 hard CPU                  |
- |             | 2     | 80188 hard CPU                 |
- |             | 3     | 65816 hard CPU                 |
- |             | 4     | 6x09 hard CPU                  |
- |             | 5     | Z80 hard CPU                   |
- |             | 6     | 68008 hard CPU                 |
- |             | 7     | 680x0 hard CPU                 |
- | FC 008A..8F | *     | - reserved - all bits read 0   |
+ | address     | bit # | descriptions                   |API|Sub|
+ |-------------|-------|--------------------------------|---|---|
+ | FC 0088     | 0     | Chipset                        | 1 | 0 |
+ |             | 1     | DMA                            | 1 | 0 |
+ |             | 2     | Blitter                        | 1 | 0 |
+ |             | 3     | Aeris                          | 1 | 0 |
+ |             | 4     | i2c                            | 1 | 0 |
+ |             | 5     | Paula sound                    | 1 | 0 |
+ |             | 6     | HDMI framebuffer               | 1 | 0 |
+ |             | 7     | T65 soft CPU                   | 1 | 0 |
+ | FC 0089     | 0     | 65C02 hard CPU                 | 1 | 0 |
+ |             | 1     | 6800 hard CPU                  | 1 | 0 |
+ |             | 2     | 80188 hard CPU                 | 1 | 0 |
+ |             | 3     | 65816 hard CPU                 | 1 | 0 |
+ |             | 4     | 6x09 hard CPU                  | 1 | 0 |
+ |             | 5     | Z80 hard CPU                   | 1 | 0 |
+ |             | 6     | 68008 hard CPU                 | 1 | 0 |
+ |             | 7     | 680x0 hard CPU                 | 1 | 0 |
+ | FC 008A     | 0     | ARM2 hard CPU                  | 1 | 1 |
+ |             | 1     | Z180 hard CPU                  | 1 | 1 |
+ |             | 2     | George Foot Supershadow        | 1 | 1 |
+ |             | 3     | 0                              | 1 | 1 |
+ |             | 4     | 0                              | 1 | 1 |
+ |             | 5     | 0                              | 1 | 1 |
+ |             | 6     | 0                              | 1 | 1 |
+ |             | 7     | 0                              | 1 | 1 |
+ | FC 008B..8F | *     | - reserved - all bits read 0   |
 
 
 # The NoIce debugger

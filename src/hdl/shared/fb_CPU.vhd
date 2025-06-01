@@ -94,6 +94,7 @@ entity fb_cpu is
 		throttle_cpu_2MHz_i					: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
 
 
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
@@ -135,7 +136,7 @@ entity fb_cpu is
 
 		-- cpu specific signals
 
-		boot_65816_i							: in 	std_logic;
+		boot_65816_i							: in 	std_logic_vector(1 downto 0);
 
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
@@ -147,6 +148,7 @@ entity fb_cpu is
 		debug_Z180_M1_o						: out std_logic;
 
 		debug_65816_addr_meta_o				: out std_logic;
+		debug_65816_boot_act_o				: out std_logic;
 
 		debug_80188_state_o					: out std_logic_vector(2 downto 0)
 
@@ -327,11 +329,13 @@ architecture rtl of fb_cpu is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic;
+		boot_65816_i							: in		std_logic_vector(1 downto 0);
 
 		debug_vma_o								: out		std_logic;
 
-		debug_addr_meta_o						: out		std_logic
+		debug_addr_meta_o						: out		std_logic;
+
+		debug_65816_boot_act_o					: out		std_logic
 
 	);
 	end component;
@@ -485,6 +489,7 @@ architecture rtl of fb_cpu is
 
 	signal i_fb_c2p_log			: fb_con_o_per_i_t;
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
+	signal i_fb_c2p_extra_instr_fetch : std_logic;		-- extra signal to qualify a cycle as an instruction fetch
 
 	-----------------------------------------------------------------------------
 	-- cpu mapping signals
@@ -518,6 +523,8 @@ architecture rtl of fb_cpu is
 	signal r_do_sys_via_block		: std_logic;
 
 	signal i_rom_throttle_act		: std_logic; -- qualifies the current cycle as being to/from a ROM slot that is throttled
+
+	signal i_sys_via_blocker_en	: std_logic;
 begin
 
 	-- ================================================================================================ --
@@ -645,6 +652,25 @@ begin
 		end if;
 	end process;
 
+	p_blk_en:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if throttle_cpu_2MHz_i = '0' and (
+				r_cpu_en_t65 = '1' or
+					(
+						r_hard_cpu_en = '1' and (
+							r_cpu_en_65816 = '1' or
+							r_cpu_en_65c02 = '1'
+						)
+					)
+				) then
+				i_sys_via_blocker_en <= '1';
+			else
+				i_sys_via_blocker_en <= '0';
+			end if;
+		end if;
+	end process;
+
 	-- ================================================================================================ --
 	-- NMI registration 
 	-- ================================================================================================ --
@@ -689,6 +715,7 @@ begin
 		D_wr_i				=> i_wrap_o_cur_act.D_wr,
 		D_wr_stb_i			=> i_wrap_o_cur_act.D_wr_stb,
 		rdy_ctdn_i			=> i_wrap_o_cur_act.rdy_ctdn,
+		instr_fetch_i		=> i_wrap_o_cur_act.instr_fetch,
 	
 		-- return to wrappers
 	
@@ -703,7 +730,9 @@ begin
 		fb_syscon_i			=> fb_syscon_i,
 	
 		fb_con_c2p_o		=> i_fb_c2p_log,
-		fb_con_p2c_i		=> i_fb_p2c_log
+		fb_con_p2c_i		=> i_fb_p2c_log,
+
+		fb_con_c2pinstr_fetch_o		=> i_fb_c2p_extra_instr_fetch
 	
 	);
 	
@@ -725,6 +754,7 @@ begin
 		-- controller interface from the cpu
 		fb_con_c2p_i							=> i_fb_c2p_log,
 		fb_con_p2c_o							=> i_fb_p2c_log,
+		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch,
 
 		fb_per_c2p_o							=> fb_c2p_o,
 		fb_per_p2c_i							=> fb_p2c_i,
@@ -739,6 +769,9 @@ begin
 		cfg_mosram_i							=> cfg_mosram_i,
 		cfg_swromx_i							=> cfg_swromx_i,
 
+		-- SYS VIA slowdown enable
+		sys_via_blocker_en_i					=> i_sys_via_blocker_en,
+
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
 		JIM_page_i								=> JIM_page_i,
@@ -748,6 +781,7 @@ begin
 		swmos_shadow_i							=> swmos_shadow_i,
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
+		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
 		rom_throttle_act_o					=> i_rom_throttle_act,
 
@@ -1025,7 +1059,8 @@ g65816:IF G_INCL_CPU_65816 GENERATE
 		boot_65816_i							=> boot_65816_i,
 
 		debug_vma_o								=> debug_65816_vma_o,
-		debug_addr_meta_o						=> debug_65816_addr_meta_o
+		debug_addr_meta_o						=> debug_65816_addr_meta_o,
+		debug_65816_boot_act_o					=> debug_65816_boot_act_o
 	);
 END GENERATE;
 

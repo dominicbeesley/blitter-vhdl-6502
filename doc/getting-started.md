@@ -25,7 +25,7 @@ that you should:
 
 Your machine should now look like this:
 
-<img src="assets/getting-started/empty-mb.jpg" width="80%" />
+<img src="assets/getting-started/empty-mb.jpg" width="600" />
 
 ## Check S9 on the BBC Motherboard
 
@@ -42,7 +42,7 @@ interface in such a way that is not compatible with the Blitter. An updated
 
 In this example a simple user-port MMFS solution is used. Other options
 that have been widely tested are:
- * ADFS (Disc and Winchester)
+ * ADFS (Disc and Winchester) \[Not Pi 1MHz\]
  * 1770 DFS
  * 8271 DFS
  * HOSTFS
@@ -70,7 +70,7 @@ British switch sense - down for on
   - J2 SYS CPU Gnd - additional ground taken from motherboard
   - J8 Power Select - East - take power from motherboard
 
-<img src="assets/getting-started/mk2-first-boot-jumpers.jpg" width="80%" />
+<img src="assets/getting-started/mk2-first-boot-jumpers.jpg" width="600" />
 
 
 [See Hardware Overview](hardware-overview-mk2.md) for more information about
@@ -100,7 +100,7 @@ When fitted the board should look like this:
 
 **Mk.2**
 
-<img src="assets/getting-started/mk2-first-boot-fitted.jpg" width="80%" />
+<img src="assets/getting-started/mk2-first-boot-fitted.jpg" width="600" />
 
 
 **Mk.3**
@@ -114,13 +114,19 @@ riser are correctly aligned with the motherboard CPU socket.
 
 # First boot
 
-You should now be able to power on the machine and should get a boot screen 
-like this:
+You should power-up with the R key held down which should reset the 
+configuration. Note: this will only work if your BLTUTIL ROM is newer than 
+Nov 2024.
 
-<img src="assets/getting-started/mk2-first-boot.jpg" width="80%" />
+<img src="assets/getting-started/mk2-cmos-reset-1st.jpg" width="600" />
+
+You can now press CTRL-BREAK to get to the normal boot screen.
+
+<img src="assets/getting-started/mk2-first-boot.jpg" width="600" />
 
 If the machine doesn't boot then switch off and work through the 
 [Troubleshooting](#troubleshooting) section.
+
 
 You should then be able type type
 
@@ -128,14 +134,49 @@ You should then be able type type
 
 at the command prompt and receive a display of the ROMS in the machine thus:
 
-<img src="assets/getting-started/empty-roms.jpg" width="80%" />
+<img src="assets/getting-started/empty-roms.jpg" width="600" />
 
 The ROMS that show through in slots #4-#7 should correspond to those fitted
-in the motherboard. 
+in the motherboard. (Indicated with an S for System board). The other ROMS are
+all marked as T to show that they are throttled.
 
 The following sections will discuss loading up the default set of ROMs
 you may have been supplied with a board which is pre-loaded with ROMs in 
 which case you may want to skip all or part of the following sections.
+
+# Configuration
+
+The Blitter allows you to save some configuration to an on board EEPROM and
+gives its own versions of \*CONFIGURE and \*STATUS as found on the Master 
+series. There are a number of configuration options which may be set and you
+can see what is available by typing
+
+    *STATUS
+
+<img src="assets/getting-started/status1.jpg" width="600" />
+
+You can set the options with the \*CONFIGURE command - for more information
+on the options see the [BLTUTILS documentation](https://github.com/dominicbeesley/blitter-65xx-code/blob/dev-config/doc/bltutil_readme.md#configuration-options)
+
+For now we will turn off the throttling of the CPU and the ROMs using the
+commands
+
+    *CON. NOBLSLOW
+    *CON. BLSLOWROMS -R0-R15
+
+<img src="assets/getting-started/con-slow-off.jpg" width="600" />
+
+You should now press CTRL-BREAK to update the current settings from the CMOS.
+
+Typing
+
+    *ROMS
+
+will show the ROMs are now no longer all marked with 'T'
+
+
+<img src="assets/getting-started/empty-roms-fast.jpg" width="600" />
+
 
 # Loading other ROMs
 
@@ -151,6 +192,8 @@ It is desirable to have the utility ROM be in the highest slot:
  * the NoIce debugger only works in slot F
  * holding down "£" at boot can be used to "catch" corrupted ROMs (see 
    [Troubleshooting](#troubleshooting))
+ * The Hazel feature for Model B, Electron machines only works on ROM slots 
+   with a number below that of the BLTUTIL ROM
 
 
 Please use the ROMS65.SSD file with your filing system. In this example it
@@ -162,7 +205,7 @@ is on MMFS
 This will load the ROM in slot F of the current map. You should get the 
 following:
 
-<img src="assets/getting-started/srload-output.jpg" size="80%" />
+<img src="assets/getting-started/srload-output.jpg" width="600" />
 
 You should now press CTRL-BREAK to refresh the MOS ROM table. Typing:
 
@@ -170,12 +213,10 @@ You should now press CTRL-BREAK to refresh the MOS ROM table. Typing:
 
 Should now show
 
-<img src="assets/getting-started/srload-2.jpg" size="80%" />
+<img src="assets/getting-started/srload-2.jpg" width="600" />
 
 The OS has now disabled the ROM at #7 as it is identical to the one in 
-slot #F. However, if you loaded a different version of the BLTUTIL ROM to the
-one in the socket on the motherboard you may see both showing in the \*ROMS 
-list and also see two Blitter boot messages. 
+slot #F. 
 
 Note: if you attempt to overwrite the current BLTUTIL rom at any time
 the load should work but you will not be returned to the command prompt, 
@@ -187,14 +228,14 @@ show all the ROMS, even those ignored by the MOS
 
     *ROMS A
 
-<img src="assets/getting-started/roms-a.jpg" size="80%" />
+<img src="assets/getting-started/roms-a.jpg" width="600" />
 
 There are also options 
 
   * "V" to show more verbose ROM titles (including version)
   * "C" to show a CRC for each ROM
 
-<img src="assets/getting-started/roms-vac.jpg" size="80%" />
+<img src="assets/getting-started/roms-vac.jpg" width="600" />
 
 It can be useful to keep a note of ROM CRCs when they are first loaded,
 especially to sideways RAM to check for corruption. Here you can see that
@@ -242,7 +283,7 @@ You may now check to see the speed of the system:
     *DIN 0 TOOLS65
     CHAIN"CLOCKSP"
 
-<img src="assets/getting-started/clocksp-base.jpg" size="80%" />
+<img src="assets/getting-started/clocksp-base.jpg" width="600" />
 
 As can be seen this is running at 2MHz. Even though the T65 core is 
 capable of running at up to 16MHz per cycle on this firmware it is being
@@ -260,7 +301,7 @@ And press CTRL-Break
     *DIN 0 TOOLS65
     CHAIN"CLOCKSP"
 
-<img src="assets/getting-started/clocksp-f2.jpg" size="80%" />
+<img src="assets/getting-started/clocksp-f2.jpg" width="600"" />
 
 This has more or less doubled the speed of BASIC but we can do more:
 
@@ -268,7 +309,7 @@ This has more or less doubled the speed of BASIC but we can do more:
     *BLTURBO L7F
     RUN
 
-<img src="assets/getting-started/clocksp-f3.jpg" size="80%" />
+<img src="assets/getting-started/clocksp-f3.jpg" width="600" />
 
 
 The [BLTURBO Lxx](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
@@ -303,7 +344,7 @@ that we have redirected to ChipRAM
 
 will restore the screen.
 
-<img src="assets/getting-started/blturbo-1.jpg" size="80%" />
+<img src="assets/getting-started/blturbo-1.jpg" width="600" />
 
 We can have mode 0 work normally *and* have faster basic by using 
 
@@ -312,7 +353,7 @@ We can have mode 0 work normally *and* have faster basic by using
 This will remap 0-2FFF to ChipRAM and leave screen ram at 3000-7FFF pointing at
 the motherboard
 
-<img src="assets/getting-started/blturbo-2.jpg" size="80%" />
+<img src="assets/getting-started/blturbo-2.jpg" width="600" />
 
 Sometimes it is desirable, when ROMs or RAM is remapped to fast memory to have
 the T65 run at a stable 2MHz this can be acheived with:
@@ -328,7 +369,7 @@ One can type
 
 to query the current settings.
 
-<img src="assets/getting-started/blturbo-3.jpg" size="80%" />
+<img src="assets/getting-started/blturbo-3.jpg" width="600" />
 
 When you have finished you may wish to erase the Blitter copy of the BASIC2 rom
 
@@ -358,7 +399,7 @@ and bottom of resistor R172 on the motherboard respectively.
 The audio headers are J3 on the Mk.2 and J32 on the Mk.3. The ground loop 
 connector (J4 on the Mk.2 LK34 on the Mk.3) should be left un-bridged. 
 
-<img src="assets/getting-started/mk2-audio-hookup.jpg" size="80%" />
+<img src="assets/getting-started/mk2-audio-hookup.jpg" width="600" />
 
 This will mix the Paula sound with that of the BBC Micro and play it out 
 through the internal speaker. Of course, it will sound pretty tinny and not
@@ -398,7 +439,7 @@ trackers and are many times faster to load. (TODO: investigate ADFS MMFS)
 You should now be able to select one of the tunes to play - it may take some
 time to load.
 
-<img src="assets/getting-started/modplay-1.gif" size="80%" />
+<img src="assets/getting-started/modplay-1.gif" width="600" />
 
 Press H for options or ESCape to stop.
 
@@ -417,7 +458,7 @@ information see [Chipset](chipset.md#the-blitter)
 You should see demo which shows some smoot scrolling of large graphics
 at 50 frames a second.
 
-<img src="assets/getting-started/demo65.jpg" size="80%" />
+<img src="assets/getting-started/demo65.jpg" width="600" />
 
 
 # Aeris
@@ -446,7 +487,7 @@ CRTC as follows:
  * Pin 15 of the configuration header should be attached to pin 39 of
    IC2
 
-<img src="assets/getting-started/mk2-aeris-hookup.jpg" size="80%" />
+<img src="assets/getting-started/mk2-aeris-hookup.jpg" width="600" />
 
 ### mk.3 Aeris hookup
 
@@ -488,7 +529,7 @@ Before starting please check that your machine is set to run in Map 0 you
 should get a boot message like the one in the picture below the important
 parts are circled.
 
-<img src="assets/getting-started/mk2-first-boot-map0.jpg" width="80%" />
+<img src="assets/getting-started/mk2-first-boot-map0.jpg" width="600" />
 
 
 If you don't please check that the jumpers are set follows:
@@ -528,7 +569,7 @@ This will be equivalent to executing
 If you have started with a blank blitter board you should get a display like
 this:
 
-<img src="assets/getting-started/roms-alt-all-blank.jpg" width="80%" />
+<img src="assets/getting-started/roms-alt-all-blank.jpg" width="600" />
 
 Note: the special CRC F1EF is an indicator that all bytes of the entire 16K 
 of each bank is set to the value &FF.
@@ -581,7 +622,7 @@ ensure that the MOS updates its ROM map.
 
 Press CTRL-Break, you should see:
 
-<img src="assets/getting-started/roms-alt-boot-lang.jpg" width="80%" />
+<img src="assets/getting-started/roms-alt-boot-lang.jpg" width="600" />
 
 This shows that the MOS in slot #9 has been recognised but no other ROMS
 are present.
@@ -633,7 +674,7 @@ jumpers as follows:
 
 For further information see [Hardware overview Mk.2](hardware-overview-mk2.md#j5-system-config)
 
-<img src="assets/getting-started/w65c02s-fit.jpg" width="80%" />
+<img src="assets/getting-started/w65c02s-fit.jpg" width="600" />
 
 Please ensure that:
 
@@ -663,7 +704,7 @@ You should check that these, and no other, ROMs are loaded to map 1 by typing
 Which will list all the ROMs in map 1 along with their CRC. your list should
 look like this:
 
-<img src="assets/getting-started/w65c02-roms-1.jpg" width="80%" />
+<img src="assets/getting-started/w65c02-roms-1.jpg" width="600" />
 
 Any unwanted roms should be unloaded using
 
@@ -672,15 +713,25 @@ Any unwanted roms should be unloaded using
 for each unwanted ROM, substituting the ROM number as appropriate.
 
 You are now ready to boot to the alternate ROM set. You should remove the 
-jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break
+jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break.
 
-<img src="assets/getting-started/w65c02-boot-1.jpg" width="80%" />
+<img src="assets/getting-started/w65c02-boot-1.jpg" width="600" />
+
+If you have problems such as a garbled or rolling screen you may need to hold
+down R and press CTRL-BREAK to reset the CMOS configuration.
 
 Notice that the boot message now says "65C02 8MHz". You may also type
 
     *BLINFO
 
 as a command to see the configuration.
+
+As the boot banner notes and the ```\*ROMS``` command will show the CPU and
+ROM slots are all throttled to 2MHz you should enter the following commands, 
+as you did for the T65 soft CPU, to set them to full speed:
+
+    *CON. NOBLSLOW
+    *CON. BLSLOWROMS -R0-R15
 
 There's not much you can do other than type in BASIC programs as there is
 no filing system present yet.
@@ -754,6 +805,9 @@ The following filing systems are tested and known to work
 Other filing systems may or may not work. Please report any difficulties on
 the startdot forum.
 
+Note: the supplied roms65.ssd contains BLMMFS and ADFSH30 which are special
+Blitter enhanced versions of ADFS130 and MMFS (User port) for the BBC Micro
+which leave PAGE at E00.
 
 ## Running a 65816
 
@@ -776,7 +830,7 @@ jumpers as follows:
 
 For further information see [Hardware overview Mk.2](hardware-overview-mk2.md#j5-system-config)
 
-<img src="assets/getting-started/w65c816s-fit.jpg" width="80%" />
+<img src="assets/getting-started/w65c816s-fit.jpg" width="600" />
 
 Please ensure that:
 
@@ -807,18 +861,18 @@ This should load up some files and return a > prompt. Typing
 
 should show "6816 BASIC (c) 2020 Dossy". 
 
-<img src="assets/getting-started/bas816-1.jpg" width="80%" />
+<img src="assets/getting-started/bas816-1.jpg" width="600" />
 
 You may now run BASIC programs as normal i.e. CLOCKSP:
 
-<img src="assets/getting-started/bas816-2.jpg" width="80%" />
+<img src="assets/getting-started/bas816-2.jpg" width="600" />
 
 This will be somewhat slower than the figures obtained for a 65C02 running 
 BASIC 4.32 but this is explained, in part, by the fact that the BASIC 
 interpreter is using larger, slower, 24 bit pointers which allows for much
 larger programs and data:
 
-<img src="assets/getting-started/bas816-3.jpg" width="80%" />
+<img src="assets/getting-started/bas816-3.jpg" width="600" />
 
 Currently the program/data size is limited to just slightly less than 512K.
 However, if there is sufficient interest, this could be increased.
@@ -849,7 +903,7 @@ Insert the 6309 in the correct set of pins with pin 1 of the CPU to the left
 and the CPU inserted into the lower of the 6502/6x09 socket pair near the top 
 left.
 
-<img src="assets/getting-started/6809-fit.jpg" width="80%" />
+<img src="assets/getting-started/6809-fit.jpg" width="600" />
 
 Please ensure that:
 
@@ -871,7 +925,7 @@ as a command to see the configuration, the hard cpu that is configured
 should display even when it is not selected.
 
 
-<img src="assets/getting-started/6809-blinfo.jpg" width="80%" />
+<img src="assets/getting-started/6809-blinfo.jpg" width="600" />
 
 You will then need to load the 6809 MOS and BASIC roms from T65 mode:
 
@@ -890,12 +944,12 @@ Ensure you have loaded from ROMS68 not the 6502 ssd!
 
 You should have these ROMS:
 
-<img src="assets/getting-started/6809-roms.jpg" width="80%" />
+<img src="assets/getting-started/6809-roms.jpg" width="600" />
 
 You should now be able to boot the 6809 by removing the T65 jumper (CFG0) and 
 press CTRL-Break. 
 
-<img src="assets/getting-started/6809-boot-1.jpg" width="80%" />
+<img src="assets/getting-started/6809-boot-1.jpg" width="600" />
 
 You should get a screen as above. As there is now no filings system there is
 not much you can do other than type programs in and try them out.
@@ -935,7 +989,7 @@ see:
     [https://mdfs.net/Software/Tube/Serial/]
 
 
-<img src="assets/getting-started/6809-clocksp.jpg" width="80%" />
+<img src="assets/getting-started/6809-clocksp.jpg" width="600" />
 
 The timings are a little faster but fairly similar to a 6502. This first
 comparison is a little flattering of the 6809 as in 2MHz mode it actually
@@ -945,7 +999,7 @@ motherboard clock.
 
     *BLTURBO T
 
-<img src="assets/getting-started/6809-clocksp.jpg" width="80%" />
+<img src="assets/getting-started/6809-clocksp.jpg" width="600" />
 
 Now most of the timings are within around 10% of the 6502's times. The
 trig/log functions are significantly faster as the 6809 BASIC ROM uses
@@ -977,7 +1031,7 @@ You should now be able to reboot to the 6309. You should transfer the CLOCKSP
 program to the 6309 using the method above or using HOSTFS. Running CLOCKSP
 should now give better results
 
-<img src="assets/getting-started/6309-clocksp-1.jpg" width="80%" />
+<img src="assets/getting-started/6309-clocksp-1.jpg" width="600" />
 
 This is still somewhat held back by the fact that the memory used to store
 the BASIC program is running at 2MHz. You can used the BLTURBO command to 
@@ -987,7 +1041,7 @@ use fast ChipRAM shadow memory
 
 This should give a little more of a boost
 
-<img src="assets/getting-started/6309-clocksp-2.jpg" width="80%" />
+<img src="assets/getting-started/6309-clocksp-2.jpg" width="600" />
 
 However, this is still no using all the facilities of the 6309 processor
 which features a "native" mode which runs around 25% faster than the 6809
@@ -1005,7 +1059,7 @@ Note: the correct MOS filename ends with "N" for native.
 Repeating the CLOCKSP tests above (don't forget BLTURBO L07) should give an
 even greater improvement.
 
-<img src="assets/getting-started/6309-clocksp-3.jpg" width="80%" />
+<img src="assets/getting-started/6309-clocksp-3.jpg" width="600" />
 
 6x09 MOS ROMS
 

@@ -70,7 +70,7 @@ entity fb_cpu_arm2 is
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
 		wrap_exp_i								: in t_cpu_wrap_exp_i;
 
-		-- special m68k signals
+		-- special arm2 signals
 
 		jim_en_i									: in		std_logic
 
@@ -99,8 +99,10 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_A_log				: unsigned(1 downto 0);
 	signal r_WE					: std_logic;
 	signal r_nMREQ				: std_logic;
+	signal r_nOPC				: std_logic;
 	signal r_nBW				: std_logic;
 	signal r_nRW				: std_logic;
+	signal r_instr_fetch		: std_logic;
 
 	-- port B
 
@@ -236,6 +238,7 @@ begin
 	wrap_o.D_wr_stb(I)	<= r_writed_lane_prev3(I) and r_D_wr_stb;
 	END GENERATE;
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
+	wrap_o.instr_fetch 	<= r_instr_fetch;
 
 	i_cyc_ack_i 			<= wrap_i.ack;
 
@@ -335,7 +338,7 @@ begin
 					else
 						r_cpu_phi1 <= '1';
 
-
+						r_instr_fetch <= not r_nOPC;
 						if r_arm_boot = '1' and r_nRW = '0' then
 							if cfg_mosram_i = '1' then
 								r_a_cpu <= x"7D3F" & i_CPUSKT_A_c2b(7 downto 0); 	-- boot from SWRAM at 7D xxxx
@@ -354,6 +357,7 @@ begin
 						r_clk_state <= phi1;
 						r_mem_acc_reset <= '1';
 						r_nMREQ <= i_CPUSKT_nMREQ_c2b or fb_syscon_i.rst;
+						r_nOPC <= i_CPUSKT_nOPC_c2b;
 						r_nBW <= i_CPUSKT_nBW_c2b;
 						r_nRW <= i_CPUSKT_nRW_c2b;
 					else

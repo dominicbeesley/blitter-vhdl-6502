@@ -117,27 +117,54 @@ entity fb_dmac_blit is
 
    -- note addresses are odd to cater for extended registers at $A0 and baseic at $60
 
-	constant	A_BLTCON 		: integer := 16#00#;
-	constant	A_FUNCGEN 		: integer := 16#01#;
-	constant	A_WIDTH	 		: integer := 16#02#;
-	constant	A_HEIGHT 		: integer := 16#03#;
-	constant	A_SHIFT			: integer := 16#04#;
-	constant	A_MASK_FIRST	: integer := 16#05#;
-	constant	A_MASK_LAST 	: integer := 16#06#;
-	constant	A_DATA_A 		: integer := 16#07#;
-	constant	A_ADDR_A 		: integer := 16#08#;
-	constant	A_DATA_B 		: integer := 16#0B#;
-	constant	A_ADDR_B 		: integer := 16#0C#;
-	constant	A_ADDR_C 		: integer := 16#0F#;
-	constant	A_ADDR_D 		: integer := 16#12#;
-	constant	A_ADDR_E 		: integer := 16#15#;
-	constant	A_STRIDE_A		: integer := 16#18#;
-	constant	A_STRIDE_B		: integer := 16#1A#;
-	constant	A_STRIDE_C		: integer := 16#1C#;
-	constant	A_STRIDE_D		: integer := 16#1E#;
+	constant	A_BLTCON 		: integer := 16#60#;
+	constant	A_FUNCGEN 		: integer := 16#61#;
+	constant	A_WIDTH	 		: integer := 16#62#;
+	constant	A_HEIGHT 		: integer := 16#63#;
+	constant	A_SHIFT			: integer := 16#64#;
+	constant	A_MASK_FIRST	: integer := 16#65#;
+	constant	A_MASK_LAST 	: integer := 16#66#;
+	constant	A_DATA_A 		: integer := 16#67#;
+	constant	A_ADDR_A 		: integer := 16#68#;
+	constant	A_DATA_B 		: integer := 16#6B#;
+	constant	A_ADDR_B 		: integer := 16#6C#;
+	constant	A_ADDR_C 		: integer := 16#6F#;
+	constant	A_ADDR_D 		: integer := 16#72#;
+	constant	A_ADDR_E 		: integer := 16#75#;
+	constant	A_STRIDE_A		: integer := 16#78#;
+	constant	A_STRIDE_B		: integer := 16#7A#;
+	constant	A_STRIDE_C		: integer := 16#7C#;
+	constant	A_STRIDE_D		: integer := 16#7E#;
+	constant A_ADDR_D_MIN	: integer := 16#A0#;
+	constant A_ADDR_D_MAX	: integer := 16#A3#;
 
-	constant A_ADDR_D_MIN	: integer := 16#40#;
-	constant A_ADDR_D_MAX	: integer := 16#43#;
+	-- NEW ABI: cater for little-endian pokes and 4 byte aligned access for ARM
+	constant	A_N_BLTCON 		: integer := 16#200#;
+	constant	A_N_FUNCGEN 	: integer := 16#201#;
+	constant	A_N_MASK_FIRST	: integer := 16#202#;
+	constant	A_N_MASK_LAST 	: integer := 16#203#;
+	constant	A_N_WIDTH	 	: integer := 16#204#;
+	constant	A_N_HEIGHT 		: integer := 16#205#;
+	constant	A_N_SHIFT_A		: integer := 16#206#;
+	constant	A_N_STRIDE_A	: integer := 16#208#;
+	constant	A_N_STRIDE_B	: integer := 16#20A#;
+	constant	A_N_STRIDE_C	: integer := 16#20C#;
+	constant	A_N_ADDR_A 		: integer := 16#210#;
+	constant	A_N_DATA_A 		: integer := 16#213#;
+	constant	A_N_ADDR_B 		: integer := 16#214#;
+	constant	A_N_DATA_B 		: integer := 16#217#;
+	constant	A_N_ADDR_C 		: integer := 16#218#;
+	constant	A_N_DATA_C 		: integer := 16#21B#;
+	constant	A_N_ADDR_E 		: integer := 16#21C#;
+
+	constant A_N_ADDR_D_MIN	: integer := 16#220#;
+	constant A_N_ADDR_D_MAX	: integer := 16#224#;
+	constant	A_N_STRIDE_D	: integer := 16#228#;
+	constant	A_N_SHIFT_B		: integer := 16#22A#;
+	constant	A_N_ADDR_D 		: integer := 16#22C#;
+
+
+
 end fb_dmac_blit;
 
 architecture Behavioral of fb_dmac_blit is
@@ -166,10 +193,10 @@ architecture Behavioral of fb_dmac_blit is
 	TYPE 		state_cha_A 		IS (sMemAccA, sShiftA1, sShiftA2, sShiftA3, sShiftA4, sShiftA5, sShiftA6, sShiftA7);
 
 	-- peripheral interface sigs
-	type		per_state_t			is (idle, wait_d_stb, rd);
+	type		per_state_t			is (idle, wait_d_stb, rd, rd0);
 
 	signal	r_per_state				: per_state_t;
-	signal	r_per_addr				: std_logic_vector(6 downto 0);
+	signal	r_per_addr				: std_logic_vector(9 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr_stb			: std_logic;
@@ -196,6 +223,7 @@ architecture Behavioral of fb_dmac_blit is
 
 	--BLTCON/CFG
 																						-- bit 7 -- write as 0
+	signal r_BLTCON_cellB			: std_logic;								-- channel B is in CELL mode
 	signal r_BLTCON_execE			: std_logic;								-- bit 4
 	signal r_BLTCON_execD			: std_logic;								-- bit 3
 	signal r_BLTCON_execC			: std_logic;								-- bit 2
@@ -262,16 +290,6 @@ architecture Behavioral of fb_dmac_blit is
 	signal r_reg_line_minor			: std_logic;
 	signal r_reg_line_pxmaskcur	: std_logic_vector(7 downto 0);
 
-	function BANK8(x : std_logic_vector(23 downto 16))
-	return std_logic_vector is
-		variable tmp:std_logic_vector(24 downto 16);
-		variable ret:std_logic_vector(7 downto 0);
-	begin
-		tmp := (24 downto 23 + 1 => '0') & x;
-		ret := tmp(23 downto 16);
-		return ret;
-	end;
-
 begin
 
 	p_addr_mux:process(r_blit_state
@@ -281,6 +299,7 @@ begin
 		, r_cha_D_addr, r_cha_D_stride
 		, r_cha_E_addr
 		, r_BLTCON_cell
+		, r_BLTCON_cellB
 		, i_cha_A_last, i_main_last
 		, i_cha_A_width
 		, r_width
@@ -356,8 +375,8 @@ begin
 			when sMemAccB =>
 				i_cur_stride <= signed(r_cha_B_stride);
 				i_cur_addr <= r_cha_B_addr(15 downto 0);
-				i_cur_mode_cell <= false;
-				i_cur_direction <= fnDirection(i_main_last,false);
+				i_cur_mode_cell <= r_BLTCON_cellB = '1';
+				i_cur_direction <= fnDirection(i_main_last, r_blit_state = sMemAccB);
 				i_cur_width <= r_width;
 				i_cur_wrap <= '0';
 				i_cur_min <= (others => '-');
@@ -560,11 +579,11 @@ begin
 		elsif r_BLTCON_mode = "01" then
 			case r_shift_B(1 downto 0) is
 				when "01" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(1 downto 0) & r_cha_B_data(7 downto 2);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(4) & r_cha_B_data(7 downto 5) & r_cha_B_data_pre(0) & r_cha_B_data(3 downto 1);
 				when "10" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(3 downto 0) & r_cha_B_data(7 downto 4);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(5 downto 4) & r_cha_B_data(7 downto 6) & r_cha_B_data_pre(1 downto 0) & r_cha_B_data(3 downto 2);
 				when "11" =>
-					i_cha_B_data_shifted <= r_cha_B_data_pre(5 downto 0) & r_cha_B_data(7 downto 6);
+					i_cha_B_data_shifted <= r_cha_B_data_pre(6 downto 4) & r_cha_B_data(7) & r_cha_B_data_pre(2 downto 0) & r_cha_B_data(3);
 				when others =>
 					i_cha_B_data_shifted <= r_cha_B_data;
 			end case;
@@ -790,10 +809,10 @@ begin
 						r_cha_A_first <= false;
 					end if;
 				end if;
-			elsif fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA then
-				i_cha_A_last_mask <= i_cha_A_last;	
 			elsif r_blit_state = sFinish then
 				cpu_halt_o <= '0';		
+			elsif (fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA) or (i_accA_state_next = sMemAccA and r_BLTCON_execA = '0') then
+				i_cha_A_last_mask <= i_cha_A_last;	
 			end if;
 		end if;
 	end process;
@@ -822,6 +841,7 @@ begin
 			r_BLTCON_execC <= '0';
 			r_BLTCON_execD <= '0';
 			r_BLTCON_execE <= '0';
+			r_BLTCON_cellB <= '0';
 			r_BLTCON_mode <= (others => '0');
 			r_BLTCON_cell <= '0';
 			r_BLTCON_line <= '0';
@@ -911,7 +931,7 @@ begin
 
 			if r_per_D_wr_stb = '1' then -- register write from peripheral port
 				case to_integer(unsigned(r_per_addr)) is
-					when A_BLTCON =>
+					when A_BLTCON | A_N_BLTCON =>
 						if r_per_d_wr(7) = '1' then
 							r_BLTCON_act <= '1';
 							r_BLTCON_cell <= r_per_D_wr(6);
@@ -925,86 +945,113 @@ begin
 							r_BLTCON_execC <= r_per_D_wr(2);
 							r_BLTCON_execD <= r_per_D_wr(3);
 							r_BLTCON_execE <= r_per_D_wr(4);
+							r_BLTCON_cellB <= r_per_D_wr(5);
 						end if;
-					when A_FUNCGEN =>
+					when A_FUNCGEN | A_N_FUNCGEN =>
 						r_FUNCGEN <= r_per_d_wr;
-					when A_WIDTH =>
+					when A_WIDTH | A_N_WIDTH =>
 						r_width(7 downto 0) <= unsigned(r_per_d_wr);
-					when A_HEIGHT =>
+					when A_HEIGHT | A_N_HEIGHT =>
 						r_height(7 downto 0) <= unsigned(r_per_d_wr);
 					when A_SHIFT => -- TODO: maybe split to two addresses to make calcs easier?
 						r_shift_A <= r_per_d_wr(2 downto 0);
 						r_shift_B <= r_per_d_wr(6 downto 4);
-					when A_MASK_FIRST =>
+					when A_N_SHIFT_A =>
+						r_shift_A <= r_per_d_wr(2 downto 0);
+						r_shift_B <= r_per_d_wr(2 downto 0);				-- convenience poke
+					when A_N_SHIFT_B => 
+						r_shift_B <= r_per_d_wr(2 downto 0);
+					when A_MASK_FIRST | A_N_MASK_FIRST=>
 						r_mask_first <= r_per_d_wr;
-					when A_MASK_LAST =>
+					when A_MASK_LAST | A_N_MASK_LAST=>
 						r_mask_last <= r_per_d_wr;
-					when A_DATA_A =>
-						r_cha_A_data_pre <= r_cha_A_data(6 downto 0);			
+					when A_DATA_A | A_N_DATA_A=>
+						r_cha_A_data_pre <= r_per_d_wr(6 downto 0);
 						r_cha_A_data <= r_per_d_wr;
 
-					when A_ADDR_A + 0 =>
+					when A_ADDR_A + 0 | A_N_ADDR_A + 2 =>
 						r_cha_A_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_A + 1 =>
+					when A_ADDR_A + 1 | A_N_ADDR_A + 1 =>
 						r_cha_A_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_A + 2 =>
+					when A_ADDR_A + 2 | A_N_ADDR_A + 0 =>
 						r_cha_A_addr(7 downto 0) <= r_per_d_wr;			
-					when A_DATA_B =>
-						r_cha_B_data_pre <= r_cha_B_data (6 downto 0);
+					when A_DATA_B | A_N_DATA_B=>
+						r_cha_B_data_pre <= r_per_d_wr(6 downto 0);
 						r_cha_B_data <= r_per_d_wr;
-					when A_ADDR_B + 0 =>
+					when A_ADDR_B + 0 | A_N_ADDR_B + 2 =>
 						r_cha_B_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_B + 1 =>
+					when A_ADDR_B + 1 | A_N_ADDR_B + 1 =>
 						r_cha_B_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_B + 2 =>
+					when A_ADDR_B + 2 | A_N_ADDR_B + 0 =>
 						r_cha_B_addr(7 downto 0) <= r_per_d_wr;	
+					when A_N_DATA_C =>
+						r_cha_C_data <= r_per_d_wr;
 					when A_ADDR_C + 0 =>
 						r_cha_C_addr(23 downto 16) <= r_per_d_wr;
 					when A_ADDR_C + 1 =>
 						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
 					when A_ADDR_C + 2 =>
 						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
-					when A_ADDR_D + 0 =>
+
+					when A_N_ADDR_C + 0 =>
+						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
+						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			-- convenience
+					when A_N_ADDR_C + 1 =>
+						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
+						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			-- convenience
+					when A_N_ADDR_C + 2 =>
+						r_cha_C_addr(23 downto 16) <= r_per_d_wr;			
+						r_cha_D_addr(23 downto 16) <= r_per_d_wr;			-- convenience
+
+					when A_ADDR_D + 0 | A_N_ADDR_D + 2 =>
 						r_cha_D_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D + 1 =>
+					when A_ADDR_D + 1 | A_N_ADDR_D + 1 =>
 						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_D + 2 =>
+					when A_ADDR_D + 2 | A_N_ADDR_D + 0 =>
 						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			
-					when A_ADDR_E + 0 =>
+					when A_ADDR_E + 0 | A_N_ADDR_E + 2 =>
 						r_cha_E_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_E + 1 =>
+					when A_ADDR_E + 1 | A_N_ADDR_E + 1 =>
 						r_cha_E_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_E + 2 =>
+					when A_ADDR_E + 2 | A_N_ADDR_E + 0 =>
 						r_cha_E_addr(7 downto 0) <= r_per_d_wr;			
-					when A_STRIDE_A =>
+					when A_STRIDE_A + 0| A_N_STRIDE_A + 1 =>
 						r_cha_A_stride(15 downto 8) <= r_per_d_wr; -- note 16 bits for line mode
-					when A_STRIDE_A + 1 =>
+					when A_STRIDE_A + 1 | A_N_STRIDE_A + 0 =>
 						r_cha_A_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_B =>
-						r_cha_B_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
-					when A_STRIDE_B + 1 =>
+					when A_STRIDE_B + 0 | A_N_STRIDE_B + 1 =>
+						r_cha_B_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+					when A_STRIDE_B + 1 | A_N_STRIDE_B + 0 =>
 						r_cha_B_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_C =>
-						r_cha_C_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
-					when A_STRIDE_C + 1 =>
+					when A_STRIDE_C + 0 =>
+						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+					when A_STRIDE_C + 1  =>
 						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_D =>
-						r_cha_D_stride(G_STRIDE_HIGH					 downto 8) <= r_per_d_wr(G_STRIDE_HIGH					 - 8 downto 0);
-					when A_STRIDE_D + 1 =>
+
+					when A_N_STRIDE_C + 0 =>
+						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
+						r_cha_D_stride(7 downto 0) <= r_per_d_wr; -- convenience
+					when A_N_STRIDE_C + 1  =>
+						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0); -- convenience
+
+					when A_STRIDE_D + 0 | A_N_STRIDE_D + 1 =>
+						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
+					when A_STRIDE_D + 1 | A_N_STRIDE_D + 0 =>
 						r_cha_D_stride(7 downto 0) <= r_per_d_wr;
 
-					when A_ADDR_D_MIN => 
+					when A_ADDR_D_MIN + 0 | A_N_ADDR_D_MIN + 2 => 
 						r_cha_D_addr_min(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D_MIN+1 => 
+					when A_ADDR_D_MIN + 1 | A_N_ADDR_D_MIN + 1 => 
 						r_cha_D_addr_min(15 downto 8) <= r_per_d_wr;
-					when A_ADDR_D_MIN+2 => 
+					when A_ADDR_D_MIN + 2 | A_N_ADDR_D_MIN + 0 => 
 						r_cha_D_addr_min(7 downto 0) <= r_per_d_wr;
 
-					when A_ADDR_D_MAX => 
+					when A_ADDR_D_MAX + 0 | A_N_ADDR_D_MAX + 2 => 
 						r_cha_D_addr_max(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D_MAX+1 => 
+					when A_ADDR_D_MAX + 1 | A_N_ADDR_D_MAX + 1 => 
 						r_cha_D_addr_max(15 downto 8) <= r_per_d_wr;
-					when A_ADDR_D_MAX+2 => 
+					when A_ADDR_D_MAX + 2 | A_N_ADDR_D_MAX + 0 => 
 						r_cha_D_addr_max(7 downto 0) <= r_per_d_wr;
 
 					when others => null;
@@ -1020,7 +1067,7 @@ begin
 		r_width, r_height, r_shift_A, r_shift_B,
 		r_cha_A_addr, r_cha_A_data, r_cha_A_stride,
 		r_cha_B_addr, r_cha_B_data, r_cha_B_stride,
-		r_cha_C_addr, r_cha_C_stride,
+		r_cha_C_addr, r_cha_C_stride, r_cha_C_data,
 		r_cha_D_addr, r_cha_D_stride,
 		r_cha_E_addr,
 		r_BLTCON_cell,
@@ -1031,7 +1078,7 @@ begin
 		)
 	begin
 		case to_integer(unsigned(r_per_addr)) is
-			when A_BLTCON =>
+			when A_BLTCON | A_N_BLTCON =>
 				i_per_D_rd <= r_BLTCON_act 
 							& r_BLTCON_cell
 							& r_BLTCON_mode
@@ -1039,81 +1086,87 @@ begin
 							& r_BLTCON_collision
 							& r_BLTCON_wrap
 							& "0";
-			when A_FUNCGEN =>
+			when A_FUNCGEN | A_N_FUNCGEN =>
 				i_per_D_rd <= r_FUNCGEN;
-			when A_WIDTH =>
+			when A_WIDTH | A_N_WIDTH =>
 				i_per_D_rd <= std_logic_vector(r_width);
-			when A_HEIGHT =>			
+			when A_HEIGHT | A_N_HEIGHT =>			
 				i_per_D_rd <= std_logic_vector(r_height);
-			when A_SHIFT =>
+			when A_SHIFT => 
 				i_per_D_rd <= "0" & r_shift_B & "0" & r_shift_A;
-			when A_MASK_FIRST =>
+			when A_N_SHIFT_A => 
+				i_per_D_rd <= "00000" & r_shift_A;
+			when A_N_SHIFT_B => 
+				i_per_D_rd <= "00000" & r_shift_B;
+			when A_MASK_FIRST | A_N_MASK_FIRST =>
 				i_per_D_rd <= r_mask_first;
-			when A_MASK_LAST =>
+			when A_MASK_LAST | A_N_MASK_LAST =>
 				i_per_D_rd <= r_mask_last;
-			when A_DATA_A =>
+			when A_DATA_A | A_N_DATA_A =>
 				i_per_D_rd <= r_cha_A_data;
-			when A_ADDR_A =>				
-				i_per_D_rd <= BANK8(r_cha_A_addr(23 downto 16));
-			when A_ADDR_A + 1 =>
+			when A_ADDR_A + 0 | A_N_ADDR_A + 2 =>				
+				i_per_D_rd <= r_cha_A_addr(23 downto 16);
+			when A_ADDR_A + 1 | A_N_ADDR_A + 1 =>
 				i_per_D_rd <= r_cha_A_addr(15 downto 8);
-			when A_ADDR_A + 2 =>
+			when A_ADDR_A + 2 | A_N_ADDR_A + 0 =>
 				i_per_D_rd <= r_cha_A_addr(7 downto 0);
-			when A_DATA_B =>
+			when A_DATA_B | A_N_DATA_B =>
 				i_per_D_rd <= r_cha_B_data;
-			when A_ADDR_B =>
-				i_per_D_rd <= BANK8(r_cha_B_addr(23 downto 16));
-			when A_ADDR_B + 1 =>
+			when A_ADDR_B + 0 | A_N_ADDR_B + 2 =>
+				i_per_D_rd <= r_cha_B_addr(23 downto 16);
+			when A_ADDR_B + 1 | A_N_ADDR_B + 1 =>
 				i_per_D_rd <= r_cha_B_addr(15 downto 8);
-			when A_ADDR_B + 2 =>
+			when A_ADDR_B + 2 | A_N_ADDR_B + 0 =>
 				i_per_D_rd <= r_cha_B_addr(7 downto 0);
-			when A_ADDR_C =>
-				i_per_D_rd <= BANK8(r_cha_C_addr(23 downto 16));
-			when A_ADDR_C + 1 =>
+			when A_N_DATA_C =>
+				i_per_D_rd <= r_cha_C_data;
+			when A_ADDR_C + 0 | A_N_ADDR_C + 2 =>
+				i_per_D_rd <= r_cha_C_addr(23 downto 16);
+			when A_ADDR_C + 1 | A_N_ADDR_C + 1 =>
 				i_per_D_rd <= r_cha_C_addr(15 downto 8);
-			when A_ADDR_C + 2 =>
+			when A_ADDR_C + 2 | A_N_ADDR_C + 0 =>
 				i_per_D_rd <= r_cha_C_addr(7 downto 0);
-			when A_ADDR_D =>
-				i_per_D_rd <= BANK8(r_cha_D_addr(23 downto 16));
-			when A_ADDR_D + 1 =>
+			when A_ADDR_D + 0 | A_N_ADDR_D + 2 =>
+				i_per_D_rd <= r_cha_D_addr(23 downto 16);
+			when A_ADDR_D + 1 | A_N_ADDR_D + 1 =>
 				i_per_D_rd <= r_cha_D_addr(15 downto 8);
-			when A_ADDR_D + 2 =>
+			when A_ADDR_D + 2 | A_N_ADDR_D + 0 =>
 				i_per_D_rd <= r_cha_D_addr(7 downto 0);
-			when A_ADDR_E =>
-				i_per_D_rd <= BANK8(r_cha_E_addr(23 downto 16));
-			when A_ADDR_E + 1 =>
+			when A_ADDR_E + 0 | A_N_ADDR_E + 2 =>
+				i_per_D_rd <= r_cha_E_addr(23 downto 16);
+			when A_ADDR_E + 1 | A_N_ADDR_E + 1 =>
 				i_per_D_rd <= r_cha_E_addr(15 downto 8);
-			when A_ADDR_E + 2 =>
+			when A_ADDR_E + 2 | A_N_ADDR_E + 0 =>
 				i_per_D_rd <= r_cha_E_addr(7 downto 0);
-			when A_STRIDE_A =>
+			when A_STRIDE_A + 0 | A_N_STRIDE_A + 1 =>
 				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_A_stride(15 downto 8)), 8));
-			when A_STRIDE_A + 1 =>
+			when A_STRIDE_A + 1 | A_N_STRIDE_A + 0 =>
 				i_per_D_rd <= r_cha_A_stride(7 downto 0);
-			when A_STRIDE_B =>
+			when A_STRIDE_B + 0 | A_N_STRIDE_B + 1 =>
 				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_B_stride(G_STRIDE_HIGH					 downto 8)), 8));
-			when A_STRIDE_B + 1 =>
+			when A_STRIDE_B + 1 | A_N_STRIDE_B + 0 =>
 				i_per_D_rd <= r_cha_B_stride(7 downto 0);
-			when A_STRIDE_C =>
+			when A_STRIDE_C + 0 | A_N_STRIDE_C + 1 =>
 				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_C_stride(G_STRIDE_HIGH					 downto 8)), 8));
-			when A_STRIDE_C + 1 =>
+			when A_STRIDE_C + 1 | A_N_STRIDE_C + 0 =>
 				i_per_D_rd <= r_cha_C_stride(7 downto 0);
-			when A_STRIDE_D =>
+			when A_STRIDE_D + 0 | A_N_STRIDE_D + 1 =>
 				i_per_D_rd <= std_logic_vector(resize(signed(r_cha_D_stride(G_STRIDE_HIGH					 downto 8)), 8));
-			when A_STRIDE_D + 1 =>
+			when A_STRIDE_D + 1 | A_N_STRIDE_D + 0 =>
 				i_per_D_rd <= r_cha_D_stride(7 downto 0);		
 
-			when A_ADDR_D_MIN =>
-				i_per_D_rd <= BANK8(r_cha_D_addr_min(23 downto 16));
-			when A_ADDR_D_MIN + 1 =>
+			when A_ADDR_D_MIN + 0 | A_N_ADDR_D_MIN + 2 =>
+				i_per_D_rd <= r_cha_D_addr_min(23 downto 16);
+			when A_ADDR_D_MIN + 1 | A_N_ADDR_D_MIN + 1 =>
 				i_per_D_rd <= r_cha_D_addr_min(15 downto 8);
-			when A_ADDR_D_MIN + 2 =>
+			when A_ADDR_D_MIN + 2 | A_N_ADDR_D_MIN + 0 =>
 				i_per_D_rd <= r_cha_D_addr_min(7 downto 0);
 
-			when A_ADDR_D_MAX =>
-				i_per_D_rd <= BANK8(r_cha_D_addr_max(23 downto 16));
-			when A_ADDR_D_MAX + 1 =>
+			when A_ADDR_D_MAX + 0 | A_N_ADDR_D_MAX + 2 =>
+				i_per_D_rd <= r_cha_D_addr_max(23 downto 16);
+			when A_ADDR_D_MAX + 1 | A_N_ADDR_D_MAX + 1 =>
 				i_per_D_rd <= r_cha_D_addr_max(15 downto 8);
-			when A_ADDR_D_MAX + 2 =>
+			when A_ADDR_D_MAX + 2 | A_N_ADDR_D_MAX + 0 =>
 				i_per_D_rd <= r_cha_D_addr_max(7 downto 0);
 
 			when others =>
@@ -1245,15 +1298,17 @@ begin
 			case r_per_state is
 				when idle =>
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= not fb_per_c2p_i.A(6) & "0" & fb_per_c2p_i.A(4 downto 0);
+						r_per_addr <= fb_per_c2p_i.A(9) & '0' & fb_per_c2p_i.A(7 downto 0);
 						if fb_per_c2p_i.we = '0' then
-							r_per_state <= rd;
+							r_per_state <= rd0;
 						else
 							v_write := true;
 						end if;
 					end if;
 				when wait_d_stb =>
 					v_write := true;
+				when rd0 =>
+					r_per_state <= rd;
 				when rd =>
 					fb_per_p2c_o.D_rd <= i_per_D_rd;
 					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
