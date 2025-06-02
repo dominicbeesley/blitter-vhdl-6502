@@ -60,7 +60,8 @@ entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
+		G_DWRITE_HOLD						: natural := 6									-- hold write data on system bus for this many cycles
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -277,6 +278,9 @@ architecture rtl of mk3blit is
 	signal i_SYS_RnW						: std_logic;
 	signal i_SYS_A							: std_logic_vector(15 downto 0);
 	signal i_SYS_PHI2						: std_logic;
+	signal i_SYS_PHI2_dly_nOE			: std_logic;							-- used to extend the gating of the data bus
+
+	signal i_BUF_D_nOE					: std_logic;
 
 	-----------------------------------------------------------------------------
 	-- cpu control signals
@@ -285,7 +289,8 @@ architecture rtl of mk3blit is
 	signal i_chipset_cpu_halt			: std_logic;
 	signal i_chipset_cpu_int			: std_logic;
 
-	signal i_boot_65816					: std_logic;
+	signal i_boot_65816					: std_logic_vector(1 downto 0);
+	signal i_65816_bool_act				: std_logic;
 
 	signal i_throttle_cpu_2MHz			: std_logic;
 
@@ -297,6 +302,7 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
 	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
@@ -613,7 +619,8 @@ END GENERATE;
 
 		boot_65816_o						=> i_boot_65816,
 
-		rom_throttle_map_o				=> i_rom_throttle_map
+		rom_throttle_map_o				=> i_rom_throttle_map,
+		rom_autohazel_map_o				=> i_rom_autohazel_map
 	);
 
 
@@ -641,18 +648,31 @@ END GENERATE;
 		debug_mem_a_stb_o					=> i_debug_mem_a_stb
 	);
 
+	e_bus_oe_dly:entity work.metadelay
+	generic map (
+		N => MAX(0,G_DWRITE_HOLD-3)		-- need here to make sure we hold data in fb_SYS for at least as long as nOE delay
+		)
+	port map (
+		clk => i_fb_syscon.clk,
+		i => i_SYS_PHI2,
+		o => i_SYS_PHI2_dly_nOE
+		);
+
+
+	i_BUF_D_nOE <= not i_SYS_PHI2 and not i_SYS_PHI2_dly_nOE;
 
 	SYS_RnW_o <= i_SYS_RnW;
 	SYS_A_o <= i_SYS_A;
 	SYS_PHI2_o <= i_SYS_PHI2;
-	SYS_BUF_D_nOE_o <= '0';
+	SYS_BUF_D_nOE_o <= i_BUF_D_nOE;
 	SYS_BUF_D_DIR_o <= i_SYS_RnW;
 
 	e_fb_sys: entity work.fb_sys
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
-		G_JIM_DEVNO => G_JIM_DEVNO
+		G_JIM_DEVNO => G_JIM_DEVNO,
+		G_DWRITE_HOLD => G_DWRITE_HOLD
 	)
 	port map (
       cfg_sys_type_i                => r_cfg_sys_type,
@@ -737,6 +757,7 @@ END GENERATE;
 		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
+		rom_autohazel_map_i				=> i_rom_autohazel_map,
 
 		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,
@@ -787,7 +808,8 @@ END GENERATE;
 		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
-		debug_80188_state_o				=> i_debug_80188_state
+		debug_80188_state_o				=> i_debug_80188_state,
+		debug_65816_boot_act_o			=> i_65816_bool_act
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int and i_sys_nIRQ;
