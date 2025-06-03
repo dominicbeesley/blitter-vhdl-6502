@@ -1,0 +1,39 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW2A-18C" pn="GW2A-LV18PG256C8/I7">gw2a18c-011</Device>
+    <FileList>
+        <File path="src/P20KBare.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c20k-pins.cst" type="file.cst" enable="1"/>
+        <File path="src/P20KBare.sdc" type="file.sdc" enable="1"/>
+
+        <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1" />
+        <File path="src/gowin_rpll/pll_48_128.vhd" type="file.vhdl" enable="1" />
+
+
+        <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />
+        <File path="src/address_decode_P20KBare.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_CPU_log2phys_simple16.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/common.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_MCode.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
+
+
+    </FileList>
+</Project>
