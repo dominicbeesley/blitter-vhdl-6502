@@ -178,9 +178,13 @@ architecture rtl of P20KBare is
    signal i_c2p_cpu           : fb_con_o_per_i_t;
    signal i_p2c_cpu           : fb_con_i_per_o_t;
 
-   -- block RAM/ROM wrapper
-   signal i_c2p_mem           : fb_con_o_per_i_t;
-   signal i_p2c_mem           : fb_con_i_per_o_t;
+   -- block ROM wrapper
+   signal i_c2p_mem_rom           : fb_con_o_per_i_t;
+   signal i_p2c_mem_rom           : fb_con_i_per_o_t;
+
+   -- block RAM wrapper
+   signal i_c2p_mem_ram           : fb_con_o_per_i_t;
+   signal i_p2c_mem_ram           : fb_con_i_per_o_t;
 
    -- uart wrapper
    signal i_c2p_uart          : fb_con_o_per_i_t;
@@ -245,7 +249,7 @@ begin
    ); 
 
    -- address decode to select peripheral
-   e_addr2s:entity work.address_decode_xyloni
+   e_addr2s:entity work.address_decode_P20K
    generic map (
       SIM                     => SIM,
       G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT
@@ -278,28 +282,44 @@ begin
       peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
    );
 
-   i_con_c2p_intcon(MAS_NO_CPU)        <= i_c2p_cpu;
-   i_per_p2c_intcon(PERIPHERAL_NO_MEM) <= i_p2c_mem;
+   i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
+   i_per_p2c_intcon(PERIPHERAL_NO_MEM_RAM)<= i_p2c_mem_ram;
+   i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
-   i_c2p_mem            <= i_per_c2p_intcon(PERIPHERAL_NO_MEM);
+   i_c2p_mem_ram        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_RAM);
+   i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
-   e_fb_mem: entity work.fb_eff_mem
+   e_fb_mem_rom: entity work.fb_P20K_mem
    generic map (
-      G_ADDR_W => 12,
---    INIT_FILE => "./../../../../../../../sim_asm/efinix-test/build/efinix-boot-rom.vec"
+      G_ADDR_W => 12,   -- 4K
+      G_READONLY => true,
       INIT_FILE => PROJECT_ROOT_PATH & "/src/hdl/modelC20K/FirstLight/asm/P20KBareMOS/build/P20K-boot-rom.vec"
       )
    port map (
       -- fishbone signals
 
       fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_mem,
-      fb_p2c_o                      => i_p2c_mem
+      fb_c2p_i                      => i_c2p_mem_rom,
+      fb_p2c_o                      => i_p2c_mem_rom
 
    );
+
+   e_fb_mem_ram: entity work.fb_P20K_mem
+   generic map (
+      G_ADDR_W => 13 -- 8K      
+      )
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_mem_ram,
+      fb_p2c_o                      => i_p2c_mem_ram
+
+   );
+
 
    p_uart_clk:process(i_fb_syscon)
    begin

@@ -27,7 +27,7 @@
 -- 
 -- Create Date:    	25/4/2023
 -- Design Name: 
--- Module Name:    	address_decode_xyloni
+-- Module Name:    	address_decode_p20k
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -50,7 +50,7 @@ use work.common.all;
 use work.fishbone.all;
 use work.board_config_pack.all;
 
-entity address_decode_xyloni is
+entity address_decode_p20k is
 	generic (
 		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_PERIPHERAL_COUNT		: natural
@@ -60,9 +60,9 @@ entity address_decode_xyloni is
 		peripheral_sel_o			: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
 		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
 	);
-end address_decode_xyloni;
+end address_decode_p20k;
 
-architecture rtl of address_decode_xyloni is
+architecture rtl of address_decode_p20k is
 begin
 
 
@@ -73,9 +73,13 @@ begin
 		if addr_i(15 downto 4) = x"FE0" then
 			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
 			peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
+		elsif addr_i(15) = '1' then
+
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
 		else
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM, peripheral_sel_o'length);
-			peripheral_sel_oh_o(PERIPHERAL_NO_MEM) <= '1';
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_RAM, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_RAM) <= '1';
 		end if;
 	end process;
 

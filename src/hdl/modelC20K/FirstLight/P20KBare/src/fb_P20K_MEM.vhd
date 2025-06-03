@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    	16/04/2019
 -- Design Name: 
--- Module Name:    	fb_eff_mem
+-- Module Name:    	fb_P20K_mem
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -49,10 +49,11 @@ use std.textio.all;
 library work;
 use work.fishbone.all;
 
-entity fb_eff_mem is
+entity fb_P20K_mem is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_ADDR_W								: positive;	-- number of address lines in memory
+		G_READONLY							: boolean := false;
 		INIT_FILE							: string := ""
 	);
 	port(
@@ -65,9 +66,9 @@ entity fb_eff_mem is
 		fb_p2c_o								: out		fb_con_i_per_o_t
 
 	);
-end fb_eff_mem;
+end fb_P20K_mem;
 
-architecture rtl of fb_eff_mem is
+architecture rtl of fb_P20K_mem is
 
 	type		arr_mem_t is array(2**G_ADDR_W-1 downto 0) of std_logic_vector(7 downto 0);
 
@@ -130,7 +131,7 @@ begin
 	p_wr:process(fb_syscon_i)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if i_wr_ack = '1' then
+			if i_wr_ack = '1' and not G_READONLY then
 				r_mem(to_integer(unsigned(i_addr))) <= fb_c2p_i.D_wr;
 			end if;
 		end if;
