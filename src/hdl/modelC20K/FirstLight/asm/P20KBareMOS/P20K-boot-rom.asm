@@ -61,8 +61,16 @@ mos_handle_res:
 	beq	@lp
 
 wait:	jsr	wait2
-wait2:	rts
+wait2:	
+	bit	UART_STAT
+	bmi	shch
+	rts
 
+shch:	pha
+	lda	UART_DAT
+	jsr	PrintHexA
+	pla
+	rts
 
 uart_tx:	bit	UART_STAT
 	bvs	uart_tx

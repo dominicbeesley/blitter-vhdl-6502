@@ -27,12 +27,12 @@
 -- 
 -- Create Date:    	25/4/2023
 -- Design Name: 
--- Module Name:    	uart_tx
+-- Module Name:    	uart_rx
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
 -- Description: 		Simple uart for debugging purposes. baud_clken_i should be
---						at the baud rate. No handshaking, format = 8n1
+--						at 16 times the baud rate. No handshaking, format = 8n1
 --						client CPU should set tx_data_i and set tx_req_i <= not tx_ack_o
 --						the tx_ack_o signal will flip once the character has been
 --						transmitted. tx_data_i should remain stable after tx_req_i
@@ -55,48 +55,57 @@ use work.fb_CPU_pack.all;
 use work.fb_intcon_pack.all;
 use work.board_config_pack.all;
 
-entity uart_tx is
+entity uart_rx is
 	port(
 		-- serial signals
 
 		clk_i								: in     std_logic;
-		baud_clken_i					: in		std_logic;
-		ser_tx_o							: out		std_logic;
+		baud16_clken_i					: in		std_logic;
+		ser_rx_i							: in		std_logic;
 
 		-- cpu signals
 
 		rst_i								: in std_logic;
-		tx_data_i						: in std_logic_vector(7 downto 0);
-		tx_req_i							: in std_logic;
-		tx_ack_o							: out std_logic
+
+		rx_dat_o							: out std_logic_vector(7 downto 0);
+		rx_ferr_o						: out std_logic;
+		rx_req_o							: out std_logic								-- flips when character received
 
 	);
-end uart_tx;
+end uart_rx;
 
-architecture rtl of uart_tx is
+architecture rtl of uart_rx is
 
-	signal	r_tx_char			: std_logic_vector(7 downto 0);
-	signal	r_tx_req				: std_logic;
-	signal	r_tx_ack				: std_logic;
-	signal   r_ser_tx				: std_logic;
-	signal	r_shift				: std_logic_vector(8 downto 0);
-
-	type tx_state is (idle, shift);
+	type rx_state is (idle, start_bit, shift, stop_bit);
 	
-	signal	r_state : tx_state;
+	signal	r_state : rx_state;
+
+	signal	r_dat		: std_logic_vector(7 downto 0) 
+												:= (others => '0');
+	signal	r_shift	: std_logic_vector(7 downto 0) 
+												:= (others => '0');
+	signal   r_ix		: unsigned(2 downto 0)	
+												:= (others => '0');	-- bit number - we read 8 plus start and stop
+	signal   r_subctr : unsigned(3 downto 0)	
+												:= (others => '0');	-- intra bit counter (16 for 1 bit, 8 for half)
+
+	signal   r_ser_rx : std_logic_vector(3 downto 0) := 
+												(others => '0');		-- meta stability and change detection
+
+	signal   r_req    : std_logic		:= '0';
+	signal   r_ferr   : std_logic		:= '0';
 
 begin
 
-	ser_tx_o <= r_ser_tx;
-	tx_ack_o <= r_tx_ack;
+	rx_req_o <= r_req;
+	rx_dat_o <= r_dat;
+	rx_ferr_o <= r_ferr;
 
 	p_meta:process(clk_i)
 	begin
 		if rising_edge(clk_i) then
-			if rst_i = '1' then
-				r_tx_req <= '0';
-			elsif baud_clken_i = '1' then
-				r_tx_req <= tx_req_i;
+		   if baud16_clken_i = '1' then
+				r_ser_rx <= r_ser_rx(r_ser_rx'high-1 downto 0) & ser_rx_i ;
 			end if;
 		end if;
 	end process;
@@ -105,36 +114,48 @@ begin
 	begin
 		if rising_edge(clk_i) then
 			if rst_i = '1' then
-				r_tx_ack <= '0';
+				r_req <= '0';
 				r_state <= idle;
-				r_ser_tx <= '1';
-				r_shift <= (r_shift'high => '1', others => '0');
-			elsif baud_clken_i = '1' then
-	
-				r_shift <= '0' & r_shift(r_shift'high downto 1);
-
+				r_ix <= (others => '0');
+				r_subctr <= (others => '0');
+				r_dat <= (others => '0');				
+				r_shift <= (others => '0');				
+				r_ferr <= '0';
+			elsif baud16_clken_i = '1' then
+				r_subctr <= r_subctr + 1;
 				case r_state is
 					when idle =>
-
-						if r_tx_req /= r_tx_ack then
-							r_tx_char <= tx_data_i;
-							r_ser_tx <= '0';		-- start bit for one clock
-							r_shift <= (r_shift'high => '1', others => '0');
+						if r_ser_rx(0) = '0' and r_ser_rx(1) = '1' then
+							r_subctr <= to_unsigned(8, r_subctr'length);
+							r_state <= start_bit;
+						end if;
+					when start_bit =>
+						if r_subctr = 0 then
+							r_ix <= (others => '0');
 							r_state <= shift;
-							r_tx_ack <= r_tx_req; -- we've got the char in the shift register, can accept another...later
 						end if;
 					when shift =>
-						if r_shift(0) = '1' then
+						if r_subctr = 0 then
+							r_ix <= r_ix + 1;
+							r_shift <= r_ser_rx(0) & r_shift(7 downto 1);
+							if to_integer(r_ix) = 7 then							
+								r_state <= stop_bit;
+							end if;
+						end if;
+					when stop_bit =>
+						if r_subctr = 0 then
+							if r_ser_rx(0) = '1' then
+								r_dat <= r_shift;
+							else
+								r_ferr <= '1';
+							end if;
+							r_req <= not r_req;
 							r_state <= idle;
-							r_ser_tx <= '1';
-						else
-							r_ser_tx <= r_tx_char(0);
-							r_tx_char <= '0' & r_tx_char(r_tx_char'high downto 1);
-						end if;				
+						end if;							
 					when others =>
 						r_state <= idle;
-						r_ser_tx <= '1';
-						r_tx_ack <= r_tx_req;
+						r_ferr <= '1';
+						r_req <= '1';
 				end case;
 				
 			end if;

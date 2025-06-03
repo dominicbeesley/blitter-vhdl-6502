@@ -33,6 +33,7 @@
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
 
 
     </FileList>

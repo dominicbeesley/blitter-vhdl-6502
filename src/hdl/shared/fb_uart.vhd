@@ -36,7 +36,9 @@
 --							Even addresses read status:
 --								(7) - rx data full i.e. data available, read data to clear
 --								(6) - tx data full i.e. you should wait to write data data, a char is being xmitted
+--								(0) - framing error
 --							Odd addresses read/write data from/to rx/tx
+--							There is no overrun detection
 -- Dependencies: 
 --
 -- Revision: 
@@ -90,10 +92,17 @@ architecture rtl of fb_uart is
 
 	signal r_clk_div	: unsigned(3 downto 0); -- divide the 16x clock down for TX
 	signal r_clken_baud	: std_logic;
+
+	signal i_rx_req	: std_logic;
+	signal r_rx_ack	: std_logic;
+
+	signal i_rx_ferr  : std_logic;
+
+	signal i_rx_dat   : std_logic_vector(7 downto 0);
 begin
 
-	fb_p2c_o.D_rd <= 	(6 => i_tx_ack xor r_tx_req, others => '0') when fb_c2p_i.A(0) = '0' else
-							(others => '0');
+	fb_p2c_o.D_rd <= 	(7 => i_rx_req xor r_rx_ack, 6 => i_tx_ack xor r_tx_req, 0 => i_rx_ferr, others => '0') when fb_c2p_i.A(0) = '0' else
+							i_rx_dat;
 	fb_p2c_o.ack <= r_fb_ack;
 	fb_p2c_o.rdy <= r_fb_ack;
 	fb_p2c_o.stall <= '0' when r_state = idle else '1';
@@ -108,6 +117,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_fb_ack <= '0';
 			r_tx_req <= '0';
+			r_rx_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 			v_dowrite := false;
@@ -125,7 +135,12 @@ begin
 								r_state <= wait_wr_stb;
 							end if;
 						else
-							r_fb_ack <= '1';							
+							r_fb_ack <= '1';						
+							if fb_c2p_i.A(0) = '1' then
+								-- ack read of data
+								r_rx_ack <= i_rx_req;
+							end if;
+
 						end if;
 					end if;
 				when wait_wr_stb =>
@@ -160,6 +175,17 @@ begin
 		tx_data_i => r_tx_char,
 		tx_req_i => r_tx_req,
 		tx_ack_o => i_tx_ack
+		);
+
+	e_rx:entity work.uart_rx
+	port map (
+		clk_i				=> fb_syscon_i.clk,
+		baud16_clken_i => baud16_clken_i,
+		ser_rx_i 		=> ser_rx_i,
+		rst_i 			=> fb_syscon_i.rst,
+		rx_dat_o			=> i_rx_dat,
+		rx_ferr_o		=> i_rx_ferr,
+		rx_req_o			=> i_rx_req
 		);
 
 	p_clk_div:process(fb_syscon_i)
