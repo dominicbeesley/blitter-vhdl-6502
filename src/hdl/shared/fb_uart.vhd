@@ -63,7 +63,7 @@ entity fb_uart is
 	port(
 		-- serial signals
 
-		clk_baud16_i						: in		std_logic;
+		baud16_clken_i						: in		std_logic;							-- clocked in fishbone domain 16x baud rate
 		ser_rx_i								: in		std_logic;
 		ser_tx_o								: out		std_logic;
 
@@ -89,7 +89,7 @@ architecture rtl of fb_uart is
 	signal r_tx_char	: std_logic_vector(7 downto 0);
 
 	signal r_clk_div	: unsigned(3 downto 0); -- divide the 16x clock down for TX
-	signal i_clk_baud	: std_logic;
+	signal r_clken_baud	: std_logic;
 begin
 
 	fb_p2c_o.D_rd <= 	(6 => i_tx_ack xor r_tx_req, others => '0') when fb_c2p_i.A(0) = '0' else
@@ -153,7 +153,8 @@ begin
 
 	e_tx:entity work.uart_tx
 	port map (
-		baud_clk_i => i_clk_baud,
+		clk_i	=> fb_syscon_i.clk,
+		baud_clken_i => r_clken_baud,
 		ser_tx_o => ser_tx_o,
 		rst_i => fb_syscon_i.rst,
 		tx_data_i => r_tx_char,
@@ -161,14 +162,18 @@ begin
 		tx_ack_o => i_tx_ack
 		);
 
-	i_clk_baud <= r_clk_div(3);
-
-	p_clk_div:process(fb_syscon_i, clk_baud16_i)
+	p_clk_div:process(fb_syscon_i)
 	begin
-		if fb_syscon_i.rst = '1' then
-			r_clk_div <= (others => '0');
-		elsif rising_edge(clk_baud16_i) then
-			r_clk_div <= r_clk_div - 1;
+		if rising_edge(fb_syscon_i.clk) then
+			r_clken_baud <= '0';
+			if fb_syscon_i.rst = '1' then
+				r_clk_div <= (others => '0');
+			elsif baud16_clken_i = '1' then
+				r_clk_div <= r_clk_div - 1;
+				if r_clk_div = 0 then
+					r_clken_baud <= '1';
+				end if;
+			end if;
 		end if;
 	end process;
 

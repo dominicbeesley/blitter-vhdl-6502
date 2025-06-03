@@ -62,7 +62,8 @@ entity uart_tx is
 	port(
 		-- serial signals
 
-		baud_clk_i						: in		std_logic;
+		clk_i								: in     std_logic;
+		baud_clken_i					: in		std_logic;
 		ser_tx_o							: out		std_logic;
 
 		-- cpu signals
@@ -92,50 +93,54 @@ begin
 	ser_tx_o <= r_ser_tx;
 	tx_ack_o <= r_tx_ack;
 
-	p_meta:process(baud_clk_i, rst_i)
+	p_meta:process(clk_i)
 	begin
-		if rst_i = '1' then
-			r_tx_req <= '0';
-		elsif rising_edge(baud_clk_i) then
-			r_tx_req <= tx_req_i;
+		if rising_edge(clk_i) then
+			if rst_i = '1' then
+				r_tx_req <= '0';
+			elsif baud_clken_i = '1' then
+				r_tx_req <= tx_req_i;
+			end if;
 		end if;
 	end process;
 
-	p_state:process(baud_clk_i, rst_i)
+	p_state:process(clk_i)
 	begin
-		if rst_i = '1' then
-			r_tx_ack <= '0';
-			r_state <= idle;
-			r_ser_tx <= '1';
-			r_shift <= (r_shift'high => '1', others => '0');
-		elsif rising_edge(baud_clk_i) then
-			
-			r_shift <= '0' & r_shift(r_shift'high downto 1);
+		if rising_edge(clk_i) then
+			if rst_i = '1' then
+				r_tx_ack <= '0';
+				r_state <= idle;
+				r_ser_tx <= '1';
+				r_shift <= (r_shift'high => '1', others => '0');
+			elsif baud_clken_i = '1' then
+	
+				r_shift <= '0' & r_shift(r_shift'high downto 1);
 
-			case r_state is
-				when idle =>
+				case r_state is
+					when idle =>
 
-					if r_tx_req /= r_tx_ack then
-						r_tx_char <= tx_data_i;
-						r_ser_tx <= '0';		-- start bit for one clock
-						r_shift <= (r_shift'high => '1', others => '0');
-						r_state <= shift;
-						r_tx_ack <= r_tx_req; -- we've got the char in the shift register, can accept another...later
-					end if;
-				when shift =>
-					if r_shift(0) = '1' then
+						if r_tx_req /= r_tx_ack then
+							r_tx_char <= tx_data_i;
+							r_ser_tx <= '0';		-- start bit for one clock
+							r_shift <= (r_shift'high => '1', others => '0');
+							r_state <= shift;
+							r_tx_ack <= r_tx_req; -- we've got the char in the shift register, can accept another...later
+						end if;
+					when shift =>
+						if r_shift(0) = '1' then
+							r_state <= idle;
+							r_ser_tx <= '1';
+						else
+							r_ser_tx <= r_tx_char(0);
+							r_tx_char <= '0' & r_tx_char(r_tx_char'high downto 1);
+						end if;				
+					when others =>
 						r_state <= idle;
 						r_ser_tx <= '1';
-					else
-						r_ser_tx <= r_tx_char(0);
-						r_tx_char <= '0' & r_tx_char(r_tx_char'high downto 1);
-					end if;				
-				when others =>
-					r_state <= idle;
-					r_ser_tx <= '1';
-					r_tx_ack <= r_tx_req;
-			end case;
-			
+						r_tx_ack <= r_tx_req;
+				end case;
+				
+			end if;
 		end if;
 	end process;
 

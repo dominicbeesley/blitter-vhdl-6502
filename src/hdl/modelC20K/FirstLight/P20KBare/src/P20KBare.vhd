@@ -204,10 +204,10 @@ architecture rtl of P20KBare is
    -- peripherals
    -----------------------------------------------------------------------------
    
-   constant C_BAUD_CKK16_DIV2 : positive := (CLOCKSPEED*1000000)/(32*BAUD);
+   constant C_BAUD_CKK16_DIV : positive := (CLOCKSPEED*1000000)/(16*BAUD);
 
-   signal r_clk_baud16  : std_logic;
-   signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV2-1) downto 0); -- note 1 bigger to catch carry out
+   signal r_clken_baud16  : std_logic;
+   signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV-1) downto 0); -- note 1 bigger to catch carry out
 
    signal i_ser_tx      : std_logic;
 
@@ -303,13 +303,13 @@ begin
 
    p_uart_clk:process(i_fb_syscon)
    begin
-      if i_fb_syscon.rst = '1' then
-         r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV2-1, r_clk_baud_div'length);
-         r_clk_baud16 <= '1';
-      elsif rising_edge(i_fb_syscon.clk) then
-         if r_clk_baud_div(r_clk_baud_div'high) = '1' then
-            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV2-1, r_clk_baud_div'length);
-            r_clk_baud16 <= not(r_clk_baud16);
+      if rising_edge(i_fb_syscon.clk) then
+         r_clken_baud16 <= '0';
+         if i_fb_syscon.rst = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+         elsif r_clk_baud_div(r_clk_baud_div'high) = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+            r_clken_baud16 <= '1';
          else
             r_clk_baud_div <= r_clk_baud_div - 1;
          end if;
@@ -318,7 +318,7 @@ begin
 
    e_fb_uart: entity work.fb_uart
    port map (
-      clk_baud16_i   => r_clk_baud16,
+      baud16_clken_i => r_clken_baud16,
       ser_rx_i       => uart2_rx_i,
       ser_tx_o       => uart2_tx_o,
 
@@ -430,7 +430,7 @@ begin
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
                      
-      ui_leds_o            <= r_clk_baud16;
+      ui_leds_o            <= r_clken_baud16;
       
 
 
