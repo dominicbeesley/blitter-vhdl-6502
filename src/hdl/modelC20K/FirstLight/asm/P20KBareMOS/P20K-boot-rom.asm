@@ -3,13 +3,12 @@
 
 		.setcpu "6502X"
 
+		.include "p20k.inc"
 
-UART_BASE = $FE00
-UART_STAT = UART_BASE + 0
-UART_DAT  = UART_BASE + 1
-
-UART_STAT_RXF = $80
-UART_STAT_TXF = $40
+                .import noice_init
+                .import noice_nmi
+                .import noice_brk
+                .import noice_enter
 
 
 		.ZEROPAGE
@@ -21,8 +20,27 @@ mos_handle_res:
 
 	sei
 	cld
-	ldx	#$FA			; start stack just below vectors
+	ldx	#$FF	
 	txs
+
+
+	lda	#<str_msg
+	sta	ZP_PTR
+	lda	#>str_msg
+	sta	ZP_PTR+1
+	ldy	#0
+@lp2:	lda	(ZP_PTR),Y
+	beq	@sk1
+	jsr	uart_tx
+	iny
+	bne	@lp2
+@sk1:
+
+	; TODO - init BSS
+
+	jsr	noice_init
+
+	jsr	noice_enter
 
 @lp:	inc	CTR
 	bne	@s1
@@ -41,17 +59,7 @@ mos_handle_res:
 	lda	CTR+0
 	jsr	PrintHexA
 
-	lda	#<str_msg
-	sta	ZP_PTR
-	lda	#>str_msg
-	sta	ZP_PTR+1
-	ldy	#0
-@lp2:	lda	(ZP_PTR),Y
-	beq	@sk1
-	jsr	uart_tx
-	iny
-	bne	@lp2
-@sk1:	ldx	#0
+	ldx	#0
 	ldy	#0
 @lp3:	jsr	wait
 	dex
@@ -99,8 +107,42 @@ PrintHexNybA:	and	#$0F
 
 
 mos_handle_nmi:
+		jmp	noice_nmi
+
 mos_handle_irq:
+		; check for BRK
+		pha
+		txa
+		pha
+
+		; stack
+		;	+5	caller PCH
+		;	+4	caller PCL
+		;	+3	caller P
+		;	+2	caller A
+		;	+1	caller X
+
+		tsx	
+		lda	$103,X
+		and	#$10
+		bne	mos_handle_brk
+
+		
+		;;;;; interrupt handler, can use A,X
+
+		pla
+		tax
+		pla
 		rti
+
+mos_handle_brk:	pla
+		tax
+		pla
+		jmp	noice_brk
+
+
+
+
 
 str_msg:	.byte "Hello Ishbel", 13, 10, 0
 
