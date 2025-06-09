@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 
 library fmf;
 
-entity periphs_csel is
+entity sim_peripherals_csel is
    port(
       clk_2MHzE_i    :  in std_logic;
       nCS_i          :  in std_logic_vector(3 downto 0);
@@ -20,9 +20,9 @@ entity periphs_csel is
       nFDCONWR_o     : out std_logic;
       nVIAB_o        : out std_logic
    );
-end periphs_csel;
+end sim_peripherals_csel;
 
-architecture rtl of periphs_csel is
+architecture rtl of sim_peripherals_csel is
 
 
 begin

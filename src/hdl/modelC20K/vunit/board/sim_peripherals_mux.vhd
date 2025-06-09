@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 
 library fmf;
 
-entity peripherals is
+entity sim_peripherals_mux is
    port(
 
       -- signals to/from FPGA
@@ -76,9 +76,9 @@ entity peripherals is
       kb_pa7_i       : in std_logic
       
    );
-end peripherals;
+end sim_peripherals_mux;
 
-architecture rtl of peripherals is
+architecture rtl of sim_peripherals_mux is
    
 
    signal i_U8_B     : std_logic_vector(7 downto 0);
@@ -221,7 +221,7 @@ begin
 
 
 
-   e_csel:entity work.periphs_csel
+   e_csel:entity work.sim_peripherals_csel
    port map (
       clk_2MHzE_i    => clk_2MHz_E_i,
       nCS_i          => i_P_nCS,

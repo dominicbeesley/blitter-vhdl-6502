@@ -12,7 +12,7 @@ lib = vu.add_library("lib")
 
 # Add all files ending in .vhd in current working directory to library
 lib.add_source_files("./*.vhd")
-lib.add_source_files("../../board/periphs_csel.vhd")
+lib.add_source_files("../../board/sim_peripherals_csel.vhd")
 lib.add_source_files("../../library/*.vhd")
 
 fmf = vu.add_library("fmf")

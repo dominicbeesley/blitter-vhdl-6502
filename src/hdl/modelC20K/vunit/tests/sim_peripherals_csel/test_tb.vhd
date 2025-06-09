@@ -76,7 +76,7 @@ begin
       test_runner_cleanup(runner); -- Simulation ends here
    end process;
 
-   e_dut:entity work.periphs_csel
+   e_dut:entity work.sim_peripherals_csel
    port map (
       clk_2MHzE_i    => i_clk_2MHzE,
       nCS_i          => i_nCS,

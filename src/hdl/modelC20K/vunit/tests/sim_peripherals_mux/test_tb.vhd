@@ -361,7 +361,7 @@ begin
       test_runner_cleanup(runner); -- Simulation ends here
    end process;
 
-   e_dut:entity work.peripherals
+   e_dut:entity work.sim_peripherals_mux
    port map (
 
       clk_2MHz_E_i   => i_clk_2MHzE,
