@@ -1,7 +1,6 @@
 library vunit_lib;
 context vunit_lib.vunit_context;
 
--- test periphs_csel 
 
 
 library ieee;
@@ -26,7 +25,6 @@ architecture rtl of test_tb is
    signal i_clk_2_int   : std_logic;
 
    signal i_SYS_A       : std_logic_vector(15 downto 0);
-   signal i_SYS_D_rd    : std_logic_vector(7 downto 0);
    signal i_SYS_D_wr    : std_logic_vector(7 downto 0);
    signal i_SYS_RnW     : std_logic;
 
