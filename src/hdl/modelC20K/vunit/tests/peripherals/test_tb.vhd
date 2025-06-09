@@ -33,6 +33,7 @@ architecture rtl of test_tb is
    signal i_bbc_slow_cyc: std_logic;
 
 
+   -- signals from fpga to multiplex
    signal i_clk_2MHzE   : std_logic;
    signal i_clk_1MHzE   : std_logic;
    signal i_MIO         : std_logic_vector(7 downto 0);
@@ -52,13 +53,13 @@ architecture rtl of test_tb is
    signal i_MIO_O0      : std_logic_vector(7 downto 0);
    signal i_MIO_O1      : std_logic_vector(7 downto 0);
 
-   -- O0 signals
+   -- fpga internal O0 signals
    signal i_MIO_nCS     : std_logic_vector(3 downto 0);
    signal i_SYS_nRST    : std_logic := '1';
    signal i_SER_TX      : std_logic := '0';
    signal i_SER_RTS     : std_logic := '0';
 
-   -- O1 signals
+   -- fpga internal O1 signals
    signal i_J_SPI_CLK   : std_logic := '1';
    signal i_J_SPI_MOSI  : std_logic := '1';
    signal i_J_ADC_CS    : std_logic := '1';
@@ -72,13 +73,75 @@ architecture rtl of test_tb is
    signal i_sync_cyc_A  : std_logic;
 
 
-   -- test signals back out of peripherals
+   -- test signal into multiplexer from board
 
-   signal i_test_VID_CS : std_logic;
-   signal i_test_VID_HS : std_logic;
-   signal i_test_VID_VS : std_logic;
+   signal   imi_ser_cts       : std_logic;
+   signal   imi_ser_rx        : std_logic;
+   signal   imi_d_cas         : std_logic;
+   signal   imi_kb_nRST       : std_logic;
+   signal   imi_kb_CA2        : std_logic;
+   signal   imi_netint        : std_logic;
+   signal   imi_irq           : std_logic;
+   signal   imi_nmi           : std_logic;
+
+   signal   imi_j_i0_i        : std_logic;
+   signal   imi_j_i1_i        : std_logic;
+   signal   imi_j_spi_miso_i  : std_logic;
+   signal   imi_btn0_i        : std_logic;
+   signal   imi_btn1_i        : std_logic;
+   signal   imi_btn2_i        : std_logic;
+   signal   imi_btn3_i        : std_logic;
+   signal   imi_kb_pa7_i      : std_logic;
+
+   -- test signals back out of multiplexer
+
+   signal im_P_D              : std_logic_vector(7 downto 0);
+   signal im_P_A              : std_logic_vector(7 downto 0);
+
+   signal im_P_RnW            : std_logic;
+   signal im_P_nRST           : std_logic;
+   signal im_P_SER_TX         : std_logic;
+   signal im_P_SER_RTS        : std_logic;
+
+   signal im_nADLC            : std_logic;
+   signal im_nKBPAWR          : std_logic;
+   signal im_nIC32WR          : std_logic;
+   signal im_nPGFC            : std_logic;
+   signal im_nPGFD            : std_logic;
+   signal im_nFDC             : std_logic;
+   signal im_nTUBE            : std_logic;
+   signal im_nFDCONWR         : std_logic;
+   signal im_nVIAB            : std_logic;
+
+   signal im_j_ds_nCS2        : std_logic;
+   signal im_j_ds_nCS1        : std_logic;
+   signal im_j_spi_clk        : std_logic;
+   signal im_VID_HS           : std_logic;
+   signal im_VID_VS           : std_logic;
+   signal im_VID_CS           : std_logic;
+   signal im_j_spi_mosi       : std_logic;
+   signal im_j_adc_nCS        : std_logic;
 
 begin
+
+   imi_j_i0_i           <= '0';
+   imi_j_i1_i           <= '1';
+   imi_j_spi_miso_i     <= '0';
+   imi_btn0_i           <= '1';
+   imi_btn1_i           <= '0';
+   imi_btn2_i           <= '1';
+   imi_btn3_i           <= '0';
+   imi_kb_pa7_i         <= '1';
+
+   imi_ser_cts          <= '1';
+   imi_ser_rx           <= '0';
+   imi_d_cas            <= '1';
+   imi_kb_nRST          <= '0';
+   imi_kb_CA2           <= '1';
+   imi_netint           <= '0';
+   imi_irq              <= '1';
+   imi_nmi              <= '0';
+
 
    p_clk_128:process
    begin
@@ -312,10 +375,73 @@ begin
       MIO_O0_nOE_i   => i_MIO_O0_nOE,
       MIO_O1_nOE_i   => i_MIO_O1_nOE,
 
-      VID_HS_o       => i_test_VID_HS,
-      VID_VS_o       => i_test_VID_VS,
-      VID_CS_o       => i_test_VID_CS
+      P_RnW_o        => im_P_RnW,
+      P_nRST_o       => im_P_nRST,
+      P_SER_TX_o     => im_P_SER_TX,
+      P_SER_RTS_o    => im_P_SER_RTS,
 
+      nADLC_o        => im_nADLC,
+      nKBPAWR_o      => im_nKBPAWR,
+      nIC32WR_o      => im_nIC32WR,
+      nPGFC_o        => im_nPGFC,
+      nPGFD_o        => im_nPGFD,
+      nFDC_o         => im_nFDC,
+      nTUBE_o        => im_nTUBE,
+      nFDCONWR_o     => im_nFDCONWR,
+      nVIAB_o        => im_nVIAB,
+
+      -- MIO_I0 phase
+
+      ser_cts_i      => imi_ser_cts,
+      ser_rx_i       => imi_ser_rx,
+      d_cas_i        => imi_d_cas,
+      kb_nRST_i      => imi_kb_nRST,
+      kb_CA2_i       => imi_kb_CA2,
+      netint_i       => imi_netint,
+      irq_i          => imi_irq,
+      nmi_i          => imi_nmi,
+
+      -- MIO_O1 phase
+      j_ds_nCS2_o    => im_j_ds_nCS2,
+      j_ds_nCS1_o    => im_j_ds_nCS1,
+      j_spi_clk_o    => im_j_spi_clk,
+      VID_HS_o       => im_VID_HS,
+      VID_VS_o       => im_VID_VS,
+      VID_CS_o       => im_VID_CS,
+      j_spi_mosi_o   => im_j_spi_mosi,
+      j_adc_nCS_o    => im_j_adc_nCS,
+
+      -- MIO_I1 phase
+      j_i0_i         => imi_j_i0_i,
+      j_i1_i         => imi_j_i1_i,
+      j_spi_miso_i   => imi_j_spi_miso_i,
+      btn0_i         => imi_btn0_i,
+      btn1_i         => imi_btn1_i,
+      btn2_i         => imi_btn2_i,
+      btn3_i         => imi_btn3_i,
+      kb_pa7_i       => imi_kb_pa7_i,
+
+      -- data phase
+      P_D_io         => im_P_D,
+
+      -- address phase
+      P_A_o          => im_P_A
+
+
+   );
+
+   -- mock devices
+
+   e_floppy:entity work.floppy
+   port map (
+      A_i         => im_P_A(1 downto 0),
+      D_io        => im_P_D,
+      RnW_i       => im_P_RnW,
+      nRST_i      => im_P_nRST,
+      nFDC_i      => im_nFDC,
+      nFDCON_i    => im_nFDCONWR,
+      NMI_o       => open,       -- UNTESTED
+      CLK8_i      => '1'         -- UNTESTED
    );
 
    e_slow_cyc:entity work.bbc_slow_cyc
