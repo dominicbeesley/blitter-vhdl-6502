@@ -443,12 +443,12 @@ begin
    i_MIO_O1 <= (
       0 => p_J_DS_nCS2_i,
       1 => p_J_DS_nCS1_i,
-      2 => p_VID_CS_i,
+      2 => p_J_SPI_CLK_i,
       3 => p_VID_VS_i,
       4 => p_VID_HS_i,
-      5 => p_J_ADC_nCS_i,
+      5 => p_VID_CS_i,
       6 => p_J_SPI_MOSI_i,
-      7 => p_J_SPI_CLK_i
+      7 => p_J_ADC_nCS_i
       );
 
 

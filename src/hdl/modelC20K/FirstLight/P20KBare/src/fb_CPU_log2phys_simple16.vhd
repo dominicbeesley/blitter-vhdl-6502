@@ -72,7 +72,19 @@ architecture rtl of fb_cpu_log2phys_simple16 is
 begin
 
 	fb_con_p2c_o <= fb_per_p2c_i;
-	fb_per_c2p_o <= fb_con_c2p_i;
+
+	p_l2p:process(all)
+	begin
+		
+		fb_per_c2p_o <= fb_con_c2p_i;
+
+		if fb_con_c2p_i.A(23 downto 16) = x"FF" then
+			if fb_con_c2p_i.A(15 downto 8) = x"FD" then
+				fb_per_c2p_o.A <= x"1F10" & fb_con_c2p_i.A(7 downto 0);
+			end if;
+		end if;
+
+	end process;
 
 
 end rtl;

@@ -186,6 +186,10 @@ architecture rtl of P20KBare is
    signal i_c2p_mem_ram           : fb_con_o_per_i_t;
    signal i_p2c_mem_ram           : fb_con_i_per_o_t;
 
+   -- SRAM wrapper
+   signal i_c2p_mem_ram_brd       : fb_con_o_per_i_t;
+   signal i_p2c_mem_ram_brd       : fb_con_i_per_o_t;
+
    -- uart wrapper
    signal i_c2p_uart          : fb_con_o_per_i_t;
    signal i_p2c_uart          : fb_con_i_per_o_t;
@@ -285,11 +289,13 @@ begin
    i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_RAM)<= i_p2c_mem_ram;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
+   i_per_p2c_intcon(PERIPHERAL_NO_MEM_BRD)<= i_p2c_mem_ram_brd;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_ram        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_RAM);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
+   i_c2p_mem_ram_brd    <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_BRD);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
@@ -309,7 +315,7 @@ begin
 
    e_fb_mem_ram: entity work.fb_P20K_mem
    generic map (
-      G_ADDR_W => 13 -- 8K      
+      G_ADDR_W => 12 -- 4K      
       )
    port map (
       -- fishbone signals
@@ -317,6 +323,26 @@ begin
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_i                      => i_c2p_mem_ram,
       fb_p2c_o                      => i_p2c_mem_ram
+
+   );
+
+   e_fb_mem_sdram:entity work.fb_C20K_mem_sram
+   port map (
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_mem_ram_brd,
+      fb_p2c_o                      => i_p2c_mem_ram_brd,
+
+      mem_A_o                       => mem_A_io,
+      mem_D_io                      => mem_D_io,
+      mem_nCE_o                     => mem_nCE_o,
+      mem_nCE_BB_o                  => mem_nCE_BB_o,
+      mem_nCE_FL_o                  => mem_nCE_FL_o,
+      mem_nOE_o                     => mem_nOE_o,
+      mem_nWE_o                     => mem_nWE_o
+
 
    );
 
@@ -389,13 +415,6 @@ begin
       ddr_reset_n_o        <= '0';
       ddr_we_o             <= '0';
 
-      mem_A_io             <= (others => 'Z');
-      mem_D_io             <= (others => 'Z');
-      mem_nCE_o            <= (others => '1');
-      mem_nCE_BB_o         <= '1';
-      mem_nCE_FL_o         <= '1';
-      mem_nOE_o            <= '1';
-      mem_nWE_o            <= '1';
 
       cpu_A_nOE_o          <= '1';
       cpu_BE_o             <= '0';

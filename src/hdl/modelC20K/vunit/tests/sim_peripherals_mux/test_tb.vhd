@@ -64,8 +64,8 @@ architecture rtl of test_tb is
    signal i_VID_HS      : std_logic := '1';
    signal i_VID_VS      : std_logic := '1';
    signal i_VID_CS      : std_logic := '1';
-   signal i_J_DS1_CS    : std_logic := '1';
-   signal i_J_DS2_CS    : std_logic := '1';
+   signal i_J_DS_CS1    : std_logic := '1';
+   signal i_J_DS_CS2    : std_logic := '1';
 
    signal i_sync_cyc    : std_logic;
    signal i_sync_cyc_A  : std_logic;
@@ -284,7 +284,17 @@ begin
          7 => i_SER_RTS
       );
 
-   i_MIO_O1 <= i_J_SPI_CLK & i_J_SPI_MOSI & i_J_ADC_CS & i_VID_HS & i_VID_VS & i_VID_CS & i_J_DS1_CS & i_J_DS2_CS;
+  i_MIO_O1 <= (
+      0 => i_J_DS_nCS2,
+      1 => i_J_DS_nCS1,
+      2 => i_J_SPI_CLK,
+      3 => i_VID_VS,
+      4 => i_VID_HS,
+      5 => i_VID_CS,
+      6 => i_J_SPI_MOSI,
+      7 => i_J_ADC_nCi
+      );
+
 
    i_MIO <= i_SYS_A(7 downto 0) when i_MIO_nALE2 = '0' else
             i_MIO_O0 when i_MIO_O0_nOE2 = '0' else

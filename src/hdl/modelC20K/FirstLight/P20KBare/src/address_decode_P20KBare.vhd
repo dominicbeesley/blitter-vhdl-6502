@@ -70,16 +70,24 @@ begin
 	begin
 		peripheral_sel_oh_o <= (others => '0');
 
-		if addr_i(15 downto 4) = x"FE0" then
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
-			peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
-		elsif addr_i(15) = '1' then
+		if addr_i(23 downto 16) = x"FF" then
+			if addr_i(15 downto 4) = x"FE0" then
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
+			elsif addr_i(15) = '1' then
 
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
-			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
+			elsif addr_i(15 downto 12) = x"0" then
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_RAM, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_RAM) <= '1';
+			else
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_BRD, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_BRD) <= '1';
+			end if;
 		else
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_RAM, peripheral_sel_o'length);
-			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_RAM) <= '1';
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_BRD, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_BRD) <= '1';			
 		end if;
 	end process;
 
