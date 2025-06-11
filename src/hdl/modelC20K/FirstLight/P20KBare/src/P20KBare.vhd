@@ -244,7 +244,7 @@ begin
    port map (
       fb_syscon_o                   => i_fb_syscon,
 
-      EXT_nRESET_i                  => '1',
+      EXT_nRESET_i                  => sup_nRST_i,
 
       clk_fish_i                    => i_clk_pll_128M,
       clk_lock_i                    => '1',
