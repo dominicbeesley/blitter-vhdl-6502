@@ -1,16 +1,16 @@
 .PHONY:		all clean
 
-ASMTARGETS=	test-serialout.bin 
+ASMTARGETS=	test-serialout.hex
 TARGETS=	$(ASMTARGETS) 
 
-INCS=		
+INCS=../../includes/
 LIBS=		
 SCRIPTS=../../../../../../scripts
 BUILD=./build
 
 AS=ca65
 LD=ld65
-DEPS=p20k.inc
+DEPS=
 AR=ar65
 
 OBJS=test-serialout
@@ -24,6 +24,9 @@ X:=$(shell mkdir -p build)
 all:		$(addprefix $(BUILD)/, $(TARGETS))
 
 
+$(BUILD)/%.hex: $(BUILD)/%.bin
+		bin2hex 0x300 $< $@
+
 $(BUILD)/test-serialout.bin : $(OBJS_B) $(LIBS) test-serialout.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_B) $(LIBS)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
@@ -31,7 +34,7 @@ $(BUILD)/test-serialout.bin : $(OBJS_B) $(LIBS) test-serialout.cfg
 
 
 $(BUILD)/%.o:	%.asm $(DEPS) $(INCS)
-		$(AS) -g -l $(basename $@).lst -o $@ $<
+		$(AS) -g -l $(basename $@).lst -I $(INCS) -o $@ $<
 
 
 clean:		
