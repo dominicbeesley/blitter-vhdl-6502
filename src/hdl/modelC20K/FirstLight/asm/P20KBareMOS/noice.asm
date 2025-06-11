@@ -244,7 +244,7 @@ INT_ENTRY:
 
        	SEC
        	LDA     REG_PC          		;BACK UP PC TO POINT AT BREAKPOINT
-       	SBC     #1
+       	SBC     #2
        	STA     REG_PC
        	LDA     REG_PC+1
        	SBC     #0
