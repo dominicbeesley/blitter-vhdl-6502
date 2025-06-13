@@ -51,12 +51,13 @@ package board_config_pack is
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
-	constant PERIPHERAL_COUNT 			: natural 		:= 5;
+	constant PERIPHERAL_COUNT 			: natural 		:= 6;
 	constant PERIPHERAL_NO_MEM_RAM 	: natural		:= 0;
 	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
 	constant PERIPHERAL_NO_MEM_BRD 	: natural		:= 2;
 	constant PERIPHERAL_NO_1MHZ_BUS	: natural      := 3;
-	constant PERIPHERAL_NO_UART 		: natural		:= 4;
+	constant PERIPHERAL_NO_LED_ARR	: natural      := 4;
+	constant PERIPHERAL_NO_UART 		: natural		:= 5;
 
 end board_config_pack;
 

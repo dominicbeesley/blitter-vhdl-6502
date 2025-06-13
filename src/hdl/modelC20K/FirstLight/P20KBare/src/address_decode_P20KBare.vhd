@@ -88,6 +88,9 @@ begin
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_BRD, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_BRD) <= '1';
 			end if;
+		elsif addr_i(23 downto 16) = x"F0" then
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_LED_ARR, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_LED_ARR) <= '1';		
 		else
 			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_BRD, peripheral_sel_o'length);
 			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_BRD) <= '1';			

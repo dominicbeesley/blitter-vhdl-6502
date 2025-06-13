@@ -51,6 +51,7 @@ use work.fishbone.all;
 use work.fb_CPU_pack.all;
 use work.fb_intcon_pack.all;
 use work.board_config_pack.all;
+use work.ws2812_pack.all;
 
 entity P20KBare is
    generic (
@@ -200,6 +201,10 @@ architecture rtl of P20KBare is
    signal i_c2p_1mhz_bus          : fb_con_o_per_i_t;
    signal i_p2c_1mhz_bus          : fb_con_i_per_o_t;
 
+   -- LED array wrapper
+   signal i_c2p_led_arr          : fb_con_o_per_i_t;
+   signal i_p2c_led_arr          : fb_con_i_per_o_t;
+
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
    signal i_con_p2c_intcon    : fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
@@ -297,6 +302,7 @@ begin
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_BRD)<= i_p2c_mem_ram_brd;
    i_per_p2c_intcon(PERIPHERAL_NO_1MHZ_BUS)<= i_p2c_1mhz_bus;
+   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
@@ -304,6 +310,7 @@ begin
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
    i_c2p_mem_ram_brd    <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_BRD);
    i_c2p_1mhz_bus       <= i_per_c2p_intcon(PERIPHERAL_NO_1MHZ_BUS);
+   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
@@ -423,7 +430,21 @@ begin
 --   led(2) <= not i_ser_tx;
 --   led(3) <= '0';
 
+   e_fb_led_arr:entity work.fb_ws2812
+   generic map (
+      G_CLOCKSPEED => CLOCKSPEED * 1000000,
+      G_N_CHAIN => 8
+      )
+   port map (
 
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_led_arr,
+      fb_p2c_o                      => i_p2c_led_arr,
+
+      led_serial_o                  => ui_leds_o
+   );
 
 
       ddr_addr_o           <= (others => '0');
@@ -491,7 +512,6 @@ begin
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
                      
-      ui_leds_o            <= r_clken_baud16;
       
 
 

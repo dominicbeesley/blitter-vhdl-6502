@@ -34,6 +34,9 @@
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_c20k_1mhz_bus.vhd" type="file.vhdl" enable="1" />
+        <File path="src/ws2812_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="src/ws2812.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_ws2812.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
 
