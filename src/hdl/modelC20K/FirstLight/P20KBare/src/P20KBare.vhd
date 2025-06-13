@@ -167,6 +167,8 @@ end entity;
 
 architecture rtl of P20KBare is
 
+   signal   i_JIM_page     : std_logic_vector(15 downto 0);
+
 
    -----------------------------------------------------------------------------
    -- fishbone signals
@@ -193,6 +195,10 @@ architecture rtl of P20KBare is
    -- uart wrapper
    signal i_c2p_uart          : fb_con_o_per_i_t;
    signal i_p2c_uart          : fb_con_i_per_o_t;
+
+   -- 1mhz bus wrapper
+   signal i_c2p_1mhz_bus          : fb_con_o_per_i_t;
+   signal i_p2c_1mhz_bus          : fb_con_i_per_o_t;
 
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
@@ -290,12 +296,14 @@ begin
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_RAM)<= i_p2c_mem_ram;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_BRD)<= i_p2c_mem_ram_brd;
+   i_per_p2c_intcon(PERIPHERAL_NO_1MHZ_BUS)<= i_p2c_1mhz_bus;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_ram        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_RAM);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
    i_c2p_mem_ram_brd    <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_BRD);
+   i_c2p_1mhz_bus       <= i_per_c2p_intcon(PERIPHERAL_NO_1MHZ_BUS);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
@@ -346,6 +354,17 @@ begin
 
    );
 
+   e_fb_1mhzBus:entity work.fb_c20k_1MHZ_bus
+   port map (
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_1mhz_bus,
+      fb_p2c_o                      => i_p2c_1mhz_bus,
+
+      JIM_page_o                    => i_JIM_page
+   );
 
    p_uart_clk:process(i_fb_syscon)
    begin
@@ -392,7 +411,10 @@ begin
       -- fishbone signals
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_o                      => i_c2p_cpu,
-      fb_p2c_i                      => i_p2c_cpu
+      fb_p2c_i                      => i_p2c_cpu,
+
+      -- logical mappings
+      JIM_page_i                    => i_JIM_page
 
    );
 

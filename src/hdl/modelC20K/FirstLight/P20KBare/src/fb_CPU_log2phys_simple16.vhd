@@ -61,7 +61,10 @@ entity fb_cpu_log2phys_simple16 is
 		fb_con_p2c_o							: out	fb_con_i_per_o_t;
 
 		fb_per_c2p_o							: out fb_con_o_per_i_t;
-		fb_per_p2c_i							: in	fb_con_i_per_o_t
+		fb_per_p2c_i							: in	fb_con_i_per_o_t;
+
+		-- memory control and paging
+		JIM_page_i							: in  std_logic_vector(15 downto 0)
 
 	);
 end fb_cpu_log2phys_simple16;
@@ -80,7 +83,7 @@ begin
 
 		if fb_con_c2p_i.A(23 downto 16) = x"FF" then
 			if fb_con_c2p_i.A(15 downto 8) = x"FD" then
-				fb_per_c2p_o.A <= x"1F10" & fb_con_c2p_i.A(7 downto 0);
+				fb_per_c2p_o.A <= JIM_page_i & fb_con_c2p_i.A(7 downto 0);
 			end if;
 		end if;
 

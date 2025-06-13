@@ -235,6 +235,44 @@ addr_S1:
 
 		jsr	passfail
 
+		M_PRINT	str_memvalues
+		lda	flag_soak_ctr
+		jsr	PrintHex
+		jsr	OSNEWL
+
+		jsr	addr0
+@mvlp0:		lda	flag_soak_ctr
+		eor	zp_addr + 1
+		eor	zp_addr + 1
+		sta	zp_data
+		lda	zp_addr + 1
+		bne	@mvlp1
+		jsr	PrintAddr
+		jsr	OSNEWL
+@mvlp1:		jsr	jimwrite
+		inc	zp_data
+		inc	zp_addr
+		bne	@mvlp1
+
+		lda	flag_soak_ctr
+		eor	zp_addr + 1
+		eor	zp_addr + 1
+		sta	zp_data
+		lda	#0
+		sta	zp_fail
+
+@mvlp2:		jsr	jimcheck
+		inc	zp_data
+		inc	zp_addr
+		bne	@mvlp2
+
+		inc	zp_addr+1
+		bne	@mvsk1
+		inc	zp_addr+2
+@mvsk1:		jsr	cmpaddrmax
+		bcc	@mvlp0
+
+		jsr	passfail
 
 
 		bit	flag_soak
@@ -403,6 +441,7 @@ PrintAddr:	lda	zp_addr+2
 		jsr	PrintHex
 		lda	zp_addr+0
 		jmp	PrintHex
+
 PrintData:	lda	zp_data
 		jmp	PrintHex
 
@@ -624,8 +663,10 @@ str_pass:		.byte	" - PASS", 13, 0
 str_fail:		.byte	13, "FAIL!", 13, 0
 str_continue:		.byte	"Continue?", 0
 str_read:		.byte	" failed, read ", 0 
+str_expected:		.byte	" extpected ",0
 str_warning_dev:	.byte	"Warning: device not found ", 0
 str_panic:		.byte	"WARNING: This will corrupt all memory in the specified range", 13, 0
 str_SoakPass:		.byte	"Pass, soak test #",0
 str_Escape:		.byte   "Escape", 0
 str_exit:		.byte   "Exit", 0
+str_memvalues:		.byte	"Test Mem Data", 0

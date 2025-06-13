@@ -72,7 +72,10 @@ entity fb_cpu_t65only is
 		fb_p2c_i									: in	fb_con_i_per_o_t;
 
 		-- chipset control signals
-		cpu_halt_i								: in  std_logic
+		cpu_halt_i								: in  std_logic;
+
+		-- logical mappings
+		JIM_page_i								: in  std_logic_vector(15 downto 0)
 	);
 end fb_cpu_t65only;
 
@@ -196,7 +199,9 @@ begin
 		fb_con_p2c_o							=> i_fb_p2c_log,
 
 		fb_per_c2p_o							=> fb_c2p_o,
-		fb_per_p2c_i							=> fb_p2c_i
+		fb_per_p2c_i							=> fb_p2c_i,
+
+		JIM_page_i								=> JIM_page_i
 
 	);
 
