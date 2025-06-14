@@ -285,14 +285,14 @@ begin
       );
 
   i_MIO_O1 <= (
-      0 => i_J_DS_nCS2,
-      1 => i_J_DS_nCS1,
-      2 => i_J_SPI_CLK,
+      0 => im_j_ds_nCS2,
+      1 => im_j_ds_nCS1,
+      2 => im_j_spi_clk,
       3 => i_VID_VS,
       4 => i_VID_HS,
       5 => i_VID_CS,
-      6 => i_J_SPI_MOSI,
-      7 => i_J_ADC_nCi
+      6 => im_j_spi_mosi,
+      7 => im_j_adc_nCS
       );
 
 

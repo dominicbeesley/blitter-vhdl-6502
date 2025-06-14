@@ -14,7 +14,7 @@ lib = vu.add_library("lib")
 lib.add_source_files("./*.vhd")
 lib.add_source_files("../../board/*.vhd")
 lib.add_source_files("../../library/*.vhd")
-lib.add_source_files("../../library/bbc/*.vhd")
+lib.add_source_files("../../../../library/bbc/*.vhd")
 
 fmf = vu.add_library("fmf")
 
