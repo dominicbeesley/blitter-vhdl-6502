@@ -13,12 +13,13 @@ lib = vu.add_library("lib")
 # Add all files ending in .vhd in current working directory to library
 lib.add_source_files("./*.vhd")
 lib.add_source_files("../../board/*.vhd")
-lib.add_source_files("../../library/*.vhd")
 lib.add_source_files("../../../../library/bbc/*.vhd")
+lib.add_source_files("../../../../library/simulation/cy74FCT2543.vhd")
+lib.add_source_files("../../../../library/simulation/ls74245.vhd")
 
 fmf = vu.add_library("fmf")
 
-fmf.add_source_files("../../library/fmf/*.vhd")
+fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
 
