@@ -14,3 +14,5 @@ fred_JIM_PAGE_HI2		:=	$FCFC		; note ignored Blitter/Paula
 fred_JIM_PAGE_HI		:=	$FCFD
 fred_JIM_PAGE_LO		:=	$FCFE
 fred_JIM_DEVNO			:=	$FCFF
+
+PAGE_LEDS	:= $F000
