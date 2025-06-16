@@ -277,5 +277,4 @@ begin
       nVIAB_o        => nVIAB_o
    );
 
-
 end rtl;

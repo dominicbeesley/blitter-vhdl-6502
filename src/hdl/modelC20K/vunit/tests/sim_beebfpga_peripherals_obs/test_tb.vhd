@@ -119,7 +119,7 @@ architecture rtl of test_tb is
    signal ibpio_P_D        : std_logic_vector(7 downto 0);
    signal ibpo_A           : std_logic_vector(7 downto 0);
 
-
+   signal i_u11_Q          : std_logic_vector(7 downto 0);
 
 begin
 
@@ -215,6 +215,8 @@ begin
             wait until ic_mhz2E_clken = '1' and rising_edge(i_clk_48);
             
             CYC_R(x"FFEA");
+            CYC_W(x"FE40", x"A5");
+            CYC_W(x"FE40", x"5A");
             CYC_R(x"FFEA");
             CYC_W(x"FD23", x"5A");
             CYC_R(x"FFEA");
@@ -406,25 +408,17 @@ begin
 
 
    );
---
---   -- mock devices
---
---   e_floppy:entity work.floppy
---   port map (
---      A_i         => im_P_A(1 downto 0),
---      D_io        => im_P_D,
---      RnW_i       => im_P_RnW,
---      nRST_i      => im_P_nRST,
---      nFDC_i      => im_nFDC,
---      nFDCON_i    => im_nFDCONWR,
---      NMI_o       => open,       -- UNTESTED
---      CLK8_i      => '1'         -- UNTESTED
---   );
---
---   e_slow_cyc:entity work.bbc_slow_cyc
---   port map (
---      sys_A_i        => i_SYS_A,
---      slow_o         => i_bbc_slow_cyc
---   );
+
+
+   -- slow latch the data lines are munged in or before the controller
+   -- to mimic a LS259 8 bit addressable latch
+   e_U9:entity work.hct574
+    PORT MAP (
+        Q       => i_u11_Q,
+        D       => ibpio_P_D,
+        CLK     => ibpo_nIC32WR,
+        nOE     => '0'
+    );
+
 
 end rtl;
