@@ -450,7 +450,7 @@ begin
       sys_cyc_en_i            => fb_c2p_i.cyc,
       sys_A_i                 => fb_c2p_i.A(15 downto 0),
       sys_RnW_i               => not fb_c2p_i.we,
-      sys_nRST_i              => fb_syscon_i.rst,
+      sys_nRST_i              => not fb_syscon_i.rst,
 
       -- address and cycle selection back to core
       addr_ack_clken_o        => i_SYScyc_st_clken,
