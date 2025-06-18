@@ -55,6 +55,77 @@ architecture rtl of test_tb is
    signal i_jim_page          : std_logic_vector(15 downto 0);
    signal cpu_2MHz_phi2_clken : std_logic;
 
+   -- peripheral signals to / from FPGA to controller
+   signal ipi_ser_cts      : std_logic;
+   signal ipi_ser_rx       : std_logic;
+   signal ipi_d_cas        : std_logic;
+   signal ipi_kb_nRST      : std_logic;
+   signal ipi_kb_CA2       : std_logic;
+   signal ipi_netint       : std_logic;
+   signal ipi_irq          : std_logic;
+   signal ipi_nmi          : std_logic;
+   signal ipi_j_i0         : std_logic;
+   signal ipi_j_i1         : std_logic;
+   signal ipi_j_spi_miso   : std_logic;
+   signal ipi_btn0         : std_logic;
+   signal ipi_btn1         : std_logic;
+   signal ipi_btn2         : std_logic;
+   signal ipi_btn3         : std_logic;
+   signal ipi_kb_pa7       : std_logic;
+
+   signal ipo_SER_TX       : std_logic;
+   signal ipo_SER_RTS      : std_logic;
+   signal ipo_j_ds_nCS2    : std_logic;
+   signal ipo_j_ds_nCS1    : std_logic;
+   signal ipo_j_spi_clk    : std_logic;
+   signal ipo_VID_HS       : std_logic;
+   signal ipo_VID_VS       : std_logic;
+   signal ipo_VID_CS       : std_logic;
+   signal ipo_j_spi_mosi   : std_logic;
+   signal ipo_j_adc_nCS    : std_logic;
+
+   -- peripheral signals on the simulated motherboard in/out of the multiplexer
+   signal ibpo_RnW         : std_logic;
+   signal ibpo_nRST        : std_logic;
+   signal ibpo_SER_TX      : std_logic;
+   signal ibpo_SER_RTS     : std_logic;
+   signal ibpo_nADLC       : std_logic;
+   signal ibpo_nKBPAWR     : std_logic;
+   signal ibpo_nIC32WR     : std_logic;
+   signal ibpo_nPGFC       : std_logic;
+   signal ibpo_nPGFD       : std_logic;
+   signal ibpo_nFDC        : std_logic;
+   signal ibpo_nTUBE       : std_logic;
+   signal ibpo_nFDCONWR    : std_logic;
+   signal ibpo_nVIAB       : std_logic;
+   signal ibpi_ser_cts     : std_logic;
+   signal ibpi_ser_rx      : std_logic;
+   signal ibpi_d_cas       : std_logic;
+   signal ibpi_kb_nRST     : std_logic;
+   signal ibpi_kb_CA2      : std_logic;
+   signal ibpi_netint      : std_logic;
+   signal ibpi_irq         : std_logic;
+   signal ibpi_nmi         : std_logic;
+   signal ibpo_j_ds_nCS2   : std_logic;
+   signal ibpo_j_ds_nCS1   : std_logic;
+   signal ibpo_j_spi_clk   : std_logic;
+   signal ibpo_VID_HS      : std_logic;
+   signal ibpo_VID_VS      : std_logic;
+   signal ibpo_VID_CS      : std_logic;
+   signal ibpo_j_spi_mosi  : std_logic;
+   signal ibpo_j_adc_nCS   : std_logic;
+   signal ibpi_j_i0        : std_logic;
+   signal ibpi_j_i1        : std_logic;
+   signal ibpi_j_spi_miso  : std_logic;
+   signal ibpi_btn0        : std_logic;
+   signal ibpi_btn1        : std_logic;
+   signal ibpi_btn2        : std_logic;
+   signal ibpi_btn3        : std_logic;
+   signal ibpi_kb_pa7      : std_logic;
+   signal ibpio_P_D        : std_logic_vector(7 downto 0);
+   signal ibpo_A           : std_logic_vector(7 downto 0);
+
+   signal i_u11_Q          : std_logic_vector(7 downto 0);
 
    procedure multi_read(
          A        : in  std_logic_vector(23 downto 0);
@@ -267,8 +338,11 @@ begin
             -- simple single read, with no a_stb delay
 
             fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
-            simple_write(x"FFFE41", x"08", i_fb_con_c2p);
-            simple_write(x"FFFE41", x"00", i_fb_con_c2p);
+
+            wait for 10 us;
+
+            simple_write(x"FFFE40", x"08", i_fb_con_c2p);
+            simple_write(x"FFFE40", x"00", i_fb_con_c2p);
 
          
 
@@ -321,88 +395,88 @@ begin
 
    );
 
-----===========================================================
----- board sim
-----===========================================================
---
---
---   e_brd_per:entity work.sim_peripherals_mux
---   port map (
---
---      clk_2MHz_E_i   => im_mux_mhz1E_clk,
---      clk_1MHz_E_i   => im_mux_mhz2E_clk,
---      
---      MIO_io         => im_mux_bus_io,
---      MIO_nALE_i     => im_mux_nALE_o,
---      MIO_D_nOE_i    => im_mux_D_nOE_o,
---      MIO_I0_nOE_i   => im_mux_I0_nOE_o,
---      MIO_I1_nOE_i   => im_mux_I1_nOE_o,
---      MIO_O0_nOE_i   => im_mux_O0_nOE_o,
---      MIO_O1_nOE_i   => im_mux_O1_nOE_o,
---
---      P_RnW_o        => ibpo_RnW,
---      P_nRST_o       => ibpo_nRST,
---      P_SER_TX_o     => ibpo_SER_TX,
---      P_SER_RTS_o    => ibpo_SER_RTS,
---
---      nADLC_o        => ibpo_nADLC,
---      nKBPAWR_o      => ibpo_nKBPAWR,
---      nIC32WR_o      => ibpo_nIC32WR,
---      nPGFC_o        => ibpo_nPGFC,
---      nPGFD_o        => ibpo_nPGFD,
---      nFDC_o         => ibpo_nFDC,
---      nTUBE_o        => ibpo_nTUBE,
---      nFDCONWR_o     => ibpo_nFDCONWR,
---      nVIAB_o        => ibpo_nVIAB,
---
---      -- MIO_I0 phase
---
---      ser_cts_i      => ibpi_ser_cts,
---      ser_rx_i       => ibpi_ser_rx,
---      d_cas_i        => ibpi_d_cas,
---      kb_nRST_i      => ibpi_kb_nRST,
---      kb_CA2_i       => ibpi_kb_CA2,
---      netint_i       => ibpi_netint,
---      irq_i          => ibpi_irq,
---      nmi_i          => ibpi_nmi,
---
---      -- MIO_O1 phase
---      j_ds_nCS2_o    => ibpo_j_ds_nCS2,
---      j_ds_nCS1_o    => ibpo_j_ds_nCS1,
---      j_spi_clk_o    => ibpo_j_spi_clk,
---      VID_HS_o       => ibpo_VID_HS,
---      VID_VS_o       => ibpo_VID_VS,
---      VID_CS_o       => ibpo_VID_CS,
---      j_spi_mosi_o   => ibpo_j_spi_mosi,
---      j_adc_nCS_o    => ibpo_j_adc_nCS,
---
---      -- MIO_I1 phase
---      j_i0_i         => ibpi_j_i0,
---      j_i1_i         => ibpi_j_i1,
---      j_spi_miso_i   => ibpi_j_spi_miso,
---      btn0_i         => ibpi_btn0,
---      btn1_i         => ibpi_btn1,
---      btn2_i         => ibpi_btn2,
---      btn3_i         => ibpi_btn3,
---      kb_pa7_i       => ibpi_kb_pa7,
---
---      -- data phase
---      P_D_io         => ibpio_P_D,
---
---      -- address phase
---      P_A_o          => ibpo_A
---
---
---   );
---
---
---   -- slow latch the data lines are munged in or before the controller
---   -- to mimic a LS259 8 bit addressable latch
---   e_U9:entity work.hct574
---    PORT MAP (
---        Q       => i_u11_Q,
---        D       => ibpio_P_D,
---        CLK     => ibpo_nIC32WR,
---        nOE     => '0'
---    );
+--===========================================================
+-- board sim
+--===========================================================
+
+
+   e_brd_per:entity work.sim_peripherals_mux
+   port map (
+
+      clk_2MHz_E_i   => im_mux_mhz1E_clk,
+      clk_1MHz_E_i   => im_mux_mhz2E_clk,
+      
+      MIO_io         => im_mux_bus_io,
+      MIO_nALE_i     => im_mux_nALE_o,
+      MIO_D_nOE_i    => im_mux_D_nOE_o,
+      MIO_I0_nOE_i   => im_mux_I0_nOE_o,
+      MIO_I1_nOE_i   => im_mux_I1_nOE_o,
+      MIO_O0_nOE_i   => im_mux_O0_nOE_o,
+      MIO_O1_nOE_i   => im_mux_O1_nOE_o,
+
+      P_RnW_o        => ibpo_RnW,
+      P_nRST_o       => ibpo_nRST,
+      P_SER_TX_o     => ibpo_SER_TX,
+      P_SER_RTS_o    => ibpo_SER_RTS,
+
+      nADLC_o        => ibpo_nADLC,
+      nKBPAWR_o      => ibpo_nKBPAWR,
+      nIC32WR_o      => ibpo_nIC32WR,
+      nPGFC_o        => ibpo_nPGFC,
+      nPGFD_o        => ibpo_nPGFD,
+      nFDC_o         => ibpo_nFDC,
+      nTUBE_o        => ibpo_nTUBE,
+      nFDCONWR_o     => ibpo_nFDCONWR,
+      nVIAB_o        => ibpo_nVIAB,
+
+      -- MIO_I0 phase
+
+      ser_cts_i      => ibpi_ser_cts,
+      ser_rx_i       => ibpi_ser_rx,
+      d_cas_i        => ibpi_d_cas,
+      kb_nRST_i      => ibpi_kb_nRST,
+      kb_CA2_i       => ibpi_kb_CA2,
+      netint_i       => ibpi_netint,
+      irq_i          => ibpi_irq,
+      nmi_i          => ibpi_nmi,
+
+      -- MIO_O1 phase
+      j_ds_nCS2_o    => ibpo_j_ds_nCS2,
+      j_ds_nCS1_o    => ibpo_j_ds_nCS1,
+      j_spi_clk_o    => ibpo_j_spi_clk,
+      VID_HS_o       => ibpo_VID_HS,
+      VID_VS_o       => ibpo_VID_VS,
+      VID_CS_o       => ibpo_VID_CS,
+      j_spi_mosi_o   => ibpo_j_spi_mosi,
+      j_adc_nCS_o    => ibpo_j_adc_nCS,
+
+      -- MIO_I1 phase
+      j_i0_i         => ibpi_j_i0,
+      j_i1_i         => ibpi_j_i1,
+      j_spi_miso_i   => ibpi_j_spi_miso,
+      btn0_i         => ibpi_btn0,
+      btn1_i         => ibpi_btn1,
+      btn2_i         => ibpi_btn2,
+      btn3_i         => ibpi_btn3,
+      kb_pa7_i       => ibpi_kb_pa7,
+
+      -- data phase
+      P_D_io         => ibpio_P_D,
+
+      -- address phase
+      P_A_o          => ibpo_A
+
+
+   );
+
+
+   -- slow latch the data lines are munged in or before the controller
+   -- to mimic a LS259 8 bit addressable latch
+   e_U9:entity work.hct574
+    PORT MAP (
+        Q       => i_u11_Q,
+        D       => ibpio_P_D,
+        CLK     => ibpo_nIC32WR,
+        nOE     => '0'
+    );
 end rtl;
