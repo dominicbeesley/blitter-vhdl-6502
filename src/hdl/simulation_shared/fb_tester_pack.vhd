@@ -50,6 +50,7 @@ use work.common.all;
 
 package fb_tester_pack is
 
+   constant RDY_CTDN_TEST : unsigned(RDY_CTDN_LEN-1 downto 0) := to_unsigned(5, RDY_CTDN_LEN);
 
    procedure fbtest_wait_reset
    (
@@ -133,7 +134,7 @@ package body fb_tester_pack is
             A_stb       => '1',
             D_wr        => x"00",
             D_wr_stb    => '0',
-            rdy_ctdn    => RDY_CTDN_MIN
+            rdy_ctdn    => RDY_CTDN_TEST
          );
       else
          c2p_o <= (
@@ -143,7 +144,7 @@ package body fb_tester_pack is
             A_stb       => '0',
             D_wr        => x"00",
             D_wr_stb    => '0',
-            rdy_ctdn    => RDY_CTDN_MIN
+            rdy_ctdn    => RDY_CTDN_TEST
          );
          for i in 1 to A_stb_dl_i loop
             wait until rising_edge(syscon_i.clk);
@@ -212,7 +213,7 @@ package body fb_tester_pack is
       wait until rising_edge(syscon_i.clk);
 
       c2p_o.cyc <= '1';
-      c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
+      c2p_o.rdy_ctdn <= RDY_CTDN_TEST;
 
       v_iter := 0;
       while v_iter < A_stb_dl_i loop

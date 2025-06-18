@@ -371,6 +371,12 @@ begin
 
             wait for 1200 ns;
 
+            simple_write(x"FFFCFF", x"00", i_fb_con_c2p);
+            simple_read(x"FFFCFF", v_D, i_fb_con_c2p);
+            simple_write(x"FFFCF0", x"00", i_fb_con_c2p);
+            simple_read(x"FFFCF0", v_D, i_fb_con_c2p);
+
+
             simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
             simple_read(x"FFFFAA", v_D, i_fb_con_c2p);
             simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
