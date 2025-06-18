@@ -41,6 +41,9 @@ zp_tmp:		.res	4
 ; M A I N
 ;==============================================================================
 
+		lda	#DEVNO_C20K
+		sta	fred_JIM_DEVNO
+
 		lda	#>PAGE_LEDS
 		sta	fred_JIM_PAGE_HI
 		lda	#<PAGE_LEDS

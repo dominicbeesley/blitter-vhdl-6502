@@ -71,14 +71,13 @@ begin
 		peripheral_sel_oh_o <= (others => '0');
 
 		if addr_i(23 downto 16) = x"FF" then
-			if addr_i(15 downto 4) = x"FE0" then
+			if addr_i(15 downto 4) = x"FC1" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
-			elsif addr_i(15 downto 8) = x"FC" or addr_i(15 downto 8) = x"FD" then
-				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_1MHZ_BUS, peripheral_sel_o'length);
-				peripheral_sel_oh_o(PERIPHERAL_NO_1MHZ_BUS) <= '1';
+			elsif addr_i(15 downto 8) = x"FC" or addr_i(15 downto 8) = x"FD" or addr_i(15 downto 8) = x"FE" then
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
 			elsif addr_i(15) = '1' then
-
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
 			elsif addr_i(15 downto 12) = x"0" then

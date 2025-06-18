@@ -1,0 +1,12 @@
+
+SUBDIRSWIMAKE:=ledchase memtest serialouttest
+
+all:$(SUBDIRSWIMAKE)
+clean:$(SUBDIRSWIMAKE)
+
+
+$(SUBDIRSWIMAKE):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
+
+.PHONY:		$(SUBDIRSWIMAKE)

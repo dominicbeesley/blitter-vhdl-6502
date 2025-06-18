@@ -95,7 +95,6 @@ entity fb_SYS_c20k is
 		-- cpu sync 
 		cpu_2MHz_phi2_clken_o				: out		std_logic
 
-
 	);
 end fb_SYS_c20k;
 
@@ -153,6 +152,8 @@ architecture rtl of fb_SYS_c20k is
 	signal	r_JIM_en				: std_logic;
 	signal	r_JIM_page			: std_logic_vector(15 downto 0);
 
+	-- control signals
+	signal   i_mux_cyc_en		: std_logic;
 
 	-- timing back from MUX/board
 	signal   i_SYScyc_st_clken : std_logic;
@@ -221,7 +222,7 @@ begin
 						r_had_d_stb <= '0';
 
 						if i_SYScyc_st_clken = '1' then
-							-- default idle cycle, drop busses
+							-- default idle cycle, drop buses
 							r_sys_A <= DEFAULT_SYS_ADDR;
 							r_sys_RnW <= '1';
 
@@ -300,6 +301,7 @@ begin
 						-- anyway if writing to a hardware reg?
 
 						if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
+							r_con_cyc <= '0';
 							if i_SYScyc_end_clken = '1' then
 								r_state <= idle;
 							else
@@ -428,6 +430,8 @@ begin
 
 	end process;
 
+	i_mux_cyc_en <= fb_c2p_i.cyc and fb_c2p_i.a_stb when r_state = idle else
+						 '0';
 
 	e_MUX:entity work.c20k_peripherals_mux_ctl
    generic map (
@@ -447,7 +451,7 @@ begin
       reset_i                 => fb_syscon_i.rst,
 
       -- address and cycle selection from core
-      sys_cyc_en_i            => fb_c2p_i.cyc,
+      sys_cyc_en_i            => i_mux_cyc_en,
       sys_A_i                 => fb_c2p_i.A(15 downto 0),
       sys_RnW_i               => not fb_c2p_i.we,
       sys_nRST_i              => not fb_syscon_i.rst,

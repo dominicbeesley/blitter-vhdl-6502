@@ -3,14 +3,14 @@
 ASMTARGETS=	P20K-boot-rom.rom 
 TARGETS=	$(ASMTARGETS) 
 
-INCS=		
+INCS=../includes		
 LIBS=		
 SCRIPTS=../../../../../scripts
 BUILD=./build
 
 AS=ca65
 LD=ld65
-DEPS=p20k.inc
+DEPS=
 AR=ar65
 
 OBJS=P20K-boot-rom noice
@@ -32,7 +32,7 @@ $(BUILD)/P20K-boot-rom.rom : $(OBJS_B) $(LIBS) P20K-boot-rom.cfg
 
 
 $(BUILD)/%.o:	%.asm $(DEPS) $(INCS)
-		$(AS) -g -l $(basename $@).lst -o $@ $<
+		$(AS) -g -l $(basename $@).lst -I $(INCS) -o $@ $<
 
 
 clean:		

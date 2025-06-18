@@ -61,6 +61,8 @@ flag_soak_ctr:	.res	4
 ; M A I N
 ;==============================================================================
 
+		lda	#DEVNO_C20K
+		sta	fred_JIM_DEVNO
 
 		lda	#$1F
 		sta	addr_max+2

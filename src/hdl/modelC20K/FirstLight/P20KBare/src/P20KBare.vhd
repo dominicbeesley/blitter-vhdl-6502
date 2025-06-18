@@ -169,7 +169,7 @@ end entity;
 architecture rtl of P20KBare is
 
    signal   i_JIM_page     : std_logic_vector(15 downto 0);
-
+   signal   i_JIM_en       : std_logic;
 
    -----------------------------------------------------------------------------
    -- fishbone signals
@@ -197,9 +197,9 @@ architecture rtl of P20KBare is
    signal i_c2p_uart          : fb_con_o_per_i_t;
    signal i_p2c_uart          : fb_con_i_per_o_t;
 
-   -- 1mhz bus wrapper
-   signal i_c2p_1mhz_bus          : fb_con_o_per_i_t;
-   signal i_p2c_1mhz_bus          : fb_con_i_per_o_t;
+   -- sys bus wrapper
+   signal i_c2p_sys               : fb_con_o_per_i_t;
+   signal i_p2c_sys               : fb_con_i_per_o_t;
 
    -- LED array wrapper
    signal i_c2p_led_arr          : fb_con_o_per_i_t;
@@ -301,7 +301,7 @@ begin
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_RAM)<= i_p2c_mem_ram;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_BRD)<= i_p2c_mem_ram_brd;
-   i_per_p2c_intcon(PERIPHERAL_NO_1MHZ_BUS)<= i_p2c_1mhz_bus;
+   i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
    i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
@@ -309,7 +309,7 @@ begin
    i_c2p_mem_ram        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_RAM);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
    i_c2p_mem_ram_brd    <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_BRD);
-   i_c2p_1mhz_bus       <= i_per_c2p_intcon(PERIPHERAL_NO_1MHZ_BUS);
+   i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
    i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
@@ -361,18 +361,6 @@ begin
 
    );
 
-   e_fb_1mhzBus:entity work.fb_c20k_1MHZ_bus
-   port map (
-
-      -- fishbone signals
-
-      fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_1mhz_bus,
-      fb_p2c_o                      => i_p2c_1mhz_bus,
-
-      JIM_page_o                    => i_JIM_page
-   );
-
    p_uart_clk:process(i_fb_syscon)
    begin
       if rising_edge(i_fb_syscon.clk) then
@@ -421,7 +409,8 @@ begin
       fb_p2c_i                      => i_p2c_cpu,
 
       -- logical mappings
-      JIM_page_i                    => i_JIM_page
+      JIM_page_i                    => i_JIM_page,
+      JIM_en_i                      => i_JIM_en
 
    );
 
@@ -445,6 +434,70 @@ begin
 
       led_serial_o                  => ui_leds_o
    );
+
+
+   e_fb_sys:entity work.fb_SYS_c20k
+   generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED,
+      G_JIM_DEVNO                   => x"D2"
+   )
+   port map (
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_sys,
+      fb_p2c_o                      => i_p2c_sys,
+
+      -- mux clock outputs
+      mux_mhz1E_clk_o               => p_1MHZ_E_o,
+      mux_mhz2E_clk_o               => p_2MHZ_E_o,
+
+      -- mux control outputs
+      mux_nALE_o                    => mux_nALE_o,
+      mux_D_nOE_o                   => mux_D_nOE_o,
+      mux_I0_nOE_o                  => mux_I0_nOE_o,
+      mux_I1_nOE_o                  => mux_I1_nOE_o,
+      mux_O0_nOE_o                  => mux_O0_nOE_o,
+      mux_O1_nOE_o                  => mux_O1_nOE_o,
+
+      -- mux multiplexed signals bus
+      mux_bus_io                    => mux_io,
+
+
+      -- memory registers managed in here
+      sys_ROMPG_o                  => open,
+      jim_en_o                     => i_JIM_en,
+      jim_page_o                   => i_JIM_page,
+
+      -- cpu sync 
+      cpu_2MHz_phi2_clken_o        => open
+
+   );
+
+--   -------------------------------------
+--   -- DEBUG LEDS
+--   -------------------------------------
+--   G_DBG_LED_I:FOR I in 0 to 3 generate
+--
+--      i_debug_leds(I).red <= x"8";
+--      i_debug_leds(I).blue <= (others => '0');
+--      i_debug_leds(I).green <= (others => i_debug_c20k_sys_state(I));
+--   END GENERATE;
+--
+--   e_dbg_led:entity work.ws2812
+--   generic map (
+--      G_CLOCKSPEED                    => CLOCKSPEED * 1000000,
+--      G_N_CHAIN                       => 8
+--   )
+--   port map (
+--      rst_i                   => i_fb_syscon.rst,
+--      clk_i                   => i_fb_syscon.clk,
+--      rgb_arr_i               => i_debug_leds,
+--      led_serial_o            => ui_leds_o
+--
+--   );
 
 
       ddr_addr_o           <= (others => '0');
@@ -490,16 +543,6 @@ begin
       i2c_scl_o            <= '1';
       i2c_sda_io           <= 'Z';
 
-      mux_D_nOE_o          <= '1';
-      mux_i0_nOE_o         <= '1';
-      mux_i1_nOE_o         <= '1';
-      mux_io               <= (others => 'Z');
-      mux_nALE_o           <= '1';
-      mux_o0_nOE_o         <= '1';
-      mux_o1_nOE_o         <= '1';
-
-      p_1MHZ_E_o           <= '0';
-      p_2MHZ_E_o           <= '0';
       p_8MHZ_FDC_o         <= '0';
 
       cassette_o           <= '0';
