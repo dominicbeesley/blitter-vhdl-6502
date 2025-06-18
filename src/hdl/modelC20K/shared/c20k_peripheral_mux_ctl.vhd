@@ -38,6 +38,7 @@
 --                   This is intended to work in the Blitter and BeebFPGA projects
 --
 ----------------------------------------------------------------------------------
+-- TODO: try reducing number of SYS_A lines and check resource usage / timing improvement
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -451,9 +452,9 @@ begin
    mux_O1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O1 else
                      '1';
 
-   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 and to_integer(r_mhz2_ctdn) > C_F_I0 - C_F_MUL + 1 else
+   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - C_F_MUL + 2 else
                      '1';
-   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 1 else
+   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 2 else
                      '1';
 
    i_MIO_nCS <= "0000"  when r_slow /= fast and r_slow /= slow_short_2 else
