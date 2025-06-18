@@ -301,6 +301,28 @@ architecture rtl of test_tb is
 
    end simple_write;
 
+   procedure simple_read(
+      A           : in std_logic_vector(23 downto 0);
+      D           : out std_logic_vector(7 downto 0);
+      signal c2p  : out fb_con_o_per_i_t;
+      A_stb_dl    : in natural := 0    -- number of cycles to delay A_stb for reads    
+   )  is
+   variable v_read: std_logic_vector(7 downto 0);
+   begin
+
+      fbtest_single_read(
+         syscon_i => i_fb_syscon,
+         p2c_i => i_fb_con_p2c,
+         c2p_o => c2p,
+         A_i => A, 
+         D_o => v_read
+         );
+
+      D := v_read;
+
+   end simple_read;
+
+
 begin
    p_syscon_clk:process
    begin
@@ -326,7 +348,7 @@ begin
 
    p_main:process
    variable v_time:time;
-
+   variable v_D:std_logic_vector(7 downto 0);
    begin
 
       test_runner_setup(runner, runner_cfg);
@@ -342,8 +364,17 @@ begin
             wait for 10 us;
 
             simple_write(x"FFFE40", x"08", i_fb_con_c2p);
+
+            wait for 1900 ns;
+
             simple_write(x"FFFE40", x"00", i_fb_con_c2p);
 
+            wait for 1900 ns;
+
+            simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
+            simple_read(x"FFFFAA", v_D, i_fb_con_c2p);
+            simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
+            simple_read(x"FFFFAA", v_D, i_fb_con_c2p);
          
 
          end if;

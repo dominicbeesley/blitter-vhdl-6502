@@ -152,11 +152,11 @@ architecture rtl of c20k_peripherals_mux_ctl is
 
    --imaginary 32MHz slices within a 2MHz cycle
    constant C_32_D_hold          : natural := 0;
-   constant C_32_ALE             : natural := 2;
-   constant C_32_O0              : natural := 3;
-   constant C_32_I0              : natural := 4;
-   constant C_32_O1              : natural := 5;
-   constant C_32_I1              : natural := 6;
+   constant C_32_I0              : natural := 2;
+   constant C_32_O1              : natural := 3;
+   constant C_32_I1              : natural := 4;
+   constant C_32_ALE             : natural := 5;      -- address setup to phi2
+   constant C_32_O0              : natural := 6;      -- address setup to phi2
    constant C_32_D_write         : natural := 10;
    constant C_32_D_read          : natural := 14;
 
