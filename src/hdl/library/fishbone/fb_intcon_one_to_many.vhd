@@ -144,6 +144,7 @@ begin
 
 			case r_state is
 				when idle =>
+					r_con_D_wr_stb <= '0';
 					if fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.A_stb = '1' then
 						r_a_stb <= '1';
 						r_cyc_per_oh <= peripheral_sel_oh_i;
@@ -152,9 +153,20 @@ begin
 						r_con_we <= fb_con_c2p_i.we;
 						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
+						if fb_con_c2p_i.D_wr_stb = '1' then
+							r_con_D_wr <= fb_con_c2p_i.D_wr;
+							r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
+						end if;
+
 						r_state <= wait_per_stall;
 					end if;
 				when wait_per_stall =>
+
+					if fb_con_c2p_i.D_wr_stb = '1' then
+						r_con_D_wr <= fb_con_c2p_i.D_wr;
+						r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
+					end if;
+
 					if fb_per_p2c_i(to_integer(r_peripheral_sel_ix)).stall /= '0' then
 						r_state <= wait_per_stall;
 					else
@@ -182,8 +194,6 @@ begin
 				r_a_stb <= '0';
 			end if;
 
-			r_con_D_wr <= fb_con_c2p_i.D_wr;
-			r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
 
 
 		end if;
