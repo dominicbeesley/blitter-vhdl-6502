@@ -365,11 +365,11 @@ begin
 
             simple_write(x"FFFE40", x"08", i_fb_con_c2p);
 
-            wait for 1900 ns;
+            wait for 1200 ns;
 
             simple_write(x"FFFE40", x"00", i_fb_con_c2p);
 
-            wait for 1900 ns;
+            wait for 1200 ns;
 
             simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
             simple_read(x"FFFFAA", v_D, i_fb_con_c2p);

@@ -148,7 +148,8 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_CLKS_MHZ2          : natural := G_FAST_CLOCKSPEED / 2000000;
    constant C_CLKS_MHZ2_HALF     : natural := C_CLKS_MHZ2 / 2;
 
-   constant C_CTR2_LENGTH        : natural := numbits(C_CLKS_MHZ2 - 1);
+   constant C_MHZ2_CTR_LEN       : natural := numbits(C_CLKS_MHZ2-1);
+   constant C_BIG_CTR_LEN        : natural := numbits(C_CLKS_MHZ2 * 3 - 1);       -- needs to fit at least 3 2MHz cycles for long clock stetch
 
    --imaginary 32MHz slices within a 2MHz cycle
    constant C_32_D_hold          : natural := 0;
@@ -159,6 +160,9 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_32_O0              : natural := 6;      -- address setup to phi2
    constant C_32_D_write         : natural := 10;
    constant C_32_D_read          : natural := 14;
+
+   constant C_2MHZE_LONG_UP      : natural := C_CLKS_MHZ2_HALF * 3 - 1;
+   constant C_2MHZE_MED_UP      : natural := C_CLKS_MHZ2_HALF * 2 - 1;
 
    function C_F_MUL return natural is
    begin
@@ -188,20 +192,21 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_F_D_write          : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_write;
    constant C_F_D_read           : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_read;
 
-   signal r_mhz2_ctdn            : unsigned(C_CTR2_LENGTH-1 downto 0) := to_unsigned(0, C_CTR2_LENGTH);
+   signal r_big_ctdn             : unsigned(C_BIG_CTR_LEN - 1 downto 0) := (others => '1');
+   signal r_mhz2_ctdn            : unsigned(C_MHZ2_CTR_LEN-1 downto 0);
  
    signal r_mhz1E_clken          : std_logic := '0';
    signal r_mhz2int_clken        : std_logic := '0';        -- not cycle stretched at end of phi2
    signal r_mhz2int_rise_clken   : std_logic := '0';        -- not cycle stretched at end of phi1
-   signal i_mhz2E_clken          : std_logic;               -- cycle stretched at end of phi2
+   signal r_mhz2E_clken          : std_logic;               -- cycle stretched at end of phi2
 
    signal r_mhz1E_clk            : std_logic := '0';
    signal r_mhz2E_clk            : std_logic := '0';
 
    signal i_bbc_slow_cyc         : std_logic;
 
-   type slow_cyc_t is (fast, slow_short, slow_short_2, slow_long);
-   signal r_slow                 : slow_cyc_t   := fast;
+   type stretch_cyc_t is (short, medium, long);
+   signal r_stretch              : stretch_cyc_t   := short;
    signal r_cyc_start            : std_logic;               -- on next cycle after address registered
 
    -- convenience and grouping of mux bus signals
@@ -245,8 +250,52 @@ architecture rtl of c20k_peripherals_mux_ctl is
 
 begin
 
+   rd_ready_ctdn_o <= RDYCTDN(to_integer(r_big_ctdn));
+
+   
+
    assert G_BEEBFPGA = false or G_FAST_CLOCKSPEED = 96000000 report "CLOCKSPEED must be 96M for BEEBFPGA" severity error;
    assert G_BEEBFPGA = true  or G_FAST_CLOCKSPEED = 128000000 report "CLOCKSPEED must be 128M for C20K" severity error;
+
+   p_big_clk:process(clk_fast_i)
+   begin
+      if rising_edge(clk_fast_i) then
+         if reset_i = '1' then
+            r_big_ctdn <= to_unsigned(C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);      -- needs to fit at least 3 2MHz cycles for long clock stetch
+            r_mhz2_ctdn <= to_unsigned(C_CLKS_MHZ2 - 1, C_MHZ2_CTR_LEN);
+         else
+            if r_big_ctdn = 0 then
+               r_big_ctdn <= to_unsigned(C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);       -- needs to fit at least 3 2MHz cycles for long clock stetch
+               r_stretch <= short;
+            else
+               r_big_ctdn <= r_big_ctdn - 1;
+            end if;
+
+            if r_mhz2_ctdn = 0 then
+               r_mhz2_ctdn <= to_unsigned(C_CLKS_MHZ2 - 1, C_MHZ2_CTR_LEN);       -- needs to fit at least 3 2MHz cycles for long clock stetch
+            else
+               r_mhz2_ctdn <= r_mhz2_ctdn - 1;
+            end if;
+
+            if r_cyc_start = '1' then
+               -- register whether a slow or fast cycle and the type
+               if i_bbc_slow_cyc = '1' then
+                  if r_mhz1E_clk = '1' then
+                     r_stretch <= long;
+                     r_big_ctdn <= to_unsigned(C_F_ALE + 2 * C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);
+                  else
+                     r_stretch <= medium;
+                     r_big_ctdn <= to_unsigned(C_F_ALE + 1 * C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);
+                  end if;
+               else
+                  r_stretch <= short;
+               end if;
+            end if;
+
+         end if;
+      end if;
+   end process;
+
 
    p_clk_2i:process(clk_fast_i)
    begin
@@ -254,30 +303,19 @@ begin
          r_mhz2int_rise_clken <= '0';
          r_mhz2int_clken <= '0'; 
          r_mhz1E_clken <= '0';
-         if reset_i = '1' then
-            r_mhz2_ctdn <= to_unsigned(0, C_CTR2_LENGTH);
-         else
-            if r_mhz2_ctdn = 0 then
-               r_mhz2int_clken <= '1';               
-               if r_mhz1E_clk = '1' then
-                  r_mhz1E_clken <= '1';
-               end if;
-               r_mhz2_ctdn <= to_unsigned(C_CLKS_MHZ2 - 1, C_CTR2_LENGTH);
-            else
-               r_mhz2_ctdn <= r_mhz2_ctdn - 1;
-            end if;
 
-            if to_integer(r_mhz2_ctdn) = C_CLKS_MHZ2_HALF - 1 then
-               r_mhz2int_rise_clken <= '1';
+         if r_mhz2_ctdn = 0 then
+            r_mhz2int_clken <= '1';               
+            if r_mhz1E_clk = '1' then
+               r_mhz1E_clken <= '1';
             end if;
+         elsif to_integer(r_mhz2_ctdn) = C_CLKS_MHZ2_HALF - 1 then
+            r_mhz2int_rise_clken <= '1';
          end if;
+
       end if;
    end process;
 
-   rd_ready_ctdn_o <= RDYCTDN(to_integer(r_mhz2_ctdn) + C_CLKS_MHZ2 * 3) when r_slow = slow_long else
-                      RDYCTDN(to_integer(r_mhz2_ctdn) + C_CLKS_MHZ2 * 2) when r_slow = slow_short else
-                      RDYCTDN(to_integer(r_mhz2_ctdn) + C_CLKS_MHZ2) when r_slow = slow_short_2 else
-                      RDYCTDN(to_integer(r_mhz2_ctdn));
 
    p_clk_1e:process(clk_fast_i)
    begin
@@ -295,41 +333,30 @@ begin
    p_clk_2e:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
+         r_mhz2E_clken <= '0';
          if reset_i = '1' then
             r_mhz2E_clk <= '0';     
-            r_slow <= fast;       
          else
-            if r_cyc_start = '1' then
-               -- register whether a slow or fast cycle and the type
-               if i_bbc_slow_cyc = '1' then
-                  if r_mhz1E_clk = '1' then
-                     r_slow <= slow_long;
-                  else
-                     r_slow <= slow_short;
-                  end if;
-               else
-                  r_slow <= fast;
+            if r_stretch = long then
+               if to_integer(r_big_ctdn) = C_2MHZE_LONG_UP then
+                  r_mhz2E_clk <= '1';
+               elsif to_integer(r_big_ctdn) = 0 then
+                  r_mhz2E_clk <= '0';
+                  r_mhz2E_clken <= '1';
+               end if;
+            elsif r_stretch = medium then
+               if to_integer(r_big_ctdn) = C_2MHZE_MED_UP then
+                  r_mhz2E_clk <= '1';
+               elsif to_integer(r_big_ctdn) = 0 then
+                  r_mhz2E_clk <= '0';
+                  r_mhz2E_clken <= '1';
                end if;
             else
-               if r_mhz2int_clken = '1' then
-                  if r_slow = fast then
-                     r_mhz2E_clk <= '0';
-                  end if;
-
-               elsif r_mhz2int_rise_clken = '1' then
-                  if r_slow = fast or r_slow = slow_short then
-                     r_mhz2E_clk <= '1';
-                  end if;
-
-                  if r_slow = slow_long then
-                     r_slow <= slow_short;
-                  elsif r_slow = slow_short then
-                     r_slow <= slow_short_2;
-                  elsif r_slow = slow_short_2 then
-                     r_slow <= fast;
-                  end if;
-
-
+               if to_integer(r_mhz2_ctdn) = C_CLKS_MHZ2_HALF then
+                  r_mhz2E_clk <= '1';
+               elsif to_integer(r_big_ctdn) = 0 then
+                  r_mhz2E_clk <= '0';
+                  r_mhz2E_clken <= '1';
                end if;
             end if;
          end if;
@@ -337,9 +364,7 @@ begin
    end process;
 
    mhz1E_clken_o <= r_mhz1E_clken;
-   mhz2E_clken_o <= i_mhz2E_clken;
-   i_mhz2E_clken  <= r_mhz2int_clken when r_slow = fast else 
-                    '0';
+   mhz2E_clken_o <= r_mhz2E_clken;
    mux_mhz1E_clk_o <= r_mhz1E_clk;
    mux_mhz2E_clk_o <= r_mhz2E_clk;
 
@@ -354,7 +379,7 @@ begin
             r_cyc_start <= '0';
          else
             r_cyc_start <= '0';
-            if to_integer(r_mhz2_ctdn) = C_F_ALE + 1 and r_slow = fast then
+            if to_integer(r_big_ctdn) = C_F_ALE + 1 and r_stretch = short then
                addr_ack_clken_o <= '1';
                if sys_cyc_en_i = '1' then
                   r_cyc_start <= '1';
@@ -375,7 +400,7 @@ begin
 
       if rising_edge(clk_fast_i) then
          sys_D_rd_clken_o <= '0';
-         if i_mhz2E_clken = '1' then
+         if r_mhz2E_clken = '1' then
             sys_D_rd_o <= mux_bus_io;
             sys_D_rd_clken_o <= '1';
          end if;
@@ -457,7 +482,7 @@ begin
    mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 2 else
                      '1';
 
-   i_MIO_nCS <= "0000"  when r_slow /= fast and r_slow /= slow_short_2 else
+   i_MIO_nCS <= "0000"  when to_integer(r_big_ctdn) < C_CLKS_MHZ2 - 1  else
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE
