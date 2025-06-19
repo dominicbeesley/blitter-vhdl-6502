@@ -72,6 +72,7 @@ port (
 
    -- address and cycle selection from core
    -- this needs to be ready before the ALE phase
+   -- A, RnW are registered _1 cycle AFTER_ addr_ack_clken_o 
    sys_cyc_en_i            : in     std_logic;                       -- ignore SYS bus cycle when '0'
    sys_A_i                 : in     std_logic_vector(15 downto 0);   -- this will be decoded to a peripheral
    sys_RnW_i               : in     std_logic;                       -- bus/peripherals RnW
@@ -208,6 +209,7 @@ architecture rtl of c20k_peripherals_mux_ctl is
    type stretch_cyc_t is (short, medium, long);
    signal r_stretch              : stretch_cyc_t   := short;
    signal r_cyc_start            : std_logic;               -- on next cycle after address registered
+   signal r_cyc                  : std_logic;               -- cycle is live
 
    -- convenience and grouping of mux bus signals
    signal i_MIO_O0               : std_logic_vector(7 downto 0);
@@ -233,6 +235,9 @@ architecture rtl of c20k_peripherals_mux_ctl is
    signal r_p_kb_pa7             : std_logic;
 
 
+   -- bus req/ack signals
+   signal r_addr_ack_clken       : std_logic;      -- signal to controller to prepare addresses
+   signal r_addr_ack_clken2      : std_logic;      -- signal to internal process to latch addresses
    -- bus registered signals
    signal r_SYS_A                : std_logic_vector(15 downto 0)  := (others => '0');
    signal r_SYS_RnW              : std_logic                      := '1';
@@ -251,7 +256,7 @@ architecture rtl of c20k_peripherals_mux_ctl is
 begin
 
    rd_ready_ctdn_o <= RDYCTDN(to_integer(r_big_ctdn));
-
+   addr_ack_clken_o <= r_addr_ack_clken;
    
 
    assert G_BEEBFPGA = false or G_FAST_CLOCKSPEED = 96000000 report "CLOCKSPEED must be 96M for BEEBFPGA" severity error;
@@ -279,15 +284,16 @@ begin
 
             if r_cyc_start = '1' then
                -- register whether a slow or fast cycle and the type
-               if i_bbc_slow_cyc = '1' then
+               if i_bbc_slow_cyc = '1' and r_cyc = '1' then
                   if r_mhz1E_clk = '1' then
                      r_stretch <= long;
-                     r_big_ctdn <= to_unsigned(C_F_ALE + 2 * C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);
+                     r_big_ctdn <= to_unsigned(C_F_ALE + 2 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
                   else
                      r_stretch <= medium;
-                     r_big_ctdn <= to_unsigned(C_F_ALE + 1 * C_CLKS_MHZ2 - 1, C_BIG_CTR_LEN);
+                     r_big_ctdn <= to_unsigned(C_F_ALE + 1 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
                   end if;
                else
+                  r_big_ctdn <= to_unsigned(to_integer(r_mhz2_ctdn) - 1, C_BIG_CTR_LEN);
                   r_stretch <= short;
                end if;
             end if;
@@ -372,22 +378,27 @@ begin
    p_cyc:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
-         addr_ack_clken_o <= '0';
+         r_addr_ack_clken <= '0';
+         r_addr_ack_clken2 <= '0';
+         r_cyc_start <= '0';
          if reset_i = '1' then
             r_SYS_A <= (others => '0');
             r_SYS_RnW <= '1';
-            r_cyc_start <= '0';
          else
-            r_cyc_start <= '0';
-            if to_integer(r_big_ctdn) = C_F_ALE + 1 and r_stretch = short then
-               addr_ack_clken_o <= '1';
+            if to_integer(r_big_ctdn) = C_F_ALE + 2 and r_stretch = short then
+               r_addr_ack_clken <= '1';
+            elsif r_addr_ack_clken = '1' then
+               r_addr_ack_clken2 <= '1';
+            elsif r_addr_ack_clken2 = '1' then
+               r_cyc_start <= '1';
                if sys_cyc_en_i = '1' then
-                  r_cyc_start <= '1';
                   r_SYS_A <= sys_A_i;
                   r_SYS_RnW <= sys_RnW_i;
+                  r_cyc <= '1';
                else
                   r_SYS_A <= x"FFEA";
                   r_SYS_RnW <= '1';
+                  r_cyc <= '0';
                end if;
             end if;
          end if;
@@ -532,7 +543,7 @@ begin
 
    e_slow_cyc:entity work.bbc_slow_cyc
    port map (
-      sys_A_i        => sys_A_i,
+      sys_A_i        => r_SYS_A,
       slow_o         => i_bbc_slow_cyc
    );
 
