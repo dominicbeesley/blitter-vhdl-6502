@@ -493,7 +493,7 @@ begin
    mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 2 else
                      '1';
 
-   i_MIO_nCS <= "0000"  when to_integer(r_big_ctdn) < C_CLKS_MHZ2 - 1  else
+   i_MIO_nCS <= "0000"  when to_integer(r_big_ctdn) > C_CLKS_MHZ2 - 1  else
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE
