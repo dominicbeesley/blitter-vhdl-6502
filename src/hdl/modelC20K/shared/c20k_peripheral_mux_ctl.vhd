@@ -488,12 +488,12 @@ begin
    mux_O1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O1 else
                      '1';
 
-   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - C_F_MUL + 2 else
+   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - C_F_MUL + 3 else
                      '1';
-   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 2 else
+   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 3 else
                      '1';
 
-   i_MIO_nCS <= "0000"  when to_integer(r_big_ctdn) > C_CLKS_MHZ2 - 1  else
+   i_MIO_nCS <= --"0000"  when to_integer(r_big_ctdn) > C_CLKS_MHZ2 - 1 and  else
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE
@@ -528,9 +528,9 @@ begin
 
    mux_bus_io <=  r_SYS_D_wr  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 and r_SYS_RnW = '0' else
                   r_SYS_A(7 downto 0)     
-                              when to_integer(r_mhz2_ctdn) <= C_F_ALE and to_integer(r_mhz2_ctdn) > C_F_ALE - C_F_MUL + 1 else
-                  i_MIO_O0    when to_integer(r_mhz2_ctdn) <= C_F_O0 and to_integer(r_mhz2_ctdn)  > C_F_O0  - C_F_MUL + 1 else
-                  i_MIO_O1    when to_integer(r_mhz2_ctdn) <= C_F_O1 and to_integer(r_mhz2_ctdn)  > C_F_O1  - C_F_MUL + 1 else
+                              when to_integer(r_mhz2_ctdn) <= C_F_ALE + 1    and to_integer(r_mhz2_ctdn) > C_F_ALE - C_F_MUL + 1 else
+                  i_MIO_O0    when to_integer(r_mhz2_ctdn) <= C_F_O0 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O0  - C_F_MUL + 1 else
+                  i_MIO_O1    when to_integer(r_mhz2_ctdn) <= C_F_O1 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O1  - C_F_MUL + 1 else
                   r_SYS_D_wr  when to_integer(r_mhz2_ctdn) <= C_F_D_write and r_SYS_RnW = '0' else
                   (others => 'Z');
 
