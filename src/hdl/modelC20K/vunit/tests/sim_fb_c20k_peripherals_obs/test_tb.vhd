@@ -363,25 +363,14 @@ begin
 
             wait for 10 us;
 
-            simple_write(x"FFFE40", x"08", i_fb_con_c2p);
+            simple_write(x"FFFE62", x"FF", i_fb_con_c2p);
 
             wait for 1200 ns;
 
-            simple_write(x"FFFE40", x"00", i_fb_con_c2p);
-
-            wait for 1200 ns;
-
-            simple_write(x"FFFCFF", x"00", i_fb_con_c2p);
-            simple_read(x"FFFCFF", v_D, i_fb_con_c2p);
-            simple_write(x"FFFCF0", x"00", i_fb_con_c2p);
-            simple_read(x"FFFCF0", v_D, i_fb_con_c2p);
+            simple_write(x"FFFE63", x"AA", i_fb_con_c2p);
 
 
-            simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
-            simple_read(x"FFFFAA", v_D, i_fb_con_c2p);
-            simple_write(x"FFFFAA", x"00", i_fb_con_c2p);
-            simple_read(x"FFFFAA", v_D, i_fb_con_c2p);
-         
+            wait for 1200 ns;         
 
          end if;
 

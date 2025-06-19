@@ -52,7 +52,8 @@ entity c20k_peripherals_mux_ctl is
 generic (
       G_FAST_CLOCKSPEED    : natural := 128000000;
       G_BEEBFPGA           : boolean := false;
-      G_RD_CTDN_BITS       : natural := 7
+      G_RD_CTDN_BITS       : natural := 7;
+      DEFAULT_SYS_ADDR     : std_logic_vector(15 downto 0) := x"FFEA"
    );
 port (
 
@@ -385,7 +386,7 @@ begin
             r_SYS_A <= (others => '0');
             r_SYS_RnW <= '1';
          else
-            if to_integer(r_big_ctdn) = C_F_ALE + 2 and r_stretch = short then
+            if to_integer(r_big_ctdn) = C_F_ALE + C_F_MUL + 2 and r_stretch = short then
                r_addr_ack_clken <= '1';
             elsif r_addr_ack_clken = '1' then
                r_addr_ack_clken2 <= '1';
@@ -396,7 +397,7 @@ begin
                   r_SYS_RnW <= sys_RnW_i;
                   r_cyc <= '1';
                else
-                  r_SYS_A <= x"FFEA";
+                  r_SYS_A <= DEFAULT_SYS_ADDR;
                   r_SYS_RnW <= '1';
                   r_cyc <= '0';
                end if;

@@ -57,7 +57,7 @@ entity fb_SYS_c20k is
 		CLOCKSPEED							: natural;
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0);
 		-- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
-		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEA"   -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
+		DEFAULT_SYS_ADDR					: std_logic_vector(15 downto 0) := x"FFEF"   -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
 
 	);
 	port(
@@ -430,7 +430,8 @@ begin
 	e_MUX:entity work.c20k_peripherals_mux_ctl
    generic map (
       G_FAST_CLOCKSPEED    => CLOCKSPEED * 1000000,
-      G_BEEBFPGA           => false
+      G_BEEBFPGA           => false,
+      DEFAULT_SYS_ADDR     => DEFAULT_SYS_ADDR
    )
    port map (
 
