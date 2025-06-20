@@ -147,7 +147,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_cyc <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_cyc then
+			if r_cyc = '1' then
 				if cyc_i = '0' then
 					r_cyc <= '0';
 				end if;
@@ -210,7 +210,7 @@ begin
 				r_ack <= '0';
 				r_ack_lane <= (others => '0');
 			elsif r_cyc = '1' and cyc_i = '1' then
-				if fb_con_p2c_i.ack then
+				if fb_con_p2c_i.ack = '1' then
 					for i in 0 to G_BYTELANES-1 loop
 						if i_rx_cur(i) = '1' then
 							r_d_Rd(((i+1)*8)-1 downto (i*8)) <= fb_con_p2c_i.D_rd;
