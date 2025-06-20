@@ -286,7 +286,7 @@ begin
 							if i_sys_rdy_ctdn_rd <= r_con_rdy_ctdn then
 								r_rdy <= '1';
 							end if;
-							if i_sys_rdy_ctdn_rd = RDY_CTDN_MIN then
+							if i_SYScyc_end_clken = '1' then
 								r_state <= idle;		
 								r_ack <= '1';		
 								r_D_rd <= i_D_rd;				
