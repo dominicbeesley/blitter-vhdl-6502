@@ -161,10 +161,7 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_32_ALE             : natural := 5;      -- address setup to phi2
    constant C_32_O0              : natural := 6;      -- address setup to phi2
    constant C_32_D_write         : natural := 10;
-   constant C_32_D_read          : natural := 14;
-
-   constant C_2MHZE_LONG_UP      : natural := C_CLKS_MHZ2_HALF * 3 - 1;
-   constant C_2MHZE_MED_UP      : natural := C_CLKS_MHZ2_HALF * 2 - 1;
+   constant C_32_D_read          : natural := 10;
 
    function C_F_MUL return natural is
    begin
@@ -194,14 +191,22 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_F_D_write          : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_write;
    constant C_F_D_read           : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_read;
 
+   constant C_2MHZE_LONG_UP      : natural := C_CLKS_MHZ2_HALF * 3 + 1;
+   constant C_2MHZE_MED_UP       : natural := C_CLKS_MHZ2_HALF * 2 + 1;
+   constant C_2MHZE_SHORT_UP     : natural := C_CLKS_MHZ2_HALF * 1 + 1;
+   constant C_2MHZE_DOWN         : natural := 1;
+   constant C_2MHZI_UP           : natural := C_CLKS_MHZ2_HALF + 1;
+   constant C_2MHZI_DOWN         : natural := 1;
+
+
    signal r_big_ctdn             : unsigned(C_BIG_CTR_LEN - 1 downto 0) := (others => '1');
    signal r_mhz2_ctdn            : unsigned(C_MHZ2_CTR_LEN-1 downto 0);
  
    signal r_mhz1E_clken          : std_logic := '0';
    signal r_mhz2int_clken        : std_logic := '0';        -- not cycle stretched at end of phi2
    signal r_mhz2int_rise_clken   : std_logic := '0';        -- not cycle stretched at end of phi1
-   signal r_mhz2E_clken          : std_logic;               -- cycle stretched at end of phi2
-
+   signal r_mhz2E_clken          : std_logic := '0';        -- cycle stretched at end of phi2
+   signal r_mhz2E_up_clken       : std_logic := '0';
    signal r_mhz1E_clk            : std_logic := '0';
    signal r_mhz2E_clk            : std_logic := '0';
 
@@ -247,16 +252,23 @@ architecture rtl of c20k_peripherals_mux_ctl is
 
    function RDYCTDN(i : integer) return unsigned is
    begin
+
       if i < 2**G_RD_CTDN_BITS then
          return to_unsigned(i, G_RD_CTDN_BITS);
       else
-         return to_unsigned(2**G_RD_CTDN_BITS-1, G_RD_CTDN_BITS);
+         return to_unsigned(2**G_RD_CTDN_BITS, G_RD_CTDN_BITS) - 1;
       end if;
    end function;
 
 begin
 
-   rd_ready_ctdn_o <= RDYCTDN(to_integer(r_big_ctdn));
+   p_rdyctdn:process(clk_fast_i)
+   begin
+      if rising_edge(clk_fast_i) then
+         rd_ready_ctdn_o <= RDYCTDN(to_integer(r_big_ctdn));
+      end if;
+   end process;
+
    addr_ack_clken_o <= r_addr_ack_clken;
    
 
@@ -288,10 +300,10 @@ begin
                if i_bbc_slow_cyc = '1' and r_cyc = '1' then
                   if r_mhz1E_clk = '1' then
                      r_stretch <= long;
-                     r_big_ctdn <= to_unsigned(C_F_ALE + 2 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
+                     r_big_ctdn <= to_unsigned(C_F_ALE + C_F_MUL + 2 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
                   else
                      r_stretch <= medium;
-                     r_big_ctdn <= to_unsigned(C_F_ALE + 1 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
+                     r_big_ctdn <= to_unsigned(C_F_ALE + C_F_MUL + 1 * C_CLKS_MHZ2 - 2, C_BIG_CTR_LEN);
                   end if;
                else
                   r_big_ctdn <= to_unsigned(to_integer(r_mhz2_ctdn) - 1, C_BIG_CTR_LEN);
@@ -311,12 +323,12 @@ begin
          r_mhz2int_clken <= '0'; 
          r_mhz1E_clken <= '0';
 
-         if r_mhz2_ctdn = 0 then
+         if r_mhz2_ctdn = C_2MHZI_DOWN then
             r_mhz2int_clken <= '1';               
             if r_mhz1E_clk = '1' then
                r_mhz1E_clken <= '1';
             end if;
-         elsif to_integer(r_mhz2_ctdn) = C_CLKS_MHZ2_HALF - 1 then
+         elsif to_integer(r_mhz2_ctdn) = C_2MHZI_UP then
             r_mhz2int_rise_clken <= '1';
          end if;
 
@@ -341,28 +353,34 @@ begin
    begin
       if rising_edge(clk_fast_i) then
          r_mhz2E_clken <= '0';
+         r_mhz2E_up_clken <= '0';
          if reset_i = '1' then
             r_mhz2E_clk <= '0';     
          else
+            
+            if r_mhz2E_up_clken = '1' then
+               r_mhz2E_clk <= '1';
+            elsif r_mhz2E_clken = '1' then
+               r_mhz2E_clk <= '0';
+            end if;
+
+
             if r_stretch = long then
                if to_integer(r_big_ctdn) = C_2MHZE_LONG_UP then
-                  r_mhz2E_clk <= '1';
-               elsif to_integer(r_big_ctdn) = 0 then
-                  r_mhz2E_clk <= '0';
+                  r_mhz2E_up_clken <= '1';
+               elsif to_integer(r_big_ctdn) = C_2MHZE_DOWN then
                   r_mhz2E_clken <= '1';
                end if;
             elsif r_stretch = medium then
                if to_integer(r_big_ctdn) = C_2MHZE_MED_UP then
-                  r_mhz2E_clk <= '1';
-               elsif to_integer(r_big_ctdn) = 0 then
-                  r_mhz2E_clk <= '0';
+                  r_mhz2E_up_clken <= '1';
+               elsif to_integer(r_big_ctdn) = C_2MHZE_DOWN then
                   r_mhz2E_clken <= '1';
                end if;
             else
-               if to_integer(r_mhz2_ctdn) = C_CLKS_MHZ2_HALF then
-                  r_mhz2E_clk <= '1';
-               elsif to_integer(r_big_ctdn) = 0 then
-                  r_mhz2E_clk <= '0';
+               if to_integer(r_mhz2_ctdn) = C_2MHZE_SHORT_UP then
+                  r_mhz2E_up_clken <= '1';
+               elsif to_integer(r_big_ctdn) = C_2MHZE_DOWN then
                   r_mhz2E_clken <= '1';
                end if;
             end if;
@@ -412,8 +430,12 @@ begin
 
       if rising_edge(clk_fast_i) then
          sys_D_rd_clken_o <= '0';
-         if r_mhz2E_clken = '1' then
+
+         if r_big_ctdn < 16 then
             sys_D_rd_o <= mux_bus_io;
+         end if;
+
+         if r_mhz2E_clken = '1' then
             sys_D_rd_clken_o <= '1';
          end if;
       end if;
