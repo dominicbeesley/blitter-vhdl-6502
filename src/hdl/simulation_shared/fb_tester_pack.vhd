@@ -50,7 +50,7 @@ use work.common.all;
 
 package fb_tester_pack is
 
-   constant RDY_CTDN_TEST : unsigned(RDY_CTDN_LEN-1 downto 0) := to_unsigned(5, RDY_CTDN_LEN);
+   constant RDY_CTDN_TEST : unsigned(RDY_CTDN_LEN-1 downto 0) := RDY_CTDN_MIN;
 
    procedure fbtest_wait_reset
    (

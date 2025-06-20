@@ -127,6 +127,10 @@ architecture rtl of test_tb is
 
    signal i_u11_Q          : std_logic_vector(7 downto 0);
 
+   -- test data
+   signal i_read_data      : std_logic_vector(7 downto 0);
+   signal im_mux_mhz2E_clk_dly : std_logic;
+
    procedure multi_read(
          A        : in  std_logic_vector(23 downto 0);
          N        : positive;
@@ -369,6 +373,16 @@ begin
 
             simple_write(x"FFFE63", x"AA", i_fb_con_c2p);
 
+            wait for 1200 ns;
+
+            i_read_data <= x"AA";
+            simple_read(x"FFFFFF", v_D, i_fb_con_c2p);
+
+            wait for 1200 ns;
+
+            i_read_data <= x"55";
+            simple_read(x"FFFFFF", v_D, i_fb_con_c2p);
+
 
             wait for 1200 ns;         
 
@@ -494,6 +508,11 @@ begin
 
 
    );
+
+   im_mux_mhz2E_clk_dly <= transport im_mux_mhz2E_clk after 20 ns;
+
+   ibpio_P_D <= i_read_data when ibpo_RnW = '1' and im_mux_mhz2E_clk_dly = '1' else
+                (others => 'Z');
 
 
    -- slow latch the data lines are munged in or before the controller
