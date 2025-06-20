@@ -131,7 +131,7 @@ entity P20KBare is
       mux_D_nOE_o          : out           std_logic;
       mux_i0_nOE_o         : out           std_logic;
       mux_i1_nOE_o         : out           std_logic;
-      mux_io               : out           std_logic_vector(7 downto 0);
+      mux_io               : inout         std_logic_vector(7 downto 0);
       mux_nALE_o           : out           std_logic;
       mux_o0_nOE_o         : out           std_logic;
       mux_o1_nOE_o         : out           std_logic;
