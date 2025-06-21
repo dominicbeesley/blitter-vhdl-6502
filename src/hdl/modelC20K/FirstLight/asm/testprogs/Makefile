@@ -1,5 +1,5 @@
 
-SUBDIRSWIMAKE:=ledchase memtest serialouttest uservia-time
+SUBDIRSWIMAKE:=ledchase memtest serialouttest uservia-time-poll uservia-time-irq
 
 all:$(SUBDIRSWIMAKE)
 clean:$(SUBDIRSWIMAKE)
