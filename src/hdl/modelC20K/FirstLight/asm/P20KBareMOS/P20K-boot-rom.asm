@@ -14,6 +14,7 @@
 		.ZEROPAGE
 ZP_PTR:		.RES 2
 CTR:		.RES 4
+		
 		.CODE
 
 mos_handle_res:
@@ -22,6 +23,13 @@ mos_handle_res:
 	cld
 	ldx	#$FF	
 	txs
+
+	; setup default vectors
+	ldx	#end_default_vectors - default_vectors - 1
+@vl:	lda	default_vectors,X
+	sta	USERV,X
+	dex
+	bpl	@vl
 
 
 	lda	#<str_msg
@@ -73,20 +81,29 @@ mos_handle_irq:
 
 		
 		;;;;; interrupt handler, can use A,X
+		jsr	call_irqv
 
 		pla
 		tax
 		pla
 		rti
 
+call_irqv:	jmp	(IRQV)
+
+default_irqv:	rts
+
 mos_handle_brk:	pla
 		tax
 		pla
-		jmp	noice_brk
+		jmp	(BRKV)
 
-
-
-
+		.RODATA
+default_vectors:
+		.addr	default_irqv
+		.addr	noice_brk
+		.addr	default_irqv
+		.addr	noice_nmi
+end_default_vectors:
 
 str_msg:	.byte "NoIce Monitor MOS", 13, 10, 0
 
