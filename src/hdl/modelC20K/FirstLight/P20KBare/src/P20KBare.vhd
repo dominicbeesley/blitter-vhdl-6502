@@ -233,6 +233,41 @@ architecture rtl of P20KBare is
    signal i_clk_pll_48M: std_logic;
    signal i_clk_pll_128M: std_logic;
 
+   -- multiplex in to core, out from peripheral (I0 phase)   
+   signal icipo_ser_cts    : std_logic;
+   signal icipo_ser_rx     : std_logic;
+   signal icipo_d_cas      : std_logic;
+   signal icipo_kb_nRST    : std_logic;
+   signal icipo_kb_CA2     : std_logic;
+   signal icipo_netint     : std_logic;
+   signal icipo_irq        : std_logic;
+   signal icipo_nmi        : std_logic;
+
+   -- multiplex in to core, out from peripheral (I1 phase)   
+   signal icipo_j_i0       : std_logic;
+   signal icipo_j_i1       : std_logic;
+   signal icipo_j_spi_miso : std_logic;
+   signal icipo_btn0       : std_logic;
+   signal icipo_btn1       : std_logic;
+   signal icipo_btn2       : std_logic;
+   signal icipo_btn3       : std_logic;
+   signal icipo_kb_pa7     : std_logic;
+
+   -- multiplex out from core, in to peripheral (O0 phase)   
+   signal icopi_SER_TX     : std_logic;
+   signal icopi_SER_RTS    : std_logic;
+
+   -- multiplex out from core, in to peripheral (O0 phase)   
+   signal icopi_j_ds_nCS2  : std_logic;
+   signal icopi_j_ds_nCS1  : std_logic;
+   signal icopi_j_spi_clk  : std_logic;
+   signal icopi_VID_HS     : std_logic;
+   signal icopi_VID_VS     : std_logic;
+   signal icopi_VID_CS     : std_logic;
+   signal icopi_j_spi_mosi : std_logic;
+   signal icopi_j_adc_nCS  : std_logic;
+
+
 begin
 
    e_pll_27_48: entity work.pll_27_48
@@ -399,8 +434,8 @@ begin
    port map (
 
       -- direct CPU control signals from system
-      nmi_n_i                       => '1',
-      irq_n_i                       => '1',
+      nmi_n_i                       => icipo_btn1,
+      irq_n_i                       => icipo_irq,
       cpu_halt_i                    => '0',
 
       -- fishbone signals
@@ -410,7 +445,7 @@ begin
 
       -- logical mappings
       JIM_page_i                    => i_JIM_page,
-      JIM_en_i                      => i_JIM_en
+      JIM_en_i                      => i_JIM_en      
 
    );
 
@@ -467,12 +502,46 @@ begin
 
 
       -- memory registers managed in here
-      sys_ROMPG_o                  => open,
-      jim_en_o                     => i_JIM_en,
-      jim_page_o                   => i_JIM_page,
+      sys_ROMPG_o                   => open,
+      jim_en_o                      => i_JIM_en,
+      jim_page_o                    => i_JIM_page,
 
       -- cpu sync 
-      cpu_2MHz_phi2_clken_o        => open
+      cpu_2MHz_phi2_clken_o         => open,
+
+      -- random other multiplexed pins out to FPGA (I0 phase)
+      p_ser_cts_o                   => icipo_ser_cts,
+      p_ser_rx_o                    => icipo_ser_rx,
+      p_d_cas_o                     => icipo_d_cas,
+      p_kb_nRST_o                   => icipo_kb_nRST,
+      p_kb_CA2_o                    => icipo_kb_CA2,
+      p_netint_o                    => icipo_netint,
+      p_irq_o                       => icipo_irq,
+      p_nmi_o                       => icipo_nmi,
+
+      -- random other multiplexed pins out to FPGA (I1 phase)
+      p_j_i0_o                      => icipo_j_i0,
+      p_j_i1_o                      => icipo_j_i1,
+      p_j_spi_miso_o                => icipo_j_spi_miso,
+      p_btn0_o                      => icipo_btn0,
+      p_btn1_o                      => icipo_btn1,
+      p_btn2_o                      => icipo_btn2,
+      p_btn3_o                      => icipo_btn3,
+      p_kb_pa7_o                    => icipo_kb_pa7,
+
+      -- random other multiplexed pins in from FPGA (O0 phase)
+      p_SER_TX_i                    => icopi_SER_TX,
+      p_SER_RTS_i                   => icopi_SER_RTS,
+
+      -- random other multiplexed pins in from FPGA (O1 phase)
+      p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
+      p_j_ds_nCS1_i                 => icopi_j_ds_nCS1,
+      p_j_spi_clk_i                 => icopi_j_spi_clk,
+      p_VID_HS_i                    => icopi_VID_HS,
+      p_VID_VS_i                    => icopi_VID_VS,
+      p_VID_CS_i                    => icopi_VID_CS,
+      p_j_spi_mosi_i                => icopi_j_spi_mosi,
+      p_j_adc_nCS_i                 => icopi_j_adc_nCS
 
    );
 

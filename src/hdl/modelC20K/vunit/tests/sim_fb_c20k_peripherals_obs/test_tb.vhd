@@ -355,36 +355,56 @@ begin
    variable v_D:std_logic_vector(7 downto 0);
    begin
 
+      ipo_SER_TX <= '1';
+      ipo_SER_RTS <= '1';
+      ipo_j_ds_nCS2 <= '1';
+      ipo_j_ds_nCS1 <= '1';
+      ipo_j_spi_clk <= '1';
+      ipo_VID_HS <= '1';
+      ipo_VID_VS <= '1';
+      ipo_VID_CS <= '1';
+      ipo_j_spi_mosi <= '1';
+      ipo_j_adc_nCS <= '1';
+
+
       test_runner_setup(runner, runner_cfg);
 
       while test_suite loop
 
-         if run("write latch and test") then
+         if run("read sys A bus") then
 
             -- simple single read, with no a_stb delay
 
             fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
 
-            wait for 10 us;
-
-            simple_write(x"FFFE62", x"FF", i_fb_con_c2p);
-
-            wait for 1200 ns;
-
-            simple_write(x"FFFE63", x"AA", i_fb_con_c2p);
-
             wait for 1200 ns;
 
             i_read_data <= x"AA";
             simple_read(x"FFFFFF", v_D, i_fb_con_c2p);
+            assert v_D = x"AA" report "Data mismatch" severity error;
 
             wait for 1200 ns;
 
             i_read_data <= x"55";
             simple_read(x"FFFFFF", v_D, i_fb_con_c2p);
+            assert v_D = x"55" report "Data mismatch" severity error;
 
 
-            wait for 1200 ns;         
+            wait for 1200 ns;
+
+         elsif run("test interrupt lines") then         
+
+            fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
+
+            wait for 1200 ns;
+            ibpi_irq <= '1';        -- set board irq
+            wait for 1200 ns;
+            assert ipi_irq = '1' report "irq mismatch" severity error;
+
+            wait for 1200 ns;
+            ibpi_irq <= '0';        -- set board irq
+            wait for 1200 ns;
+            assert ipi_irq = '0' report "irq mismatch" severity error;
 
          end if;
 
@@ -431,7 +451,41 @@ begin
       jim_page_o                    => i_jim_page,
 
       -- cpu sync 
-      cpu_2MHz_phi2_clken_o         => cpu_2MHz_phi2_clken
+      cpu_2MHz_phi2_clken_o         => cpu_2MHz_phi2_clken,
+
+      -- random other multiplexed pins out to FPGA (I0 phase)
+      p_ser_cts_o                   => ipi_ser_cts,
+      p_ser_rx_o                    => ipi_ser_rx,
+      p_d_cas_o                     => ipi_d_cas,
+      p_kb_nRST_o                   => ipi_kb_nRST,
+      p_kb_CA2_o                    => ipi_kb_CA2,
+      p_netint_o                    => ipi_netint,
+      p_irq_o                       => ipi_irq,
+      p_nmi_o                       => ipi_nmi,
+
+      -- random other multiplexed pins out to FPGA (I1 phase)
+      p_j_i0_o                      => ipi_j_i0,
+      p_j_i1_o                      => ipi_j_i1,
+      p_j_spi_miso_o                => ipi_j_spi_miso,
+      p_btn0_o                      => ipi_btn0,
+      p_btn1_o                      => ipi_btn1,
+      p_btn2_o                      => ipi_btn2,
+      p_btn3_o                      => ipi_btn3,
+      p_kb_pa7_o                    => ipi_kb_pa7,
+
+      -- random other multiplexed pins in from FPGA (O0 phase)
+      p_SER_TX_i                    => ipo_SER_TX,
+      p_SER_RTS_i                   => ipo_SER_RTS,
+
+      -- random other multiplexed pins in from FPGA (O1 phase)
+      p_j_ds_nCS2_i                 => ipo_j_ds_nCS2,
+      p_j_ds_nCS1_i                 => ipo_j_ds_nCS1,
+      p_j_spi_clk_i                 => ipo_j_spi_clk,
+      p_VID_HS_i                    => ipo_VID_HS,
+      p_VID_VS_i                    => ipo_VID_VS,
+      p_VID_CS_i                    => ipo_VID_CS,
+      p_j_spi_mosi_i                => ipo_j_spi_mosi,
+      p_j_adc_nCS_i                 => ipo_j_adc_nCS
 
    );
 

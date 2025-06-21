@@ -457,7 +457,7 @@ begin
    p_reg_i0:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
-         if to_integer(r_mhz2_ctdn) = C_F_I0 + 2 then
+         if to_integer(r_mhz2_ctdn) = C_F_I0 - 1 then
             r_p_ser_cts <= mux_bus_io(0);
             r_p_ser_rx <= mux_bus_io(1);
             r_p_d_cas <= mux_bus_io(2);
@@ -473,7 +473,7 @@ begin
    p_reg_i1:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
-         if to_integer(r_mhz2_ctdn) = C_F_I1 + 2 then
+         if to_integer(r_mhz2_ctdn) = C_F_I1 - 1 then
             r_p_j_i0 <= mux_bus_io(0);
             r_p_j_i1 <= mux_bus_io(1);
             r_p_j_spi_miso <= mux_bus_io(2);
@@ -511,9 +511,9 @@ begin
    mux_O1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O1 else
                      '1';
 
-   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - C_F_MUL + 3 else
+   mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - 1 else
                      '1';
-   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - C_F_MUL + 3 else
+   mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - 1 else
                      '1';
 
    i_MIO_nCS <= --"0000"  when to_integer(r_big_ctdn) > C_CLKS_MHZ2 - 1 and  else
