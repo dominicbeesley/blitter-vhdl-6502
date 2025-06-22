@@ -250,7 +250,6 @@ architecture rtl of P20KBare is
    signal icipo_btn1       : std_logic;
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
-   signal icipo_kb_pa7     : std_logic;
 
    -- multiplex out from core, in to peripheral (O0 phase)   
    signal icopi_SER_TX     : std_logic;
@@ -527,7 +526,6 @@ begin
       p_btn1_o                      => icipo_btn1,
       p_btn2_o                      => icipo_btn2,
       p_btn3_o                      => icipo_btn3,
-      p_kb_pa7_o                    => icipo_kb_pa7,
 
       -- random other multiplexed pins in from FPGA (O0 phase)
       p_SER_TX_i                    => icopi_SER_TX,

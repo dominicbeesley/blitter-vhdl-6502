@@ -140,7 +140,10 @@ port (
    p_VID_VS_i              : in     std_logic;
    p_VID_CS_i              : in     std_logic;
    p_j_spi_mosi_i          : in     std_logic;
-   p_j_adc_nCS_i           : in     std_logic
+   p_j_adc_nCS_i           : in     std_logic;
+
+   -- slow latch curren values
+   p_slow_latch_copy_o     : out    std_logic_vector(7 downto 0)     -- note these are in c20k order
 
 
 );
@@ -252,6 +255,7 @@ architecture rtl of c20k_peripherals_mux_ctl is
    signal r_SYS_RnW              : std_logic                      := '1';
    signal r_SYS_D_wr             : std_logic_vector(7 downto 0)   := (others => '0');
 
+   signal r_slow_latch           : std_logic_vector(7 downto 0)   := (others => '0');
 
    function RDYCTDN(i : integer) return unsigned is
    begin
@@ -447,17 +451,45 @@ begin
    end process;
 
    p_wr:process(clk_fast_i)
+   variable v_m : std_logic_vector(7 downto 0);
    begin
       if rising_edge(clk_fast_i) then
          if reset_i = '1' then
             r_SYS_D_wr <= (others => '0');
          else
             if to_integer(r_mhz2_ctdn) = C_F_D_write - 1 then
-               r_SYS_D_wr <= sys_D_wr_i;
+               if r_SYS_A = x"FE40" then
+                  --TODO: mask out new indices
+                  v_m := "00000001" sll to_integer(unsigned(sys_D_wr_i(2 downto 0)));
+                  if sys_D_wr_i(3) = '1' then
+                     r_SYS_D_wr <= r_slow_latch or v_m;
+                  else
+                     r_SYS_D_wr <= r_slow_latch and not v_m;
+                  end if;
+               else
+                  r_SYS_D_wr <= sys_D_wr_i;
+               end if;
             end if;
          end if;
       end if;      
    end process;
+
+   p_slow_latch:process(clk_fast_i)
+   begin
+      if rising_edge(clk_fast_i) then
+         if SYS_nRST_i = '0' then
+            --TODO: mask out new indices
+            r_slow_latch <= (others => '0');
+         else
+            if r_mhz1E_clken = '1' and i_MIO_nCS = "0101" then
+               r_slow_latch <= r_SYS_D_wr;
+            end if;
+         end if;
+      end if;
+   end process;
+
+
+   p_slow_latch_copy_o <= r_slow_latch;
 
    p_reg_i0:process(clk_fast_i)
    begin

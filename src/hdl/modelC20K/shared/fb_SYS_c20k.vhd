@@ -116,7 +116,6 @@ entity fb_SYS_c20k is
       p_btn1_o                         : out    std_logic;
       p_btn2_o                         : out    std_logic;
       p_btn3_o                         : out    std_logic;
-      p_kb_pa7_o                       : out    std_logic;
 
       -- random other multiplexed pins in from FPGA (O0 phase)
       p_SER_TX_i                       : in     std_logic;
@@ -218,6 +217,8 @@ architecture rtl of fb_SYS_c20k is
    signal   i_p_netint        : std_logic;
    signal   i_p_irq           : std_logic;
    signal   i_p_nmi           : std_logic;
+   signal   i_p_kb_pa7        : std_logic;
+   signal   i_p_slow_latch_copy  : std_logic_vector(7 downto 0);
 
    -- emulated peripherals signals
    signal   i_MHz1E_clken     : std_logic;
@@ -229,6 +230,8 @@ architecture rtl of fb_SYS_c20k is
    signal   i_sysvia_nIRQ     : std_logic;
    signal   i_sysvia_ca2      : std_logic;
    signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
+   signal   i_sysvia_PA_o     : std_logic_vector(7 downto 0);
+   signal   i_sysvia_PA_nOE   : std_logic_vector(7 downto 0);
    signal   i_sysvia_CB1_i    : std_logic;
    signal   i_sysvia_PB_i     : std_logic_vector(7 downto 0);
 
@@ -578,7 +581,7 @@ begin
       p_btn1_o                => p_btn1_o,
       p_btn2_o                => p_btn2_o,
       p_btn3_o                => p_btn3_o,
-      p_kb_pa7_o              => p_kb_pa7_o,
+      p_kb_pa7_o              => i_p_kb_pa7,
 
       -- random other multiplexed pins in from FPGA (O0 phase)
       p_SER_TX_i              => p_SER_TX_i,
@@ -592,8 +595,9 @@ begin
       p_VID_VS_i              => p_VID_VS_i,
       p_VID_CS_i              => p_VID_CS_i,
       p_j_spi_mosi_i          => p_j_spi_mosi_i,
-      p_j_adc_nCS_i           => p_j_adc_nCS_i
+      p_j_adc_nCS_i           => p_j_adc_nCS_i,
 
+      p_slow_latch_copy_o     => i_p_slow_latch_copy
 
    );
 
@@ -603,7 +607,14 @@ begin
 
    -- SYS VIA
 
-   i_sysvia_PA_i <= (others => '1');
+   -- TODO: speech
+   g_pa_back:for i in 0 to 6 generate
+      i_sysvia_PA_i(i) <=  i_sysvia_PA_o(i) when i_sysvia_PA_nOE(i) = '0' else
+                           '1';
+   end generate;
+   i_sysvia_PA_i(7) <= i_p_kb_pa7 when i_p_slow_latch_copy(3) = '0' else
+                       '1';
+
    i_sysvia_PB_i <= (others => '1');
    
 
@@ -628,8 +639,8 @@ begin
       O_CA2_OE_L            => open,
 
       I_PA                  => i_sysvia_PA_i,
-      O_PA                  => open,
-      O_PA_OE_L             => open,
+      O_PA                  => i_sysvia_PA_o,
+      O_PA_OE_L             => i_sysvia_PA_nOE,
 
       -- port b
       I_CB1                 => i_sysvia_CB1_i,
