@@ -192,8 +192,10 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_F_D_write          : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_write;
    constant C_F_D_read           : natural := C_CLKS_MHZ2 - 1 - C_F_MUL * C_32_D_read;
 
-   constant C_2MHZE_LONG_UP      : natural := C_CLKS_MHZ2_HALF * 3 + 1;
-   constant C_2MHZE_MED_UP       : natural := C_CLKS_MHZ2_HALF * 2 + 1;
+   -- note for stretched cycles 2mhzE must rise _before_ 1MHzE for the USER VIA
+   -- TODO: check if this is acceptable for Master
+   constant C_2MHZE_LONG_UP      : natural := C_CLKS_MHZ2_HALF * 4 + 1;
+   constant C_2MHZE_MED_UP       : natural := C_CLKS_MHZ2_HALF * 3 + 1;
    constant C_2MHZE_SHORT_UP     : natural := C_CLKS_MHZ2_HALF * 1 + 1;
    constant C_2MHZE_DOWN         : natural := 1;
    constant C_2MHZI_UP           : natural := C_CLKS_MHZ2_HALF + 1;

@@ -603,6 +603,10 @@ begin
 
    -- SYS VIA
 
+   i_sysvia_PA_i <= (others => '1');
+   i_sysvia_PB_i <= (others => '1');
+   
+
 
    e_sys_via:entity work.M6522
    port map (
