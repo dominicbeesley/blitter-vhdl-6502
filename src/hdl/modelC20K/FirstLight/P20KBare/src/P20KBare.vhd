@@ -238,10 +238,9 @@ architecture rtl of P20KBare is
    signal icipo_ser_rx     : std_logic;
    signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
-   signal icipo_kb_CA2     : std_logic;
    signal icipo_netint     : std_logic;
-   signal icipo_irq        : std_logic;
-   signal icipo_nmi        : std_logic;
+   signal i_sys_nIRQ        : std_logic;
+   signal i_sys_nNMI        : std_logic;
 
    -- multiplex in to core, out from peripheral (I1 phase)   
    signal icipo_j_i0       : std_logic;
@@ -435,7 +434,7 @@ begin
 
       -- direct CPU control signals from system
       nmi_n_i                       => icipo_btn1,
-      irq_n_i                       => icipo_irq,
+      irq_n_i                       => i_sys_nIRQ,
       cpu_halt_i                    => '0',
 
       -- fishbone signals
@@ -509,15 +508,16 @@ begin
       -- cpu sync 
       cpu_2MHz_phi2_clken_o         => open,
 
+      -- combined signals
+      sys_nIRQ_o                    => i_sys_nIRQ,
+      sys_nNMI_o                    => i_sys_nNMI,
+
       -- random other multiplexed pins out to FPGA (I0 phase)
       p_ser_cts_o                   => icipo_ser_cts,
       p_ser_rx_o                    => icipo_ser_rx,
       p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
-      p_kb_CA2_o                    => icipo_kb_CA2,
       p_netint_o                    => icipo_netint,
-      p_irq_o                       => icipo_irq,
-      p_nmi_o                       => icipo_nmi,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
       p_j_i0_o                      => icipo_j_i0,
@@ -541,7 +541,10 @@ begin
       p_VID_VS_i                    => icopi_VID_VS,
       p_VID_CS_i                    => icopi_VID_CS,
       p_j_spi_mosi_i                => icopi_j_spi_mosi,
-      p_j_adc_nCS_i                 => icopi_j_adc_nCS
+      p_j_adc_nCS_i                 => icopi_j_adc_nCS,
+
+      -- other inputs to FPGA
+      lpstb_i                       => pj_LPSTB_i
 
    );
 

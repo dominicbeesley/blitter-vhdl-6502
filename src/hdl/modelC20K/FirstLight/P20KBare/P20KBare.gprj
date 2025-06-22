@@ -35,6 +35,7 @@
         <File path="../../../library/3rdparty/T6502/T65_MCode.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
         <File path="src/ws2812_pack.vhd" type="file.vhdl" enable="1" />

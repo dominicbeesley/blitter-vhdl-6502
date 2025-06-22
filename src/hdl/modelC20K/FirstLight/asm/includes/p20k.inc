@@ -33,6 +33,26 @@ DEVNO_C20K				:=  $D2
 
 
 ;***********************************************************************
+;* System VIA                                                          *
+;***********************************************************************
+sheila_SYSVIA_orb			:= $FE40
+sheila_SYSVIA_ora			:= $FE41
+sheila_SYSVIA_ddrb			:= $FE42
+sheila_SYSVIA_ddra			:= $FE43
+sheila_SYSVIA_t1cl			:= $FE44
+sheila_SYSVIA_t1ch			:= $FE45
+sheila_SYSVIA_t1ll			:= $FE46
+sheila_SYSVIA_t1lh			:= $FE47
+sheila_SYSVIA_t2cl			:= $FE48
+sheila_SYSVIA_t2ch			:= $FE49
+sheila_SYSVIA_sr			:= $FE4A
+sheila_SYSVIA_acr			:= $FE4B
+sheila_SYSVIA_pcr			:= $FE4C
+sheila_SYSVIA_ifr			:= $FE4D
+sheila_SYSVIA_ier			:= $FE4E
+sheila_SYSVIA_ora_nh		:= $FE4F
+
+;***********************************************************************
 ;* User VIA                                                            *
 ;***********************************************************************
 sheila_USRVIA_orb			:= $FE60

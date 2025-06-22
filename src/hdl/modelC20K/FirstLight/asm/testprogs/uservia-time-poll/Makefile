@@ -1,6 +1,6 @@
 .PHONY:		all clean
 
-ASMTARGETS=	uservia-time.hex
+ASMTARGETS=	uservia-time-poll.hex
 TARGETS=	$(ASMTARGETS) 
 
 INCS=../../includes/
@@ -13,7 +13,7 @@ LD=ld65
 DEPS=
 AR=ar65
 
-OBJS=uservia-time
+OBJS=uservia-time-poll
 OBJS_O=$(addsuffix .o, $(OBJS))
 OBJS_B=$(addprefix $(BUILD)/, $(OBJS_O))
 
@@ -27,7 +27,7 @@ all:		$(addprefix $(BUILD)/, $(TARGETS))
 $(BUILD)/%.hex: $(BUILD)/%.bin
 		bin2hex 0x300 $< $@
 
-$(BUILD)/uservia-time.bin : $(OBJS_B) $(LIBS) uservia-time.cfg
+$(BUILD)/uservia-time-poll.bin : $(OBJS_B) $(LIBS) uservia-time-poll.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_B) $(LIBS)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
 		da65 -S 0x1000 --comments 4 $(basename $@).bin >$(basename $@).da.s

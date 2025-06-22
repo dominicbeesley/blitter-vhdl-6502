@@ -60,7 +60,6 @@ architecture rtl of test_tb is
    signal ipi_ser_rx       : std_logic;
    signal ipi_d_cas        : std_logic;
    signal ipi_kb_nRST      : std_logic;
-   signal ipi_kb_CA2       : std_logic;
    signal ipi_netint       : std_logic;
    signal ipi_irq          : std_logic;
    signal ipi_nmi          : std_logic;
@@ -406,6 +405,26 @@ begin
             wait for 1200 ns;
             assert ipi_irq = '0' report "irq mismatch" severity error;
 
+         elsif run("sys via") then         
+
+            fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
+
+            wait for 1200 ns;
+            simple_write(x"FFFE4E", x"84", i_fb_con_c2p);
+
+            wait for 1200 ns;
+            simple_read(x"FFFE4E", v_D, i_fb_con_c2p);
+            report "SYS VIA READ " & to_hex_string(v_D) severity note;
+
+            wait for 1200 ns;
+            simple_write(x"FFFE4E", x"04", i_fb_con_c2p);
+
+            wait for 1200 ns;
+            simple_read(x"FFFE4E", v_D, i_fb_con_c2p);
+            report "SYS VIA READ " & to_hex_string(v_D) severity note;
+
+
+
          end if;
 
       end loop;
@@ -458,7 +477,6 @@ begin
       p_ser_rx_o                    => ipi_ser_rx,
       p_d_cas_o                     => ipi_d_cas,
       p_kb_nRST_o                   => ipi_kb_nRST,
-      p_kb_CA2_o                    => ipi_kb_CA2,
       p_netint_o                    => ipi_netint,
       p_irq_o                       => ipi_irq,
       p_nmi_o                       => ipi_nmi,
@@ -485,7 +503,11 @@ begin
       p_VID_VS_i                    => ipo_VID_VS,
       p_VID_CS_i                    => ipo_VID_CS,
       p_j_spi_mosi_i                => ipo_j_spi_mosi,
-      p_j_adc_nCS_i                 => ipo_j_adc_nCS
+      p_j_adc_nCS_i                 => ipo_j_adc_nCS,
+
+      -- other inputs to FPGA
+      lpstb_i                       => '1'
+
 
    );
 

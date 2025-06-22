@@ -95,12 +95,15 @@ entity fb_SYS_c20k is
       -- cpu sync 
       cpu_2MHz_phi2_clken_o            : out    std_logic;
 
+      -- combined signals
+      sys_nIRQ_o                       : out    std_logic;
+      sys_nNMI_o                       : out    std_logic;
+
       -- random other multiplexed pins out to FPGA (I0 phase)
       p_ser_cts_o                      : out    std_logic;
       p_ser_rx_o                       : out    std_logic;
       p_d_cas_o                        : out    std_logic;
       p_kb_nRST_o                      : out    std_logic;
-      p_kb_CA2_o                       : out    std_logic;
       p_netint_o                       : out    std_logic;
       p_irq_o                          : out    std_logic;
       p_nmi_o                          : out    std_logic;
@@ -127,7 +130,10 @@ entity fb_SYS_c20k is
       p_VID_VS_i                       : in     std_logic;
       p_VID_CS_i                       : in     std_logic;
       p_j_spi_mosi_i                   : in     std_logic;
-      p_j_adc_nCS_i                    : in     std_logic      
+      p_j_adc_nCS_i                    : in     std_logic;
+
+      -- other inputs to FPGA
+      lpstb_i                          : in     std_logic      
 
    );
 end fb_SYS_c20k;
@@ -154,7 +160,9 @@ architecture rtl of fb_SYS_c20k is
       jim_page_lo_wr,
       jim_page_hi_wr,
       jim_page_lo_rd,
-      jim_page_hi_rd
+      jim_page_hi_rd,
+      sys_via_rd,
+      sys_via_wr
    );
 
    signal   r_state           : state_sys_t;
@@ -203,8 +211,32 @@ architecture rtl of fb_SYS_c20k is
 
    -- control
    signal   i_reset_full      : std_logic;      -- reset mux state machine before clocking out full reset
+   signal   i_reset_hard      : std_logic;      -- "power up" reset for sys via --TODO: distinguish between reset button and break key?
+
+   -- peripheral local signals
+
+   signal   i_p_netint        : std_logic;
+   signal   i_p_irq           : std_logic;
+   signal   i_p_nmi           : std_logic;
+
+   -- emulated peripherals signals
+   signal   i_MHz1E_clken     : std_logic;
+   signal   i_MHz4_clken      : std_logic;
+
+   signal   i_sysvia_d_o      : std_logic_vector(7 downto 0);
+   signal   r_sysvia_d_o      : std_logic_vector(7 downto 0);
+   signal   r_sysvia_nCS2     : std_logic;
+   signal   i_sysvia_nIRQ     : std_logic;
+   signal   i_sysvia_ca2      : std_logic;
+   signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
+   signal   i_sysvia_CB1_i    : std_logic;
+   signal   i_sysvia_PB_i     : std_logic_vector(7 downto 0);
+
 
 begin
+
+   sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ;
+   sys_nNMI_o <= i_p_nmi;
 
    --TODO: get 2mhzE clken
    -- used to synchronise throttled cpu
@@ -213,7 +245,8 @@ begin
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
 
-   fb_p2c_o.D_rd <= r_D_rd; -- this used to be a latch but got rid for timing simplification
+   fb_p2c_o.D_rd <=  r_sysvia_d_o when r_sysvia_nCS2 = '0' else
+                     r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
    fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
    fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
@@ -254,6 +287,7 @@ begin
                   r_rdy <= '0';
 
                   r_had_d_stb <= '0';
+                  r_sysvia_nCS2 <= '1';
 
                   if i_SYScyc_st_clken = '1' then
                      -- default idle cycle, drop buses
@@ -305,6 +339,10 @@ begin
                               r_sys_RnW <= '1';
                               r_state <= addrlatched_rd;
                            end if;
+
+                           if fb_c2p_i.A(15 downto 4) = x"FE4" then
+                              r_sysvia_nCS2 <= '0';
+                           end if;  
                         end if;
 
                      end if;
@@ -464,8 +502,11 @@ begin
    end process;
 
 
-   i_reset_full <= '1' when fb_syscon_i.rst = '1' and fb_syscon_i.rst_state = resetfull else
+   i_reset_full <= '1' when fb_syscon_i.rst = '1' and (fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup) else
                    '0';
+   i_reset_hard <= '1' when fb_syscon_i.rst = '1' and fb_syscon_i.rst_state = powerup else
+                   '0';
+
 
    e_MUX:entity work.c20k_peripherals_mux_ctl
    generic map (
@@ -479,8 +520,9 @@ begin
       clk_fast_i              => fb_syscon_i.clk,
 
       -- clock ens out in fast clock domain
-      mhz1E_clken_o           => open,
+      mhz1E_clken_o           => i_MHz1E_clken,
       mhz2E_clken_o           => open,
+      mhz4_clken_o            => i_MHz4_clken,
 
       -- state control in
       reset_i                 => i_reset_full,
@@ -523,10 +565,10 @@ begin
       p_ser_rx_o              => p_ser_rx_o,
       p_d_cas_o               => p_d_cas_o,
       p_kb_nRST_o             => p_kb_nRST_o,
-      p_kb_CA2_o              => p_kb_CA2_o,
-      p_netint_o              => p_netint_o,
-      p_irq_o                 => p_irq_o,
-      p_nmi_o                 => p_nmi_o,
+      p_kb_CA2_o              => i_sysvia_ca2,
+      p_netint_o              => i_p_netint,
+      p_irq_o                 => i_p_irq,
+      p_nmi_o                 => i_p_nmi,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
       p_j_i0_o                => p_j_i0_o,
@@ -555,7 +597,62 @@ begin
 
    );
 
- 
+   --==========================================================
+   -- Emulated motherboard chips   
+   --==========================================================
 
+   -- SYS VIA
+
+
+   e_sys_via:entity work.M6522
+   port map (
+      I_RS                  => r_sys_A(3 downto 0),
+      I_DATA                => r_d_wr,
+      O_DATA                => i_sysvia_d_o,
+      O_DATA_OE_L           => open,
+
+      I_RW_L                => r_sys_RnW,
+      I_CS1                 => mux_mhz2E_clk_o,
+      I_CS2_L               => r_sysvia_nCS2,
+
+      O_IRQ_L               => i_sysvia_nIRQ,
+
+      -- port a
+      I_CA1                 => p_VID_VS_i,
+      I_CA2                 => i_sysvia_ca2,
+      O_CA2                 => open,
+      O_CA2_OE_L            => open,
+
+      I_PA                  => i_sysvia_PA_i,
+      O_PA                  => open,
+      O_PA_OE_L             => open,
+
+      -- port b
+      I_CB1                 => i_sysvia_CB1_i,
+      O_CB1                 => open,
+      O_CB1_OE_L            => open,
+
+      I_CB2                 => lpstb_i,
+      O_CB2                 => open,
+      O_CB2_OE_L            => open,
+
+      I_PB                  => i_sysvia_PB_i,
+      O_PB                  => open,
+      O_PB_OE_L             => open,
+
+      I_P2_H                => mux_mhz1E_clk_o,
+      RESET_L               => not i_reset_hard,
+      ENA_4                 => i_MHz4_clken,
+      CLK                   => fb_syscon_i.clk
+   );
+
+   p_reg_sysvia_do:process(fb_syscon_i)
+   begin 
+      if rising_edge(fb_syscon_i.clk) then
+         if r_sys_RnW = '1' and r_sysvia_nCS2 = '0' and mux_mhz1E_clk_o = '1' and i_MHz4_clken = '1' then
+            r_sysvia_d_o <= i_sysvia_d_o;
+         end if;
+      end if;
+   end process;
 
 end rtl;

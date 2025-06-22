@@ -64,6 +64,7 @@ port (
    mhz1E_clken_o           : out    std_logic;                       -- last fast cycle of 1MHz enable
    mhz2E_clken_o           : out    std_logic;                       -- last cycle of cycle stretched 2MHzE
                                                                      -- coincident with clken_mhz1E_clken_i
+   mhz4_clken_o            : out    std_logic;                       -- 4x 1MHzE_clken - used by m6522
 
    -- state control in
    reset_i                 : in     std_logic;                       -- reset signal
@@ -334,6 +335,8 @@ begin
 
       end if;
    end process;
+
+   mhz4_clken_o <= r_mhz2int_clken or r_mhz2int_rise_clken;
 
 
    p_clk_1e:process(clk_fast_i)
