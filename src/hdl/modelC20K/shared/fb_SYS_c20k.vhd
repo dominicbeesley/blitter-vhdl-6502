@@ -201,6 +201,9 @@ architecture rtl of fb_SYS_c20k is
                                                  -- shortened
    signal   r_wr_setup_ctr    : unsigned(NUMBITS(C_WRITE_SETUP)-1 downto 0);
 
+   -- control
+   signal   i_reset_full      : std_logic;      -- reset mux state machine before clocking out full reset
+
 begin
 
    --TODO: get 2mhzE clken
@@ -461,6 +464,9 @@ begin
    end process;
 
 
+   i_reset_full <= '1' when fb_syscon_i.rst = '1' and fb_syscon_i.rst_state = resetfull else
+                   '0';
+
    e_MUX:entity work.c20k_peripherals_mux_ctl
    generic map (
       G_FAST_CLOCKSPEED    => CLOCKSPEED * 1000000,
@@ -477,7 +483,7 @@ begin
       mhz2E_clken_o           => open,
 
       -- state control in
-      reset_i                 => fb_syscon_i.rst,
+      reset_i                 => i_reset_full,
 
       -- address and cycle selection from core, registered 1 cycle after i_SYScyc_st_clken
       sys_cyc_en_i            => r_con_cyc,
@@ -548,5 +554,8 @@ begin
 
 
    );
+
+ 
+
 
 end rtl;
