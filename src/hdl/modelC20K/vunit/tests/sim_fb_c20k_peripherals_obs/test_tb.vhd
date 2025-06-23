@@ -505,8 +505,11 @@ begin
       p_j_adc_nCS_i                 => ipo_j_adc_nCS,
 
       -- other inputs to FPGA
-      lpstb_i                       => '1'
+      lpstb_i                       => '1',
 
+      -- emulated / synthesized beeb signals
+      beeb_ic32_o                   => i_beeb_ic32,
+      c20k_latch_o                  => i_c20k_latch
 
    );
 

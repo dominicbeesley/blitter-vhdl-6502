@@ -53,7 +53,9 @@ generic (
       G_FAST_CLOCKSPEED    : natural := 128000000;
       G_BEEBFPGA           : boolean := false;
       G_RD_CTDN_BITS       : natural := 7;
-      DEFAULT_SYS_ADDR     : std_logic_vector(15 downto 0) := x"FFEA"
+      DEFAULT_SYS_ADDR     : std_logic_vector(15 downto 0) := x"FFEA";
+      C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC20";  -- TODO: better address
+      C20K_LATCH_DEFAULT   : std_logic_vector(7 downto 0)  := "00100001"
    );
 port (
 
@@ -143,7 +145,8 @@ port (
    p_j_adc_nCS_i           : in     std_logic;
 
    -- slow latch curren values
-   p_slow_latch_copy_o     : out    std_logic_vector(7 downto 0)     -- note these are in c20k order
+   beeb_ic32_o             : out    std_logic_vector(7 downto 0); -- the emulated beeb ic32 outputs
+   c20k_latch_o            : out    std_logic_vector(7 downto 0)  -- c20k slow latch
 
 
 );
@@ -255,12 +258,14 @@ architecture rtl of c20k_peripherals_mux_ctl is
    signal r_SYS_RnW              : std_logic                      := '1';
    signal r_SYS_D_wr             : std_logic_vector(7 downto 0)   := (others => '0');
 
-   signal r_slow_latch           : std_logic_vector(7 downto 0)   := (others => '0');
-   signal i_slow_latch_o         : std_logic_vector(7 downto 0)   := (others => '0');
+   signal r_beeb_ic32            : std_logic_vector(7 downto 0)   := (others =>'0'); -- emulated BEEB IC32
+   signal r_c20k_latch           : std_logic_vector(7 downto 0)   := C20K_LATCH_DEFAULT; -- c02k internal latch
+   signal i_C20K_U9_o            : std_logic_vector(7 downto 0);
+   signal i_new_ic32             : std_logic_vector(7 downto 0);
+   signal i_new_c20k_latch       : std_logic_vector(7 downto 0);
 
    -- slow latch reset
    signal i_data_o               : std_logic_vector(7 downto 0);
-   signal i_rnw_o                : std_logic;
 
    function RDYCTDN(i : integer) return unsigned is
    begin
@@ -416,7 +421,7 @@ begin
          r_cyc_start <= '0';
          if reset_i = '1' then
             r_SYS_A <= (others => '0');
-            r_SYS_RnW <= '1';
+            r_SYS_RnW <= '0';
          else
             if to_integer(r_big_ctdn) = C_F_ALE + C_F_MUL + 2 and r_stretch = short then
                r_addr_ack_clken <= '1';
@@ -456,48 +461,72 @@ begin
    end process;
 
    p_wr:process(clk_fast_i)
-   variable v_m : std_logic_vector(7 downto 0);
    begin
       if rising_edge(clk_fast_i) then
          if reset_i = '1' then
             r_SYS_D_wr <= (others => '0');
          else
             if to_integer(r_mhz2_ctdn) = C_F_D_write - 1 then
-               if r_SYS_A = x"FE40" then
-                  --TODO: mask out new indices
-                  v_m := "00000001" sll to_integer(unsigned(sys_D_wr_i(2 downto 0)));
-                  if sys_D_wr_i(3) = '1' then
-                     r_SYS_D_wr <= r_slow_latch or v_m;
-                  else
-                     r_SYS_D_wr <= r_slow_latch and not v_m;
-                  end if;
-               else
-                  r_SYS_D_wr <= sys_D_wr_i;
-               end if;
+               r_SYS_D_wr <= sys_D_wr_i;
             end if;
          end if;
       end if;      
    end process;
 
-   -- TODO: state machine to poke slow latch at start up with initial values
+   p_slow_latch_mux:process
+   variable v_m : std_logic_vector(7 downto 0);
+   begin
+      v_m := "00000001" sll to_integer(unsigned(r_SYS_D_wr(2 downto 0)));
+      i_new_c20k_latch <= r_c20k_latch;
+      i_new_ic32 <= r_beeb_ic32;
+      if SYS_nRST_i = '1' then
+         if r_SYS_A = C20K_LATCH_ADDR then
+            if r_SYS_D_wr(3) = '1' then
+               i_new_c20k_latch <= r_c20k_latch or v_m;
+            else
+               i_new_c20k_latch <= r_c20k_latch and not v_m;
+            end if;
+         else
+            if r_SYS_D_wr(3) = '1' then
+               i_new_ic32 <= r_beeb_ic32 or v_m;
+            else
+               i_new_ic32 <= r_beeb_ic32 and not v_m;
+            end if;
+         end if;
+      end if;
+   end process;
+         
+--      i_C20K_U9_o <= i_new_ic32(7 downto 6) & 
+--                     i_new_c20k_latch(5 downto 4) &
+--                     i_new_ic32(3) & 
+--                     i_new_c20k_latch(2 downto 0);
+   i_C20K_U9_o <= i_new_ic32(7 downto 6) & 
+                  i_new_c20k_latch(5) &
+                  "0" &
+                  i_new_ic32(3) & 
+                  "00" &
+                  i_new_c20k_latch(0);
+
    p_slow_latch:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
          if SYS_nRST_i = '0' then
             --TODO: mask out new indices
-            r_slow_latch <= (others => '0');
+            r_beeb_ic32 <= (others => '0');
+            r_c20k_latch <= C20K_LATCH_DEFAULT;
          else
-            if r_mhz1E_clken = '1' and i_MIO_nCS = "0101" then
-               r_slow_latch <= r_SYS_D_wr;
+            if r_mhz1E_clken = '1' and r_SYS_RnW = '0' and r_SYS_A = x"FE40" then
+               r_beeb_ic32 <= i_new_ic32;
+            elsif r_mhz1E_clken = '1' and r_SYS_RnW = '0' and r_SYS_A = C20K_LATCH_ADDR then
+               r_c20k_latch <= i_new_c20k_latch;
             end if;
          end if;
       end if;
    end process;
 
 
-   p_slow_latch_copy_o <= r_slow_latch;
-
-   i_slow_latch_o <= r_slow_latch;
+   beeb_ic32_o <= r_beeb_ic32;
+   c20k_latch_o <= r_c20k_latch;
 
    p_reg_i0:process(clk_fast_i)
    begin
@@ -562,6 +591,8 @@ begin
                      '1';
 
    i_MIO_nCS <= "0101"  when SYS_nRST_i = '0' else -- reset slow latch
+                "0101"  when r_SYS_A(15 downto 0)       = x"FE40" and r_SYS_RnW = '0' else -- BEEB IC32 WRITE
+                "0101"  when r_SYS_A(15 downto 0)       = C20K_LATCH_ADDR and r_SYS_RnW = '0' else -- C20K latch
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE
@@ -571,7 +602,6 @@ begin
                 "1001"  when r_SYS_A(15 downto 5) & "0" = x"FE6" else -- VIAB
                 "0100"  when r_SYS_A(15 downto 0)       = x"FE41" and r_SYS_RnW = '0' else -- KBPAWR
                 "0100"  when r_SYS_A(15 downto 0)       = x"FE4F" and r_SYS_RnW = '0' else -- KBPAWR
-                "0101"  when r_SYS_A(15 downto 0)       = x"FE40" and r_SYS_RnW = '0' else -- IC32WR
                 "0000";
 
    i_MIO_O0 <= (
@@ -595,22 +625,20 @@ begin
 
 
    -- subvert data bus during reset to initialize c20k slow latch
-   i_data_o       <= i_slow_latch_o when sys_nRST_i = '0' else
+   i_data_o       <= i_C20K_U9_o when i_MIO_nCS = "0101" else
                      r_SYS_D_wr;
-   i_rnw_o        <= '0' when sys_nRST_i = '0' else
-                     r_SYS_RnW;
 
-   mux_bus_io <=  i_data_o  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 and i_rnw_o = '0' else
+   mux_bus_io <=  i_data_o  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 and r_SYS_RnW = '0' else
                   r_SYS_A(7 downto 0)     
                             when to_integer(r_mhz2_ctdn) <= C_F_ALE + 1    and to_integer(r_mhz2_ctdn) > C_F_ALE - C_F_MUL + 1 else
                   i_MIO_O0  when to_integer(r_mhz2_ctdn) <= C_F_O0 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O0  - C_F_MUL + 1 else
                   i_MIO_O1  when to_integer(r_mhz2_ctdn) <= C_F_O1 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O1  - C_F_MUL + 1 else
-                  i_data_o  when to_integer(r_mhz2_ctdn) <= C_F_D_write and i_rnw_o = '0' else
+                  i_data_o  when to_integer(r_mhz2_ctdn) <= C_F_D_write and r_SYS_RnW = '0' else
                   (others => 'Z');
 
    mux_D_nOE_o  <= '0'  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 else
-                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_write and i_rnw_o = '0' else
-                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_read  and i_rnw_o = '1' else
+                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_write and r_SYS_RnW = '0' else
+                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_read  and r_SYS_RnW = '1' else
                    '1';
 
 

@@ -265,6 +265,13 @@ architecture rtl of P20KBare is
    signal icopi_j_spi_mosi : std_logic;
    signal icopi_j_adc_nCS  : std_logic;
 
+   -- emulated / synthesized beeb signals
+   signal i_beeb_ic32      : std_logic_vector(7 downto 0);
+   signal i_c20k_latch     : std_logic_vector(7 downto 0);
+
+
+   -- debug
+   signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
 
 begin
 
@@ -465,7 +472,7 @@ begin
       fb_c2p_i                      => i_c2p_led_arr,
       fb_p2c_o                      => i_p2c_led_arr,
 
-      led_serial_o                  => ui_leds_o
+      led_serial_o                  => open --ui_leds_o
    );
 
 
@@ -542,32 +549,37 @@ begin
       p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 
       -- other inputs to FPGA
-      lpstb_i                       => pj_LPSTB_i
+      lpstb_i                       => pj_LPSTB_i,
+
+      -- emulated / synthesized beeb signals
+      beeb_ic32_o                   => i_beeb_ic32,
+      c20k_latch_o                  => i_c20k_latch
+
 
    );
 
---   -------------------------------------
---   -- DEBUG LEDS
---   -------------------------------------
---   G_DBG_LED_I:FOR I in 0 to 3 generate
---
---      i_debug_leds(I).red <= x"8";
---      i_debug_leds(I).blue <= (others => '0');
---      i_debug_leds(I).green <= (others => i_debug_c20k_sys_state(I));
---   END GENERATE;
---
---   e_dbg_led:entity work.ws2812
---   generic map (
---      G_CLOCKSPEED                    => CLOCKSPEED * 1000000,
---      G_N_CHAIN                       => 8
---   )
---   port map (
---      rst_i                   => i_fb_syscon.rst,
---      clk_i                   => i_fb_syscon.clk,
---      rgb_arr_i               => i_debug_leds,
---      led_serial_o            => ui_leds_o
---
---   );
+   -------------------------------------
+   -- DEBUG LEDS
+   -------------------------------------
+   G_DBG_LED_I:FOR I in 0 to 7 generate
+
+      i_debug_leds(I).red <= (0 => i_c20k_latch(I), others => '0');
+      i_debug_leds(I).blue <= (others => '0');
+      i_debug_leds(I).green <= (0 => i_beeb_ic32(I), others => '0');
+   END GENERATE;
+
+   e_dbg_led:entity work.ws2812
+   generic map (
+      G_CLOCKSPEED                    => CLOCKSPEED * 1000000,
+      G_N_CHAIN                       => 8
+   )
+   port map (
+      rst_i                   => i_fb_syscon.rst,
+      clk_i                   => i_fb_syscon.clk,
+      rgb_arr_i               => i_debug_leds,
+      led_serial_o            => ui_leds_o
+
+   );
 
 
       ddr_addr_o           <= (others => '0');

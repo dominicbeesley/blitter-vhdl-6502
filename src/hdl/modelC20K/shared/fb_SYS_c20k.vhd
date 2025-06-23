@@ -132,7 +132,11 @@ entity fb_SYS_c20k is
       p_j_adc_nCS_i                    : in     std_logic;
 
       -- other inputs to FPGA
-      lpstb_i                          : in     std_logic      
+      lpstb_i                          : in     std_logic;
+
+      -- emulated / synthesized beeb signals
+      beeb_ic32_o                      : out    std_logic_vector(7 downto 0);
+      c20k_latch_o                     : out    std_logic_vector(7 downto 0) 
 
    );
 end fb_SYS_c20k;
@@ -218,7 +222,7 @@ architecture rtl of fb_SYS_c20k is
    signal   i_p_irq           : std_logic;
    signal   i_p_nmi           : std_logic;
    signal   i_p_kb_pa7        : std_logic;
-   signal   i_p_slow_latch_copy  : std_logic_vector(7 downto 0);
+   signal   i_beeb_ic32       : std_logic_vector(7 downto 0);
 
    -- emulated peripherals signals
    signal   i_MHz1E_clken     : std_logic;
@@ -597,13 +601,18 @@ begin
       p_j_spi_mosi_i          => p_j_spi_mosi_i,
       p_j_adc_nCS_i           => p_j_adc_nCS_i,
 
-      p_slow_latch_copy_o     => i_p_slow_latch_copy
+      -- emulated / synthesized back to core
+      beeb_ic32_o             => i_beeb_ic32,
+      c20k_latch_o            => c20k_latch_o
 
    );
 
    --==========================================================
    -- Emulated motherboard chips   
    --==========================================================
+
+   -- slow latch
+   beeb_ic32_o <= i_beeb_ic32;
 
    -- SYS VIA
 
@@ -612,7 +621,7 @@ begin
       i_sysvia_PA_i(i) <=  i_sysvia_PA_o(i) when i_sysvia_PA_nOE(i) = '0' else
                            '1';
    end generate;
-   i_sysvia_PA_i(7) <= i_p_kb_pa7 when i_p_slow_latch_copy(3) = '0' else
+   i_sysvia_PA_i(7) <= i_p_kb_pa7 when i_beeb_ic32(3) = '0' else
                        '1';
 
    i_sysvia_PB_i <= (others => '1');
