@@ -489,7 +489,6 @@ begin
       p_btn1_o                      => ipi_btn1,
       p_btn2_o                      => ipi_btn2,
       p_btn3_o                      => ipi_btn3,
-      p_kb_pa7_o                    => ipi_kb_pa7,
 
       -- random other multiplexed pins in from FPGA (O0 phase)
       p_SER_TX_i                    => ipo_SER_TX,
