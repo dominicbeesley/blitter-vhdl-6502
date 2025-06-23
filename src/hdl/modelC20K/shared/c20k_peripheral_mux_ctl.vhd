@@ -580,9 +580,9 @@ begin
 
    mux_nALE_o  <=    '0'   when to_integer(r_mhz2_ctdn) = C_F_ALE else
                      '1';
-   mux_O0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O0 else
+   mux_O0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O0 - 1 else -- TODO: this nudged on by 1, consider making outs wider, was tickling slow latch with glitches
                      '1';
-   mux_O1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O1 else
+   mux_O1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) = C_F_O1 - 1 else -- TODO: this nudged on by 1, consider making outs wider, was tickling slow latch with glitches
                      '1';
 
    mux_I0_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I0 + 1 and to_integer(r_mhz2_ctdn) > C_F_I0 - 1 else
