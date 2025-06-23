@@ -256,6 +256,11 @@ architecture rtl of c20k_peripherals_mux_ctl is
    signal r_SYS_D_wr             : std_logic_vector(7 downto 0)   := (others => '0');
 
    signal r_slow_latch           : std_logic_vector(7 downto 0)   := (others => '0');
+   signal i_slow_latch_o         : std_logic_vector(7 downto 0)   := (others => '0');
+
+   -- slow latch reset
+   signal i_data_o               : std_logic_vector(7 downto 0);
+   signal i_rnw_o                : std_logic;
 
    function RDYCTDN(i : integer) return unsigned is
    begin
@@ -474,6 +479,7 @@ begin
       end if;      
    end process;
 
+   -- TODO: state machine to poke slow latch at start up with initial values
    p_slow_latch:process(clk_fast_i)
    begin
       if rising_edge(clk_fast_i) then
@@ -490,6 +496,8 @@ begin
 
 
    p_slow_latch_copy_o <= r_slow_latch;
+
+   i_slow_latch_o <= r_slow_latch;
 
    p_reg_i0:process(clk_fast_i)
    begin
@@ -553,7 +561,7 @@ begin
    mux_I1_nOE_o <=   '0'   when to_integer(r_mhz2_ctdn) <= C_F_I1 + 1 and to_integer(r_mhz2_ctdn) > C_F_I1 - 1 else
                      '1';
 
-   i_MIO_nCS <= --"0000"  when to_integer(r_big_ctdn) > C_CLKS_MHZ2 - 1 and  else
+   i_MIO_nCS <= "0101"  when SYS_nRST_i = '0' else -- reset slow latch
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE
@@ -586,17 +594,23 @@ begin
       );
 
 
-   mux_bus_io <=  r_SYS_D_wr  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 and r_SYS_RnW = '0' else
+   -- subvert data bus during reset to initialize c20k slow latch
+   i_data_o       <= i_slow_latch_o when sys_nRST_i = '0' else
+                     r_SYS_D_wr;
+   i_rnw_o        <= '0' when sys_nRST_i = '0' else
+                     r_SYS_RnW;
+
+   mux_bus_io <=  i_data_o  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 and i_rnw_o = '0' else
                   r_SYS_A(7 downto 0)     
-                              when to_integer(r_mhz2_ctdn) <= C_F_ALE + 1    and to_integer(r_mhz2_ctdn) > C_F_ALE - C_F_MUL + 1 else
-                  i_MIO_O0    when to_integer(r_mhz2_ctdn) <= C_F_O0 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O0  - C_F_MUL + 1 else
-                  i_MIO_O1    when to_integer(r_mhz2_ctdn) <= C_F_O1 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O1  - C_F_MUL + 1 else
-                  r_SYS_D_wr  when to_integer(r_mhz2_ctdn) <= C_F_D_write and r_SYS_RnW = '0' else
+                            when to_integer(r_mhz2_ctdn) <= C_F_ALE + 1    and to_integer(r_mhz2_ctdn) > C_F_ALE - C_F_MUL + 1 else
+                  i_MIO_O0  when to_integer(r_mhz2_ctdn) <= C_F_O0 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O0  - C_F_MUL + 1 else
+                  i_MIO_O1  when to_integer(r_mhz2_ctdn) <= C_F_O1 + 1     and to_integer(r_mhz2_ctdn)  > C_F_O1  - C_F_MUL + 1 else
+                  i_data_o  when to_integer(r_mhz2_ctdn) <= C_F_D_write and i_rnw_o = '0' else
                   (others => 'Z');
 
    mux_D_nOE_o  <= '0'  when to_integer(r_mhz2_ctdn) > C_F_D_hold - C_F_MUL + 1 else
-                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_write and r_SYS_RnW = '0' else
-                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_read  and r_SYS_RnW = '1' else
+                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_write and i_rnw_o = '0' else
+                   '0'  when to_integer(r_mhz2_ctdn) < C_F_D_read  and i_rnw_o = '1' else
                    '1';
 
 
