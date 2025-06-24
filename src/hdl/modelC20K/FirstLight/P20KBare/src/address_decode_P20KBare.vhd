@@ -77,7 +77,7 @@ begin
 			elsif addr_i(15 downto 8) = x"FC" or addr_i(15 downto 8) = x"FD" or addr_i(15 downto 8) = x"FE" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
-			elsif addr_i(15) = '1' then
+			elsif addr_i(15 downto 12) = x"F" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
 			elsif addr_i(15 downto 12) = x"0" then
