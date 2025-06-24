@@ -83,7 +83,9 @@ begin
 		fb_per_c2p_o <= fb_con_c2p_i;
 
 		if fb_con_c2p_i.A(23 downto 16) = x"FF" then
-			if fb_con_c2p_i.A(15 downto 8) = x"FD" and JIM_en_i = '1' then
+			if fb_con_c2p_i.A(15 downto 8) >= x"10" and fb_con_c2p_i.A(15 downto 8) <= x"70" then
+				fb_per_c2p_o.A <= x"00" & fb_con_c2p_i.A(15 downto 0);
+			elsif fb_con_c2p_i.A(15 downto 8) = x"FD" and JIM_en_i = '1' then
 				fb_per_c2p_o.A <= JIM_page_i & fb_con_c2p_i.A(7 downto 0);
 			end if;
 		end if;
