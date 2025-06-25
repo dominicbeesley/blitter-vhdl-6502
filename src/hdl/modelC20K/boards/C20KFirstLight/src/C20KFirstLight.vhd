@@ -27,7 +27,7 @@
 -- 
 -- Create Date:      2/6/2025
 -- Design Name: 
--- Module Name:      P20KBare
+-- Module Name:      C20KFirstLight
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -53,7 +53,7 @@ use work.fb_intcon_pack.all;
 use work.board_config_pack.all;
 use work.ws2812_pack.all;
 
-entity P20KBare is
+entity C20KFirstLight is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
@@ -166,7 +166,7 @@ entity P20KBare is
 );
 end entity;
 
-architecture rtl of P20KBare is
+architecture rtl of C20KFirstLight is
 
    signal   i_JIM_page     : std_logic_vector(15 downto 0);
    signal   i_JIM_en       : std_logic;
@@ -357,7 +357,7 @@ begin
    generic map (
       G_ADDR_W => 12,   -- 4K
       G_READONLY => true,
-      INIT_FILE => PROJECT_ROOT_PATH & "/src/hdl/modelC20K/FirstLight/asm/P20KBareMOS/build/P20K-boot-rom.vec"
+      INIT_FILE => PROJECT_ROOT_PATH & "/src/hdl/modelC20K/asm/C20KFirstLight/C20KBareMOS/build/C20K-boot-rom.vec"
       )
    port map (
       -- fishbone signals

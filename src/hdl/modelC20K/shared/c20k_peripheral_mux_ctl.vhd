@@ -473,7 +473,7 @@ begin
       end if;      
    end process;
 
-   p_slow_latch_mux:process
+   p_slow_latch_mux:process(all)
    variable v_m : std_logic_vector(7 downto 0);
    begin
       v_m := "00000001" sll to_integer(unsigned(r_SYS_D_wr(2 downto 0)));

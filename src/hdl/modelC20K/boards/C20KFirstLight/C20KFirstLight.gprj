@@ -5,9 +5,9 @@
     <Version>5</Version>
     <Device name="GW2A-18C" pn="GW2A-LV18PG256C8/I7">gw2a18c-011</Device>
     <FileList>
-        <File path="src/P20KBare.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/C20KFirstLight.vhd" type="file.vhdl" enable="1"/>
         <File path="src/c20k-pins.cst" type="file.cst" enable="1"/>
-        <File path="src/P20KBare.sdc" type="file.sdc" enable="1"/>
+        <File path="src/C20KFirstLight.sdc" type="file.sdc" enable="1"/>
 
         <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
@@ -20,8 +20,8 @@
         <File path="src/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_C20K_MEM_SRAM.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />
-        <File path="src/address_decode_P20KBare.vhd" type="file.vhdl" enable="1" />
-        <File path="src/fb_CPU_log2phys_simple16.vhd" type="file.vhdl" enable="1" />
+        <File path="src/address_decode_C20KFirstLight.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_CPU_log2phys_C20KFirstLight.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />

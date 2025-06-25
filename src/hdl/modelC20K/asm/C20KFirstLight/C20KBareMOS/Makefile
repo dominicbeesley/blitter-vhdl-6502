@@ -1,6 +1,6 @@
 .PHONY:		all clean
 
-ASMTARGETS=	P20K-boot-rom.rom 
+ASMTARGETS=	C20K-boot-rom.rom 
 TARGETS=	$(ASMTARGETS) 
 
 INCS=../includes		
@@ -13,7 +13,7 @@ LD=ld65
 DEPS=
 AR=ar65
 
-OBJS=P20K-boot-rom noice
+OBJS=C20K-boot-rom noice
 OBJS_O=$(addsuffix .o, $(OBJS))
 OBJS_B=$(addprefix $(BUILD)/, $(OBJS_O))
 
@@ -24,7 +24,7 @@ X:=$(shell mkdir -p build)
 all:		$(addprefix $(BUILD)/, $(TARGETS))
 
 
-$(BUILD)/P20K-boot-rom.rom : $(OBJS_B) $(LIBS) P20K-boot-rom.cfg
+$(BUILD)/C20K-boot-rom.rom : $(OBJS_B) $(LIBS) C20K-boot-rom.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_B) $(LIBS)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
 		da65 -S 0xE000 --comments 4 $(basename $@).rom >$(basename $@).da.s
