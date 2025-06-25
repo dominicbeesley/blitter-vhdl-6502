@@ -83,7 +83,10 @@ main_menu:	M_PRINT	str_menu
 @sk_mR:		cmp	#'P'
 		bne	@sk_mP
 		jmp	doPROG
-@sk_mP:
+@sk_mP:		cmp	#'E'
+		bne	@sk_mE
+		jmp	doERASE
+@sk_mE:
 		; drop through unrecognized
 		jmp	 main_menu
 
@@ -93,7 +96,86 @@ ErrBadHex:	M_PRINT str_BadHex
 		jmp	 main_menu
 
 ;==============================================================================
-; T E S T
+; E R A S E
+;==============================================================================
+
+doERASE:		M_PRINT	str_Erase
+		
+		ldx	#<textbuf
+		stx	zp_mos_txtptr
+		ldy	#>textbuf
+		sty	zp_mos_txtptr+1
+		ldy	#1
+		jsr	ParseHex
+		bcc	@ok_start
+		jmp	ErrBadHex
+@ok_start:	jsr	acc2Addr
+		jsr	ParseHex
+		bcc	@ok_len
+		jmp	ErrBadHex
+@ok_len:	jsr	acc2Len
+		lda	zp_addr+1
+		and	#$0F
+		ora	zp_addr			; check sector boundary
+		bne	@bad_sector
+		lda	zp_len+1
+		and	#$0F
+		ora	zp_len			; check sector boundary
+		bne	@bad_sector
+
+		lda	#0
+		sta	zp_addr
+		sta	zp_len
+		lda	zp_addr + 1
+		and	#$F0
+		sta	zp_addr + 1
+		lda	zp_len + 1
+		and	#$F0
+		sta	zp_len + 1
+
+@erase_loop:	lda	zp_len + 1
+		ora	zp_len + 2
+		beq	@mm
+
+		jsr	PrintAddr
+		jsr	OSNEWL
+
+		lda	#$80
+		jsr	flash_cmd
+		jsr	pushAddr
+		jsr	jimwrite5522
+		jsr	popAddr
+		jsr	jimaddr
+		ldx	zp_addr
+		lda	#$30
+		sta	JIM,X
+
+@wlp:		lda	JIM,X
+		eor	JIM,X
+		bne	@wlp
+
+		clc
+		lda	zp_addr + 1
+		adc	#$10
+		sta	zp_addr + 1
+		lda	zp_addr + 2
+		adc	#0
+		sta	zp_addr + 2
+
+		sec
+		lda	zp_len + 1
+		sbc	#$10
+		sta	zp_len + 1
+		lda	zp_len + 2
+		sbc	#0
+		sta	zp_len + 2
+		jmp	@erase_loop
+
+@bad_sector:	M_PRINT str_badSector
+@mm:		jmp	main_menu
+
+;==============================================================================
+; P R O G R A M   F R O M   R A M   A T   1 0 0 0
 ;==============================================================================
 
 doPROG:		M_PRINT	str_Prog
@@ -734,9 +816,13 @@ str_menu:	.byte	"FlashProg",13,10
 		.byte	"Menu:",13,10
 		.byte   " (R)EAD <addr> <len>", 13,10
 		.byte   " (P)ROG <addr> <len>", 13, 10
+		.byte   " (E)RASE <addr> <len>", 13, 10
 		.byte 	0
 
-str_Prog:	.byte	"Send SRECS...",13,10,13,10,0
+str_Prog:	.byte	"Prog...",13,10,0
+str_Erase:	.byte	"Erase...",13,10,0
+
+str_badSector:	.byte	"Bad sector",13,10,0
 
 str_Escape:	.byte   "Escape", 0
 str_YN:		.byte	" (Y/N)?",0
