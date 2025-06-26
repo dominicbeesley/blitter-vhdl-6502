@@ -1,0 +1,111 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW2A-18C" pn="GW2A-LV18PG256C8/I7">gw2a18c-011</Device>
+    <FileList>
+        <File path="src/C20K.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c20k-pins.cst" type="file.cst" enable="1"/>
+        <File path="src/C20K.sdc" type="file.sdc" enable="1"/>
+
+        <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_48_128.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
+
+        <File path="../../../shared/firmware_info_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../shared/fb_cpu_log2phys.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/log2phys.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/address_decode.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../mk3/shared/fb_MEM.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_memctl.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../shared/address_decode_chipset.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/fb_chipset_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/fb_chipset.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_types.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_int.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_addr.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/aeris.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_sound.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_sound_cha.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_dma.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_dma_cha.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_many_to_one.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/common.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_MCode.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_SYS_VIA_blocker.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_VERSION.vhd" type="file.vhdl" enable="1" />
+
+
+        <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
+
+        <File path="src/ws2812_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="src/ws2812.vhd" type="file.vhdl" enable="1" />
+        <File path="src/fb_ws2812.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
+
+
+
+<!-- HDMI -->
+
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/encoder.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi//hdmi_out_gowin_2A.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/mc6845.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_crtc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/saa5050.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_vidproc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_ram.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/HDMI_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_enabled.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_seq_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprites_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/fb_sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprite_int.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/vidmem_sequencer.vhd" type="file.vhdl" enable="1" />
+
+
+    </FileList>
+</Project>

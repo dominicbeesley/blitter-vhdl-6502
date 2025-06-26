@@ -50,6 +50,8 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
+use work.board_config_pack.all;
+use work.fb_SYS_pack.all;
 
 entity fb_SYS_c20k is
    generic (
@@ -62,6 +64,7 @@ entity fb_SYS_c20k is
    );
    port(
 
+      cfg_sys_type_i                : in     sys_type;
       -- fishbone signals
 
       fb_syscon_i                   : in     fb_syscon_t;
@@ -104,9 +107,6 @@ entity fb_SYS_c20k is
       p_ser_rx_o                       : out    std_logic;
       p_d_cas_o                        : out    std_logic;
       p_kb_nRST_o                      : out    std_logic;
-      p_netint_o                       : out    std_logic;
-      p_irq_o                          : out    std_logic;
-      p_nmi_o                          : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I1 phase)
       p_j_i0_o                         : out    std_logic;
@@ -255,6 +255,7 @@ begin
    fb_p2c_o.D_rd <=  r_sysvia_d_o when r_sysvia_nCS2 = '0' else
                      r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
+	sys_ROMPG_o <= r_sys_ROMPG;
    fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
    fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
 
@@ -391,8 +392,12 @@ begin
                         r_d_wr <= fb_c2p_i.d_wr;
                      end if;
                      if r_had_d_stb = '1' then
-                        if r_sys_A(15 downto 0) = x"FE30" then
-                           r_sys_ROMPG <= r_D_wr;        -- write to both shadow register and MUX for now TODO: maybe not for c20k?
+	                     if r_sys_A(15 downto 0) = x"FE05" and cfg_sys_type_i = SYS_ELK then
+	                        -- TODO: fix this properly, for now just munge the number to match
+	                        -- the mappings from the BBC, this will not allow any external ROMs!
+	                        r_sys_ROMPG <= r_D_wr xor "00001100";       -- write to both shadow register and SYS
+						 elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
+							r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
                         end if;
                         if r_sys_A(15 downto 0) = x"FCFF" then
                            if r_D_wr = G_JIM_DEVNO then
