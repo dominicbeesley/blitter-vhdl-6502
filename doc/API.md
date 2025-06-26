@@ -220,13 +220,20 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | 0 | BB RAM    | 7E 0000 - 7E 3FFF  |                                       
   | 1 | EEPROM    | 9E 0000 - 9E 3FFF  |                                       
   | 2 | BB RAM    | 7E 4000 - 7E 7FFF  |                                       
-  | 3 | EEPROM    | 9E 4000 - 9E 7FFF  |                                       
-  | 4 | SYS IC 52 | FF 8000 - FF BFFF  |                                       
-  | 5 | SYS IC 88 | FF 8000 - FF BFFF  |                                       
-  | 6 | SYS IC 100| FF 8000 - FF BFFF  |                                       
-  | 7 | SYS IC 101| FF 8000 - FF BFFF  |                                       
+  | 3 | EEPROM    | 9E 4000 - 9E 7FFF  |                    
+
+  | 4 | SYS IC 52 | FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 5 | SYS IC 88 | FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 6 | SYS IC 100| FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 7 | SYS IC 101| FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  
+  | 4 | BB        | 7E 8000 - 7E BFFF  | C20K                                      
+  | 5 | EEPROM    | 9E 8000 - 9E BFFF  | C20K                                      
+  | 6 | BB        | 7E C000 - 7E FFFF  | C20K                                      
+  | 7 | EEPROM    | 9E C000 - 9E FFFF  | C20K                                      
+
   | 8 | BB RAM    | 7F 0000 - 7F 3FFF  | NB: also used as the MOS ROM when MOSRAM in effect
-  | 9 | EEPROM    | 9F 0000 - 9F 3FFF  |                                       
+  | 9 | EEPROM    | 9F 0000 - 9F 3FFF  | NB: also used as the MOS on C20K                                      
   | A | BB RAM    | 7F 4000 - 7F 7FFF  |                                       
   | B | EEPROM    | 9F 4000 - 9F 7FFF  |                                       
   | C | BB RAM    | 7F 8000 - 7F BFFF  |                                       
