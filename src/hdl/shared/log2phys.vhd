@@ -62,7 +62,8 @@ use work.fb_sys_pack.all;
 entity log2phys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_MK3									: boolean := false
+		G_MK3									: boolean := false;
+		G_C20K								: boolean := false
 	);
 	port(
 
@@ -123,11 +124,11 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_pagrom_A <= x"FF" & "10";
-			if cfg_swram_enable_i = '1' and fb_syscon_i.rst = '0' then
+			if (cfg_swram_enable_i = '1' or G_C20K) and fb_syscon_i.rst = '0' then
 				if map0n1 then
-					if sys_ROMPG_i(3 downto 0) = x"E" and G_MK3 then -- special turbo ROM
+					if sys_ROMPG_i(3 downto 0) = x"E" and (G_MK3 or G_C20K) then -- special turbo ROM
 						r_pagrom_A <= x"1F" & "00";
-					elsif (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
+					elsif G_C20K or (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
 						if sys_ROMPG_i(0) = '0' then
 							r_pagrom_A <= x"7" & "111" & sys_ROMPG_i(3 downto 1);
 						else
@@ -158,7 +159,7 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_mosrom_A <= x"FF" & "11";								-- SYS																FF C000 - FF FFFF
-			if cfg_swram_enable_i = '1' then
+			if cfg_swram_enable_i = '1' or G_C20K then
 				if noice_debug_shadow_i = '1' then
 					if map0n1 then		
 						r_mosrom_A <= x"9F" & "11";							-- NOICE shadow MOS from slot #F map 0 					9F C000 - 9F FFFF
@@ -173,6 +174,8 @@ begin
 					end if;
 				elsif not map0n1 then
 					r_mosrom_A <= x"9D" & "00";								-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
+				elsif map0n1 and G_C20K then
+					r_mosrom_A <= x"9F" & "00";								-- SWMOS from slot #9 map 0 on C20K							9F 0000 - 9F 3FFF
 				end if;
 			end if;
 		end if;
@@ -207,6 +210,8 @@ begin
 						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
 					end if;
 				end if;
+			elsif G_C20K and unsigned(A_i(15 downto 12)) < 3 then
+				A_o <= x"00" & A_i(15 downto 0);							-- C20K 
 			elsif A_i(15) = '0' and turbo_lo_mask_i(to_integer(unsigned(A_i(14 downto 12)))) = '1' then
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF
 			end if;

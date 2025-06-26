@@ -59,7 +59,7 @@ use ieee.numeric_std.all;
 
 package firmware_info_pack is
 	
-	type firmware_board_level is (PAULA, MK1, MK2, MK3);
+	type firmware_board_level is (PAULA, MK1, MK2, MK3, C20K);
 
 	constant FW_API_level : std_logic_vector(7 downto 0) := x"01";
 	constant FW_API_sublevel : std_logic_vector(7 downto 0) := x"03";

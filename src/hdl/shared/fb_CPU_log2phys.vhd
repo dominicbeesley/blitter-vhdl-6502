@@ -52,7 +52,8 @@ entity fb_cpu_log2phys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		G_MK3									: boolean := false		
+		G_MK3									: boolean := false;							-- TODO: get from board_config?
+		G_C20K								: boolean := false
 	);
 	port(
 
@@ -277,7 +278,8 @@ begin
 	e_log2phys: entity work.log2phys
 	generic map (
 		SIM									=> SIM,
-		G_MK3									=> G_MK3
+		G_MK3									=> G_MK3,
+		G_C20K								=> G_C20K
 	)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,	
