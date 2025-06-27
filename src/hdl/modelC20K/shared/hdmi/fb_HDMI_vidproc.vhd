@@ -171,6 +171,8 @@ begin
 	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
+	fb_p2c_o.D_rd <= x"FF"; -- no readback
+
 
 	p_per_state:process(fb_syscon_i)
 	begin
