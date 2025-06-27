@@ -137,7 +137,7 @@ begin
 	i_RAMA_FONT <= SEQ_font_addr_A(4 downto 0) & r_RAMD_PLANE0 & crtc_ra_i(3 downto 0);
 
 
-	p_seq:process(clk_i)
+	p_seq:process(clk_i, rst_i)
 	begin
 		if rst_i = '1' then
 			r_main_seq 		<= (others => '0');
