@@ -226,6 +226,7 @@ architecture rtl of fb_SYS_c20k is
 
    -- emulated peripherals signals
    signal   i_MHz1E_clken     : std_logic;
+   signal   i_MHz2E_clken     : std_logic;
    signal   i_MHz4_clken      : std_logic;
 
    signal   i_sysvia_d_o      : std_logic_vector(7 downto 0);
@@ -247,7 +248,7 @@ begin
 
    --TODO: get 2mhzE clken
    -- used to synchronise throttled cpu
-   cpu_2MHz_phi2_clken_o <= i_SYScyc_end_clken;
+   cpu_2MHz_phi2_clken_o <= i_MHz2E_clken;
 
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
@@ -533,7 +534,7 @@ begin
 
       -- clock ens out in fast clock domain
       mhz1E_clken_o           => i_MHz1E_clken,
-      mhz2E_clken_o           => open,
+      mhz2E_clken_o           => i_MHz2E_clken,
       mhz4_clken_o            => i_MHz4_clken,
 
       -- state control in
@@ -647,7 +648,7 @@ begin
       O_IRQ_L               => i_sysvia_nIRQ,
 
       -- port a
-      I_CA1                 => p_VID_VS_i,
+      I_CA1                 => not p_VID_VS_i,
       I_CA2                 => i_sysvia_ca2,
       O_CA2                 => open,
       O_CA2_OE_L            => open,

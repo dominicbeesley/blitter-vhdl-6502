@@ -18,7 +18,7 @@
 -width_1 8
 -read_mode_0 bypass
 -read_mode_1 bypass
--write_mode_0 normal
--write_mode_1 normal
+-write_mode_0 write-through
+-write_mode_1 write-through
 -speed false
 -reset_mode async

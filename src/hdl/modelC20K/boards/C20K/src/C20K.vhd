@@ -169,7 +169,24 @@ entity C20K is
 end entity;
 
 architecture rtl of C20K is
------------------------------------------------------------------------------
+
+   -----------------------------------------------------------------------------
+   -- component declarations
+   -----------------------------------------------------------------------------
+   component CLKDIV
+   generic (
+      DIV_MODE : string := "2";
+      GSREN: in string := "false"
+   );
+   port (
+      CLKOUT: out std_logic;
+      HCLKIN: in std_logic;
+      RESETN: in std_logic;
+      CALIB: in std_logic
+   );
+   end component;
+
+   -----------------------------------------------------------------------------
 	-- config signals
 	-----------------------------------------------------------------------------
 
@@ -346,8 +363,11 @@ architecture rtl of C20K is
 
    signal i_ser_tx      : std_logic;
 
-   signal i_clk_pll_48M: std_logic;
-   signal i_clk_pll_128M: std_logic;
+   signal i_clk_pll_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
+   signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
+
+   signal i_clk_pll_360M: std_logic;         -- used for video DACs
+   signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
    signal icipo_ser_cts    : std_logic;
@@ -507,13 +527,19 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
+   G_SND_CLK:if G_INCL_CS_SND generate
+      
+
+
+   end generate;
+
 	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
-		fb_syscon_i						=> i_fb_syscon,
+		fb_syscon_i		=> i_fb_syscon,
 
 		-- peripheral port connect to controllers
 		fb_per_c2p_i 	=> i_c2p_chipset_per,
@@ -528,8 +554,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		cpu_halt_o		=> i_chipset_cpu_halt,
 		cpu_int_o		=> i_chipset_cpu_int,
 
-		vsync_i			=> i_vga_debug_vs,
-		hsync_i			=> i_vga_debug_hs,
+		vsync_i			=> not i_vga_debug_vs,
+		hsync_i			=> not i_vga_debug_hs,
 
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
@@ -657,7 +683,7 @@ END GENERATE;
    generic map (
       SIM                           => SIM,
       CLOCKSPEED                    => CLOCKSPEED,
-      G_JIM_DEVNO                   => x"D2"
+      G_JIM_DEVNO                   => G_JIM_DEVNO
    )
    port map (
       cfg_sys_type_i                => r_cfg_sys_type,
@@ -733,7 +759,7 @@ END GENERATE;
       c20k_latch_o                  => i_c20k_latch		
    );
    
-   
+
 G_DBG_UART:if G_INCL_DBG_UART generate
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
@@ -1006,12 +1032,6 @@ END GENERATE;
       flash_mosi_o         <= '1';
 
 
-      vid_b_o              <= not i_vga_debug_b(3);
-      vid_chroma_o         <= '0';
-      vid_g_o              <= not i_vga_debug_g(3);
-      vid_r_o              <= not i_vga_debug_r(3);
-
-
       p_8MHZ_FDC_o         <= '0';
 
       cassette_o           <= '0';
@@ -1024,7 +1044,160 @@ END GENERATE;
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
 
+   --------------------------------------------------------
+   -- 1 bit video
+   --------------------------------------------------------
+    
+   -- the 1 bit DACs run at 360MHz pwm, there are three sub-pixels for each 72MHz sample
+
+   e_pll2: entity work.pll_rgb_dac
+   port map (
+      clkout      => i_clk_pll_360M,
+      clkin       => i_clk_pll_48M
+   );
+
+   clkdiv5 : CLKDIV
+   generic map (
+      DIV_MODE => "5",            -- Divide by 5
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_pll_360M,
+      CLKOUT => i_clk_div_72M,
+      CALIB  => '1'
+   );
+
+   
+--   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
+--   p_car_gen:process(i_clk_pll_48M)
+--      constant div : natural := 709379;
+--      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
+--      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
+--   begin
+--      if rising_edge(i_clk_pll_48M) then
+--         r_acc := r_acc + div;
+--         if r_acc >= num then
+--            r_acc := r_acc - num;
+--            i_clk_chroma_x4_jitter <= '1';
+--         else
+--            i_clk_chroma_x4_jitter <= '0';
+--         end if;
+--      end if;
+--   end process;
+--
+--
+--
+--   e_pal_pll: entity work.pll_pal_sc
+--   port map (
+--      clkout => i_clk_chroma_x30_dac,        -- ~132MHz  - DAC frequency
+--      clkoutd3 => i_clk_chroma_x10_dac,      -- ~13.2MHz - DAC sample freq
+--      clkin  => i_clk_chroma_x4_jitter
+--   );
+--
+--   e_clkdiv_cdac_5 : CLKDIV
+--   generic map (
+--      DIV_MODE => "5",
+--      GSREN => "false"
+--   )
+--   port map (
+--      RESETN => powerup_reset_n,
+--      HCLKIN => i_clk_chroma_x30_dac,
+--      CLKOUT => i_clk_chroma_x4_px,
+--      CALIB  => '1'
+--   );
+--   
+--   e_clkdiv_cdac_3 : CLKDIV
+--   generic map (
+--      DIV_MODE => "5",
+--      GSREN => "false"
+--   )
+--   port map (
+--      RESETN => powerup_reset_n,
+--      HCLKIN => i_clk_chroma_x10_dac,
+--      CLKOUT => i_clk_chroma_x4,
+--      CALIB  => '1'
+--   );
+--
+--    e_chroma_gen:entity work.dossy_chroma
+--    generic map (
+--        G_USE_EXT_x4_CLK  => true,
+--        G_GAIN => 1.0
+--        )
+--    port map (
+--
+--      clk_i             => i_clk_pll_48M,
+--      clk_chroma_x4_i   => i_clk_chroma_x4,
+--
+--      r_i               => unsigned(i_VGA_debug_r),
+--      g_i               => unsigned(i_VGA_debug_g),
+--      b_i               => unsigned(i_VGA_debug_b),
+--
+--      hs_i              => not i_VGA_hs,
+--      vs_i              => not i_VGA_vs,
+--
+--      chroma_o          => i_chroma_s,
+--
+--      car_ry_o          => open,
+--      pal_sw_o          => open,
+--      base_ry_o         => open
+--   );
+
+
+--    p_chrom_s2u:process(i_clk_chroma_x4)
+--    begin
+--        if rising_edge(i_clk_chroma_x4) then
+--            
+--            r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
+--
+--        end if;
+--
+--    end process;
+
+--    -- regular 30 bits per sample 
+--    e_chroma_dac:entity work.dac1_oser
+--    port map (
+--        rst_i             => not hard_reset_n,
+--        clk_sample_i      => i_clk_chroma_x4,
+--        clk_dac_px_i      => i_clk_chroma_x4_px,
+--        clk_dac_i         => i_clk_chroma_x30_dac,
+--        sample_i          => r2_vid_chroma(4 downto 1),
+--        bitstream_o       => vid_chr_o
+--   );
+    
+
+
+   -- split x2 15 bits per sample
+   e_mono_dac_r:entity work.dac1_oserx2
+   port map (
+      rst_i             => i_fb_syscon.rst,
+      clk_sample_i      => i_clk_pll_48M,
+      clk_dac_px_i      => i_clk_div_72M,
+      clk_dac_i         => i_clk_pll_360M,
+      sample_i          => unsigned(not(i_VGA_debug_r)),
+      bitstream_o       => vid_r_o
+   );
+
+   e_mono_dac_g:entity work.dac1_oserx2
+   port map (
+      rst_i             => i_fb_syscon.rst,
+      clk_sample_i      => i_clk_pll_48M,
+      clk_dac_px_i      => i_clk_div_72M,
+      clk_dac_i         => i_clk_pll_360M,
+      sample_i          => unsigned(not(i_VGA_debug_g)),
+      bitstream_o       => vid_g_o
+   );
+
+   e_mono_dac_b:entity work.dac1_oserx2
+   port map (
+      rst_i             => i_fb_syscon.rst,
+      clk_sample_i      => i_clk_pll_48M,
+      clk_dac_px_i      => i_clk_div_72M,
+      clk_dac_i         => i_clk_pll_360M,
+      sample_i          => unsigned(not(i_VGA_debug_b)),
+      bitstream_o       => vid_b_o
+   );
+
 
 end architecture rtl;
-      
       

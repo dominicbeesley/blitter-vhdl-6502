@@ -5,7 +5,7 @@
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Sat Jun 28 11:09:18 2025
+--Created Time: Sat Jun 28 13:04:25 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -99,8 +99,6 @@ architecture Behavioral of hdmi_blockram is
     signal dpb_inst_15_doutb: std_logic_vector(7 downto 7);
     signal dff_q_0: std_logic;
     signal dff_q_1: std_logic;
-    signal cea_w: std_logic;
-    signal ceb_w: std_logic;
     signal gw_gnd: std_logic;
     signal dpb_inst_0_BLKSELA_i: std_logic_vector(2 downto 0);
     signal dpb_inst_0_BLKSELB_i: std_logic_vector(2 downto 0);
@@ -321,8 +319,6 @@ architecture Behavioral of hdmi_blockram is
 begin
     gw_gnd <= '0';
 
-    cea_w <= not wrea and cea;
-    ceb_w <= not wreb and ceb;
     dpb_inst_0_BLKSELA_i <= gw_gnd & gw_gnd & ada(14);
     dpb_inst_0_BLKSELB_i <= gw_gnd & gw_gnd & adb(14);
     dpb_inst_0_DIA_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & dina(0);
@@ -456,8 +452,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -489,8 +485,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -522,8 +518,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -555,8 +551,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -588,8 +584,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -621,8 +617,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -654,8 +650,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -687,8 +683,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -720,8 +716,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -753,8 +749,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -786,8 +782,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -819,8 +815,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -852,8 +848,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -885,8 +881,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -918,8 +914,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -951,8 +947,8 @@ begin
         generic map (
             READ_MODE0 => '0',
             READ_MODE1 => '0',
-            WRITE_MODE0 => "00",
-            WRITE_MODE1 => "00",
+            WRITE_MODE0 => "01",
+            WRITE_MODE1 => "01",
             BIT_WIDTH_0 => 1,
             BIT_WIDTH_1 => 1,
             RESET_MODE => "ASYNC",
@@ -985,7 +981,7 @@ begin
             Q => dff_q_0,
             D => ada(14),
             CLK => clka,
-            CE => cea_w
+            CE => cea
         );
 
     dff_inst_1: DFFE
@@ -993,7 +989,7 @@ begin
             Q => dff_q_1,
             D => adb(14),
             CLK => clkb,
-            CE => ceb_w
+            CE => ceb
         );
 
     mux_inst_0: MUX2

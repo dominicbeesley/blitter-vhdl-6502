@@ -21,6 +21,11 @@
         <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
 
+        <File path="src/gowin_rpll/pll_rgb_dac.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/1bitvid/dac1_oser.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dac1_oserx2.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dossy_chroma.vhd" type="file.vhdl" enable="1" />
+
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
 
