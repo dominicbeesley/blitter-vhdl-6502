@@ -489,16 +489,12 @@ END GENERATE;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
-   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
-   i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
-   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
-   i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
 
 
@@ -657,21 +653,6 @@ END GENERATE;
 		debug_mem_a_stb_o					=> open
 	);
 
-   p_uart_clk:process(i_fb_syscon)
-   begin
-      if rising_edge(i_fb_syscon.clk) then
-         r_clken_baud16 <= '0';
-         if i_fb_syscon.rst = '1' then
-            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
-         elsif r_clk_baud_div(r_clk_baud_div'high) = '1' then
-            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
-            r_clken_baud16 <= '1';
-         else
-            r_clk_baud_div <= r_clk_baud_div - 1;
-         end if;
-      end if;
-   end process;
-
    e_fb_sys:entity work.fb_SYS_c20k
    generic map (
       SIM                           => SIM,
@@ -752,6 +733,26 @@ END GENERATE;
       c20k_latch_o                  => i_c20k_latch		
    );
    
+   
+G_DBG_UART:if G_INCL_DBG_UART generate
+   i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
+   i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
+
+   p_uart_clk:process(i_fb_syscon)
+   begin
+      if rising_edge(i_fb_syscon.clk) then
+         r_clken_baud16 <= '0';
+         if i_fb_syscon.rst = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+         elsif r_clk_baud_div(r_clk_baud_div'high) = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+            r_clken_baud16 <= '1';
+         else
+            r_clk_baud_div <= r_clk_baud_div - 1;
+         end if;
+      end if;
+   end process;
+
    e_fb_uart: entity work.fb_uart
    port map (
       baud16_clken_i => r_clken_baud16,
@@ -765,6 +766,7 @@ END GENERATE;
       fb_p2c_o    => i_p2c_uart
 
    );
+end generate;
 
 
    e_fb_cpu_t65only: entity work.fb_cpu_t65only
@@ -828,28 +830,29 @@ END GENERATE;
 
 	i_cpu_IRQ_n <= not i_chipset_cpu_int and i_sys_nIRQ;
 
+g_led_arr:if G_INCL_LED_ARR generate
+   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
+   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
 
---   led(0) <= i_ser_tx;
---   led(1) <= '1';
---   led(2) <= not i_ser_tx;
---   led(3) <= '0';
 
---TODO: move to chipset?
---   e_fb_led_arr:entity work.fb_ws2812
---   generic map (
---      G_CLOCKSPEED => CLOCKSPEED * 1000000,
---      G_N_CHAIN => 8
---      )
---   port map (
 
---      -- fishbone signals
+--   TODO: move to chipset?
+   e_fb_led_arr:entity work.fb_ws2812
+   generic map (
+      G_CLOCKSPEED => CLOCKSPEED * 1000000,
+      G_N_CHAIN => 8
+      )
+   port map (
 
---      fb_syscon_i                   => i_fb_syscon,
---      fb_c2p_i                      => i_c2p_led_arr,
---      fb_p2c_o                      => i_p2c_led_arr,
+      -- fishbone signals
 
---      led_serial_o                  => open --ui_leds_o
---   );
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_led_arr,
+      fb_p2c_o                      => i_p2c_led_arr,
+
+      led_serial_o                  => open --ui_leds_o
+   );
+end generate;
 
 
 

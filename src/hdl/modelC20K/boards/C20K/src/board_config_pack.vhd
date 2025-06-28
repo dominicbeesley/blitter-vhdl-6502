@@ -59,8 +59,10 @@ package board_config_pack is
 	constant G_INCL_CS_BLIT		: boolean := true;
 	constant G_INCL_CS_SND		: boolean := true;
 	constant G_SND_CHANNELS		: natural := 4;
-	constant G_INCL_CS_AERIS	: boolean := true;
+	constant G_INCL_CS_AERIS	: boolean := false;
 	constant G_INCL_CS_EEPROM	: boolean := true;
+	constant G_INCL_LED_ARR		: boolean := false;
+	constant G_INCL_DBG_UART	: boolean := false;
 	
 	constant C_CPU_BYTELANES	: positive := 1;		
 	constant G_INCL_CPU_T65		: boolean := true;
@@ -79,7 +81,7 @@ package board_config_pack is
 	constant G_MEM_FAST_IS_10	: boolean := true;
 	constant G_MEM_SLOW_IS_45	: boolean := true;
 
-	constant PERIPHERAL_COUNT	: natural := 8;
+	constant PERIPHERAL_COUNT	: natural := 6;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS	: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;

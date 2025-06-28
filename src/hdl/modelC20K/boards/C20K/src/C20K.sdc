@@ -1,4 +1,6 @@
 
+set_operating_conditions -grade c -model fast -speed 8
+
 # board clock @ 27M
 create_clock -name CLK_27M -period 37.037 -waveform {0 18.518} [get_ports {brd_clk_27M_i}]
 
@@ -32,4 +34,7 @@ set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to 
 set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
 
 
-#report_timing -setup -from_clock [get_clocks {CLOCK_128M}] -to_clock [get_clocks {CLOCK_128M}] -from [get_pins {e_memctl/r_turbo_lo_3_s0/Q}] -to [get_pins {e_fb_cpu_t65only/e_log/e_sys_via_block/r_iorb_block_ctdn_3_s1/D}]
+
+report_timing -setup -max_paths 1000 -max_common_paths 1
+
+#report_timing -setup -from_clock [get_clocks {CLOCK_128M}] -to_clock [get_clocks {CLOCK_128M}] -from [get_pins {g_intcon_shared.e_fb_intcon/ir_p2c_ack_0_s0/Q}] -to [get_pins {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers_r_pointers_RAMREG_3_G[10]_s0/CE}]
