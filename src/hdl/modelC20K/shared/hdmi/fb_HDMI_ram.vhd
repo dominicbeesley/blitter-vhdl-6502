@@ -50,13 +50,15 @@ end fb_HDMI_ram;
 
 architecture rtl of fb_HDMI_ram is
 
-	type	 per_state_t is (idle, rd, wait_d_stb);
+	type	 per_state_t is (idle, rd0, rd, wait_d_stb);
 	signal r_per_state 					: per_state_t;
 
 	signal r_A								: std_logic_vector(G_MEM_ADDR_WIDTH-1 downto 0);
 	signal r_d_wr							: std_logic_vector(7 downto 0);
 	signal r_d_wr_stb						: std_logic;
 	signal r_ack							: std_logic;
+
+	signal i_douta							: std_logic_vector(7 downto 0);
 
 begin
 
@@ -91,7 +93,7 @@ begin
 								r_per_state <= wait_d_stb;
 							end if;
 						else
-							r_per_state <= rd;
+							r_per_state <= rd0;
 						end if;
 					end if;
 				when wait_d_stb =>
@@ -103,7 +105,10 @@ begin
 					else
 						r_per_state <= wait_d_stb;
 					end if;
+				when rd0 =>
+					r_per_state <= rd;
 				when rd =>
+					fb_p2c_o.D_rd <= i_douta;
 					r_ack <= '1';
 					r_per_state <= idle;	
 				when others =>
@@ -124,7 +129,7 @@ begin
 		dina => 		r_d_wr,
 		wrea => 		r_d_wr_stb,
 		ocea => '1',
-		douta => 			fb_p2c_o.D_rd,
+		douta =>   i_douta,
 
 		resetb => '0',
 		adb => 	hdmi_ram_addr_i(G_MEM_ADDR_WIDTH-1 downto 0),

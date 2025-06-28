@@ -5,7 +5,7 @@
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Wed Jun 25 18:30:20 2025
+--Created Time: Sat Jun 28 11:09:18 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
