@@ -101,6 +101,8 @@ architecture rtl of fb_cpu_t65 is
 	signal i_wrap_ack 		: std_logic;
 	signal r_wrap_acked		: std_logic;
 
+	signal r_irq_n				: std_logic;
+
 	--TODO: throttle only works on SYS_BBC, on Elk it repeats cycles!
 
 begin
@@ -188,6 +190,13 @@ begin
 
 	i_wrap_ack <= r_wrap_acked or wrap_i.ack;
 
+	p_irq:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			r_irq_n <= wrap_i.irq_n;
+		end if;
+	end process;
+
 	e_cpu: entity work.T65 
   	port map (
    	Mode    => "00", 		-- 6502A
@@ -196,7 +205,7 @@ begin
    	Clk     => fb_syscon_i.clk,
    	Rdy     => '1',
    	Abort_n => '1',
-   	IRQ_n   => wrap_i.irq_n,
+   	IRQ_n   => r_irq_n,
    	NMI_n   => i_cpu65_nmi_n,
    	SO_n    => '1',
    	R_W_n   => i_t65_RnW,
