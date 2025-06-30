@@ -88,7 +88,7 @@ architecture rtl of fb_cpu_t65 is
 	signal i_t65_clken		: std_logic;
 	signal i_t65_clken_h		: std_logic; -- clocken masked by halt
 	-- the above signal delayed
-	signal r_clken_dly		: std_logic_vector(CLKEN_DLY_MAX downto 0) := (others => '0');
+	signal r_clken_dly		: std_logic_vector(CLKEN_DLY_MAX downto 0) := (0 => '1', others => '0');
 
 	signal r_cpu_halt			: std_logic;
 
