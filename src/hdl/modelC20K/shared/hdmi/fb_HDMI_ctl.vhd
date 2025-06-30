@@ -63,6 +63,7 @@ architecture rtl of fb_HDMI_ctl is
 	signal r_d_wr							: std_logic_vector(7 downto 0);
 	signal r_d_wr_stb						: std_logic;
 	signal r_ack							: std_logic;
+	signal i_D_rd							: std_logic_vector(7 downto 0);
 
 begin
 
@@ -122,7 +123,7 @@ begin
 		end if;
 	end process;
 
-	fb_p2c_o.D_rd <=
+	i_D_rd <=
 		r_avi(7 downto 0) when r_A = x"0" else
 		r_avi(15 downto 8) when r_A = x"1" else
 		r_avi(23 downto 16) when r_A = x"2" else
@@ -180,6 +181,7 @@ begin
 				when rd =>
 					r_ack <= '1';
 					r_per_state <= idle;	
+					fb_p2c_o.D_rd <= i_D_rd;
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';
