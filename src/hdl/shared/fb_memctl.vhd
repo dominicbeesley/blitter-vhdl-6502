@@ -219,7 +219,7 @@ begin
 				r_65816_boot <= "10";	
 				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_throttle_cpu_2MHz <= '0';
+					r_throttle_cpu_2MHz <= '1';
 					r_rom_throttle_map <= (others => '0');
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
