@@ -53,7 +53,8 @@ entity fb_cpu_log2phys is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
 		G_MK3									: boolean := false;							-- TODO: get from board_config?
-		G_C20K								: boolean := false
+		G_C20K								: boolean := false;
+		G_IORB_BLOCK						: boolean := true
 	);
 	port(
 
@@ -250,21 +251,26 @@ begin
 	-- ================================================================================================ --
 	-- SYS VIA blocker
 	-- ================================================================================================ --
+	g_do_IORB_BLOCK:if G_IORB_BLOCK generate
+		e_sys_via_block:entity work.fb_sys_via_blocker
+		generic map (
+			SIM => SIM,
+			CLOCKSPEED => CLOCKSPEED		
+			)
+		port map (
+			fb_syscon_i => fb_syscon_i,
+			cfg_sys_type_i => cfg_sys_type_i,
+			clken => i_sysvia_clken,
+			enable_i => sys_via_blocker_en_i,
+			A_i => i_phys_A,
+			RnW_i => not fb_con_c2p_i.we,
+			SYS_VIA_block_o => i_SYS_VIA_block
+			);
+	end generate;
 
-	e_sys_via_block:entity work.fb_sys_via_blocker
-	generic map (
-		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED		
-		)
-	port map (
-		fb_syscon_i => fb_syscon_i,
-		cfg_sys_type_i => cfg_sys_type_i,
-		clken => i_sysvia_clken,
-		enable_i => sys_via_blocker_en_i,
-		A_i => i_phys_A,
-		RnW_i => not fb_con_c2p_i.we,
-		SYS_VIA_block_o => i_SYS_VIA_block
-		);
+	g_dont_IORB_BLOCK:if not G_IORB_BLOCK generate
+		i_SYS_VIA_block <= '0';
+	end generate;
 
 	i_sysvia_clken <= '1' when r_state = idle and fb_con_c2p_i.a_stb = '1' else
 							'0';

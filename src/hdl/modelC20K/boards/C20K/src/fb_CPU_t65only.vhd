@@ -232,7 +232,8 @@ begin
 		SIM			=> SIM,
 		CLOCKSPEED	=> CLOCKSPEED,
 		G_MK3			=> false,
-		G_C20K		=> true
+		G_C20K		=> true, 
+		G_IORB_BLOCK=> G_IORB_BLOCK
 	)
 	port map(
 

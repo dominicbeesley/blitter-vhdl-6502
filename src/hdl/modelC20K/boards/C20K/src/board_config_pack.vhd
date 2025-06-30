@@ -51,6 +51,8 @@ use work.firmware_info_pack.all;
 
 package board_config_pack is
 		
+	constant G_IORB_BLOCK		: boolean := false;
+
 	constant FW_BOARD_LEVEL		: firmware_board_level := C20K;
 	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
 
