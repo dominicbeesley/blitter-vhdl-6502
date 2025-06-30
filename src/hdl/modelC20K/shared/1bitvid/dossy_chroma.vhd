@@ -72,7 +72,7 @@ entity dossy_chroma is
    port (
 
       clk_i             : in  std_logic;
-      clk_chroma_x4_i   : in  std_logic;
+      clk_chroma_x4_i   : in  std_logic := '1';
 
       r_i               : in  unsigned(G_INBITS-1 downto 0);
       g_i               : in  unsigned(G_INBITS-1 downto 0);

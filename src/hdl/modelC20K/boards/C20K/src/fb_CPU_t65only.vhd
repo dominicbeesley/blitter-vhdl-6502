@@ -104,7 +104,10 @@ entity fb_cpu_t65only is
 		fb_p2c_i									: in	fb_con_i_per_o_t;
 
 		-- chipset control signals
-		cpu_halt_i								: in  std_logic
+		cpu_halt_i								: in  std_logic;
+
+		-- debug
+		debug_cpu_instr_A						: out std_logic_vector(23 downto 0)
 
 	);
 end fb_cpu_t65only;
@@ -211,6 +214,14 @@ begin
 	
 	);
 	
+	p_debug_instr_a:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
+			if i_fb_c2p_extra_instr_fetch = '1' and i_fb_c2p_log.A_stb = '1' and i_fb_c2p_log.cyc = '1' then
+				debug_cpu_instr_A <= i_fb_c2p_log.A; 
+			end if;
+		end if;
+	end process;
 
 	-- ================================================================================================ --
 	-- log2phys and VIA throttle stage

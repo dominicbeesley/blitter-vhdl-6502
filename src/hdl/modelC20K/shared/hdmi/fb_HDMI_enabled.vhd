@@ -32,7 +32,8 @@ entity fb_HDMI is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		SIM_NODVI							: boolean := false;
 		CLOCKSPEED							: natural;
-		G_N_SPRITES							: natural := 4
+		G_N_SPRITES							: natural := 4;
+		G_EXT_TMDS_CLOCKS					: boolean := false
 	);
 	port(
 
@@ -79,7 +80,11 @@ entity fb_HDMI is
 		debug_hsync_det_o			: out std_logic;
 		debug_hsync_crtc_o			: out std_logic;
 		debug_odd_o					: out std_logic;
-		debug_spr_mem_clken_o		: out std_logic
+		debug_spr_mem_clken_o		: out std_logic;
+
+		-- external clocks (optional)
+		clk_ext_hdmi_pixel_i				: in std_logic := '1';
+		clk_ext_hdmi_tmds_i				: in std_logic := '1'
 
 
 	);
@@ -299,7 +304,7 @@ begin
 
 	end generate;
 
-	g_not_sim_pll:if not SIM generate
+	g_not_sim_pll:if not SIM and not G_EXT_TMDS_CLOCKS generate
 
 		e_pll_hdmi: entity work.pll_hdmi
 		port map(
@@ -318,7 +323,12 @@ begin
             CLKOUT => i_clk_hdmi_pixel,         -- 27MHz HDMI Pixel Clock
             CALIB  => '1'
         );
+	end generate;
 
+	g_ext_pll:if G_EXT_TMDS_CLOCKS generate
+
+	i_clk_hdmi_pixel <= clk_ext_hdmi_pixel_i;
+	i_clk_hdmi_tmds <= clk_ext_hdmi_tmds_i;
 
 	end generate;
 

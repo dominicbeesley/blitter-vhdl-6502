@@ -369,6 +369,7 @@ architecture rtl of C20K is
    signal i_clk_pll_360M: std_logic;         -- used for video DACs
    signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
 
+
    -- multiplex in to core, out from peripheral (I0 phase)   
    signal icipo_ser_cts    : std_logic;
    signal icipo_ser_rx     : std_logic;
@@ -404,6 +405,19 @@ architecture rtl of C20K is
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
+   signal i_debug_cpu_instr_a : std_logic_vector(23 downto 0);
+
+   -----------------------------------------------------------------------------
+   -- 1 bit video clocks and chroma
+   -----------------------------------------------------------------------------
+   signal i_clk_chroma_x4_jitter : std_logic; -- Base PALx4 clock
+--   signal i_clk_chroma_x4        : std_logic;
+--   signal i_clk_chroma_x60_dac   : std_logic;
+--   signal i_clk_chroma_x12_px    : std_logic;
+--   signal i_clk_chroma_x20_dac   : std_logic;
+   signal i_chroma_s             : signed(4 downto 0);
+   signal r2_vid_chroma          : unsigned(4 downto 0);
+
 
 begin
 
@@ -529,7 +543,17 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
    G_SND_CLK:if G_INCL_CS_SND generate
       
-
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_chroma_x4_jitter,
+         CLKOUT => i_clk_snd,
+         CALIB  => '1'
+      );
 
    end generate;
 
@@ -847,9 +871,10 @@ end generate;
       -- fishbone signals
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_o                      => i_c2p_cpu,
-      fb_p2c_i                      => i_p2c_cpu
+      fb_p2c_i                      => i_p2c_cpu,
 
-
+      -- debug
+      debug_cpu_instr_A             => i_debug_cpu_instr_a
 
 
    );
@@ -899,9 +924,9 @@ end generate;
       if rising_edge(i_fb_syscon.clk) then
          if i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' then
             for i in 0 to 7 loop
-               i_debug_leds(I).red <= (0 => i_c2p_cpu.A(I), others => '0');
-               i_debug_leds(I).green <= (0 => i_c2p_cpu.A(I + 8), others => '0');
-               i_debug_leds(I).blue <= (0 => i_c2p_cpu.A(I + 16), others => '0');
+               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
+               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
+               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
             end loop;
          end if;
       end if;
@@ -1050,6 +1075,8 @@ END GENERATE;
     
    -- the 1 bit DACs run at 360MHz pwm, there are three sub-pixels for each 72MHz sample
 
+   -- TODO: this is frigged together - we need another pll to (re)generate chroma clocks
+
    e_pll2: entity work.pll_rgb_dac
    port map (
       clkout      => i_clk_pll_360M,
@@ -1069,104 +1096,106 @@ END GENERATE;
    );
 
    
---   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
---   p_car_gen:process(i_clk_pll_48M)
---      constant div : natural := 709379;
---      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
---      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
---   begin
---      if rising_edge(i_clk_pll_48M) then
---         r_acc := r_acc + div;
---         if r_acc >= num then
---            r_acc := r_acc - num;
---            i_clk_chroma_x4_jitter <= '1';
---         else
---            i_clk_chroma_x4_jitter <= '0';
---         end if;
---      end if;
---   end process;
---
---
---
---   e_pal_pll: entity work.pll_pal_sc
---   port map (
---      clkout => i_clk_chroma_x30_dac,        -- ~132MHz  - DAC frequency
---      clkoutd3 => i_clk_chroma_x10_dac,      -- ~13.2MHz - DAC sample freq
---      clkin  => i_clk_chroma_x4_jitter
---   );
---
---   e_clkdiv_cdac_5 : CLKDIV
---   generic map (
---      DIV_MODE => "5",
---      GSREN => "false"
---   )
---   port map (
---      RESETN => powerup_reset_n,
---      HCLKIN => i_clk_chroma_x30_dac,
---      CLKOUT => i_clk_chroma_x4_px,
---      CALIB  => '1'
---   );
---   
---   e_clkdiv_cdac_3 : CLKDIV
---   generic map (
---      DIV_MODE => "5",
---      GSREN => "false"
---   )
---   port map (
---      RESETN => powerup_reset_n,
---      HCLKIN => i_clk_chroma_x10_dac,
---      CLKOUT => i_clk_chroma_x4,
---      CALIB  => '1'
---   );
---
---    e_chroma_gen:entity work.dossy_chroma
---    generic map (
---        G_USE_EXT_x4_CLK  => true,
---        G_GAIN => 1.0
---        )
---    port map (
---
---      clk_i             => i_clk_pll_48M,
---      clk_chroma_x4_i   => i_clk_chroma_x4,
---
---      r_i               => unsigned(i_VGA_debug_r),
---      g_i               => unsigned(i_VGA_debug_g),
---      b_i               => unsigned(i_VGA_debug_b),
---
---      hs_i              => not i_VGA_hs,
---      vs_i              => not i_VGA_vs,
---
---      chroma_o          => i_chroma_s,
---
---      car_ry_o          => open,
---      pal_sw_o          => open,
---      base_ry_o         => open
---   );
+---   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
+---   p_car_gen:process(i_clk_pll_48M)
+---      constant div : natural := 709379;
+---      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
+---      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
+---   begin
+---      if rising_edge(i_clk_pll_48M) then
+---         r_acc := r_acc + div;
+---         if r_acc >= num then
+---            r_acc := r_acc - num;
+---            i_clk_chroma_x4_jitter <= '1';
+---         else
+---            i_clk_chroma_x4_jitter <= '0';
+---         end if;
+---      end if;
+---   end process;
+
+--- TODO: not enough plls to allow this, maybe change main clock to 96MHz?
+---   e_pal_pll: entity work.pll_pal_sc
+---   port map (
+---      clkout => i_clk_chroma_x60_dac,        -- ~266.0MHz  - DAC frequency
+---      clkoutd3 => i_clk_chroma_x20_dac,      -- ~88.7MHz
+---      clkin  => i_clk_chroma_x4_jitter
+---   );
+---
+---   -- divide above by 5
+---   e_clkdiv_cdac_5 : CLKDIV
+---   generic map (
+---      DIV_MODE => "5",
+---      GSREN => "false"
+---   )
+---   port map (
+---      RESETN => '1',
+---      HCLKIN => i_clk_chroma_x60_dac,
+---      CLKOUT => i_clk_chroma_x12_px,          -- ~53.2MHz colour pixel clock clock
+---      CALIB  => '1'
+---   );
+---   
+---   e_clkdiv_cdac_3 : CLKDIV
+---   generic map (
+---      DIV_MODE => "5",
+---      GSREN => "false"
+---   )
+---   port map (
+---      RESETN => '1',
+---      HCLKIN => i_clk_chroma_x20_dac,
+---      CLKOUT => i_clk_chroma_x4,             -- ~17.5MHz x4 cleaner clock
+---      CALIB  => '1'
+---   );
+
+   e_chroma_gen:entity work.dossy_chroma
+   generic map (
+---      G_USE_EXT_x4_CLK  => true,
+      G_GAIN => 1.0
+   )
+   port map (
+      clk_i             => i_clk_pll_48M,
+---      clk_chroma_x4_i   => i_clk_chroma_x4,
+      r_i               => unsigned(i_VGA_debug_r),
+      g_i               => unsigned(i_VGA_debug_g),
+      b_i               => unsigned(i_VGA_debug_b),
+      hs_i              => i_vga_debug_hs,
+      vs_i              => i_VGA_debug_vs,
+      chroma_o          => i_chroma_s,
+      clk_chroma_x4_o   => i_clk_chroma_x4_jitter,
+      car_ry_o          => open,
+      pal_sw_o          => open,
+      base_ry_o         => open
+   );
 
 
---    p_chrom_s2u:process(i_clk_chroma_x4)
---    begin
---        if rising_edge(i_clk_chroma_x4) then
---            
---            r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
---
---        end if;
---
---    end process;
+   p_chrom_s2u:process(i_clk_chroma_x4_jitter)
+   begin
+      if rising_edge(i_clk_chroma_x4_jitter) then
+         r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
+      end if;
+   end process;
 
---    -- regular 30 bits per sample 
---    e_chroma_dac:entity work.dac1_oser
---    port map (
---        rst_i             => not hard_reset_n,
---        clk_sample_i      => i_clk_chroma_x4,
---        clk_dac_px_i      => i_clk_chroma_x4_px,
---        clk_dac_i         => i_clk_chroma_x30_dac,
---        sample_i          => r2_vid_chroma(4 downto 1),
---        bitstream_o       => vid_chr_o
---   );
+---   -- regular 30 bits per sample 
+---   e_chroma_dac:entity work.dac1_oser
+---   port map (
+---      rst_i             => i_fb_syscon.rst,
+---      clk_sample_i      => i_clk_chroma_x4,
+---      clk_dac_px_i      => i_clk_chroma_x12_px,
+---      clk_dac_i         => i_clk_chroma_x60_dac,
+---      sample_i          => r2_vid_chroma(4 downto 1),
+---      bitstream_o       => vid_chroma_o
+---   );
+
+   e_chroma_dac:entity work.dac1_oser
+   port map (
+      rst_i             => i_fb_syscon.rst,
+      clk_sample_i      => i_clk_chroma_x4_jitter,
+      clk_dac_px_i      => i_clk_div_72M,
+      clk_dac_i         => i_clk_pll_360M,
+      sample_i          => r2_vid_chroma(4 downto 1),
+      bitstream_o       => vid_chroma_o
+   );
+
     
-
-
    -- split x2 15 bits per sample
    e_mono_dac_r:entity work.dac1_oserx2
    port map (
