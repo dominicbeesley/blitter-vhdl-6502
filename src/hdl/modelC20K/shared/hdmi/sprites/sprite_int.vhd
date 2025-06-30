@@ -71,10 +71,13 @@ entity sprite_int is
 
       -- data interface, from CPU
       CPU_D_i                       : in  std_logic_vector(7 downto 0);
-      CPU_wren_i                    : in  std_logic;
       CPU_A_i                       : in  unsigned(3 downto 0);         -- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
+      CPU_wren_i                    : in  std_logic;
+      CPU_rden_i                    : in  std_logic;
+
       CPU_D_o                       : out   std_logic_vector(7 downto 0); --TODO: debug sprite read interface, remove?
       CPU_wr_ack_o                  : out std_logic;                    -- when writing stall until this is '1'
+      CPU_rd_ack_o                  : out std_logic;                    -- when writing stall until this is '1'
 
       -- vidproc / crtc signals in
       pixel_clk_i                   : in  std_logic;                    -- pixel clock (not necessarily same domain as cpu/sequencer)
@@ -375,31 +378,42 @@ begin
    end process;
 
 
-   CPU_D_o <=
-      r_spr_data(31 downto 24)      when CPU_A_i(3 downto 0) = x"0" else
-      r_spr_data(23 downto 16)      when CPU_A_i(3 downto 0) = x"1" else
-      r_spr_data(15 downto 8)       when CPU_A_i(3 downto 0) = x"2" else
-      r_spr_data(7 downto 0)        when CPU_A_i(3 downto 0) = x"3" else
-      std_logic_vector(r_horz_start(7 downto 0))
-                                    when CPU_A_i(3 downto 0) = x"4" else
-      std_logic_vector(r_vert_start(7 downto 0))
-                                    when CPU_A_i(3 downto 0) = x"5" else
-      std_logic_vector(r_vert_stop(7 downto 0))
-                                    when CPU_A_i(3 downto 0) = x"6" else
-      r_attach & "0" & r_list_cont & "00" & std_logic(r_vert_stop(8)) & std_logic(r_vert_start(8)) & std_logic(r_horz_start(8))
-                                    when CPU_A_i(3 downto 0) = x"7" else
-      r_data_ptr(7 downto 0)        when CPU_A_i(3 downto 0) = x"8" else
-      r_data_ptr(15 downto 8)       when CPU_A_i(3 downto 0) = x"9" else
-      r_listinit_ptr(7 downto 0)    when CPU_A_i(3 downto 0) = x"C" else
-      r_listinit_ptr(15 downto 8)   when CPU_A_i(3 downto 0) = x"D" else
-      -- debug
-      std_logic_vector(r_debug_ctr2)
-                                    when CPU_A_i(3 downto 0) = x"A" else
-      r_debug_states_prev
-                                    when CPU_A_i(3 downto 0) = x"E" else
-      std_logic_vector(r_debug_ctr)
-                                    when CPU_A_i(3 downto 0) = x"F" else
-      (others => '0');
+   p_cpu_d_rd:process(rst_i, clk_i)
+   begin
+      if rst_i = '1' then
+         CPU_D_o <= (others => '0');
+         CPU_rd_ack_o <= '0';
+      elsif rising_edge(clk_i) then
+         if clken_i = '1' then
+            CPU_D_o <=
+               r_spr_data(31 downto 24)      when CPU_A_i(3 downto 0) = x"0" else
+               r_spr_data(23 downto 16)      when CPU_A_i(3 downto 0) = x"1" else
+               r_spr_data(15 downto 8)       when CPU_A_i(3 downto 0) = x"2" else
+               r_spr_data(7 downto 0)        when CPU_A_i(3 downto 0) = x"3" else
+               std_logic_vector(r_horz_start(7 downto 0))
+                                             when CPU_A_i(3 downto 0) = x"4" else
+               std_logic_vector(r_vert_start(7 downto 0))
+                                             when CPU_A_i(3 downto 0) = x"5" else
+               std_logic_vector(r_vert_stop(7 downto 0))
+                                             when CPU_A_i(3 downto 0) = x"6" else
+               r_attach & "0" & r_list_cont & "00" & std_logic(r_vert_stop(8)) & std_logic(r_vert_start(8)) & std_logic(r_horz_start(8))
+                                             when CPU_A_i(3 downto 0) = x"7" else
+               r_data_ptr(7 downto 0)        when CPU_A_i(3 downto 0) = x"8" else
+               r_data_ptr(15 downto 8)       when CPU_A_i(3 downto 0) = x"9" else
+               r_listinit_ptr(7 downto 0)    when CPU_A_i(3 downto 0) = x"C" else
+               r_listinit_ptr(15 downto 8)   when CPU_A_i(3 downto 0) = x"D" else
+               -- debug
+               std_logic_vector(r_debug_ctr2)
+                                             when CPU_A_i(3 downto 0) = x"A" else
+               r_debug_states_prev
+                                             when CPU_A_i(3 downto 0) = x"E" else
+               std_logic_vector(r_debug_ctr)
+                                             when CPU_A_i(3 downto 0) = x"F" else
+               (others => '0');
+            CPU_rd_ack_o <= CPU_rden_i;
+         end if;
+      end if;
+   end process;
 
 
    p_shr:process(pixel_clk_i, rst_i, pixel_clken_i)

@@ -88,6 +88,9 @@ architecture rtl of fb_sprites is
 	signal i_horz_ctr						: unsigned(8 downto 0);
 	signal i_vert_ctr						: unsigned(8 downto 0);
 
+	signal r_d_rd_req						: std_logic;
+	signal i_rd_ack						: std_logic;
+
 begin
 
 	-- read local debug signals
@@ -111,8 +114,10 @@ begin
 			r_d_wr_stb <= '0';
 			r_d_wr <= (others => '0');
 			r_A <= (others => '0');
+			r_d_rd_req <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_ack <= '0';
+			r_d_rd_req <= '0';
 			case r_per_state is
 				when idle =>
 					r_d_wr_stb <= '0';
@@ -129,6 +134,7 @@ begin
 							end if;
 						else
 							r_per_state <= rd;
+							r_d_rd_req <= not fb_c2p_i.A(7);
 						end if;
 					end if;
 				when wait_d_stb =>
@@ -146,12 +152,15 @@ begin
 						r_per_state <= idle;
 					end if;
 				when rd =>
-					r_ack <= '1';
-					r_per_state <= idle;	
-					if r_local = '1' then
-						fb_p2c_o.D_Rd <= i_rd_D_local;
-					else
-						fb_p2c_o.D_Rd <= i_cpu_D_o;
+
+					if r_local = '1' or i_rd_ack = '1' then
+						r_ack <= '1';
+						r_per_state <= idle;	
+						if r_local = '1' then
+							fb_p2c_o.D_Rd <= i_rd_D_local;
+						else
+							fb_p2c_o.D_Rd <= i_cpu_D_o;
+						end if;
 					end if;
 				when others =>
 					r_per_state <= idle;
@@ -187,10 +196,12 @@ e_sprites:entity work.sprites
 
 		-- data interface, from CPU
 		CPU_D_i						=> r_d_wr,
+		CPU_rden_i					=> r_d_rd_req,
 		CPU_wren_i					=> r_d_wr_stb,
 		CPU_A_i						=> unsigned(r_A),
 		CPU_D_o						=> i_cpu_D_o,
 		CPU_wr_ack_o				=> i_wr_ack,
+		CPU_rd_ack_o				=> i_rd_ack,
 
 		-- vidproc / crtc signals in
 		pixel_clk_i					=> pixel_clk_i,

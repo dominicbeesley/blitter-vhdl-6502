@@ -73,10 +73,12 @@ entity sprites is
 
 		-- data interface, from CPU
 		CPU_D_i								: in	std_logic_vector(7 downto 0);
-		CPU_wren_i							: in	std_logic;
 		CPU_A_i								: in	unsigned(numbits(G_N_SPRITES) + 3 downto 0);			-- sprite data A..D, pos/ctl, ptr, lst (see below in p_regs)
+		CPU_wren_i							: in	std_logic;
+		CPU_rden_i							: in  std_logic;
 		CPU_D_o								: out   std_logic_vector(7 downto 0);--TODO: this for debugging only?
 		CPU_wr_ack_o						: out   std_logic;
+		CPU_rd_ack_o						: out   std_logic;
 
 		-- vidproc / crtc signals in
 
@@ -132,14 +134,27 @@ architecture rtl of sprites is
 
 	signal i_CPU_D_o : t_arr_d(0 to G_N_SPRITES-1);
 	signal i_CPU_wr_ack : std_logic_vector(G_N_SPRITES-1 downto 0);
+	signal i_CPU_rd_ack : std_logic_vector(G_N_SPRITES-1 downto 0);
 
 
 begin
 
 assert G_N_SPRITES mod 2 = 0 report "There must be an even number of sprites" severity error;
 
-	CPU_D_o <= i_CPU_D_o(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
-	CPU_wr_ack_o <= i_CPU_wr_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+	p_reg:process(rst_i, clk_i)
+	begin
+		if rst_i then
+			CPU_D_o <= (others => '0');
+			CPU_wr_ack_o <= '0';
+			CPU_rd_ack_o <= '0';
+		elsif rising_edge(clk_i) then
+			if clken_i then
+				CPU_D_o <= i_CPU_D_o(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+				CPU_wr_ack_o <= i_CPU_wr_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+				CPU_rd_ack_o <= i_CPU_rd_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+			end if;
+		end if;
+	end process;
 
 G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 	i_SEQ_wren_oh(I) <= '1' when SEQ_wren_i = '1' and SEQ_A_i(C_A_SIZE-1 downto 4) = I else '0';
@@ -172,10 +187,12 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 
 		-- data interface, from CPU
 		CPU_D_i								=> CPU_D_i,
-		CPU_wren_i							=> i_CPU_wren_oh(I),
 		CPU_A_i								=> CPU_A_i(3 downto 0),
+		CPU_rden_i							=> CPU_rden_i,
+		CPU_wren_i							=> i_CPU_wren_oh(I),
 		CPU_D_o								=> i_CPU_D_o(I),
 		CPU_wr_ack_o						=> i_CPU_wr_ack(I),
+		CPU_rd_ack_o						=> i_CPU_rd_ack(I),
 
 		pixel_clk_i							=> pixel_clk_i,
 		pixel_clken_i						=> pixel_clken_i,
