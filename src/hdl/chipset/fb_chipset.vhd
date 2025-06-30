@@ -395,7 +395,8 @@ begin
 	generic map (
 		SIM => SIM,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1, -- NOTE: +1 for unsel
-		G_ADDRESS_WIDTH => 10
+		G_ADDRESS_WIDTH => 10,
+		G_REGISTER_CON_READS => true
 	)
 	port map (
 		fb_syscon_i 		=> fb_syscon_i,

@@ -51,7 +51,8 @@ entity fb_intcon_one_to_many is
 		SIM					: boolean := false;
 		G_PERIPHERAL_COUNT		: POSITIVE;
 		G_ARB_ROUND_ROBIN : boolean := false;
-		G_ADDRESS_WIDTH	: POSITIVE 						-- width of the address that we care about
+		G_ADDRESS_WIDTH	: POSITIVE; 						-- width of the address that we care about
+		G_REGISTER_CON_READS  : boolean := false	-- add registers on reads port of controller
 	);
 	port (
 
@@ -123,9 +124,27 @@ begin
 		end if;
 	end process;
 
+	g_do_reg_reads:if G_REGISTER_CON_READS generate
+		p_reg_rd:process(fb_syscon_i)
+		begin
+			if fb_syscon_i.rst = '1' then
+				fb_con_p2c_o.D_rd 		<= (others => '0');
+				fb_con_p2c_o.rdy		 	<= '0';
+				fb_con_p2c_o.ack 			<= '0';	
+			elsif rising_edge(fb_syscon_i.clk) then
+				fb_con_p2c_o.D_rd 		<= i_s2m.D_rd;
+				fb_con_p2c_o.rdy		 	<= i_s2m.rdy;
+				fb_con_p2c_o.ack 			<= i_s2m.ack;	
+			end if;
+		end process;
+	end generate;
+
+	g_dont_reg_reads:if not G_REGISTER_CON_READS generate
 	fb_con_p2c_o.D_rd 		<= i_s2m.D_rd;
 	fb_con_p2c_o.rdy		 	<= i_s2m.rdy;
 	fb_con_p2c_o.ack 			<= i_s2m.ack;	
+	end generate;
+
 	fb_con_p2c_o.stall		<= '0' when r_state = idle else '1';		
 
 	p_state:process(fb_syscon_i, r_state)
