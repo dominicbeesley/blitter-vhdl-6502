@@ -205,7 +205,7 @@ end generate;
 	END GENERATE;
 
 	-- stall is always async
-	p_stall:process(i_cyc, i_cyc_grant_ix, r_state)
+	p_stall:process(all)
 	variable I:natural;
 	begin
 		ir_p2c_stall <= (others => '1');
