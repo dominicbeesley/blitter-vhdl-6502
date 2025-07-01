@@ -61,7 +61,8 @@ entity C20K is
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
-      PROJECT_ROOT_PATH             : string  := "../../../../.."
+      PROJECT_ROOT_PATH             : string  := "../../../../..";
+      G_1BIT_DAC_VIDEO              : boolean := false
    );
    port (
 
@@ -302,7 +303,7 @@ architecture rtl of C20K is
 	-- sound signals
 	-----------------------------------------------------------------------------
 
-	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
+	signal i_clk_snd						: std_logic := '0';					-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
 	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
 
@@ -541,22 +542,6 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
-
-   G_SND_CLK:if G_INCL_CS_SND generate
-      
-      clkdiv5 : CLKDIV
-      generic map (
-         DIV_MODE => "5",            -- Divide by 5
-         GSREN => "false"
-      )
-      port map (
-         RESETN => '1',
-         HCLKIN => i_clk_chroma_x4_jitter,
-         CLKOUT => i_clk_snd,
-         CALIB  => '1'
-      );
-
-   end generate;
 
 	e_chipset:fb_chipset
 	generic map (
@@ -1070,6 +1055,8 @@ END GENERATE;
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
 
+
+G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    --------------------------------------------------------
    -- 1 bit video
    --------------------------------------------------------
@@ -1228,6 +1215,46 @@ END GENERATE;
       bitstream_o       => vid_b_o
    );
 
+   G_SND_CLK:if G_INCL_CHIPSET and G_INCL_CS_SND generate
+      
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_chroma_x4_jitter,
+         CLKOUT => i_clk_snd,
+         CALIB  => '1'
+      );
+
+   end generate;
+
+
+end generate;
+G_DONT_1BIT_DAC_VIDEO:if not G_1BIT_DAC_VIDEO generate
+   vid_r_o <= not i_VGA_debug_r(i_VGA_debug_r'high);
+   vid_g_o <= not i_VGA_debug_g(i_VGA_debug_g'high);
+   vid_b_o <= not i_VGA_debug_b(i_VGA_debug_b'high);
+   vid_chroma_o <= '0';
+
+   -- TODO: this is quite rough and ready, check frequency and improve once reliable
+   p_clk_snd_gen:process(i_fb_syscon.clk)
+      constant div : natural := 3547;
+      constant num : natural := 64000;    -- roughly PAL * 4/5
+      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
+   begin
+      if rising_edge(i_fb_syscon.clk) then
+         r_acc := r_acc + div;
+         if r_acc >= num then
+            r_acc := r_acc - num;
+            i_clk_snd <= not i_clk_snd;
+         end if;
+      end if;
+   end process;
+
+end generate;
 
 end architecture rtl;
       
