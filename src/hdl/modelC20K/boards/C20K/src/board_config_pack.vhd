@@ -84,8 +84,10 @@ package board_config_pack is
 	constant G_INCL_CPU_Z180	: boolean := false;
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
-	constant G_MEM_FAST_IS_10	: boolean := true;
-	constant G_MEM_SLOW_IS_45	: boolean := true;
+	constant G_MEM_FAST_IS_10	: boolean := false;		-- for testing put back (TODO: constrain mem pins)
+	constant G_MEM_SLOW_IS_45	: boolean := false;		-- for testing put back
+--	constant G_MEM_FAST_IS_10	: boolean := true;
+--	constant G_MEM_SLOW_IS_45	: boolean := true;
 
 	constant PERIPHERAL_COUNT	: natural := 6;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
