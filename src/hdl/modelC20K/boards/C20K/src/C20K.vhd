@@ -79,9 +79,9 @@ entity C20K is
       ddr_ck_o             : out           std_logic;
       ddr_cke_o            : out           std_logic;
       ddr_cs_o             : out           std_logic;
-      ddr_dm_io            : in            std_logic_vector(1 downto 0);
-      ddr_dq_io            : in            std_logic_vector(15 downto 0);
-      ddr_dqs_io           : in            std_logic_vector(1 downto 0);
+      ddr_dm_io            : inout         std_logic_vector(1 downto 0);
+      ddr_dq_io            : inout         std_logic_vector(15 downto 0);
+      ddr_dqs_io           : inout         std_logic_vector(1 downto 0);
       ddr_odt_o            : out           std_logic;
       ddr_ras_o            : out           std_logic;
       ddr_reset_n_o        : out           std_logic;
@@ -1016,16 +1016,19 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	);
 END GENERATE;
 
-      ddr_addr_o           <= (others => '0');
-      ddr_bank_o           <= (others => '0');
-      ddr_cas_o            <= '0';
-      ddr_ck_o             <= '0';
+      ddr_addr_o           <= (others => '1');
+      ddr_bank_o           <= (others => '1');
+      ddr_cas_o            <= '1';
+      ddr_ck_o             <= '1';
       ddr_cke_o            <= '0';
-      ddr_cs_o             <= '0';
-      ddr_odt_o            <= '0';
-      ddr_ras_o            <= '0';
+      ddr_cs_o             <= '1';
+      ddr_odt_o            <= '1';
+      ddr_ras_o            <= '1';
       ddr_reset_n_o        <= '0';
       ddr_we_o             <= '0';
+      ddr_dq_io            <= (others => 'Z');
+      ddr_dqs_io           <= (others => 'Z');
+      ddr_dm_io            <= (others => 'Z');
 
 
       cpu_A_nOE_o          <= '1';
