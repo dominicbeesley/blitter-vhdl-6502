@@ -34,9 +34,22 @@
 #  Dependencies: 
 # 
 #  Revision: 
-#  Additional Comments: Note "|" (PIPE) chars will be read as x"00" in rom
+#  Additional Comments: Note "|" (PIPE) chars will be read as x"0D", x"00" in rom
 # 
 # --------------------------------------------------------------------------------
+
+proc comp_file {file1 file2} {
+    # optimization: check file size first
+    set equal 0
+    if {[file size $file1] == [file size $file2]} {
+        set fh1 [open $file1 r]
+        set fh2 [open $file2 r]
+        set equal [string equal [read $fh1] [read $fh2]]
+        close $fh1
+        close $fh2
+    }
+    return $equal
+}
 
 set systemTime [clock seconds]
 set tm [clock format $systemTime -format {%Y-%m-%d:%H:%M:%S}]
@@ -83,7 +96,7 @@ set oftag [open "version.tag" w]
 puts $oftag "$shortname"
 close $oftag
 
-set of [open "version.vhd" w]
+set of [open "version.tmp" w]
 
 puts $of "-- Automatically generated file (get-version.tcl) DO NOT EDIT!"
 puts $of "-- $outdata {.}"
@@ -100,11 +113,20 @@ puts $of "-- [regsub -all {(\r|\n)+} $outdata "\r\n-- "]"
 puts $of "architecture rtl of version_rom is"
 puts $of "begin"
 puts $of "Q <="
+set j 0
 for {set i 0} {$i < [string length $outdata] && $i < 256} {incr i} {
   set char [string index $outdata $i]
-  if { $char == "|" } { set ascii 0 } else { scan $char %c ascii }
-  set hx [format %02X $ascii]
-  puts $of "   x\"$hx\" when unsigned(A) = $i else "
+  if { $char == "|" } { 
+    puts $of "   x\"0D\" when unsigned(A) = $j else "
+    incr j
+    puts $of "   x\"00\" when unsigned(A) = $j else "
+    incr j
+  } else { 
+    scan $char %c ascii 
+    set hx [format %02X $ascii]
+    puts $of "   x\"$hx\" when unsigned(A) = $j else "
+    incr j
+  }
 }
 
 puts $of "   x\"00\";"
@@ -112,3 +134,8 @@ puts $of "   x\"00\";"
 puts $of "end rtl;"
 
 close $of
+
+
+if {![file exists version.vhd] || ![comp_file version.tmp version.vhd]} {
+    file copy -force version.tmp version.vhd
+}
