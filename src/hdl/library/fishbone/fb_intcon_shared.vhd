@@ -52,7 +52,8 @@ entity fb_intcon_shared is
 		G_CONTROLLER_COUNT		: POSITIVE;
 		G_PERIPHERAL_COUNT		: POSITIVE;
 		G_ARB_ROUND_ROBIN : boolean := false;
-		G_REGISTER_CONTROLLER_P2C: boolean := false
+		G_REGISTER_CONTROLLER_P2C: boolean := false;
+		G_REGISTER_PERIPHERAL_C2P : boolean := false
 	);
 	port (
 
@@ -62,7 +63,7 @@ entity fb_intcon_shared is
 		fb_con_c2p_i			: in	fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
 		fb_con_p2c_o			: out	fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
 
-		-- controller port connecto to peripherals
+		-- controller port connect to to peripherals
 		fb_per_c2p_o			: out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
 		fb_per_p2c_i			: in 	fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 
@@ -165,15 +166,36 @@ end generate;
 
 	i_a_stb_any <= or_reduce(i_cyc_a_stb);
 
-	g_c2p_shared:for I in G_PERIPHERAL_COUNT-1 downto 0 generate
-		fb_per_c2p_o(I).cyc 			<= r_cyc_per(i);
-		fb_per_c2p_o(I).we 			<= r_c2p_we;
-		fb_per_c2p_o(I).A				<= r_c2p_A;
-		fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
-		fb_per_c2p_o(I).A_stb		<= r_A_stb;
-		fb_per_c2p_o(I).D_wr			<= r_D_wr;
-		fb_per_c2p_o(I).D_wr_stb	<= r_D_wr_stb;
+	G_DO_REGISTER_PERIPHERAL_C2P:if G_REGISTER_PERIPHERAL_C2P generate
+		p_reg_per_c2p:process(fb_syscon_i.clk)
+		begin
+			if rising_edge(fb_syscon_i.clk) then
+				g_c2p_shared:for I in G_PERIPHERAL_COUNT-1 downto 0 loop
+					fb_per_c2p_o(I).cyc 			<= r_cyc_per(i);
+					fb_per_c2p_o(I).we 			<= r_c2p_we;
+					fb_per_c2p_o(I).A				<= r_c2p_A;
+					fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
+					fb_per_c2p_o(I).A_stb		<= r_A_stb;
+					fb_per_c2p_o(I).D_wr			<= r_D_wr;
+					fb_per_c2p_o(I).D_wr_stb	<= r_D_wr_stb;
+				end loop;
+			end if;
+		end process;
 	end generate;
+
+
+	G_DONT_REGISTER_PERIPHERAL_C2P:if not G_REGISTER_PERIPHERAL_C2P generate
+		g_c2p_shared:for I in G_PERIPHERAL_COUNT-1 downto 0 generate
+			fb_per_c2p_o(I).cyc 			<= r_cyc_per(i);
+			fb_per_c2p_o(I).we 			<= r_c2p_we;
+			fb_per_c2p_o(I).A				<= r_c2p_A;
+			fb_per_c2p_o(I).rdy_ctdn	<= r_rdy_ctdn;
+			fb_per_c2p_o(I).A_stb		<= r_A_stb;
+			fb_per_c2p_o(I).D_wr			<= r_D_wr;
+			fb_per_c2p_o(I).D_wr_stb	<= r_D_wr_stb;
+		end generate;
+	end generate;
+	
 
 	-- signals back from selected peripheral to controllers
 	i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
