@@ -5,7 +5,7 @@
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Wed Jun 25 18:02:13 2025
+--Created Time: Tue Jul  1 19:29:20 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -91,11 +91,11 @@ begin
             FCLKIN => "48",
             DEVICE => "GW2A-18C",
             DYN_IDIV_SEL => "false",
-            IDIV_SEL => 15,
+            IDIV_SEL => 7,
             DYN_FBDIV_SEL => "false",
             FBDIV_SEL => 44,
             DYN_ODIV_SEL => "false",
-            ODIV_SEL => 4,
+            ODIV_SEL => 2,
             PSDA_SEL => "0000",
             DYN_DA_EN => "true",
             DUTYDA_SEL => "1000",
