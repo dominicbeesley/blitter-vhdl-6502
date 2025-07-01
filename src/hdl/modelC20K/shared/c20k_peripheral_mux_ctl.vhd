@@ -55,7 +55,8 @@ generic (
       G_RD_CTDN_BITS       : natural := 7;
       DEFAULT_SYS_ADDR     : std_logic_vector(15 downto 0) := x"FFEA";
       DEFAULT_SYS_DATA     : std_logic_vector(7 downto 0) := x"FE";
-      DEFAULT_SYS_RnW      : std_logic := '0';        -- bodge FE onto bus for Tube detect, only works if MOS runs at 2MHz!
+--      DEFAULT_SYS_RnW      : std_logic := '0';        -- bodge FE onto bus for Tube detect, only works if MOS runs at 2MHz!
+      DEFAULT_SYS_RnW      : std_logic := '1';
       C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC20";  -- TODO: better address
       C20K_LATCH_DEFAULT   : std_logic_vector(7 downto 0)  := "00100001"
    );
@@ -437,7 +438,7 @@ begin
                   r_cyc <= '1';
                else
                   r_SYS_A <= DEFAULT_SYS_ADDR;
-                  r_SYS_RnW <= '0';                  
+                  r_SYS_RnW <= DEFAULT_SYS_RnW;                  
                   r_cyc <= '0';
                end if;
             end if;
