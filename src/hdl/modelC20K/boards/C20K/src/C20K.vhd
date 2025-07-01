@@ -472,7 +472,8 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true
+		G_REGISTER_CONTROLLER_P2C => true,
+      G_REGISTER_PERIPHERAL_C2P => true
 		)
    port map (
 		fb_syscon_i 		=> i_fb_syscon,
