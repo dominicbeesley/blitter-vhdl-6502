@@ -251,13 +251,13 @@ IO_PORT	"mem_nWE_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
 
 // HDMI - LVCMOS33D - check example projects use LVDS25
 IO_LOC	"tmds_d_o_p[0]" H14,H16;
-IO_PORT	"tmds_d_o_p[0]" IO_TYPE=LVCMOS33D PULL_MODE=NONE;
+IO_PORT	"tmds_d_o_p[0]" IO_TYPE=LVDS25 PULL_MODE=NONE;
 IO_LOC	"tmds_d_o_p[1]" J15,K16;
-IO_PORT	"tmds_d_o_p[1]" IO_TYPE=LVCMOS33D PULL_MODE=NONE;
+IO_PORT	"tmds_d_o_p[1]" IO_TYPE=LVDS25 PULL_MODE=NONE;
 IO_LOC	"tmds_d_o_p[2]" K14,K15;
-IO_PORT	"tmds_d_o_p[2]" IO_TYPE=LVCMOS33D PULL_MODE=NONE;
+IO_PORT	"tmds_d_o_p[2]" IO_TYPE=LVDS25 PULL_MODE=NONE;
 IO_LOC	"tmds_clk_o_p"	G16,H15;
-IO_PORT	"tmds_clk_o_p"	IO_TYPE=LVCMOS33D PULL_MODE=NONE;
+IO_PORT	"tmds_clk_o_p"	IO_TYPE=LVDS25 PULL_MODE=NONE;
 
 //HDMI extras
 IO_LOC	"edid_scl_io"	F16;
