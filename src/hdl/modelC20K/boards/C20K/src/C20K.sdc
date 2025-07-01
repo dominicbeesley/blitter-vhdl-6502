@@ -43,8 +43,8 @@ set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen
 
 
 
-report_timing -setup -max_paths 100 -max_common_paths 1
+#report_timing -setup -max_paths 100 -max_common_paths 1
 
 #report_timing -setup -from_clock [get_clocks {CLOCK_128M}] -to_clock [get_clocks {CLOCK_128M}] -from [get_pins {g_intcon_shared.e_fb_intcon/ir_p2c_ack_0_s0/Q}] -to [get_pins {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers_r_pointers_RAMREG_3_G[10]_s0/CE}]
 
-report_timing -setup -from_clock [get_clocks {CLOCK_128M}] -to_clock [get_clocks {CLOCK_128M}] -from [get_pins {e_memctl/r_throttle_cpu_2MHz_s1/Q}] -to [get_pins {e_fb_cpu_t65only/e_t65/e_cpu/IRQ_n_o_s0/CE}] -max_paths 25 -max_common_paths 1
+#report_timing -setup -from_clock [get_clocks {CLOCK_128M}] -to_clock [get_clocks {CLOCK_128M}] -from [get_pins {e_memctl/r_throttle_cpu_2MHz_s1/Q}] -to [get_pins {e_fb_cpu_t65only/e_t65/e_cpu/IRQ_n_o_s0/CE}] -max_paths 25 -max_common_paths 1
