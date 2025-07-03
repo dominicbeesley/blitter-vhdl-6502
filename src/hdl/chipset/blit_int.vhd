@@ -853,7 +853,7 @@ begin
 			r_FUNCGEN <= (others => '0');		
 			r_mask_first <= (others => '0');	
 			r_mask_last <= (others => '0');		
-			v_reg_line_minor := '0';
+--			v_reg_line_minor := '0';					-- was making Gowin Syn infer a latch!?
 		elsif rising_edge(fb_syscon_i.clk) then
 						
 			if r_blit_state = sFinish then
