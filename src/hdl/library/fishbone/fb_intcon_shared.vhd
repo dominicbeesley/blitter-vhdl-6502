@@ -73,6 +73,10 @@ entity fb_intcon_shared is
 		peripheral_sel_oh_i			: in fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
 	);
+	attribute syn_maxfan : integer;
+	attribute syn_maxfan of fb_per_c2p_o : signal is 3;
+--	attribute syn_preserve : integer;
+--	attribute syn_preserve of fb_per_c2p_o : signal is 1;
 end fb_intcon_shared;
 
 
