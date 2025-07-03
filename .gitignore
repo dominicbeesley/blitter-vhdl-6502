@@ -28,3 +28,5 @@ work_syn/
 
 release/release/*
 release/*.tgz
+
+**/version.tmp
