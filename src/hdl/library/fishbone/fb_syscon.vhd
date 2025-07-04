@@ -108,7 +108,6 @@ begin
 	fb_syscon_o <= i_fb_syscon;
 
 	i_fb_syscon.clk <= clk_fish_i;
-	i_fb_syscon.rst <= '0' when r_rst_state = run else '1';
 	i_fb_syscon.rst_state <= r_rst_state;
 	i_fb_syscon.prerun <= r_prerun_shift;
 
@@ -143,6 +142,7 @@ begin
 						r_rst_counter <= r_rst_counter + 1;
 					end if;
 					r_prerun_shift <= ( others => '0');
+					i_fb_syscon.rst <= '1';
 				when reset =>
 					if rr_EXT_nRESET = '0' then
 						r_rst_counter <= r_rst_counter + 1;
@@ -155,12 +155,14 @@ begin
 						r_rst_state <= prerun;
 						r_prerun_shift <= ( 0 => '1', others => '0');
 					end if;
+					i_fb_syscon.rst <= '1';
 				when resetfull =>
 					if rr_EXT_nRESET = '1' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= prerun;
 						r_prerun_shift <= ( 0 => '1', others => '0');
 					end if;
+					i_fb_syscon.rst <= '1';
 				when prerun =>
 					r_rst_counter <= r_rst_counter + 1;
 					if rr_EXT_nRESET = '0' then
@@ -175,6 +177,7 @@ begin
 							r_prerun_shift <= r_prerun_shift(r_prerun_shift'HIGH-1 downto 0) & '0';
 						end if;
 					end if;
+					i_fb_syscon.rst <= '1';
 				when run =>
 					if clk_lock_i = '0' or sys_dll_lock_i = '0' then
 						r_rst_state <= lockloss;
@@ -182,13 +185,16 @@ begin
 						r_rst_counter <= (others => '0');
 						r_rst_state <= reset;
 					end if;
+					i_fb_syscon.rst <= '0';
 				when lockloss =>
 					if rr_EXT_nRESET = '0' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= reset;
 					end if;
+					i_fb_syscon.rst <= '1';					
 				when others => 
 					r_rst_state <= lockloss;
+					i_fb_syscon.rst <= '1';					
 			end case;
 		end if;
 	end process;
