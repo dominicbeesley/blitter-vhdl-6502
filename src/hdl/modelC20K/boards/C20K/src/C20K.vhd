@@ -908,7 +908,21 @@ end generate;
    variable i : integer;
    begin
       if rising_edge(i_fb_syscon.clk) then
-         if i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' then
+         if i_fb_syscon.rst = '1' then
+            for i in 0 to 7 loop
+               if i < 4 then
+                  i_debug_leds(I).red <= (0 =>  i_fb_syscon.prerun(i), others => '0');
+               else
+                  i_debug_leds(I).red <= (others => '0');
+               end if;
+               if i = fb_rst_state_t'pos(i_fb_syscon.rst_state) then
+                  i_debug_leds(I).green <= (0 => '1', others => '0');
+               else
+                  i_debug_leds(I).green <= (0 => '0', others => '0');
+               end if;
+               i_debug_leds(I).blue <= (others => '0');         
+            end loop;
+         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' then
             for i in 0 to 7 loop
                i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
                i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
@@ -925,7 +939,7 @@ end generate;
       G_N_CHAIN                       => 8
    )
    port map (
-      rst_i                   => i_fb_syscon.rst,
+      rst_i                   => '0',
       clk_i                   => i_fb_syscon.clk,
       rgb_arr_i               => i_debug_leds,
       led_serial_o            => ui_leds_o
