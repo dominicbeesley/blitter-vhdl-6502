@@ -757,7 +757,6 @@ END GENERATE;
       p_j_spi_clk_i                 => icopi_j_spi_clk,
       p_VID_HS_i                    => i_vga_debug_hs,
       p_VID_VS_i                    => i_vga_debug_vs,
-      p_VID_CS_i                    => not (i_vga_debug_hs xor i_vga_debug_vs),
       p_j_spi_mosi_i                => icopi_j_spi_mosi,
       p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 

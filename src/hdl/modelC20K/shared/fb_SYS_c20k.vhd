@@ -127,7 +127,6 @@ entity fb_SYS_c20k is
       p_j_spi_clk_i                    : in     std_logic;
       p_VID_HS_i                       : in     std_logic;
       p_VID_VS_i                       : in     std_logic;
-      p_VID_CS_i                       : in     std_logic;
       p_j_spi_mosi_i                   : in     std_logic;
       p_j_adc_nCS_i                    : in     std_logic;
 
@@ -242,8 +241,13 @@ architecture rtl of fb_SYS_c20k is
    signal   i_sysvia_CB1_i    : std_logic;
    signal   i_sysvia_PB_i     : std_logic_vector(7 downto 0);
 
+   signal   ip_VID_CS         : std_logic;
+
+
 
 begin
+
+   ip_VID_CS <= not (p_VID_HS_i xor p_VID_VS_i);
 
    sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ;
    sys_nNMI_o <= i_p_nmi;
@@ -616,7 +620,7 @@ begin
       p_j_spi_clk_i           => p_j_spi_clk_i,
       p_VID_HS_i              => p_VID_HS_i,
       p_VID_VS_i              => p_VID_VS_i,
-      p_VID_CS_i              => p_VID_CS_i,
+      p_VID_CS_i              => ip_VID_CS,
       p_j_spi_mosi_i          => p_j_spi_mosi_i,
       p_j_adc_nCS_i           => p_j_adc_nCS_i,
 
@@ -661,7 +665,7 @@ begin
       O_IRQ_L               => i_sysvia_nIRQ,
 
       -- port a
-      I_CA1                 => not p_VID_VS_i,
+      I_CA1                 => p_VID_VS_i,
       I_CA2                 => i_sysvia_ca2,
       O_CA2                 => open,
       O_CA2_OE_L            => open,
