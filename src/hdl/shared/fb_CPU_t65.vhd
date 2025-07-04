@@ -155,8 +155,7 @@ begin
 	i_t65_clken <= '1' when 
 							
 							r_cpu_clk(0) = '1' 
---							and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1') 
-							and (i_throttle = '0' or r_had_phi2 = '1') 
+							and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1') 
 							and (		
 									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
