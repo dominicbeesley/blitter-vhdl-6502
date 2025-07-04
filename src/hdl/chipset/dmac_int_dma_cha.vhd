@@ -177,7 +177,8 @@ architecture Behavioral of fb_DMAC_int_dma_cha is
 	signal	r_dma_state				: dma_state_type;
 	signal	i_dma_state_next		: dma_state_type;
 
-	signal	i_next_addr				: std_logic_vector(15 downto 0);
+	signal	i_next_src_addr		: std_logic_vector(15 downto 0);
+	signal	i_next_dest_addr		: std_logic_vector(15 downto 0);
 	signal	i_next_con_addr		: std_logic_vector(23 downto 0);					-- the address for the next controller cycle
 	signal	r_con_addr				: std_logic_vector(23 downto 0);					-- the address for the current controller cycle
 
@@ -219,44 +220,46 @@ begin
 
 	-- check CLOCKSPEED is 128, assumed by pause_ct_dn
 
-	p_addr: process(i_dma_state_next, r_src_addr, r_dest_addr, r_ctl_step_src, r_ctl_step_dest, r_ctl2_stepsize, r_ctl_extend)
+	p_addr_next_src_addr: process(i_dma_state_next, r_src_addr, r_ctl_step_src, r_ctl2_stepsize, r_ctl_extend)
 	begin
 
+		i_next_src_addr <= r_src_addr;
 		case i_dma_state_next is
 			when sMemAccSRC =>
-				i_next_addr <= r_src_addr;
 				if r_ctl_extend = '0' or r_ctl2_stepsize = byte then
 					if r_ctl_step_src = up then
-						i_next_addr <= std_logic_vector(unsigned(r_src_addr) + 1);
+						i_next_src_addr <= std_logic_vector(unsigned(r_src_addr) + 1);
 					elsif r_ctl_step_src = down then
-						i_next_addr <= std_logic_vector(unsigned(r_src_addr) - 1);
+						i_next_src_addr <= std_logic_vector(unsigned(r_src_addr) - 1);
 					end if;
 				end if;
 			when sMemAccSRC2 =>
-				i_next_addr <= r_src_addr;
 				if r_ctl_step_src = up then
-					i_next_addr <= std_logic_vector(unsigned(r_src_addr) + 2);
+					i_next_src_addr <= std_logic_vector(unsigned(r_src_addr) + 2);
 				elsif r_ctl_step_src = down then
-					i_next_addr <= std_logic_vector(unsigned(r_src_addr) - 2);
+					i_next_src_addr <= std_logic_vector(unsigned(r_src_addr) - 2);
 				end if;
+		end case;
+	end process;
+
+	p_addr_next_dest_addr: process(i_dma_state_next, r_dest_addr, r_ctl_step_dest, r_ctl2_stepsize, r_ctl_extend)
+	begin
+		i_next_dest_addr <= r_dest_addr;
+		case i_dma_state_next is
 			when sMemAccDEST  =>
-				i_next_addr <= r_dest_addr;
 				if r_ctl_extend = '0' or r_ctl2_stepsize = byte then
 					if r_ctl_step_dest = up then
-						i_next_addr <= std_logic_vector(unsigned(r_dest_addr) + 1);
+						i_next_dest_addr <= std_logic_vector(unsigned(r_dest_addr) + 1);
 					elsif r_ctl_step_dest = down then
-						i_next_addr <= std_logic_vector(unsigned(r_dest_addr) - 1);
+						i_next_dest_addr <= std_logic_vector(unsigned(r_dest_addr) - 1);
 					end if;
 				end if;
 			when sMemAccDEST2 =>
-				i_next_addr <= r_dest_addr;
 				if r_ctl_step_dest = up then
-					i_next_addr <= std_logic_vector(unsigned(r_dest_addr) + 2);
+					i_next_dest_addr <= std_logic_vector(unsigned(r_dest_addr) + 2);
 				elsif r_ctl_step_dest = down then
-					i_next_addr <=std_logic_vector(unsigned( r_dest_addr) - 2);
+					i_next_dest_addr <= std_logic_vector(unsigned( r_dest_addr) - 2);
 				end if;
-			when others => 
-				i_next_addr <= (others => '-');
 		end case;
 	end process;
 
@@ -523,9 +526,9 @@ begin
 				-- address update when act
 				case i_dma_state_next is
 					when sMemAccSRC|sMemAccSRC2 =>
-						r_src_addr <= i_next_addr;
+						r_src_addr <= i_next_src_addr;
 					when sMemAccDEST|sMemAccDEST2 =>
-						r_dest_addr <= i_next_addr;
+						r_dest_addr <= i_next_dest_addr;
 					when others => null;
 				end case;
 
