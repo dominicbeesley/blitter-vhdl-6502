@@ -74,7 +74,7 @@ architecture rtl of fb_cpu_t65 is
 	signal i_t65_A	 			: std_logic_vector(23 downto 0);
 	signal i_t65_D_in			: std_logic_vector(7 downto 0);
 	signal i_t65_D_out		: std_logic_vector(7 downto 0);
-	signal i_t65_res_n		: std_logic;
+	signal r_t65_res_n		: std_logic;
 
 
 	signal i_cpu65_nmi_n		: std_logic;
@@ -165,8 +165,15 @@ begin
 	i_t65_clken_h <= 	'0' when r_cpu_halt = '1' else
 							i_t65_clken;
 
-	i_t65_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
-						'0';
+	p_reset:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_t65_res_n <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_t65_res_n <= cpu_en_i;
+		end if;
+	end process;
+
 
 	i_t65_D_in <= wrap_i.D_rd(7 downto 0) when i_t65_RnW = '1' else
 					  i_t65_D_out;
@@ -200,7 +207,7 @@ begin
 	e_cpu: entity work.T65 
   	port map (
    	Mode    => "00", 		-- 6502A
-   	Res_n   => i_t65_res_n,
+   	Res_n   => r_t65_res_n,
    	Enable  => i_t65_clken_h,
    	Clk     => fb_syscon_i.clk,
    	Rdy     => '1',
@@ -260,18 +267,23 @@ begin
   	end process;
 
 
-	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_t65_A(0);
+--TODO: reinstate?
+--	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_t65_A(0);
+--
+--  	wrap_o.noice_debug_cpu_clken <= i_t65_clken_h;
+--  	
+--  	wrap_o.noice_debug_5c	 <=
+--  								'1' when 
+--  										i_t65_SYNC = '1' 
+--  										and i_t65_D_in = x"5C" else
+--  								'0';
+--
+--  	wrap_o.noice_debug_opfetch <= i_t65_SYNC;
 
-  	wrap_o.noice_debug_cpu_clken <= i_t65_clken_h;
-  	
-  	wrap_o.noice_debug_5c	 <=
-  								'1' when 
-  										i_t65_SYNC = '1' 
-  										and i_t65_D_in = x"5C" else
-  								'0';
-
-  	wrap_o.noice_debug_opfetch <= i_t65_SYNC;
-
+wrap_o.noice_debug_A0_tgl <= '0';
+wrap_o.noice_debug_cpu_clken <= '0';
+wrap_o.noice_debug_5c <= '0';
+wrap_o.noice_debug_opfetch <= '0';
 
 
 end rtl;
