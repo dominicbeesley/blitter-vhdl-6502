@@ -215,6 +215,8 @@ architecture rtl of fb_SYS_c20k is
    -- control
    signal   i_reset_full      : std_logic;      -- reset mux state machine before clocking out full reset
    signal   i_reset_hard      : std_logic;      -- "power up" reset for sys via --TODO: distinguish between reset button and break key?
+   signal   r_reset_bus       : std_logic := '0';      -- single cycle reset
+   signal   r_reset_bus_pre   : std_logic := '0';      -- single cycle reset baulk
 
    -- peripheral local signals
 
@@ -521,6 +523,17 @@ begin
                    '0';
 
 
+   p_reset_bus:process(fb_syscon_i)
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+         r_reset_bus <= '0';         
+         if i_reset_full = '1' and r_reset_bus_pre = '0' then
+            r_reset_bus <= '1';
+         end if;
+         r_reset_bus_pre <= i_reset_full;
+      end if;
+   end process;
+
    e_MUX:entity work.c20k_peripherals_mux_ctl
    generic map (
       G_FAST_CLOCKSPEED    => CLOCKSPEED * 1000000,
@@ -538,7 +551,7 @@ begin
       mhz4_clken_o            => i_MHz4_clken,
 
       -- state control in
-      reset_i                 => i_reset_full,
+      reset_i                 => r_reset_bus,
 
       -- address and cycle selection from core, registered 1 cycle after i_SYScyc_st_clken
       sys_cyc_en_i            => r_con_cyc,
