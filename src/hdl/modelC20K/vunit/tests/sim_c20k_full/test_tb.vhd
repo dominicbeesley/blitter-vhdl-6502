@@ -26,7 +26,8 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-   constant G_MOSROMFILE : string := "C:/Users/Dominic/Documents/Programming/HostFS/roms65/MOS120.M";
+   --constant G_MOSROMFILE : string := "C:/Users/Dominic/Documents/Programming/HostFS/roms65/MOS120.M";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -129,7 +130,7 @@ begin
 
          if run("look") then
 
-            wait for 120000 ns;
+            wait for 1200 us;
 
          end if;
 
