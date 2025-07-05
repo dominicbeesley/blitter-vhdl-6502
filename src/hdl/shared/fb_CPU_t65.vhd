@@ -82,11 +82,11 @@ architecture rtl of fb_cpu_t65 is
 	signal r_prev_A0			: std_logic;
 
 	-- count down to next cycle - when all 1's can proceed
-	signal r_cpu_clk			: std_logic_vector((CLOCKSPEED/MAXSPEED)-2 downto 0);
+	signal r_cpu_clk			: std_logic_vector((CLOCKSPEED/MAXSPEED)-2 downto 0) := (others => '0');
 
-	-- i_t65_clken '1' for one cycle to complete a cycle/start another
-	signal i_t65_clken		: std_logic;
-	signal i_t65_clken_h		: std_logic; -- clocken masked by halt
+	-- r_t65_clken '1' for one cycle to complete a cycle/start another
+	signal r_t65_clken		: std_logic := '0';
+	signal r_t65_clken_h		: std_logic := '0'; -- clocken masked by halt
 	-- the above signal delayed
 	signal r_clken_dly		: std_logic_vector(CLKEN_DLY_MAX downto 0) := (0 => '1', others => '0');
 
@@ -115,7 +115,7 @@ begin
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and i_t65_clken /= '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_t65_clken /= '1' else
 								'0';
 
 	wrap_o.BE				<= '0';
@@ -139,7 +139,7 @@ begin
 			r_throttle_sync <= '0';
 			r_had_phi2 <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_t65_clken = '1' then
+			if r_t65_clken = '1' then
 				r_had_phi2 <= '0';
 				if i_t65_SYNC = '1' then
 					r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
@@ -151,19 +151,31 @@ begin
 		end if;
 	end process;
 
-
-	i_t65_clken <= '1' when 
-							
-							r_cpu_clk(0) = '1' 
+	p_clken:process(all)
+	variable v_t65_clken : std_logic;
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_t65_clken <= '0';
+			r_t65_clken_h <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if r_t65_clken = '0'
+							and r_cpu_clk(0) = '1' 
 							and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1') 
 							and (		
 									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
-									) else
-						'0';
-	i_t65_clken_h <= 	'0' when r_cpu_halt = '1' else
-							i_t65_clken;
+									) then
+				v_t65_clken := '1';
+			else
+				v_t65_clken := '0';
+			end if;
+
+			r_t65_clken <= v_t65_clken;
+			r_t65_clken_h <= v_t65_clken and not r_cpu_halt;
+
+		end if;
+	end process;
 
 	p_reset:process(fb_syscon_i)
 	begin
@@ -184,7 +196,7 @@ begin
 			r_cpu_halt <= '0';
 			r_wrap_acked <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_t65_clken = '1' then
+			if r_t65_clken = '1' then
 				r_cpu_halt <= wrap_i.cpu_halt;
 				r_wrap_acked <= '0';
 			else
@@ -208,7 +220,7 @@ begin
   	port map (
    	Mode    => "00", 		-- 6502A
    	Res_n   => r_t65_res_n,
-   	Enable  => i_t65_clken_h,
+   	Enable  => r_t65_clken_h,
    	Clk     => fb_syscon_i.clk,
    	Rdy     => '1',
    	Abort_n => '1',
@@ -234,7 +246,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_cpu_clk <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if i_t65_clken = '1' then
+			if r_t65_clken = '1' then
 				r_cpu_clk <= (others => '0');
 			else
 				r_cpu_clk(r_cpu_clk'high) <= '1';
@@ -249,7 +261,7 @@ begin
 			r_clken_dly <= (0 => '1', others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			if r_cpu_halt = '0' then		
-				r_clken_dly <= r_clken_dly(r_clken_dly'high-1 downto 0) & i_t65_clken;
+				r_clken_dly <= r_clken_dly(r_clken_dly'high-1 downto 0) & r_t65_clken;
 			end if;
 		end if;
 	end process;
@@ -260,7 +272,7 @@ begin
   		if fb_syscon_i.rst = '1' then
   			r_prev_A0 <= '0';
   		elsif rising_edge(fb_syscon_i.clk) then
-  			if i_t65_clken = '1' then
+  			if r_t65_clken = '1' then
   				r_prev_A0 <= i_t65_A(0);
   			end if;
   		end if;
@@ -270,7 +282,7 @@ begin
 --TODO: reinstate?
 --	wrap_o.noice_debug_A0_tgl <= r_prev_A0 xor i_t65_A(0);
 --
---  	wrap_o.noice_debug_cpu_clken <= i_t65_clken_h;
+--  	wrap_o.noice_debug_cpu_clken <= r_t65_clken_h;
 --  	
 --  	wrap_o.noice_debug_5c	 <=
 --  								'1' when 
