@@ -208,9 +208,9 @@ begin
          else
             r_base_by <= 
                to_signed(
-                  to_integer(r_i) * integer((-37) * G_GAIN)
-               +  to_integer(g_i) * integer((-73) * G_GAIN)
-               +  to_integer(b_i) * integer((111) * G_GAIN)
+                  to_integer(r_i) * integer((-37.0) * G_GAIN)
+               +  to_integer(g_i) * integer((-73.0) * G_GAIN)
+               +  to_integer(b_i) * integer((111.0) * G_GAIN)
                , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
          end if;
       end if;
@@ -228,9 +228,9 @@ begin
          else
             r_base_ry <= 
                to_signed(
-                  to_integer(r_i) * integer((157 ) * G_GAIN)
-               +  to_integer(g_i) * integer((-132) * G_GAIN)
-               +  to_integer(b_i) * integer((-25 ) * G_GAIN)
+                  to_integer(r_i) * integer(( 157.0) * G_GAIN)
+               +  to_integer(g_i) * integer((-132.0) * G_GAIN)
+               +  to_integer(b_i) * integer(( -25.0) * G_GAIN)
                , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
          end if;
       end if;
