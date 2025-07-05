@@ -60,8 +60,7 @@ entity C20K is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
-      BAUD                          : natural := 19200;
-      G_1BIT_DAC_VIDEO              : boolean := false
+      BAUD                          : natural := 19200
    );
    port (
 
@@ -72,7 +71,8 @@ entity C20K is
       clk_ext_pal_i        : in            std_logic;
 
 
-      ddr_addr_o           : out           std_logic_vector(13 downto 0);
+--TODO: clash with OSER10's on video
+--      ddr_addr_o           : out           std_logic_vector(13 downto 0);
       ddr_bank_o           : out           std_logic_vector(2 downto 0);
       ddr_cas_o            : out           std_logic;
       ddr_ck_o             : out           std_logic;
@@ -185,6 +185,13 @@ architecture rtl of C20K is
       CALIB: in std_logic
    );
    end component;
+
+   COMPONENT OBUF
+   PORT (
+      O:OUT std_logic;
+      I:IN std_logic
+   );
+   END COMPONENT;
 
    -----------------------------------------------------------------------------
 	-- config signals
@@ -418,6 +425,10 @@ architecture rtl of C20K is
    signal i_chroma_s             : signed(4 downto 0);
    signal r2_vid_chroma          : unsigned(4 downto 0);
 
+   signal i_vid_r_0  : std_logic;
+   signal i_vid_g_0  : std_logic;
+   signal i_vid_b_0  : std_logic;
+   signal i_vid_chroma_0  : std_logic;
 
 begin
 
@@ -1028,7 +1039,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	);
 END GENERATE;
 
-      ddr_addr_o           <= (others => '1');
+--TODO: clash with OSER10's on video
+--      ddr_addr_o           <= (others => '1');
       ddr_bank_o           <= (others => '1');
       ddr_cas_o            <= '1';
       ddr_ck_o             <= '1';
@@ -1195,7 +1207,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => r2_vid_chroma(4 downto 1),
-      bitstream_o       => vid_chroma_o
+      bitstream_o       => i_vid_chroma_0
    );
 
     
@@ -1207,7 +1219,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_VGA_debug_r)),
-      bitstream_o       => vid_r_o
+      bitstream_o       => i_vid_r_0
    );
 
    e_mono_dac_g:entity work.dac1_oserx2
@@ -1217,7 +1229,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_VGA_debug_g)),
-      bitstream_o       => vid_g_o
+      bitstream_o       => i_vid_g_0
    );
 
    e_mono_dac_b:entity work.dac1_oserx2
@@ -1227,7 +1239,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_VGA_debug_b)),
-      bitstream_o       => vid_b_o
+      bitstream_o       => i_vid_b_0
    );
 
    G_SND_CLK:if G_INCL_CHIPSET and G_INCL_CS_SND generate
@@ -1246,6 +1258,29 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 
    end generate;
 
+   e_obuf_vid_chroma:obuf
+   port map (
+      I => i_vid_chroma_0,
+      O => vid_chroma_o
+      );
+
+   e_obuf_vid_r:obuf
+   port map (
+      I => i_vid_r_0,
+      O => vid_r_o
+      );
+
+   e_obuf_vid_g:obuf
+   port map (
+      I => i_vid_g_0,
+      O => vid_g_o
+      );
+
+   e_obuf_vid_b:obuf
+   port map (
+      I => i_vid_b_0,
+      O => vid_b_o
+      );
 
 end generate;
 G_DONT_1BIT_DAC_VIDEO:if not G_1BIT_DAC_VIDEO generate

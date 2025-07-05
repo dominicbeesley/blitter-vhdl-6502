@@ -13,11 +13,11 @@ create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {G_HDMI.e_fb_HDM
 
 ## actually generated but div/mul too large
 ##TODO: reenable for real chroma
-#create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_pins {e_chroma_gen/i_clk_chroma_x4_s0/Q}]
-#create_generated_clock -name CLOCK_SOUND -source [get_pins {e_chroma_gen/i_clk_chroma_x4_s0/Q}] -master_clock CLOCK_CHROMA -divide_by 5 -multiply_by 1 [get_nets {i_clk_snd}]
+create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_nets {i_clk_chroma_x4_jitter}]
+create_generated_clock -name CLOCK_SOUND -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 5 -multiply_by 1 [get_nets {i_clk_snd}]
 
 ##TODO: bodge for no chroma
-create_generated_clock -name CLOCK_SOUND -source [get_nets {i_fb_syscon.clk}] -master_clock CLOCK_128M -divide_by 64000 -multiply_by 3547 [get_nets {i_clk_snd}]
+#create_generated_clock -name CLOCK_SOUND -source [get_nets {i_fb_syscon.clk}] -master_clock CLOCK_128M -divide_by 64000 -multiply_by 3547 [get_nets {i_clk_snd}]
 
 #**************************************************************
 # Set Clock Groups
@@ -28,7 +28,7 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_128M}] -group [get_cloc
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_PIXEL_HDMI}] 
 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_SOUND}] -group [get_clocks {CLOCK_128M}] 
-#set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
+set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
 
 set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -setup 4
 set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -hold 3
