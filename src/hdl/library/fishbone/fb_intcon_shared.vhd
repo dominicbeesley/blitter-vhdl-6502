@@ -73,10 +73,10 @@ entity fb_intcon_shared is
 		peripheral_sel_oh_i			: in fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
 	);
---	attribute syn_maxfan : integer;
---	attribute syn_maxfan of fb_per_c2p_o : signal is 4;
-attribute syn_preserve : integer;
-attribute syn_preserve of fb_per_c2p_o : signal is 1;
+attribute syn_maxfan : integer;
+attribute syn_maxfan of fb_per_c2p_o : signal is 4;
+-- attribute syn_preserve : integer;
+-- attribute syn_preserve of fb_per_c2p_o : signal is 1;
 end fb_intcon_shared;
 
 
@@ -122,7 +122,7 @@ architecture rtl of fb_intcon_shared is
 	signal   ir_p2c_stall	: std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
 
 	--r_state machine
-	type		state_t	is	(idle, waitstall, act);
+	type		state_t	is	(idle, waitstall, waitstall0, act);
 	signal	r_state				: state_t;
 
 begin
@@ -291,9 +291,19 @@ end generate;
 						r_rdy_ctdn <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).rdy_ctdn;
 						r_d_wr_stb <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr_stb;
 						r_d_wr <= fb_con_c2p_i(to_integer(i_cyc_grant_ix)).D_wr;
-						r_state <= waitstall;
+						if G_REGISTER_PERIPHERAL_C2P then
+							r_state <= waitstall0;
+						else
+							r_state <= waitstall;
+						end if;
 						r_a_stb <= '1';
 					end if;
+				when waitstall0 =>
+					if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' and r_d_wr_stb = '0' then
+						r_d_wr_stb <= '1';
+						r_d_wr <= fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr;
+					end if;
+					r_state <= waitstall;
 				when waitstall =>
 
 					if fb_con_c2p_i(to_integer(r_cyc_grant_ix)).D_wr_stb = '1' and r_d_wr_stb = '0' then
