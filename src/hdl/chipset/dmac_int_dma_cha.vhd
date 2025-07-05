@@ -239,6 +239,8 @@ begin
 				elsif r_ctl_step_src = down then
 					i_next_src_addr <= std_logic_vector(unsigned(r_src_addr) - 2);
 				end if;
+			when others =>
+				null;
 		end case;
 	end process;
 
@@ -260,6 +262,8 @@ begin
 				elsif r_ctl_step_dest = down then
 					i_next_dest_addr <= std_logic_vector(unsigned( r_dest_addr) - 2);
 				end if;
+			when others =>
+				null;
 		end case;
 	end process;
 
