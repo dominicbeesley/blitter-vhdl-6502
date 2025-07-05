@@ -61,7 +61,6 @@ entity C20K is
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
-      PROJECT_ROOT_PATH             : string  := "../../../../..";
       G_1BIT_DAC_VIDEO              : boolean := false
    );
    port (
