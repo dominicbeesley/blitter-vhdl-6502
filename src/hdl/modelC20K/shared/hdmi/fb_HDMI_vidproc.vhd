@@ -55,6 +55,7 @@ entity fb_HDMI_vidproc is
 		-- Control interface
 		nINVERT_i							:	in	std_logic;
 		DISEN_i								:	in	std_logic;
+		DISEN_U_i							:	in	std_logic;
 		CURSOR_i								:	in	std_logic;
 		
 		-- Teletext enabled
@@ -74,11 +75,15 @@ entity fb_HDMI_vidproc is
 		R_TTX_i								:	in	std_logic;
 		G_TTX_i								:	in	std_logic;
 		B_TTX_i								:	in	std_logic;
-		
+		PIXDE_TTX_i							:  in std_logic;
+		PIXCLKEN_TTX_i						:  in std_logic;
+
 		-- Video out
 		R_o									:	out	std_logic_vector(3 downto 0);
 		G_o									:	out	std_logic_vector(3 downto 0);
-		B_o									:	out	std_logic_vector(3 downto 0)
+		B_o									:	out	std_logic_vector(3 downto 0);
+		PIXDE_o								:  out   std_logic;
+		PIXCLKEN_o							:  out   std_logic
 
 	);
 end fb_HDMI_vidproc;
@@ -130,13 +135,18 @@ begin
 		DI_RAM_1			=> RAM_D1_i,
 		nINVERT			=> nINVERT_i,
 		DISEN				=> DISEN_i,
+		DISEN_U			=> DISEN_U_i,
 		CURSOR			=> CURSOR_i,
 		R_IN				=> R_TTX_i,
 		G_IN				=> G_TTX_i,
 		B_IN				=> B_TTX_i,
+		PIXDE_IN			=> PIXDE_TTX_i,
+		PIXCLKEN_IN		=> PIXCLKEN_TTX_i,
 		R					=> i_R,
 		G					=> i_G,
 		B					=> i_B,
+      PIXCLKEN     	=> PIXCLKEN_o,
+      PIXDE        	=> PIXDE_o,
 
 		VGA				=> '0',
 

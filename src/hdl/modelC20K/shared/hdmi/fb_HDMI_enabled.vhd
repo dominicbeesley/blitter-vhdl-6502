@@ -151,7 +151,9 @@ architecture rtl of fb_hdmi is
 	-- SYNC signals out of CRTC
 	signal i_vsync_CRTC					: std_logic;
 	signal i_hsync_CRTC					: std_logic;
-	signal i_disen_CRTC					: std_logic;
+	signal i_disen_CRTC					: std_logic;			-- disen is  gated by RA (mode 3/6)
+	signal i_disen_CRTC_U				: std_logic;			-- disen not gated by RA (mode 3/6)
+	signal i_disen_VIDPROC				: std_logic;			-- disen not gated by RA (mode 3/6), with vidproc delay
 	signal i_cursor_CRTC					: std_logic;
 
 	signal i_crtc_MA						: std_logic_vector(13 downto 0);
@@ -181,12 +183,15 @@ architecture rtl of fb_hdmi is
 	signal i_TTX							: std_logic;
 
 	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
+	signal i_ttx_pixde					: std_logic;	-- display enable after pass through saa5050
 
 	signal i_pixel_double				: std_logic;
 	signal i_audio_enable				: std_logic;
 	signal r_pix_audio_enable			: std_logic;
 
 	signal i_ttxt_di_clken				: std_logic;
+	signal i_txt_data						: std_logic_vector(6 downto 0);
+	signal i_txt_lose						: std_logic;
 
 	-- extras for ANSI mode
 
@@ -280,7 +285,7 @@ begin
 	VGA_B_o 			<= i_ULA_B;
 	VGA_VS_o 		<= i_vsync_CRTC;
 	VGA_HS_o 		<= i_hsync_CRTC;
-	VGA_BLANK_o 	<= not i_disen_CRTC;
+	VGA_BLANK_o 	<= not i_disen_VIDPROC;
 
 	g_sim_pll:if SIM generate
 
@@ -348,13 +353,18 @@ begin
 		CLKEN_SPR_o			=> i_clken_spr,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
+		DISEN_U_i			=> i_disen_CRTC_U,
 		CURSOR_i				=> i_cursor_CRTC,
 		R_TTX_i				=> i_R_TTX,
 		G_TTX_i				=> i_G_TTX,
 		B_TTX_i				=> i_B_TTX,
+		PIXDE_TTX_i			=> i_ttx_pixde,
+		PIXCLKEN_TTX_i		=> r_ttx_pixel_clken(0),
 		R_o					=> i_ULA_R,
 		G_o					=> i_ULA_G,
 		B_o					=> i_ULA_B,
+		PIXCLKEN_o			=> open, -- TODO: pass on?
+		PIXDE_o				=> i_disen_VIDPROC,
 
 		TTX_o					=> i_TTX,
 
@@ -385,7 +395,7 @@ begin
 		-- Display interface
 		VSYNC_o				=> i_vsync_CRTC,
 		HSYNC_o				=> i_hsync_CRTC,
-		DE_o					=> i_disen_CRTC,
+		DE_o					=> i_disen_CRTC_U,
 		CURSOR_o				=> i_cursor_CRTC,
 		LPSTB_i				=> '0',
 		
@@ -394,6 +404,8 @@ begin
 		RA_o					=> i_crtc_RA
 
 	);
+
+	i_disen_CRTC <= i_disen_CRTC_U and (not i_crtc_RA(3) or i_seq_alphamode);
 
 	p_ttx_px_clk:process(CLK_48M_i)
 	begin
@@ -404,39 +416,50 @@ begin
 
 	e_ttx:entity work.saa5050
 	port map (
-    CLOCK       => CLK_48M_i,
-    -- 6 MHz dot clock enable
-    CLKEN       => r_ttx_pixel_clken(0),
-    -- Async reset
-    nRESET      => not fb_syscon_i.rst,
+   	CLOCK       => CLK_48M_i,
+   	-- 6 MHz dot clock enable
+   	CLKEN       => r_ttx_pixel_clken(0),
+   	-- Async reset
+   	nRESET      => not fb_syscon_i.rst,
 
-    -- Indicates special VGA Mode 7 (720x576p)
-    VGA         => '0',
+   	-- Indicates special VGA Mode 7 (720x576p)
+   	VGA         => '0',
 
-    -- Character data input (in the bus clock domain)
-    DI_CLOCK    => fb_syscon_i.clk,
-    DI_CLKEN    => i_ttxt_di_clken,
-    DI          => i_RAMD_PLANE0(6 downto 0),
+   	-- Character data input (in the bus clock domain)
+   	DI_CLOCK    => fb_syscon_i.clk,
+   	DI_CLKEN    => i_ttxt_di_clken,
+   	DI          => i_txt_data,
 
-    -- Timing inputs
-    -- General line reset (not used)
-    GLR         => not i_hsync_CRTC,
-    -- Data entry window - high during VSYNC.
-    -- Resets ROM row counter and drives 'flash' signal
-    DEW         => i_vsync_CRTC,
-    -- Character rounding select - high during even field
-    CRS         => not i_crtc_RA(0),
-    -- Load output shift register enable - high during active video
-    LOSE        => i_disen_CRTC,
+   	-- Timing inputs
+   	-- General line reset (not used)
+   	GLR         => not i_hsync_CRTC,
+   	-- Data entry window - high during VSYNC.
+   	-- Resets ROM row counter and drives 'flash' signal
+   	DEW         => i_vsync_CRTC,
+   	-- Character rounding select - high during even field
+   	CRS         => not i_crtc_RA(0),
+   	-- Load output shift register enable - high during active video
+   	LOSE        => i_txt_lose,
 
-    -- Video out
-    R           => i_R_TTX,
-    G           => i_G_TTX,
-    B           => i_B_TTX,
-    Y           => open
+   	-- Video out
+   	R           => i_R_TTX,
+   	G           => i_G_TTX,
+   	B           => i_B_TTX,
+   	Y           => open,
+   	PIXDE			=> i_ttx_pixde
 
     );
 
+	 -- IC15 (LS273 latch in front of SAA5050)
+    process(fb_syscon_i)
+    begin
+        if rising_edge(fb_syscon_i.clk) then
+           	if i_ttxt_di_clken = '1' then
+                i_txt_data <= i_RAMD_PLANE0(6 downto 0);
+                i_txt_lose <= i_disen_CRTC_U;
+            end if;
+        end if;
+    end process;
 
 	p_ttx_di:process(fb_syscon_i)
 	variable vr_delay : std_logic_vector(30 downto 0);
@@ -538,7 +561,7 @@ begin
 			-- input signals in the local clock domain
 			VSYNC_CRTC_i	=> i_vsync_CRTC,
 			HSYNC_CRTC_i	=> i_hsync_CRTC,
-			DISEN_CRTC_i	=> i_disen_CRTC,
+			DISEN_CRTC_i	=> i_disen_VIDPROC,
 
 			R_ULA_i			=> i_ULA_R,
 			G_ULA_i			=> i_ULA_G,
@@ -696,7 +719,7 @@ END GENERATE;
 		pixel_clk_i							=> CLK_48M_i,
 		vsync_i								=> i_vsync_CRTC,
 		hsync_i								=> i_hsync_CRTC,
-		disen_i								=> i_disen_CRTC,
+		disen_i								=> i_disen_CRTC_U,
 		pixel_clken_i						=> i_sprite_pixel_cken,
 		
 		-- pixels out

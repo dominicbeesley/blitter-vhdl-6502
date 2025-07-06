@@ -129,19 +129,24 @@ entity vidproc is
 
         -- Control interface
         nINVERT     :   in  std_logic;
-        DISEN       :   in  std_logic;
+        DISEN       :   in  std_logic;                      -- masked by RA(3) for pixel blanking
+        DISEN_U     :   in  std_logic;                      -- unmasked
         CURSOR      :   in  std_logic;
 
         -- Video in (teletext mode)
         R_IN        :   in  std_logic;
         G_IN        :   in  std_logic;
         B_IN        :   in  std_logic;
+        PIXDE_IN    :   in  std_logic;
+        PIXCLKEN_IN :   in  std_logic;
 
         -- Video out
         R           :   out std_logic_vector(3 downto 0);
         G           :   out std_logic_vector(3 downto 0);
         B           :   out std_logic_vector(3 downto 0);
-
+		PIXCLKEN    :   out std_logic;
+        PIXDE       :   out std_logic;                      -- a per-pixel display enable not masked by nula scroll offsets, same delays as pixel data
+        
         -- Model B/C extras
         MODE_ATTR   :   in  std_logic;                    -- when 1 use attributes from RAM_1
         DI_RAM_1    :   in  std_logic_vector(7 downto 0); -- second plane / attributes
@@ -176,6 +181,12 @@ architecture rtl of vidproc is
     signal disen2           :   std_logic; -- needed to pipeline in speccy mode
     signal disenout         :   std_logic;
 
+    signal disen0_u         :   std_logic;
+    signal disen1_u         :   std_logic;
+    signal disen2_u         :   std_logic; -- needed to pipeline in speccy mode
+    signal disenout_u       :   std_logic;
+
+
 -- Internal clock enable generation
     signal modeIs12MHz      :   std_logic;
     signal clken_pixel      :   std_logic;
@@ -199,6 +210,7 @@ architecture rtl of vidproc is
     signal ttxt_R           :   std_logic;
     signal ttxt_G           :   std_logic;
     signal ttxt_B           :   std_logic;
+    signal ttxt_PIXDE       :   std_logic;
 
 -- Pass physical colour to VideoNuLA
     signal phys_col                   : std_logic_vector(3 downto 0);
@@ -208,6 +220,12 @@ architecture rtl of vidproc is
     signal phys_col_delay_mux         : std_logic_vector(31 downto 0);
     signal phys_col_delay_out         : std_logic_vector(3 downto 0);
     signal phys_col_final             : std_logic_vector(3 downto 0);
+
+-- Delay line for DISEN - this is character cell rather than pixel based
+    signal disen_delay_reg            : std_logic_vector(15 downto 0);
+
+    signal invert_delay_reg           : std_logic_vector(7 downto 0);
+    signal invert_final               : std_logic;
 
 -- Attribue bits
     signal mode1                      : std_logic;
@@ -220,7 +238,7 @@ architecture rtl of vidproc is
 -- Additional VideoNuLA registers
     signal nula_palette_mode          : std_logic;
     signal nula_hor_scroll_offset     : std_logic_vector(2 downto 0);
-    signal nula_left_banking_size     : std_logic_vector(3 downto 0);
+    signal nula_left_blanking_size    : std_logic_vector(3 downto 0);
     signal nula_disable_a1            : std_logic;
     signal nula_normal_attr_mode      : std_logic;
     signal nula_text_attr_mode        : std_logic;
@@ -240,6 +258,8 @@ architecture rtl of vidproc is
     signal nula_nreset                 : std_logic := '0';
 
 begin
+
+    PIXCLKEN <= clken_pixel;
 
     -- Original VideoULA Registers
     -- Synchronous register access, enabled on every clock
@@ -299,7 +319,7 @@ begin
                 if nula_nreset = '0' then
                     nula_palette_mode          <= '0';
                     nula_hor_scroll_offset     <= (others => '0');
-                    nula_left_banking_size     <= (others => '0');
+                    nula_left_blanking_size     <= (others => '0');
                     nula_disable_a1            <= '0';
                     nula_reg6                  <= (others => '0');
                     nula_reg7                  <= (others => '0');
@@ -333,7 +353,7 @@ begin
                             when x"2" =>
                                 nula_hor_scroll_offset     <= DI_CPU(2 downto 0);
                             when x"3" =>
-                                nula_left_banking_size     <= DI_CPU(3 downto 0);
+                                nula_left_blanking_size     <= DI_CPU(3 downto 0);
                             when x"4" =>
                                 nula_nreset                <= '0';
                             when x"5" =>
@@ -399,6 +419,7 @@ begin
                     di0 <= DI_RAM_0;
                     di1 <= DI_RAM_1;
                     disen0 <= DISEN;
+                    disen0_u <= DISEN_U;
                     cursor0 <= CURSOR;
                 end if;
             end if;
@@ -601,7 +622,16 @@ begin
         elsif rising_edge(PIXCLK) then
             if clken_load = '1' then
                 -- Display enable signal delayed by one character
-                disen1 <= disen0;
+                if nula_left_blanking_size = "0000" then
+                	disen1 <= disen0;
+                else
+                    -- add left hand blanking
+                    disen1 <= disen0 and disen_delay_reg(to_integer(unsigned(nula_left_blanking_size)) - 1);
+                end if;
+                disen1_u <= disen0_u;
+
+                disen_delay_reg <= disen_delay_reg(disen_delay_reg'high - 1 downto 0) & disen0;
+
                 disen2 <= disen1;
                 if cursor0 = '1' or cursor_active = '1' then
                     -- Latch cursor
@@ -639,10 +669,12 @@ begin
         variable green_val : std_logic;
         variable blue_val : std_logic;
         variable do_flash : std_logic;
+        variable mode16 : std_logic;
     begin
         if nRESET = '0' then
             phys_col <= (others =>'0');
         elsif rising_edge(PIXCLK) then
+            if clken_pixel = '1' then
                 -- Look up dot value in the palette.  Bits are as follows:
                 -- bit 3 - FLASH
                 -- bit 2 - Not BLUE
@@ -681,14 +713,30 @@ begin
                 green_val := (dot_val(3) and do_flash) xor not dot_val(1);
                 blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
 
+                -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
+                -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
+                -- cols=10 and f=1Mhz
+                if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
+                    mode16 := '1';
+                elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
+                    mode16 := '1';
+                elsif nula_reg6 /= "00" then
+                    mode16 := '1';
+                else
+                    mode16 := '0';
+                end if;
+
                 -- Output physical colour, to be used by VideoNuLA
                 if SPR_PX_ACT = '1' then
                     phys_col <= SPR_PX_DAT;
                 elsif nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
                     phys_col <= palette_a;
-                else
+                elsif mode16 = '1' then
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;
+                else
+                    phys_col <= '0' & blue_val & green_val & red_val;
                 end if;
+        	end if;
         end if;
     end process;
 
@@ -700,8 +748,10 @@ begin
                       '0' & B_IN   & G_IN   & R_IN  when VGA         = '0' else
                       '0' & ttxt_B & ttxt_G & ttxt_R;
 
+    invert_final <= invert_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)));
+
     process (PIXCLK)
-        variable invert : std_logic_vector(3 downto 0);
+    variable vr_disen_reg:std_logic;
     begin
         if rising_edge(PIXCLK) then
 
@@ -711,20 +761,35 @@ begin
                 ttxt_R <= R_IN;
                 ttxt_G <= G_IN;
                 ttxt_B <= B_IN;
+                ttxt_PIXDE <= PIXDE_IN;
 
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
-                phys_col_delay_reg <= phys_col_delay_reg(23 downto 0) & phys_col;
+                if r0_crtc_2mhz = '1' or clken_counter(0) = '1' then
+                    phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
+                    invert_delay_reg <= invert_delay_reg(6 downto 0) & cursor_invert;
+                    -- delay disen by one more pixel
+                    disenout <= vr_disen_reg;
+                end if;
+
+                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
-                    disenout <= disen2;
+                    vr_disen_reg := disen2;
                 else
-                    disenout <= disen1;
+                    vr_disen_reg := disen1;
                 end if;
                 if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
-                    nula_RGB <= invert & invert & invert;
+                    nula_RGB <= (others => invert_final);
                 else
-                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor invert)));
+                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
                 end if;
-                invert := (others => cursor_invert);
+
+                if r0_teletext = '0' then
+                    PIXDE <= disen1_u;
+                else
+                    PIXDE <= ttxt_PIXDE;
+                end if;
+
+
             end if;
         end if;
     end process;
