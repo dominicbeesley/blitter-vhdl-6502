@@ -50,8 +50,13 @@ library work;
 use work.firmware_info_pack.all;
 
 package board_config_pack is
-		
-	constant G_IORB_BLOCK		: boolean := false;
+	
+--  ______    ______   ______   __   __
+-- /______\  |______\ /______\ |__|_/__/
+--(____(___   /_____/(_______) |__|___|
+-- \______/  |______| \______/ |__| \__\
+
+	constant G_IORB_BLOCK		: boolean := true;
 
    constant G_1BIT_DAC_VIDEO  : boolean := true;
 
