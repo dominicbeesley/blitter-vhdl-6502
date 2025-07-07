@@ -144,8 +144,7 @@ begin
    e_dut:entity work.C20K
    generic map (
       SIM                           => true,
-      CLOCKSPEED                    => 128,
-      G_1BIT_DAC_VIDEO              => false
+      CLOCKSPEED                    => 128
    )
    port map (
 
@@ -155,7 +154,7 @@ begin
       clk_ext_pal_i        => '1',
 
 
-      ddr_addr_o           => open,
+      --ddr_addr_o           => open,
       ddr_bank_o           => open,
       ddr_cas_o            => open,
       ddr_ck_o             => open,
