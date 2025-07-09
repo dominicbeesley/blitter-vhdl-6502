@@ -135,7 +135,8 @@ entity fb_SYS_c20k is
 
       -- emulated / synthesized beeb signals
       beeb_ic32_o                      : out    std_logic_vector(7 downto 0);
-      c20k_latch_o                     : out    std_logic_vector(7 downto 0) 
+      c20k_latch_o                     : out    std_logic_vector(7 downto 0);
+      psg_audio_o                      : out    signed(13 downto 0)
 
    );
 end fb_SYS_c20k;
@@ -243,7 +244,7 @@ architecture rtl of fb_SYS_c20k is
 
    signal   ip_VID_CS         : std_logic;
 
-
+   signal   i_psg_audio_u     : unsigned(13 downto 0);
 
 begin
 
@@ -701,5 +702,25 @@ begin
          end if;
       end if;
    end process;
+
+
+   --------------------------------------------------------
+   -- SN76489 Sound Generator
+   --------------------------------------------------------
+
+   sound : entity work.sn76489_audio
+   port  map (
+      clk_i => fb_syscon_i.clk,
+      en_clk_psg_i => i_MHz4_clken,
+      reset_n_i => not i_reset_hard,
+      data_i => i_sysvia_PA_o,
+      wr_n_i => i_beeb_ic32(0),
+      ce_n_i => '0',
+      mix_audio_o => open,
+      pcm14s_o => i_psg_audio_u,
+      strobe_o => open
+   );   
+
+   psg_audio_o <= signed(i_psg_audio_u);
 
 end rtl;

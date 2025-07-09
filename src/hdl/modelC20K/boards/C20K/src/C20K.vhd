@@ -311,8 +311,7 @@ architecture rtl of C20K is
 
 	signal i_clk_snd						: std_logic := '0';					-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
-
+	
 	-----------------------------------------------------------------------------
 	-- cpu control signals
 	-----------------------------------------------------------------------------
@@ -408,7 +407,9 @@ architecture rtl of C20K is
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
    signal i_c20k_latch     : std_logic_vector(7 downto 0);
-
+   signal i_psg_audio      : signed(13 downto 0);
+   signal r_dac_sample     : signed(10 downto 0);
+   signal i_paula_sample   : signed(9 downto 0);
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -580,40 +581,47 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-		snd_dat_o		=> i_dac_sample,
+		snd_dat_o		=> i_paula_sample,
 		snd_dat_change_clken_o => open
 
 	);
 
-	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-	G_SND_DAC:IF G_INCL_CS_SND GENERATE
-
-		e_dac_snd: entity work.dac_1bit 
-		generic map (
-			G_SAMPLE_SIZE		=> 10,
-			G_SYNC_DEPTH		=> 0
-		)
-   	port map (
-			rst_i					=> i_fb_syscon.rst,
-			clk_dac				=> i_fb_syscon.clk,
-
-			sample				=> i_dac_sample,
-		
-			bitstream			=> i_dac_snd_pwm
-		);
-	END GENERATE;
-	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
-		i_dac_snd_pwm <= '0';
-	END GENERATE;
 
 END GENERATE;
 GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_chipset_cpu_halt <= '0';
 	i_chipset_cpu_int <= '0';
-	i_dac_snd_pwm <= '0';
+	i_paula_sample <= (others => '0');
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
 END GENERATE;
+
+   p_reg_snd:process(i_fb_syscon)
+   begin 
+      if rising_edge(i_fb_syscon.clk) then
+         r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+      end if;
+   end process;
+
+
+   --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
+   G_SND_DAC:IF G_INCL_CS_SND GENERATE
+
+      e_dac_snd: entity work.dac_1bit 
+      generic map (
+         G_SAMPLE_SIZE     => 11,
+         G_SYNC_DEPTH      => 0
+      )
+      port map (
+         rst_i             => i_fb_syscon.rst,
+         clk_dac           => i_fb_syscon.clk,
+
+         sample            => r_dac_sample,
+      
+         bitstream         => i_dac_snd_pwm
+      );
+   END GENERATE;
+
 
 	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
 	aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
@@ -775,7 +783,8 @@ END GENERATE;
 
       -- emulated / synthesized beeb signals
       beeb_ic32_o                   => i_beeb_ic32,
-      c20k_latch_o                  => i_c20k_latch		
+      c20k_latch_o                  => i_c20k_latch,
+      psg_audio_o                   => i_psg_audio
    );
    
 
@@ -1028,7 +1037,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> i_dac_sample,
+		PCM_L_i				=> r_dac_sample(10 downto 1),
 
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,

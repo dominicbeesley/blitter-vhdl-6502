@@ -79,6 +79,7 @@
 
 
         <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/sn76489.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
 
