@@ -70,7 +70,10 @@ port (
 	-- Memory interface
 	MA			:	out	std_logic_vector(13 downto 0);
     RA        : out std_logic_vector(4 downto 0);
-    test      : out std_logic_vector(3 downto 0)
+    test      : out std_logic_vector(3 downto 0);
+
+    -- DB extra
+    ILACE       : out std_logic
 	);
 end entity;
 
@@ -156,6 +159,8 @@ signal r00_h_total_hit        : std_logic;
 signal max_scanline_hit       : std_logic;
 
 begin
+
+    ILACE <= interlaced_video;
 
     -- ===========================================================================
     --

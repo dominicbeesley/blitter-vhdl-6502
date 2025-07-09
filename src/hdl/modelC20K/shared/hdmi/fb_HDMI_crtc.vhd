@@ -49,7 +49,9 @@ entity fb_HDMI_crtc is
 		
 		-- Memory interface
 		MA_o									:	out	std_logic_vector(13 downto 0);
-		RA_o									:	out	std_logic_vector(4 downto 0)
+		RA_o									:	out	std_logic_vector(4 downto 0);
+
+		ILACE_o								:  out	std_logic
 
 	);
 end fb_HDMI_crtc;
@@ -93,7 +95,9 @@ begin
 		MA			=> MA_o,
 		RA			=> RA_o,
 
-		VGA		=> '0'
+		VGA		=> '0',
+
+		ILACE		=> ILACE_o
 	);
 
 

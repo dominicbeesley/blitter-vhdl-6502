@@ -176,6 +176,7 @@ architecture rtl of fb_hdmi is
 	signal i_audio							: std_logic_vector(15 downto 0);
 
 	signal i_avi							: std_logic_vector(111 downto 0);
+	signal i_ILACE							: std_logic;
 
 	signal i_R_TTX							: std_logic;
 	signal i_G_TTX							: std_logic;
@@ -401,7 +402,9 @@ begin
 		
 		-- Memory interface
 		MA_o					=> i_crtc_MA,
-		RA_o					=> i_crtc_RA
+		RA_o					=> i_crtc_RA,
+
+		ILACE_O				=> i_ILACE
 
 	);
 
@@ -505,7 +508,9 @@ begin
 	
 		avi_o				=> i_avi,
 		audio_enable_o => i_audio_enable,
-		pixel_double_o	=> i_pixel_double
+		pixel_double_o	=> i_pixel_double,
+
+		ilace_i			=> i_ILACE
 	
 	);
 
@@ -603,6 +608,13 @@ G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 	end process;
 
 	e_spirkov:hdmi
+	generic map (
+      FREQ	=> 54000000,              -- pixel clock frequency
+      FS		=> 48000,                   -- audio sample rate - should be 32000, 44100 or 48000
+      CTS	=> 54000,                  -- CTS = Freq(pixclk) * N / (128 * Fs)
+      N		=> 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
+                          -- Check HDMI spec 7.2 for details
+	)
 	port map (
 		I_CLK_PIXEL => i_clk_hdmi_pixel,
 		I_R => i_R_DVI,

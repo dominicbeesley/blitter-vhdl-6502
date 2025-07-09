@@ -27,6 +27,9 @@ use work.common.all;
 
 
 entity dvi_synchro is
+	generic (
+		G_SHOWMARGIN : boolean := false
+		);
 	port (
 
 		fb_syscon_i					: in	fb_syscon_t;
@@ -294,10 +297,16 @@ begin
 					else					
 						r_linebuf_ctr_dvi <= to_unsigned(C_BUFMAX, r_linebuf_ctr_dvi'LENGTH);
 					end if;
-
-					R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
-					G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
-					B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+					
+					if G_SHOWMARGIN then
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+					else
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+					end if;
 				else
 					if r_linebuf_ctr_dvi < r_linebuf_ctr_dvi_max then
 						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(11 downto 8)))),8));						
@@ -306,9 +315,15 @@ begin
 
 						r_linebuf_ctr_dvi <= r_linebuf_ctr_dvi + 1;
 					else
-						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(10),8));
-						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
-						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(7),8));				
+						if G_SHOWMARGIN then
+							R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(10),8));
+							G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+							B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(7),8));				
+						else
+							R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+							G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+							B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						end if;
 					end if;
 				end if;
 			end if;
