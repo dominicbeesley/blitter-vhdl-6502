@@ -1191,9 +1191,9 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
 
-   p_chrom_s2u:process(i_clk_chroma_x4_jitter)
+   p_chrom_s2u:process(i_clk_pll_48M)
    begin
-      if rising_edge(i_clk_chroma_x4_jitter) then
+      if rising_edge(i_clk_pll_48M) then
          r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
       end if;
    end process;
@@ -1209,10 +1209,10 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 ---      bitstream_o       => vid_chroma_o
 ---   );
 
-   e_chroma_dac:entity work.dac1_oser
+   e_mono_dac_chr:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_chroma_x4_jitter,
+      clk_sample_i      => i_clk_pll_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => r2_vid_chroma(4 downto 1),
