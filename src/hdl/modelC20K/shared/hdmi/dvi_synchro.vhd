@@ -32,12 +32,12 @@ entity dvi_synchro is
 		);
 	port (
 
-		fb_syscon_i					: in	fb_syscon_t;
 
 		pixel_double_i				: in 	std_logic;
 
 		-- input signals in the local clock domain
 		CLK_48M_i					: in 	std_logic;
+		RESET_48M_i					: in  std_logic;
 		VSYNC_CRTC_i				: in	std_logic;
 		HSYNC_CRTC_i				: in	std_logic;
 		DISEN_CRTC_i				: in	std_logic;
@@ -201,9 +201,9 @@ begin
 								 '0';
 			
 
-	p_reg_pix_ula:process(CLK_48M_i, fb_syscon_i)
+	p_reg_pix_ula:process(CLK_48M_i, RESET_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_linebuf_ctr_ula <= (others => '0');
 			r_linebuf_ctr_ula_max <= (others => '0');
 		elsif rising_edge(CLK_48M_i) then
@@ -237,9 +237,9 @@ begin
 
 	end process;
 
-	p_reg_syncs_crtc:process(fb_syscon_i, CLK_48M_i)
+	p_reg_syncs_crtc:process(RESET_48M_i, CLK_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_hsync_prev_crtc <= '0';
 			r_hsync_lead_crtc <= (others => '0');
 			r_vsync_prev_crtc <= '0';
@@ -266,10 +266,10 @@ begin
 	end process;
 
 
-	p_reg_syncs_dvi:process(fb_syscon_i, clk_pixel_dvi)
+	p_reg_syncs_dvi:process(RESET_48M_i, clk_pixel_dvi)
 	begin
 
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_hsync_lead_ack <= '0';
 			r_hsync_lead_pulse <= '0';
 			r_vsync_lead_ack <= '0';

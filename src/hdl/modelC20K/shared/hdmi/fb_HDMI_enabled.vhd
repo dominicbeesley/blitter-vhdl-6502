@@ -140,8 +140,9 @@ architecture rtl of fb_hdmi is
 	signal i_RAMD_PLANE0					: std_logic_vector(7 downto 0);
 	signal i_RAMD_PLANE1					: std_logic_vector(7 downto 0);
 
-	signal i_clken_crtc					: std_logic;
-	signal i_clken_spr					: std_logic;
+	signal i_clken48_crtc				: std_logic;
+	signal i_clken48_spr					: std_logic;
+	signal i_reset48						: std_logic;
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(3 downto 0);
@@ -190,14 +191,18 @@ architecture rtl of fb_hdmi is
 	signal i_audio_enable				: std_logic;
 	signal r_pix_audio_enable			: std_logic;
 
-	signal i_ttxt_di_clken				: std_logic;
 	signal i_txt_data						: std_logic_vector(6 downto 0);
 	signal i_txt_lose						: std_logic;
+	signal i_ttxt_di_clken				: std_logic;
 
 	-- extras for ANSI mode
 
 	signal i_seq_alphamode				: std_logic;
 	signal i_seq_alphaaddrfontA		: std_logic_vector(7 downto 0);
+	signal r_seq_alphamode48			: std_logic;
+	signal r_seq_alphaaddrfontA48		: std_logic_vector(7 downto 0);
+
+	signal r_scroll_latch_c_48			: std_logic_vector(1 downto 0);
 
 
 	-- sprites
@@ -348,10 +353,13 @@ begin
 		fb_c2p_i				=> i_vidproc_fb_m2s,
 		fb_p2c_o				=> i_vidproc_fb_s2m,
 
+		-- fishbone to 48m timing signals
+		reset48_o			=> i_reset48,
+
 		CLK_48M_i			=> CLK_48M_i,
 
-		CLKEN_CRTC_o		=> i_clken_crtc,
-		CLKEN_SPR_o			=> i_clken_spr,
+		CLKEN_CRTC_o		=> i_clken48_crtc,
+		CLKEN_SPR_o			=> i_clken48_spr,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
 		DISEN_U_i			=> i_disen_CRTC_U,
@@ -370,7 +378,7 @@ begin
 		TTX_o					=> i_TTX,
 
 		-- model B/C extras
-	   MODE_ATTR_i 		=> i_seq_alphamode,
+	   MODE_ATTR_i 		=> r_seq_alphamode48,
 		RAM_D0_i				=> i_RAMD_PLANE0,
 		RAM_D1_i				=> i_RAMD_PLANE1,
 		
@@ -391,9 +399,14 @@ begin
 		fb_syscon_i			=> fb_syscon_i,
 		fb_c2p_i				=> i_crtc_fb_m2s,
 		fb_p2c_o				=> i_crtc_fb_s2m,
-		CLKEN_CRTC_i		=> i_clken_crtc,
+
+		clock_48_i			=> CLK_48M_i,
 		
+		-- fishbone to 48m timing signals
+		reset48_i			=> i_reset48,
+
 		-- Display interface
+		CLKEN_CRTC_i		=> i_clken48_crtc,
 		VSYNC_o				=> i_vsync_CRTC,
 		HSYNC_o				=> i_hsync_CRTC,
 		DE_o					=> i_disen_CRTC_U,
@@ -408,7 +421,7 @@ begin
 
 	);
 
-	i_disen_CRTC <= i_disen_CRTC_U and (not i_crtc_RA(3) or i_seq_alphamode);
+	i_disen_CRTC <= i_disen_CRTC_U and (not i_crtc_RA(3) or r_seq_alphamode48);
 
 	p_ttx_px_clk:process(CLK_48M_i)
 	begin
@@ -429,7 +442,7 @@ begin
    	VGA         => '0',
 
    	-- Character data input (in the bus clock domain)
-   	DI_CLOCK    => fb_syscon_i.clk,
+   	DI_CLOCK    => CLK_48M_i,
    	DI_CLKEN    => i_ttxt_di_clken,
    	DI          => i_txt_data,
 
@@ -454,28 +467,19 @@ begin
     );
 
 	 -- IC15 (LS273 latch in front of SAA5050)
-    process(fb_syscon_i)
+    process(CLK_48M_i)
     begin
-        if rising_edge(fb_syscon_i.clk) then
-           	if i_ttxt_di_clken = '1' then
+        if rising_edge(CLK_48M_i) then
+
+            i_ttxt_di_clken <= '0';
+           	if i_clken48_crtc = '1' then
                 i_txt_data <= i_RAMD_PLANE0(6 downto 0);
                 i_txt_lose <= i_disen_CRTC_U;
+                i_ttxt_di_clken <= '1';
             end if;
         end if;
     end process;
 
-	p_ttx_di:process(fb_syscon_i)
-	variable vr_delay : std_logic_vector(30 downto 0);
-	begin
-		if fb_syscon_i.rst = '1' then
-			vr_delay := (others => '0');
-			i_ttxt_di_clken <= '0';
-		elsif rising_edge(fb_syscon_i.clk) then
-			i_ttxt_di_clken <= vr_delay(vr_delay'high);
-			vr_delay(vr_delay'high downto 1) := vr_delay(vr_delay'high-1 downto 0);
-			vr_delay(0) := i_clken_crtc;
-		end if;
-	end process;
 
 
 	e_hdmi_ram:entity work.fb_HDMI_ram
@@ -490,7 +494,7 @@ begin
 	
 		-- vga signals
 	
-		hdmi_ram_clk_i		=> fb_syscon_i.clk,
+		hdmi_ram_clk_i		=> CLK_48M_i,
 		hdmi_ram_addr_i	=> i_VIDRAM_A,
 		hdmi_ram_Q_o		=> i_VIDRAM_Q
 	
@@ -527,6 +531,15 @@ begin
 		addr_alpha_fontA	=> i_seq_alphaaddrfontA
 	);
 
+	p_seq_ctl_48:process(clk_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then		
+
+			r_seq_alphamode48 <= i_seq_alphamode;
+			r_seq_alphaaddrfontA48 <= i_seq_alphaaddrfontA;
+		
+		end if;
+	end process;
 
 
 	e_fb_i2c:entity work.fb_i2c
@@ -559,7 +572,7 @@ begin
 		e_synch:entity work.dvi_synchro
 		port map (
 
-			fb_syscon_i		=> fb_syscon_i,
+			RESET_48M_i		=> i_reset48,
 			CLK_48M_i		=> CLK_48M_i,
 			pixel_double_i => i_pixel_double,
 
@@ -594,7 +607,7 @@ begin
 		);
 	end generate;
 
-	debug_spr_mem_clken_o <= i_clken_spr;
+	debug_spr_mem_clken_o <= i_clken48_spr;
 
 G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 
@@ -666,18 +679,18 @@ END GENERATE;
 		G_N_SPRITES => G_N_SPRITES
 		)
 	port map (
-		rst_i						=> fb_syscon_i.rst,
-		clk_i						=> fb_syscon_i.clk,
+		rst_i						=> i_reset48,
+		clk_i						=> CLK_48M_i,
 
-		scroll_latch_c_i		=> scroll_latch_c_i,
+		scroll_latch_c_i		=> r_scroll_latch_c_48,
 		ttxmode_i				=> i_TTX,
 
-		crtc_mem_clken_i		=> i_clken_spr,
+		crtc_mem_clken_i		=> i_clken48_spr,
 		crtc_MA_i				=> i_crtc_MA,
 		crtc_RA_i				=> i_crtc_RA,
 
-		SEQ_alphamode_i		=> i_seq_alphamode,
-		SEQ_font_addr_A   	=> i_seq_alphaaddrfontA,
+		SEQ_alphamode_i		=> r_seq_alphamode48,
+		SEQ_font_addr_A   	=> r_seq_alphaaddrfontA48,
 
 		SEQ_SPR_DATA_req_i	=> i_SEQ_SPR_DATA_req,
 		SEQ_SPR_DATAPTR_A_i	=> i_SEQ_SPR_DATAPTR_A,
@@ -695,6 +708,13 @@ END GENERATE;
 		RAMD_PLANE1_o			=> i_RAMD_PLANE1
 
 	);
+
+p_reg_48:process(clk_48M_i)
+begin
+	if rising_edge(CLK_48M_i) then
+		r_scroll_latch_c_48 <= scroll_latch_c_i;
+	end if;
+end process;
 
 
 --====================================================================
@@ -714,6 +734,10 @@ END GENERATE;
 		fb_c2p_i								=> i_sprites_fb_c2p,
 		fb_p2c_o								=> i_sprites_fb_p2c,
 
+		-- clock in for all non regs, should be a multiple of pixel rate and < 2*fb clock (i.e. 48 vs 128 is enough)
+		clk_48M_i							=> CLK_48M_i,
+		reset48_i							=> i_reset48,
+
 		-- data interface, from sequencer
 		SEQ_D_i								=> i_SEQ_SPR_D,
 		SEQ_wren_i							=> i_SEQ_SPR_wren,
@@ -728,7 +752,6 @@ END GENERATE;
 
 		-- vidproc / crtc signals in
 
-		pixel_clk_i							=> CLK_48M_i,
 		vsync_i								=> i_vsync_CRTC,
 		hsync_i								=> i_hsync_CRTC,
 		disen_i								=> i_disen_CRTC_U,

@@ -36,8 +36,12 @@ entity fb_HDMI_crtc is
 		fb_syscon_i							: in		fb_syscon_t;
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
+
+		-- fishbone to 48m timing signals
+		reset48_i							: in     std_logic;
 	
 		-- Clock enable output to CRTC
+		CLOCK_48_i							:  in    std_logic;
 		CLKEN_CRTC_i						:	in		std_logic;
 		
 		-- Display interface
@@ -62,27 +66,34 @@ architecture rtl of fb_HDMI_crtc is
 	signal	r_per_state : t_per_state;
 
 	-- FISHBONE wrapper signals
-	signal	r_mc6845_en		: std_logic;
 	signal	r_mc6845_rnw	: std_logic;
 	signal	r_ack				: std_logic;
 	signal	r_A				: std_logic;
 	signal	r_D_wr			: std_logic_vector(7 downto 0);
 
+	signal	r_vid_fb_req		: std_logic;
+	signal   r_vid_48_ack   	: std_logic;
+	signal   r_vid_48_clken		: std_logic;
+	signal   r_vid_rd48_clken	: std_logic;
+	signal	r_A_48				: std_logic;
+	signal	r_D_wr_48			: std_logic_vector(7 downto 0);
+	signal   i_d_rd_48			: std_logic_vector(7 downto 0);
+
 begin
 
 	e_crtc:entity work.mc6845
 	port map (
-		CLOCK		=> fb_syscon_i.clk,
-		CLKEN		=> CLKEN_CRTC_i,
-		CLKEN_CPU	=> r_mc6845_en,
-		nRESET		=> not fb_syscon_i.rst,
+		CLOCK			=> CLOCK_48_i,
+		CLKEN			=> CLKEN_CRTC_i,
+		CLKEN_CPU	=> '1',
+		nRESET		=> not reset48_i,
 
 		-- Bus interface
-		ENABLE		=> r_mc6845_en,
+		ENABLE	=> r_vid_48_clken,
 		R_nW		=> r_mc6845_rnw,
-		RS			=> r_A,
-		DI			=> r_d_wr,
-		DO			=> fb_p2c_o.D_rd,
+		RS			=> r_A_48,
+		DI			=> r_d_wr_48,
+		DO			=> i_d_rd_48,
 
 		-- Display interface
 		VSYNC		=> VSYNC_o,
@@ -107,6 +118,23 @@ begin
 	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
+	p_req_ack:process(reset48_i, CLOCK_48_i)
+	begin
+		if reset48_i = '1' then
+			r_vid_48_ack <= '0';
+			r_vid_48_clken <= '0';
+			r_vid_rd48_clken <= '0';
+		elsif rising_edge(CLOCK_48_i) then
+			r_vid_48_clken <= '0';
+			r_vid_rd48_clken <= r_vid_48_clken;
+			if r_vid_fb_req /= r_vid_48_ack then
+				r_vid_48_clken <= '1';
+				r_vid_48_ack <= r_vid_fb_req;
+				r_A_48 <= r_A;
+				r_D_wr_48 <= r_D_wr;
+			end if;
+		end if;
+	end process;
 
 
 	p_per_state:process(fb_syscon_i)
@@ -114,13 +142,12 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
 			r_ack <= '0';
-			r_mc6845_en <= '0';
 			r_mc6845_rnw <= '1';
 			r_A <= '0';
 			r_d_wr <= (others => '0');
+			r_vid_fb_req <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_ack <= '0';
-			r_mc6845_en <= '0';
 			case r_per_state is
 				when idle =>
 					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
@@ -129,33 +156,35 @@ begin
 						if fb_c2p_i.we = '1' then
 							if fb_c2p_i.D_wr_stb = '1' then
 								r_d_wr <= fb_c2p_i.D_Wr;
-								r_mc6845_en <= '1';
-								r_ack <= '1';
 								r_per_state <= idle;
+								r_vid_fb_req <= not r_vid_48_ack;
+								r_ack <= '1';
 							else
 								r_per_state <= wait_d_stb;
 							end if;
 						else
-							r_mc6845_en <= '1';
 							r_per_state <= rd;
+							r_vid_fb_req <= not r_vid_48_ack;
 						end if;
 					end if;
 				when wait_d_stb =>
 					if fb_c2p_i.D_wr_stb = '1' then
 						r_d_wr <= fb_c2p_i.D_Wr;
-						r_mc6845_en <= '1';
-						r_ack <= '1';
 						r_per_state <= idle;
+						r_vid_fb_req <= not r_vid_48_ack;
+						r_ack <= '1';
 					else
 						r_per_state <= wait_d_stb;
 					end if;
 				when rd =>
-					r_ack <= '1';
-					r_per_state <= idle;
+					if r_vid_rd48_clken = '1' then
+						fb_p2c_o.D_rd <= i_d_rd_48;
+						r_ack <= '1';
+						r_per_state <= idle;
+					end if;
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';
-					r_mc6845_en <= '0';
 					r_mc6845_rnw <= '1';
 			end case;
 		end if;

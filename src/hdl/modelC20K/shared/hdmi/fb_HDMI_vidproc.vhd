@@ -7,12 +7,12 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for the blitter/cpu board's secondary screen VIDPROC
+-- Description: 		A fishbone wrapper for the C20K/blitter/cpu board's secondary screen VIDPROC
 -- Dependencies: 
 --
 -- Revision: 
 -- Additional Comments: 
---
+--							Fishbone bus clock is assumed to be at least 2x the 48M clock
 ----------------------------------------------------------------------------------
 
 --TODO: lose latched D - not really much point?
@@ -39,7 +39,10 @@ entity fb_HDMI_vidproc is
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 
-		
+		-- fishbone to 48m timing signals
+		reset48_o							: out    std_logic;
+
+		-- rest of signals are in the 48M domain
 		CLK_48M_i							: in 		std_logic;
 
 		-- Clock enable output to CRTC
@@ -100,15 +103,28 @@ architecture rtl of fb_HDMI_vidproc is
 	signal r_ack							: std_logic;
 
 	-- VIDPROC generated signals
-	signal	r_CLKEN16_DIV	: std_logic_vector(2 downto 0);
-	signal	r_CLKEN16		: std_logic;
+	signal	r_CLKEN16_DIV				: unsigned(1 downto 0);
+	signal	r_CLKEN16					: std_logic;
 
-	signal 	i_R				: std_logic_vector(3 downto 0);
-	signal 	i_G				: std_logic_vector(3 downto 0);
-	signal 	i_B				: std_logic_vector(3 downto 0);
+	signal 	i_R							: std_logic_vector(3 downto 0);
+	signal 	i_G							: std_logic_vector(3 downto 0);
+	signal 	i_B							: std_logic_vector(3 downto 0);
+
+	signal	r_vid_wrfb_req				: std_logic;
+	signal   r_vid_wr48_ack   			: std_logic;
+	signal   r_vid_wr48_clken			: std_logic;
+
+	signal   r_reset_48					: std_logic;
+	signal   r_reset_48_0				: std_logic;
+
+	signal r_A_48							: std_logic_vector(1 downto 0);
+	signal r_d_wr_48						: std_logic_vector(7 downto 0);
+
 
 begin
 	
+	reset48_o <= r_reset_48;
+
 	R_o <= i_R;
 	G_o <= i_G;
 	B_o <= i_B;
@@ -119,18 +135,18 @@ begin
 		PIXCLK			=> CLK_48M_i,
 
 
-		CLOCK				=> fb_syscon_i.clk,
-		CLKEN				=> r_CLKEN16,				-- TODO? 2MHz?
+		CLOCK				=> CLK_48M_i,
+		CLKEN				=> r_CLKEN16,				
 
-		nRESET			=> not fb_syscon_i.rst,
+		nRESET			=> not r_reset_48,
 		
 		CLKEN_CRTC		=> CLKEN_CRTC_o,
 		CLKEN_SPR		=> CLKEN_SPR_o,
 		
 		CPUCLKEN			=> '1',
-		ENABLE			=> r_d_wr_stb,
-		A					=> r_A,
-		DI_CPU			=> r_d_wr,
+		ENABLE			=> r_vid_wr48_clken,
+		A					=> r_A_48,
+		DI_CPU			=> r_d_wr_48,
 		DI_RAM_0			=> RAM_D0_i,
 		DI_RAM_1			=> RAM_D1_i,
 		nINVERT			=> nINVERT_i,
@@ -158,19 +174,44 @@ begin
 		SPR_PX_DAT		=> SPR_PX_DAT
 	);
 
+	p_rst_48:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			r_reset_48_0 <= fb_syscon_i.rst;
+			r_reset_48 <= r_reset_48_0;
+		end if;
+	end process;
+
+	p_req_ack:process(r_reset_48, CLK_48M_i)
+	begin
+		if r_reset_48 = '1' then
+			r_vid_wr48_ack <= '0';
+			r_vid_wr48_clken <= '0';
+		elsif rising_edge(CLK_48M_i) then
+			r_vid_wr48_clken <= '0';
+			if r_vid_wrfb_req /= r_vid_wr48_ack then
+				r_A_48 <= r_A;
+				r_d_wr_48 <= r_d_wr;
+				r_vid_wr48_clken <= '1';
+				r_vid_wr48_ack <= r_vid_wrfb_req;
+			end if;
+		end if;
+	end process;
+	
 
 	--register reset
-	--divide down by 2 clock32 for clken
-	p_reg32:process(fb_syscon_i)
+	--divide down by 3 48 -> 16 MHz
+	p_reg32:process(r_reset_48, CLK_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
+		if r_reset_48 = '1' then
 			r_CLKEN16_DIV <= (others => '0');
-		elsif rising_edge(fb_syscon_i.clk) then
-			r_CLKEN16_DIV <= std_logic_vector(unsigned(r_CLKEN16_DIV) + 1);
-			if or_reduce(r_CLKEN16_DIV) = '0' then
+			r_CLKEN16 <= '0';
+		elsif rising_edge(CLK_48M_i) then
+			r_CLKEN16 <= '0';
+			r_CLKEN16_DIV <= r_CLKEN16_DIV + 1;
+			if r_CLKEN16_DIV = "10" then
 				r_CLKEN16 <= '1';
-			else
-				r_CLKEN16 <= '0';
+				r_CLKEN16_DIV <= (others => '0');
 			end if;
 		end if;
 	end process;
@@ -192,6 +233,7 @@ begin
 			r_d_wr_stb <= '0';
 			r_d_wr <= (others => '0');
 			r_A <= (others => '0');
+			r_vid_wrfb_req <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_ack <= '0';
 			r_d_wr_stb <= '0';
@@ -203,8 +245,9 @@ begin
 							if fb_c2p_i.D_wr_stb = '1' then
 								r_d_wr_stb <= '1';
 								r_d_wr <= fb_c2p_i.d_wr;
-								r_ack <= '1';
 								r_per_state <= idle;
+								r_vid_wrfb_req <= not r_vid_wr48_ack;
+								r_ack <= '1';
 							else
 								r_per_state <= wait_d_stb;
 							end if;
@@ -216,8 +259,9 @@ begin
 					if fb_c2p_i.D_wr_stb = '1' then
 						r_d_wr_stb <= '1';
 						r_d_wr <= fb_c2p_i.d_wr;
-						r_ack <= '1';
 						r_per_state <= idle;
+						r_vid_wrfb_req <= not r_vid_wr48_ack;
+						r_ack <= '1';
 					else
 						r_per_state <= wait_d_stb;
 					end if;
@@ -227,6 +271,7 @@ begin
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';
+					r_vid_wrfb_req <= '0';
 			end case;
 		end if;
 	end process;

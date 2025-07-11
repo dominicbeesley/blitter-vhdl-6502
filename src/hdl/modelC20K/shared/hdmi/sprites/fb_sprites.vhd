@@ -38,6 +38,10 @@ entity fb_sprites is
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 
+		-- clock in for all non regs, should be a multiple of pixel rate and < 2*fb clock (i.e. 48 vs 128 is enough)
+		clk_48M_i							: in		std_logic;							-- clock in video domain (48MHz)
+		reset48_i							: in     std_logic;							-- reset in video domain
+
 		-- data interface, from sequencer
 		SEQ_D_i								: in	std_logic_vector(7 downto 0);
 		SEQ_wren_i							: in	std_logic;
@@ -51,7 +55,6 @@ entity fb_sprites is
 
 		-- vidproc / crtc signals in
 
-		pixel_clk_i							: in		std_logic;							-- clock in video domain (48MHz)
 		pixel_clken_i						: in		std_logic;							-- 8MHz@64uS line (512 per line) pixel clock should be aligned with fb clock
 		vsync_i								: in		std_logic;
 		hsync_i								: in		std_logic;
@@ -73,23 +76,29 @@ architecture rtl of fb_sprites is
 
 	constant C_A_SIZE						: natural := numbits(G_N_SPRITES) + 4;
 
+	-- fishbone signals
 	signal r_A								: std_logic_vector(C_A_SIZE-1 downto 0);
 	signal r_d_wr							: std_logic_vector(7 downto 0);
 	signal r_d_wr_stb						: std_logic;
 	signal r_ack							: std_logic;
-
-	signal i_cpu_D_o						: std_logic_vector(7 downto 0);
-
-	signal i_wr_ack						: std_logic;
-
+	signal r_req							: std_logic;
 	signal i_rd_D_local					: std_logic_vector(7 downto 0);
 	signal r_local							: std_logic;
+	signal i_cpu_D_o						: std_logic_vector(7 downto 0);
+
+
+	-- pixel clock cpu access signals
+	signal r_d_wr_48						: std_logic_vector(7 downto 0);
+	signal r_d_rd_req_48					: std_logic;
+	signal r_d_wr_req_48					: std_logic;
+	signal i_wr_ack_48					: std_logic;
+	signal i_rd_ack_48					: std_logic;
+	signal r_A_48							: std_logic_vector(C_A_SIZE-1 downto 0);
+
 
 	signal i_horz_ctr						: unsigned(8 downto 0);
 	signal i_vert_ctr						: unsigned(8 downto 0);
 
-	signal r_d_rd_req						: std_logic;
-	signal i_rd_ack						: std_logic;
 
 begin
 
@@ -101,27 +110,43 @@ begin
 					(others => '1');
 
 
-		-- FISHBONE wrapper for CPU/DMA access
+	-- FISHBONE wrapper for CPU/DMA access
 	fb_p2c_o.ack <= r_ack;
 	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
+
+	p_req_ack:process(reset48_i, clk_48M_i)
+	begin
+		if reset48_i = '1' then
+			r_d_rd_req_48 <= '0';
+			r_d_wr_req_48 <= '0';
+			r_d_wr_48 <= (others => '0');
+			r_A_48 <= (others => '0');
+		elsif rising_edge(clk_48M_i) then
+			r_d_rd_req_48 <= r_req and not r_d_wr_stb;
+			r_d_wr_req_48 <= r_req and r_d_wr_stb;
+			r_d_wr_48 <= r_d_wr;
+			r_A_48 <= r_A;
+		end if;
+	end process;
+
 
 	p_per_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
 			r_ack <= '0';
+			r_req <= '0';
 			r_d_wr_stb <= '0';
 			r_d_wr <= (others => '0');
 			r_A <= (others => '0');
-			r_d_rd_req <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_ack <= '0';
-			r_d_rd_req <= '0';
 			case r_per_state is
 				when idle =>
+					r_req <= '0';
 					r_d_wr_stb <= '0';
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
+					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' and i_rd_ack_48 = '0' and i_wr_ack_48 = '0' then
 						r_A <= fb_c2p_i.A(C_A_SIZE-1 downto 0);
 						r_local <= fb_c2p_i.A(7);						-- access debug if >$80
 						if fb_c2p_i.we = '1' then
@@ -129,12 +154,13 @@ begin
 								r_d_wr_stb <= not r_local;
 								r_d_wr <= fb_c2p_i.d_wr;
 								r_per_state <= wait_wr_ack;
+								r_req <= not fb_c2p_i.A(7);
 							else
 								r_per_state <= wait_d_stb;
 							end if;
 						else
+							r_req <= not fb_c2p_i.A(7);
 							r_per_state <= rd;
-							r_d_rd_req <= not fb_c2p_i.A(7);
 						end if;
 					end if;
 				when wait_d_stb =>
@@ -142,18 +168,17 @@ begin
 						r_d_wr_stb <= not r_local;
 						r_d_wr <= fb_c2p_i.d_wr;
 						r_per_state <= wait_wr_ack;
-					else
-						r_per_state <= wait_d_stb;
+						r_req <= not r_local;
 					end if;
 				when wait_wr_ack =>
-					if i_wr_ack = '1' or r_local = '1' then
+					if i_wr_ack_48 = '1' or r_local = '1' then
 						r_ack <= '1';
 						r_d_wr_stb <= '0';
 						r_per_state <= idle;
 					end if;
 				when rd =>
 
-					if r_local = '1' or i_rd_ack = '1' then
+					if r_local = '1' or i_rd_ack_48 = '1' then
 						r_ack <= '1';
 						r_per_state <= idle;	
 						if r_local = '1' then
@@ -165,6 +190,7 @@ begin
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';
+					r_req <= '0';
 					r_d_wr_stb <= '0';
 			end case;
 		end if;
@@ -178,10 +204,8 @@ e_sprites:entity work.sprites
 	)
 	port map(
 
-		rst_i							=> fb_syscon_i.rst,
-
-		clk_i							=> fb_syscon_i.clk,
-		clken_i						=> '1',
+		clk_48M_i					=> clk_48M_i,
+		rst_i							=> reset48_i,
 
 		-- data interface, from sequencer
 		SEQ_D_i						=> SEQ_D_i,
@@ -195,16 +219,15 @@ e_sprites:entity work.sprites
 		SEQ_A_pre_o					=> SEQ_A_pre_o,
 
 		-- data interface, from CPU
-		CPU_D_i						=> r_d_wr,
-		CPU_rden_i					=> r_d_rd_req,
-		CPU_wren_i					=> r_d_wr_stb,
-		CPU_A_i						=> unsigned(r_A),
+		CPU_D_i						=> r_d_wr_48,
+		CPU_rden_i					=> r_d_rd_req_48,
+		CPU_wren_i					=> r_d_wr_req_48,
+		CPU_A_i						=> unsigned(r_A_48),
 		CPU_D_o						=> i_cpu_D_o,
-		CPU_wr_ack_o				=> i_wr_ack,
-		CPU_rd_ack_o				=> i_rd_ack,
+		CPU_wr_ack_o				=> i_wr_ack_48,
+		CPU_rd_ack_o				=> i_rd_ack_48,
 
 		-- vidproc / crtc signals in
-		pixel_clk_i					=> pixel_clk_i,
 		pixel_clken_i				=> pixel_clken_i,
 		vsync_i						=> vsync_i,
 		hsync_i						=> hsync_i,

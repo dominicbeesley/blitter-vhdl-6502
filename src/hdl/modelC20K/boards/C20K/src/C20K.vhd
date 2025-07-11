@@ -170,6 +170,8 @@ end entity;
 
 architecture rtl of C20K is
 
+   attribute syn_keep : integer;
+
    -----------------------------------------------------------------------------
    -- component declarations
    -----------------------------------------------------------------------------
@@ -336,12 +338,15 @@ architecture rtl of C20K is
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
 
-	signal i_vga_debug_r					: std_logic_vector(3 downto 0);
-	signal i_vga_debug_g					: std_logic_vector(3 downto 0);
-	signal i_vga_debug_b					: std_logic_vector(3 downto 0);
-	signal i_vga_debug_hs				: std_logic;
-	signal i_vga_debug_vs				: std_logic;
-	signal i_vga_debug_blank			: std_logic;
+	signal i_vid_48_r                : std_logic_vector(3 downto 0);
+	signal i_vid_48_g                : std_logic_vector(3 downto 0);
+	signal i_vid_48_b                : std_logic_vector(3 downto 0);
+	signal i_vid_48_hs               : std_logic;
+	signal i_vid_48_vs               : std_logic;
+	signal i_vid_48_blank			   : std_logic;
+   signal r_vid_128_hs              : std_logic;
+   signal r_vid_128_vs              : std_logic;
+
 
 	signal i_vga27_debug_r				: std_logic_vector(3 downto 0);
 	signal i_vga27_debug_g				: std_logic_vector(3 downto 0);
@@ -370,10 +375,14 @@ architecture rtl of C20K is
    signal i_ser_tx      : std_logic;
 
    signal i_clk_pll_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
+   attribute syn_keep of i_clk_pll_48M : signal is 1; -- keep for SDC
    signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
+   attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
 
    signal i_clk_pll_360M: std_logic;         -- used for video DACs
+   attribute syn_keep of i_clk_pll_360M : signal is 1; -- keep for SDC
    signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
+   attribute syn_keep of i_clk_div_72M : signal is 1; -- keep for SDC
 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
@@ -575,8 +584,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		cpu_halt_o		=> i_chipset_cpu_halt,
 		cpu_int_o		=> i_chipset_cpu_int,
 
-		vsync_i			=> not i_vga_debug_vs,
-		hsync_i			=> not i_vga_debug_hs,
+		vsync_i			=> not i_vid_48_vs,
+		hsync_i			=> not i_vid_48_hs,
 
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
@@ -773,8 +782,8 @@ END GENERATE;
       p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
       p_j_ds_nCS1_i                 => icopi_j_ds_nCS1,
       p_j_spi_clk_i                 => icopi_j_spi_clk,
-      p_VID_HS_i                    => i_vga_debug_hs,
-      p_VID_VS_i                    => i_vga_debug_vs,
+      p_VID_HS_i                    => r_vid_128_hs,
+      p_VID_VS_i                    => r_vid_128_vs,
       p_j_spi_mosi_i                => icopi_j_spi_mosi,
       p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 
@@ -787,6 +796,14 @@ END GENERATE;
       psg_audio_o                   => i_psg_audio
    );
    
+
+p_reg_128:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      r_vid_128_hs <= i_vid_48_hs;
+      r_vid_128_vs <= i_vid_48_vs;
+   end if;
+end process;
 
 G_DBG_UART:if G_INCL_DBG_UART generate
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
@@ -924,6 +941,7 @@ end generate;
 
    p_leds:process(i_fb_syscon)
    variable i : integer;
+   variable vr_btn : unsigned(7 downto 0);
    begin
       if rising_edge(i_fb_syscon.clk) then
          if i_fb_syscon.rst = '1' then
@@ -940,12 +958,19 @@ end generate;
                end if;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
-         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' then
+            vr_btn := (others => '0');
+         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
                i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
                i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
                i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
             end loop;
+         end if;
+
+         if icipo_btn2 = '0' then
+            vr_btn := (others => '0');
+         elsif vr_btn(vr_btn'high) = '0' then
+            vr_btn := vr_btn + 1;
          end if;
       end if;
 
@@ -1019,12 +1044,12 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		-- analogue video	straight from CRTC/ULA
 
-		VGA_R_o				=> i_vga_debug_r,
-		VGA_G_o				=> i_vga_debug_g,
-		VGA_B_o				=> i_vga_debug_b,
-		VGA_HS_o				=> i_vga_debug_hs,
-		VGA_VS_o				=> i_vga_debug_vs,
-		VGA_BLANK_o			=> i_vga_debug_blank,
+		VGA_R_o				=> i_vid_48_r,
+		VGA_G_o				=> i_vid_48_g,
+		VGA_B_o				=> i_vid_48_b,
+		VGA_HS_o				=> i_vid_48_hs,
+		VGA_VS_o				=> i_vid_48_vs,
+		VGA_BLANK_o			=> i_vid_48_blank,
 
 		-- analogue video	retimed to 27 MHz DVI clock
 
@@ -1067,10 +1092,10 @@ END GENERATE;
       cpu_A_nOE_o          <= '1';
       cpu_BE_o             <= '0';
       cpu_PHI2_o           <= '1';
-      cpu_RDY_o            <= '1';
+      cpu_RDY_o            <= i_clk_pll_48M;
       cpu_nIRQ_o           <= '1';
-      cpu_nNMI_o           <= '1';
-      cpu_nRES_o           <= '1';
+      cpu_nNMI_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_crtc : std_logic >>;
+      cpu_nRES_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_spr : std_logic >>;
 
       aud_i2s_dat_o        <= '1';
 
@@ -1178,11 +1203,11 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    port map (
       clk_i             => i_clk_pll_48M,
 ---      clk_chroma_x4_i   => i_clk_chroma_x4,
-      r_i               => unsigned(i_VGA_debug_r),
-      g_i               => unsigned(i_VGA_debug_g),
-      b_i               => unsigned(i_VGA_debug_b),
-      hs_i              => i_vga_debug_hs,
-      vs_i              => i_VGA_debug_vs,
+      r_i               => unsigned(i_Vid_48_r),
+      g_i               => unsigned(i_Vid_48_g),
+      b_i               => unsigned(i_Vid_48_b),
+      hs_i              => i_vid_48_hs,
+      vs_i              => i_Vid_48_vs,
       chroma_o          => i_chroma_s,
       clk_chroma_x4_o   => i_clk_chroma_x4_jitter,
       car_ry_o          => open,
@@ -1227,7 +1252,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_sample_i      => i_clk_pll_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
-      sample_i          => unsigned(not(i_VGA_debug_r)),
+      sample_i          => unsigned(not(i_Vid_48_r)),
       bitstream_o       => i_vid_r_0
    );
 
@@ -1237,7 +1262,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_sample_i      => i_clk_pll_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
-      sample_i          => unsigned(not(i_VGA_debug_g)),
+      sample_i          => unsigned(not(i_Vid_48_g)),
       bitstream_o       => i_vid_g_0
    );
 
@@ -1247,7 +1272,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clk_sample_i      => i_clk_pll_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
-      sample_i          => unsigned(not(i_VGA_debug_b)),
+      sample_i          => unsigned(not(i_Vid_48_b)),
       bitstream_o       => i_vid_b_0
    );
 
@@ -1293,9 +1318,9 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 
 end generate;
 G_DONT_1BIT_DAC_VIDEO:if not G_1BIT_DAC_VIDEO generate
-   vid_r_o <= not i_VGA_debug_r(i_VGA_debug_r'high);
-   vid_g_o <= not i_VGA_debug_g(i_VGA_debug_g'high);
-   vid_b_o <= not i_VGA_debug_b(i_VGA_debug_b'high);
+   vid_r_o <= not i_Vid_48_r(i_Vid_48_r'high);
+   vid_g_o <= not i_Vid_48_g(i_Vid_48_g'high);
+   vid_b_o <= not i_Vid_48_b(i_Vid_48_b'high);
    vid_chroma_o <= '0';
 
    -- TODO: this is quite rough and ready, check frequency and improve once reliable

@@ -55,10 +55,8 @@ entity sprites is
 	);
 	port(
 
+		clk_48M_i							: in	std_logic;
 		rst_i									: in	std_logic;							
-
-		clk_i									: in	std_logic;
-		clken_i								: in	std_logic;							-- this qualifies all clocks
 
 		-- data interface, from sequencer
 		SEQ_D_i								: in	std_logic_vector(7 downto 0);
@@ -82,7 +80,6 @@ entity sprites is
 
 		-- vidproc / crtc signals in
 
-		pixel_clk_i							: in		std_logic;							-- clock in video domain (48MHz)
 		pixel_clken_i						: in		std_logic;							-- 8MHz@64uS line (512 per line) pixel clock should be aligned with fb clock
 		vsync_i								: in		std_logic;
 		hsync_i								: in		std_logic;
@@ -141,18 +138,16 @@ begin
 
 assert G_N_SPRITES mod 2 = 0 report "There must be an even number of sprites" severity error;
 
-	p_reg:process(rst_i, clk_i)
+	p_reg:process(rst_i, clk_48M_i)
 	begin
 		if rst_i then
 			CPU_D_o <= (others => '0');
 			CPU_wr_ack_o <= '0';
 			CPU_rd_ack_o <= '0';
-		elsif rising_edge(clk_i) then
-			if clken_i then
-				CPU_D_o <= i_CPU_D_o(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
-				CPU_wr_ack_o <= i_CPU_wr_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
-				CPU_rd_ack_o <= i_CPU_rd_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
-			end if;
+		elsif rising_edge(clk_48M_i) then
+			CPU_D_o <= i_CPU_D_o(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+			CPU_wr_ack_o <= i_CPU_wr_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
+			CPU_rd_ack_o <= i_CPU_rd_ack(to_integer(unsigned(CPU_A_i(C_A_SIZE-1 downto 4))));
 		end if;
 	end process;
 
@@ -172,8 +167,7 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 
 		rst_i									=> rst_i,
 
-		clk_i									=> clk_i,
-		clken_i								=> clken_i,
+		clk_48M_i							=> clk_48M_i,
 
 		-- data interface, from sequencer
 		SEQ_D_i								=> SEQ_D_i,
@@ -194,7 +188,6 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 		CPU_wr_ack_o						=> i_CPU_wr_ack(I),
 		CPU_rd_ack_o						=> i_CPU_rd_ack(I),
 
-		pixel_clk_i							=> pixel_clk_i,
 		pixel_clken_i						=> pixel_clken_i,
 
 		-- locally generated pixel/line counters
@@ -219,12 +212,12 @@ G_SPR:FOR I IN 0 TO G_N_SPRITES-1 GENERATE
 	);
 END GENERATE;
 
-	p_pix_sel_tmp:process(pixel_clk_i, rst_i)
+	p_pix_sel_tmp:process(clk_48M_i, rst_i)
 	begin
 		if rst_i = '1' then
 			pixel_o <= (others => '0');
 			pixel_act_o <= '0';
-		elsif rising_edge(pixel_clk_i) then
+		elsif rising_edge(clk_48M_i) then
 			if pixel_clken_i = '1' then
 				pixel_act_o <= '0';
 				pixel_o <= (others => '0');
@@ -247,7 +240,7 @@ END GENERATE;
 
 	SEQ_DATA_REQ_o <= r_data_req;
 
-	process(rst_i, pixel_clk_i, pixel_clken_i)
+	process(rst_i, clk_48M_i, pixel_clken_i)
 	begin
 
 		if rst_i = '1' then
@@ -258,7 +251,7 @@ END GENERATE;
 			r_horz_disarm_clken <= '0';
 			r_vert_reload_clken <= '0';
 			r_data_req <= '0';
-		elsif rising_edge(pixel_clk_i) and pixel_clken_i = '1' then			
+		elsif rising_edge(clk_48M_i) and pixel_clken_i = '1' then			
 			r_horz_disarm_clken <= '0';
 			r_vert_reload_clken <= '0';
 			if (hsync_i = '1' and r_prev_hsync = '0') then
