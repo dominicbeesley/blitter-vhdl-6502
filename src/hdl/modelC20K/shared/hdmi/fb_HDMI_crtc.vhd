@@ -78,6 +78,7 @@ architecture rtl of fb_HDMI_crtc is
 	signal	r_A_48				: std_logic;
 	signal	r_D_wr_48			: std_logic_vector(7 downto 0);
 	signal   i_d_rd_48			: std_logic_vector(7 downto 0);
+	signal	r_mc6845_rnw_48	: std_logic;
 
 begin
 
@@ -90,7 +91,7 @@ begin
 
 		-- Bus interface
 		ENABLE	=> r_vid_48_clken,
-		R_nW		=> r_mc6845_rnw,
+		R_nW		=> r_mc6845_rnw_48,
 		RS			=> r_A_48,
 		DI			=> r_d_wr_48,
 		DO			=> i_d_rd_48,
@@ -124,6 +125,7 @@ begin
 			r_vid_48_ack <= '0';
 			r_vid_48_clken <= '0';
 			r_vid_rd48_clken <= '0';
+			r_mc6845_rnw_48 <= '1';
 		elsif rising_edge(CLOCK_48_i) then
 			r_vid_48_clken <= '0';
 			r_vid_rd48_clken <= r_vid_48_clken;
@@ -132,6 +134,7 @@ begin
 				r_vid_48_ack <= r_vid_fb_req;
 				r_A_48 <= r_A;
 				r_D_wr_48 <= r_D_wr;
+				r_mc6845_rnw_48 <= r_mc6845_rnw;
 			end if;
 		end if;
 	end process;
