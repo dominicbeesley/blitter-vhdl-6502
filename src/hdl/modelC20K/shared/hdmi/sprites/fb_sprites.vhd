@@ -86,7 +86,10 @@ architecture rtl of fb_sprites is
 	signal r_local							: std_logic;
 	signal i_cpu_D_o						: std_logic_vector(7 downto 0);
 
+	signal r_rd_ack_128					: std_logic;
+	signal r_wr_ack_128					: std_logic;
 
+	
 	-- pixel clock cpu access signals
 	signal r_d_wr_48						: std_logic_vector(7 downto 0);
 	signal r_d_rd_req_48					: std_logic;
@@ -130,6 +133,17 @@ begin
 		end if;
 	end process;
 
+	p_ack:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_rd_ack_128 <= '0';
+			r_wr_ack_128 <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_rd_ack_128 <= i_rd_ack_48;
+			r_wr_ack_128 <= i_wr_ack_48;		
+		end if;
+	end process;
+
 
 	p_per_state:process(fb_syscon_i)
 	begin
@@ -146,7 +160,7 @@ begin
 				when idle =>
 					r_req <= '0';
 					r_d_wr_stb <= '0';
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' and i_rd_ack_48 = '0' and i_wr_ack_48 = '0' then
+					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' and r_rd_ack_128 = '0' and r_wr_ack_128 = '0' then
 						r_A <= fb_c2p_i.A(C_A_SIZE-1 downto 0);
 						r_local <= fb_c2p_i.A(7);						-- access debug if >$80
 						if fb_c2p_i.we = '1' then
@@ -171,14 +185,14 @@ begin
 						r_req <= not r_local;
 					end if;
 				when wait_wr_ack =>
-					if i_wr_ack_48 = '1' or r_local = '1' then
+					if r_wr_ack_128 = '1' or r_local = '1' then
 						r_ack <= '1';
 						r_d_wr_stb <= '0';
 						r_per_state <= idle;
 					end if;
 				when rd =>
 
-					if r_local = '1' or i_rd_ack_48 = '1' then
+					if r_local = '1' or r_rd_ack_128 = '1' then
 						r_ack <= '1';
 						r_per_state <= idle;	
 						if r_local = '1' then

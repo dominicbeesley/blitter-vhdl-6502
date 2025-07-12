@@ -347,20 +347,6 @@ architecture rtl of C20K is
    signal r_vid_128_hs              : std_logic;
    signal r_vid_128_vs              : std_logic;
 
-
-	signal i_vga27_debug_r				: std_logic_vector(3 downto 0);
-	signal i_vga27_debug_g				: std_logic_vector(3 downto 0);
-	signal i_vga27_debug_b				: std_logic_vector(3 downto 0);
-	signal i_vga27_debug_hs				: std_logic;
-	signal i_vga27_debug_vs				: std_logic;
-	signal i_vga27_debug_blank			: std_logic;
-
-	signal i_debug_hsync_det			: std_logic;
-	signal i_debug_vsync_det			: std_logic;
-	signal i_debug_hsync_crtc			: std_logic;
-	signal i_debug_odd					: std_logic;
-	signal i_debug_spr_mem_clken		: std_logic;
-
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
 
    -----------------------------------------------------------------------------
@@ -1053,23 +1039,17 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		-- analogue video	retimed to 27 MHz DVI clock
 
-		VGA27_R_o				=> i_vga27_debug_r,
-		VGA27_G_o				=> i_vga27_debug_g,
-		VGA27_B_o				=> i_vga27_debug_b,
-		VGA27_HS_o				=> i_vga27_debug_hs,
-		VGA27_VS_o				=> i_vga27_debug_vs,
-		VGA27_BLANK_o			=> i_vga27_debug_blank,
+		VGA27_R_o				=> open,
+		VGA27_G_o				=> open,
+		VGA27_B_o				=> open,
+		VGA27_HS_o				=> open,
+		VGA27_VS_o				=> open,
+		VGA27_BLANK_o			=> open,
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> r_dac_sample(10 downto 1),
-
-		debug_hsync_det_o => i_debug_hsync_det,
-		debug_vsync_det_o => i_debug_vsync_det,
-		debug_hsync_crtc_o => i_debug_hsync_crtc,
-		debug_odd_o => i_debug_odd,
-		debug_spr_mem_clken_o => i_debug_spr_mem_clken
-
+		PCM_L_i				=> r_dac_sample & "00000",
+      PCM_R_i           => r_dac_sample & "00000"
 	);
 END GENERATE;
 
