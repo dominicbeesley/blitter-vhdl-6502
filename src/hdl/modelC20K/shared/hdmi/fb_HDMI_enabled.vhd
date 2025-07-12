@@ -167,8 +167,10 @@ architecture rtl of fb_hdmi is
 	signal i_G_TTX							: std_logic;
 	signal i_B_TTX							: std_logic;
 	signal i_TTX							: std_logic;
+	signal i_TTX80							: std_logic;		-- 80 column teletext
 
 	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
+	signal i_ttx_pixel_clken			: std_logic;
 	signal i_ttx_pixde					: std_logic;	-- display enable after pass through saa5050
 
 	signal i_pixel_double				: std_logic;
@@ -303,11 +305,24 @@ begin
 		end if;
 	end process;
 
+	p_ttx80:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			if i_crtc_MA(12) = '1' and scroll_latch_c_i(0) = '0' then
+				i_ttx80 <= '1';
+			else
+				i_ttx80 <= '0';
+			end if;
+		end if;
+	end process;
+
+	i_ttx_pixel_clken <= r_ttx_pixel_clken(0) or (r_ttx_pixel_clken(2) and i_ttx80);
+
 	e_ttx:entity work.saa5050
 	port map (
    	CLOCK       => CLK_48M_i,
    	-- 6 MHz dot clock enable
-   	CLKEN       => r_ttx_pixel_clken(0),
+   	CLKEN       => i_ttx_pixel_clken,
    	-- Async reset
    	nRESET      => not fb_syscon_i.rst,
 
@@ -449,6 +464,7 @@ begin
 
 		scroll_latch_c_i		=> r_scroll_latch_c_48,
 		ttxmode_i				=> i_TTX,
+		ttx80mode_i				=> i_TTX80,
 
 		crtc_mem_clken_i		=> i_clken48_spr,
 		crtc_MA_i				=> i_crtc_MA,

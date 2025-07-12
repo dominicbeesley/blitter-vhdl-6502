@@ -40,6 +40,7 @@ entity vidmem_sequencer is
 		-- motherboard signals in
 		scroll_latch_c_i					: in		std_logic_vector(1 downto 0);
 		ttxmode_i							: in		std_logic;
+		ttx80mode_i							: in		std_logic;
 
 		-- CRTC input signals
 
@@ -124,7 +125,8 @@ begin
 			  unsigned(crtc_ma_i(11 downto 8)) + 6 when scroll_latch_c_i = "10" else
 			  unsigned(crtc_ma_i(11 downto 8)) + 11;
 
-	i_RAMA_PLANE0 <= 	"0011111" & crtc_ma_i(9 downto 0) when ttxmode_i = '1' else
+	i_RAMA_PLANE0 <= 	"001111" & crtc_ma_i(10 downto 0) when ttx80mode_i = '1' and ttxmode_i = '1' else
+							"0011111" & crtc_ma_i(9 downto 0) when ttxmode_i = '1' else
 							"00111" & crtc_ma_i(10 downto 0) & '0' when SEQ_alphamode_i = '1' else
 							"00" & std_logic_vector(i_aa(3 downto 0)) & crtc_ma_i(7 downto 0) & crtc_ra_i(2 downto 0);			
 
