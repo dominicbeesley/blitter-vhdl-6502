@@ -47,6 +47,7 @@ entity dvi_synchro is
 		B_ULA_i						: in	std_logic_vector(3 downto 0);
 
 		TTX_i							: in  std_logic;
+		TTX80_i						: in  std_logic;
 
 		-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
@@ -223,6 +224,9 @@ begin
 				r_ula_read_wait <= '0';
 				r_ula_pixel_ring <= (others => '1');
 			elsif i_line_buffer_wren = '1' then
+				--if TTX_i = '1' and TTX80_i = '1' then
+				--	r_ula_pixel_ring <= "0010";
+				--els
 				if TTX_i = '1' then
 					r_ula_pixel_ring <= "1000";
 				else

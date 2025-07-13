@@ -47,6 +47,7 @@ port (
       VID_VS_i                      : in     std_logic;
       VID_DISEN_i                   : in     std_logic;
       TTX_i                         : in     std_logic;
+      TTX80_i                       : in     std_logic;
    
       -- sound data in (48KHz)
       PCM_L_i                       : in     signed(15 downto 0);
@@ -250,6 +251,7 @@ begin
          B_ULA_i        => VID_B_i,
 
          TTX_i          => TTX_i,
+         TTX80_i        => TTX80_i,
 
          -- synchronised / generated / conditioned signals in DVI pixel clock domain
 

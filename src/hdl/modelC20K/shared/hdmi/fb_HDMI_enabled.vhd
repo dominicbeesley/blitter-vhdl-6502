@@ -243,7 +243,7 @@ begin
 		G_TTX_i				=> i_G_TTX,
 		B_TTX_i				=> i_B_TTX,
 		PIXDE_TTX_i			=> i_ttx_pixde,
-		PIXCLKEN_TTX_i		=> r_ttx_pixel_clken(0),
+		PIXCLKEN_TTX_i		=> i_ttx_pixel_clken,
 		R_o					=> i_ULA_R,
 		G_o					=> i_ULA_G,
 		B_o					=> i_ULA_B,
@@ -251,6 +251,7 @@ begin
 		PIXDE_o				=> i_disen_VIDPROC,
 
 		TTX_o					=> i_TTX,
+		TTX80_i				=> i_TTX80,
 
 		-- model B/C extras
 	   MODE_ATTR_i 		=> r_seq_alphamode48,
@@ -666,6 +667,7 @@ end process;
       VID_VS_i                      => i_vsync_CRTC,
       VID_DISEN_i                   => i_disen_VIDPROC,
       TTX_i                         => i_TTX,
+      TTX80_i								=> i_TTX80,
    
       -- sound data in (48KHz)
       PCM_L_i                       => PCM_L_i,

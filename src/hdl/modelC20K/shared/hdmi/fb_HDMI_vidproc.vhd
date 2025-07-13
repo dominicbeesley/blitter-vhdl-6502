@@ -64,6 +64,9 @@ entity fb_HDMI_vidproc is
 		-- Teletext enabled
 		TTX_o									:  out std_logic;
 
+		-- 80 col telexted
+		TTX80_i								:  in std_logic;
+
 		-- Model B/C attribute in
 		MODE_ATTR_i							:  in  std_logic;
 
@@ -164,6 +167,7 @@ begin
       PIXDE        	=> PIXDE_o,
 
 		VGA				=> '0',
+		TTXT80			=> TTX80_i,
 
 		TTXT				=> TTX_o,
 

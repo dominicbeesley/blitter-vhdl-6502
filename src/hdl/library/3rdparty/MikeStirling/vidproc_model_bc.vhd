@@ -116,6 +116,8 @@ entity vidproc is
 
         -- Indicates special VGA Mode 7 (720x576p)
         VGA         :   in  std_logic;
+        -- Indicates special 80 column teletext with 24MHz pixels
+        TTXT80      :   in  std_logic;
 
         -- Bus interface
         ENABLE      :   in  std_logic;
@@ -452,7 +454,8 @@ begin
 
             -- For 12MHz pixen_prescale counts: 0, 1, 2, 3
             -- For 16MHz pixen_prescale counts: 0, 1,    3
-            if r0_teletext = '1' and VGA = '1' and pixen_prescale = 0 then
+            -- For 24MHz pixen prescale counts: 0,       3
+            if (r0_teletext = '1' and (VGA = '1' or TTXT80 ='1')) and pixen_prescale = 0 then
                 -- Special case VGA mode, count at twice the rate
                 pixen_prescale <= pixen_prescale + 3;
             elsif modeIs12MHz = '0' and pixen_prescale = 1 then
