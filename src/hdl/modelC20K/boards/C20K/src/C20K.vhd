@@ -1072,10 +1072,10 @@ END GENERATE;
       cpu_A_nOE_o          <= '1';
       cpu_BE_o             <= '0';
       cpu_PHI2_o           <= '1';
-      cpu_RDY_o            <= i_clk_pll_48M;
+      cpu_RDY_o            <= '0';
       cpu_nIRQ_o           <= '1';
-      cpu_nNMI_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_crtc : std_logic >>;
-      cpu_nRES_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_spr : std_logic >>;
+      cpu_nNMI_o           <= '1';
+      cpu_nRES_o           <= '1';
 
       aud_i2s_dat_o        <= '1';
 
