@@ -347,6 +347,10 @@ architecture rtl of C20K is
    signal r_vid_128_hs              : std_logic;
    signal r_vid_128_vs              : std_logic;
 
+   signal i_VGA27_HS                : std_logic;
+   signal i_VGA27_VS                : std_logic;
+   signal i_VGA27_CS                : std_logic;
+
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
 
    -----------------------------------------------------------------------------
@@ -1042,8 +1046,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA27_R_o				=> open,
 		VGA27_G_o				=> open,
 		VGA27_B_o				=> open,
-		VGA27_HS_o				=> open,
-		VGA27_VS_o				=> open,
+		VGA27_HS_o				=> i_VGA27_HS,
+		VGA27_VS_o				=> i_VGA27_VS,
 		VGA27_BLANK_o			=> open,
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
@@ -1052,6 +1056,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
       PCM_R_i           => r_dac_sample & "00000"
 	);
 END GENERATE;
+
+      i_VGA27_CS <= i_VGA27_HS xor i_VGA27_VS;
 
 --TODO: clash with OSER10's on video
 --      ddr_addr_o           <= (others => '1');
@@ -1073,9 +1079,9 @@ END GENERATE;
       cpu_BE_o             <= '0';
       cpu_PHI2_o           <= '1';
       cpu_RDY_o            <= i_clk_pll_48M;
-      cpu_nIRQ_o           <= '1';
-      cpu_nNMI_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_crtc : std_logic >>;
-      cpu_nRES_o           <= << signal G_HDMI.e_fb_HDMI.i_clken48_spr : std_logic >>;
+      cpu_nIRQ_o           <= i_VGA27_HS;
+      cpu_nNMI_o           <= i_VGA27_VS;
+      cpu_nRES_o           <= i_VGA27_CS;
 
       aud_i2s_dat_o        <= '1';
 

@@ -123,7 +123,7 @@ architecture rtl of dvi_synchro is
 	constant C_HSYNC_PIXELS			: natural := 252;
 	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
-	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 48;		-- margin from start of line to start ouputting pixels
+	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 96;		-- margin from start of line to start ouputting pixels
 
 	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 
@@ -137,10 +137,11 @@ architecture rtl of dvi_synchro is
 	signal	r_vsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
 	signal	r_vsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
-	constant C_BUFMAX : natural := 720;
+	constant C_BUFMAX : natural := 960;
 
 	signal 	r_field_counter		: unsigned(9 downto 0) := (others => '0');	
 	signal   r_line_counter			: unsigned(NUMBITS((C_PIXELS_PER_LINE)-1)-1 downto 0) := (others => '0');
+	signal   r_dvi_pixel_ring		: std_logic_vector(0 downto 0) := (0 => '0', others => '1');
 
 	signal	r_blank_line			: std_logic := '0';
 	signal	r_blank_field			: std_logic := '0';
@@ -224,10 +225,9 @@ begin
 				r_ula_read_wait <= '0';
 				r_ula_pixel_ring <= (others => '1');
 			elsif i_line_buffer_wren = '1' then
-				--if TTX_i = '1' and TTX80_i = '1' then
-				--	r_ula_pixel_ring <= "0010";
-				--els
-				if TTX_i = '1' then
+				if TTX_i = '1' and TTX80_i = '1' then
+					r_ula_pixel_ring <= "0010";
+				elsif TTX_i = '1' then
 					r_ula_pixel_ring <= "1000";
 				else
 					r_ula_pixel_ring <= "0100";
@@ -293,7 +293,7 @@ begin
 				r_vsync_lead_pulse <= '1';
 			end if;
 
-			if r_line_counter(1 downto 0) = "00" or pixel_double_i = '0' then
+			if r_dvi_pixel_ring(0) = '1' or pixel_double_i = '0' then
 				if r_line_counter < C_LINE_MARGIN then
 					r_linebuf_ctr_dvi_max <= r_linebuf_ctr_ula_prev_max;
 					if r_hsync_lead_ack = '0' then
@@ -332,7 +332,7 @@ begin
 				end if;
 			end if;
 
-		end if;
+		end if;	
 
 	end process;
 
@@ -362,6 +362,7 @@ begin
 
 				-- leading edge of sync, reset counter
 				r_line_counter <= (others => '0');
+				r_dvi_pixel_ring <= (0 => '0', others => '1');
 				if r_field_next = '1' then
 					r_odd <= r_odd_next;
 					r_field_counter <= to_unsigned(0, r_field_counter'length);
@@ -369,6 +370,11 @@ begin
 					r_field_counter <= r_field_counter + 1;
 				end if;
 			else
+				if r_dvi_pixel_ring(0) = '1' then
+					r_dvi_pixel_ring <= (others => '0');
+				else
+					r_dvi_pixel_ring <= "1" & r_dvi_pixel_ring(r_dvi_pixel_ring'high downto 1);
+				end if;
 				r_line_counter <= r_line_counter + 1;
 			end if;
 
