@@ -30,6 +30,9 @@
         <File path="../../shared/1bitvid/dac1_oser.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dac1_oserx2.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dossy_chroma.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/ws2812_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/ws2812.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/fb_ws2812.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
@@ -83,9 +86,6 @@
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
 
-        <File path="src/ws2812_pack.vhd" type="file.vhdl" enable="1" />
-        <File path="src/ws2812.vhd" type="file.vhdl" enable="1" />
-        <File path="src/fb_ws2812.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
 
