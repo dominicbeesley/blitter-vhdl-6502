@@ -5,3 +5,5 @@ ERC testing purposes.
 
 Connect via the debug uart using NoICE @ 19200 baud
 
+Typically used to load flash data on a new or bricked board
+
