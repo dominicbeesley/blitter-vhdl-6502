@@ -52,6 +52,7 @@ use work.fb_CPU_pack.all;
 use work.fb_intcon_pack.all;
 use work.board_config_pack.all;
 use work.ws2812_pack.all;
+use work.fb_sys_pack.all;
 
 entity C20KFirstLight is
    generic (
@@ -238,7 +239,6 @@ architecture rtl of C20KFirstLight is
    signal icipo_ser_rx     : std_logic;
    signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
-   signal icipo_netint     : std_logic;
    signal i_sys_nIRQ        : std_logic;
    signal i_sys_nNMI        : std_logic;
 
@@ -261,7 +261,6 @@ architecture rtl of C20KFirstLight is
    signal icopi_j_spi_clk  : std_logic;
    signal icopi_VID_HS     : std_logic;
    signal icopi_VID_VS     : std_logic;
-   signal icopi_VID_CS     : std_logic;
    signal icopi_j_spi_mosi : std_logic;
    signal icopi_j_adc_nCS  : std_logic;
 
@@ -484,6 +483,8 @@ begin
    )
    port map (
 
+      cfg_sys_type_i                => sys_BBC,
+
       -- fishbone signals
 
       fb_syscon_i                   => i_fb_syscon,
@@ -523,7 +524,6 @@ begin
       p_ser_rx_o                    => icipo_ser_rx,
       p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
-      p_netint_o                    => icipo_netint,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
       p_j_i0_o                      => icipo_j_i0,
@@ -544,7 +544,6 @@ begin
       p_j_spi_clk_i                 => icopi_j_spi_clk,
       p_VID_HS_i                    => icopi_VID_HS,
       p_VID_VS_i                    => icopi_VID_VS,
-      p_VID_CS_i                    => icopi_VID_CS,
       p_j_spi_mosi_i                => icopi_j_spi_mosi,
       p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 

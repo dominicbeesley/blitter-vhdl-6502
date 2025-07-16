@@ -18,6 +18,7 @@
         <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1" />
         <File path="src/gowin_rpll/pll_48_128.vhd" type="file.vhdl" enable="1" />
 
+        <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
 
         <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
@@ -39,6 +40,7 @@
         <File path="../../../library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/sn76489.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
