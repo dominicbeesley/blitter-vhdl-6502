@@ -32,7 +32,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		uses T65_816 core (modified)
+-- Description: 		uses P65C816 core
 --
 -- Dependencies: 
 --
