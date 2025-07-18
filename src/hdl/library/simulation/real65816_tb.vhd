@@ -51,7 +51,7 @@ ENTITY real_65816_tb IS
 			dly_bank	 : time := 40 ns;	
 			hld_bank  : time := 10 ns;		
 			dly_addr  : time := 40 ns;
-			dly_dwrite: time := 40 ns;	-- dwrite must be > dhold
+			dly_dwrite: time := 30 ns;	-- dwrite must be > dhold
 			dly_dhold : time := 10 ns;
 			dly_dsetup: time := 10 ns;
 			hld_EMX	 : time := 5 ns;
@@ -61,7 +61,7 @@ ENTITY real_65816_tb IS
 		A					: OUT 	STD_LOGIC_VECTOR(15 downto 0);
 		D					: INOUT 	STD_LOGIC_VECTOR(7 downto 0);
 		nRESET			: IN		STD_LOGIC;
-		RDY				: IN		STD_LOGIC;
+		RDY				: INOUT	STD_LOGIC;
 		nIRQ				: IN		STD_LOGIC;
 		nNMI				: IN		STD_LOGIC;
 		BE					: IN		STD_LOGIC;	-- NOTE: this is not implemented!
@@ -111,6 +111,8 @@ ARCHITECTURE Behavioral OF real_65816_tb IS
 
 	SIGNAL	i_PHI2_dly_bank: STD_LOGIC;
 	SIGNAL	i_PHI2_hld_bank: STD_LOGIC;
+
+	SIGNAL   i_RDY_o			: STD_LOGIC;
 BEGIN
 
 	i_cpu_clk <= not(PHI2);
@@ -178,13 +180,15 @@ BEGIN
       D_OUT    => i_cpu_D_out,
       A_OUT    => i_cpu_A,
       WE  		=> i_RnW,
-		RDY_OUT 	=> open,
+		RDY_OUT 	=> i_RDY_o,
 		VPA 		=> i_VPA,
 		VDA 		=> i_VDA,
 		MLB 		=> i_MLB,
 		VPB 		=> i_VPB
     );
 
+	RDY <= 	'0' when i_RDY_o = '0' else 
+				'H';
 
 
 END Behavioral;
