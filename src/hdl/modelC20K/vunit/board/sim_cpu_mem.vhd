@@ -64,7 +64,7 @@ entity sim_cpu_mem is
 
       CPU_PHI2_i     : in     std_logic;
       CPU_BE_i       : in     std_logic;
-      CPU_RDY_i      : in     std_logic;
+      CPU_RDY_io     : inout  std_logic;
 
       CPU_nRES_i     : in     std_logic;
       CPU_nIRQ_i     : in     std_logic;
@@ -108,13 +108,12 @@ begin
       nOE         => CPU_A_nOE_i
    );
 
-   i_U40_A <= (others => 'Z');
-
-   --MEM_A_io(17) <= i_U40_A(4);
-   --MEM_A_io(20) <= i_U40_A(3);
-   --MEM_A_io(18) <= i_U40_A(2);
-   --MEM_A_io(16) <= i_U40_A(1);
-   --MEM_A_io(19) <= i_U40_A(0);
+   
+   MEM_A_io(17) <= i_U40_A(4);
+   MEM_A_io(20) <= i_U40_A(3);
+   MEM_A_io(18) <= i_U40_A(2);
+   MEM_A_io(16) <= i_U40_A(1);
+   MEM_A_io(19) <= i_U40_A(0);
 
 
    i_U40_B <= (
@@ -134,7 +133,7 @@ begin
       A(15 downto 8) => i_CPU_A,
       D              => MEM_D_io,
       nRESET         => CPU_nRES_i,
-      RDY            => CPU_RDY_i,
+      RDY            => CPU_RDY_io,
       nIRQ           => CPU_nIRQ_i,
       nNMI           => CPU_nNMI_i,
       BE             => CPU_BE_i,
