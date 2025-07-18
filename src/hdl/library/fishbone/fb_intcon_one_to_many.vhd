@@ -194,6 +194,12 @@ begin
 					end if;
 
 				when act =>
+
+					if fb_con_c2p_i.D_wr_stb = '1' then
+						r_con_D_wr <= fb_con_c2p_i.D_wr;
+						r_con_D_wr_stb <= fb_con_c2p_i.D_wr_stb;
+					end if;
+
 					if i_s2m.ack = '1' then
 						r_state <= idle; -- do nowt
 					end if;
