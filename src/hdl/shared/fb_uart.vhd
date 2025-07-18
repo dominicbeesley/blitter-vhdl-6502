@@ -53,9 +53,6 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 use work.fishbone.all;
-use work.fb_CPU_pack.all;
-use work.fb_intcon_pack.all;
-use work.board_config_pack.all;
 
 entity fb_uart is
 	generic (
