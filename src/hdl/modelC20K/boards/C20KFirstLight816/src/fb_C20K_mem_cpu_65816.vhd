@@ -50,6 +50,7 @@ use ieee.math_real.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
+use work.board_config_pack.all;
 
 entity fb_C20K_mem_cpu_65816 is
    generic (
@@ -147,11 +148,15 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
       reset,         -- coming out of reset
       wait_asetup,   -- wait for previous cycle to release and address / bank to be ready
       read_fb,       -- a fishbone read cycle is in progress, wait for fb ack
-      write_fb       -- a fishbone write cycle is in progress, wait for fb ack
+      write_fb,      -- a fishbone write cycle is in progress, wait for fb ack,
+      read_local,    -- a local memory access, cpu frees bus, address modified
+      write_local0,  -- a local write access, latch write data then another cycle to do the write
+      write_local1   -- a local write access, data latched cpu frees bus and 
       );
 
    signal r_state          : t_state := reset;
    signal r_A              : std_logic_vector(23 downto 0);
+   signal i_log_A          : std_logic_vector(23 downto 0);
 
    signal r_VPA            : std_logic;
    signal r_VDA            : std_logic;
@@ -161,7 +166,10 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
    signal r_had_fb_ack     : std_logic;
    signal r_fb_D_rd        : std_logic_vector(7 downto 0);
+   signal r_D_wr_local     : std_logic_vector(7 downto 0);
    signal r_was_ready      : std_logic;
+
+   signal i_peripheral_sel_oh : std_logic_vector(PERIPHERAL_COUNT-1 downto 0);
 
 begin
 
@@ -241,10 +249,64 @@ begin
    end process;
 
    -- ================================================================================================ --
+   -- Local log2phys
+   -- ================================================================================================ --
+
+   p_l2p:process(all)
+   begin
+      i_log_A <= r_A;
+      if r_A(23 downto 16) = x"FF" then
+         if r_A(15 downto 8) >= x"10" and r_A(15 downto 8) <= x"70" then
+            i_log_A <= x"00" & r_A(15 downto 0);
+         elsif r_A(15 downto 8) = x"FD" and JIM_en_i = '1' then
+            i_log_A <= JIM_page_i & r_A(7 downto 0);
+         end if;
+      end if;
+   end process;
+
+   e_ad_local:entity work.address_decode_p20k
+   generic map (
+      SIM                     => SIM,
+      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT
+   )
+   port map (
+      addr_i                  => i_log_A,
+      peripheral_sel_o        => open,
+      peripheral_sel_oh_o     => i_peripheral_sel_oh
+   );
+
+   -- ================================================================================================ --
    -- CPU cycle state machine
    -- ================================================================================================ --
 
    p_state:process(fb_syscon_i)
+
+      procedure mem_unsel is
+      begin
+         MEM_A_io <= (others => 'Z');
+         MEM_RAM_nCE_o <= (others => '1');
+         MEM_ROM_nCE_o <= '1';
+         MEM_nOE_o <= '1';
+         MEM_nWE_o <= '1';
+      end mem_unsel;
+
+      procedure mem_sel is
+      begin
+         mem_unsel;
+         MEM_A_io <= i_log_A(20 downto 0);
+
+         if i_log_A(23) = '1' then
+            MEM_ROM_nCE_o <= '0';
+         elsif i_log_A(22 downto 21) = "11" then
+            MEM_RAM_nCE_o(0) <= '0';
+         else
+            MEM_RAM_nCE_o(to_integer(unsigned(i_log_A(22 downto 21)))+1) <= '0';
+         end if;
+
+         MEM_nOE_o <= not r_RnW;
+         MEM_nWE_o <= r_RnW;
+      end mem_sel;
+
    begin
       if fb_syscon_i.rst = '1' then
          r_state      <= reset;
@@ -253,7 +315,13 @@ begin
          r_fb_D_rd       <= (others => '0');
 
          fb_c2p_o <= fb_c2p_unsel;
-         
+
+         CPU_BE_o <= '0';
+         CPU_A_nOE_o <= '0';
+
+         mem_unsel;
+         MEM_D_io <= (others => '1');        -- pull D(5) high at reset (reconfig_n)
+   
       else
          if rising_edge(fb_syscon_i.clk) then
             case r_state is
@@ -261,24 +329,44 @@ begin
                   fb_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_PHI2) = '1' then
                      r_state <= wait_asetup;
+                     MEM_D_io <= (others => 'Z');
                   end if;
                when wait_asetup =>
                   fb_c2p_o <= fb_c2p_unsel;
+                  CPU_BE_o <= '1';
+                  CPU_A_nOE_o <= '0';
+                  mem_unsel;
+                  MEM_D_io <= (others => 'Z');
+
                   if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
 
                      CPU_RDY_io <= '0';
                      r_was_ready <= '0';
 
-                     fb_c2p_o.cyc <= '1';
-                     fb_c2p_o.A <= r_A;
-                     fb_c2p_o.A_stb <= '1';                     
 
-                     r_had_fb_ack <= '0';
-                     if r_RnW = '1' then
-                        r_state <= read_fb;
+                     if i_peripheral_sel_oh(PERIPHERAL_NO_MEM_BRD) = '1' then
+                        -- local memory cycle
+                        if r_RnW = '1' then
+                           r_state <= read_local;
+                           CPU_BE_o <= '0';
+                           CPU_A_nOE_o <= '1';
+                           CPU_RDY_io <= '1'; -- assume it completes!
+                           mem_sel;
+                        else
+                           r_state <= write_local0;
+                        end if;
                      else
-                        fb_c2p_o.we <= '1';
-                        r_state <= write_fb;
+                        -- not local memory start a fishbone cycle
+                        fb_c2p_o.cyc <= '1';
+                        fb_c2p_o.A <= i_log_A;
+                        fb_c2p_o.A_stb <= '1';                     
+                        r_had_fb_ack <= '0';
+                        if r_RnW = '1' then
+                           r_state <= read_fb;
+                        else
+                           fb_c2p_o.we <= '1';
+                           r_state <= write_fb;
+                        end if;
                      end if;
                   else
                      --TODO: log2 phys
@@ -331,8 +419,38 @@ begin
                      if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
+                  end if;
+               when read_local =>
+                  -- assumes all reads complete in time - check
+                  if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     r_state <= wait_asetup;
+                     CPU_A_nOE_o <= '0';
+                     CPU_BE_o <= '1';
+                     mem_unsel;
+                  end if;
+               when write_local0 =>
+                  if i_ring_next(C_CPU_DIV_MDS) = '1' then
+                     CPU_BE_o <= '0';
+                     CPU_A_nOE_o <= '1';
+                     r_D_wr_local <= MEM_D_io;
+                  end if;
 
+                  if i_ring_next(0) = '1' then
+                     mem_sel;
+                     MEM_D_io <= r_D_wr_local;
+                     CPU_RDY_io <= '1'; -- assume it completes!
+                     r_state <= write_local1;
+                  end if;
+               when write_local1 =>
 
+                  if i_ring_next(C_DIV_TOTAL - 1) then
+                     MEM_nWE_o <= '1';  -- latch one cycle early for hold
+                  end if;
+
+                  if i_ring_next(0) = '1' then
+                     r_state <= wait_asetup;
+                     mem_unsel;
+                     MEM_D_io <= (others => 'Z');
                   end if;
 
             end case;
@@ -367,20 +485,14 @@ begin
       end if;
    end process;
 
+
+
    -- ================================================================================================ --
    -- Unused / static 
    -- ================================================================================================ --
 
    CPU_nABORT_o <= '1';
-   CPU_BE_o <= '1';
 
-   CPU_A_nOE_o <= '0';
-
-   MEM_A_io <= (others => 'Z');
-   MEM_RAM_nCE_o <= (others => '1');
-   MEM_ROM_nCE_o <= '1';
-   MEM_nOE_o <= '1';
-   MEM_nWE_o <= '1';
 
 
 end rtl;

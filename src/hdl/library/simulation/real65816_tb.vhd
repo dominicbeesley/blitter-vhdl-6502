@@ -54,6 +54,7 @@ ENTITY real_65816_tb IS
 			dly_dwrite: time := 30 ns;	-- dwrite must be > dhold
 			dly_dhold : time := 10 ns;
 			dly_dsetup: time := 10 ns;
+			dly_be	 : time := 20 ns;
 			hld_EMX	 : time := 5 ns;
 			dly_EMX	 : time := 45 ns
 		);
@@ -100,6 +101,7 @@ ARCHITECTURE Behavioral OF real_65816_tb IS
 
 	SIGNAL  	i_RnW				: STD_LOGIC;
 	SIGNAL	i_cpu_A			: STD_LOGIC_VECTOR(23 downto 0);
+	SIGNAL	i_cpu_A_dly		: STD_LOGIC_VECTOR(23 downto 0);
 
 	SIGNAL	i_cpu_D_out		: STD_LOGIC_VECTOR(7 downto 0);
 	SIGNAL	i_cpu_D_out_dly_hold : STD_LOGIC_VECTOR(7 downto 0);
@@ -113,13 +115,21 @@ ARCHITECTURE Behavioral OF real_65816_tb IS
 	SIGNAL	i_PHI2_hld_bank: STD_LOGIC;
 
 	SIGNAL   i_RDY_o			: STD_LOGIC;
+
+	SIGNAL	i_BE_dly			: STD_LOGIC;
+
 BEGIN
 
 	i_cpu_clk <= not(PHI2);
 
 	i_RnW_hold <= i_RnW AFTER dly_addr;
-	RnW <= i_RnW_hold;
-	A <= i_cpu_A(15 downto 0) AFTER dly_addr;
+	RnW <= 	i_RnW_hold when i_BE_dly = '1' else
+				'Z';
+	i_cpu_A_dly <= transport i_cpu_A(23 downto 0) AFTER dly_addr;
+	i_BE_dly <= transport BE after dly_be;
+	A <= 
+			(others => 'Z') when i_BE_dly = '0' else
+			i_cpu_A_dly(15 downto 0);
 	
 	MLB <= i_MLB AFTER dly_addr;
 	VPA <= i_VPA AFTER dly_addr;
@@ -134,7 +144,8 @@ BEGIN
 
 	i_cpu_D_out_dly_hold <= i_cpu_D_out AFTER dly_dhold;
 
-	D <= 	i_cpu_A(23 downto 16) when i_bankact = '1' else
+	D <= 	(others => 'Z') when i_BE_dly = '0' else
+			i_cpu_A(23 downto 16) when i_bankact = '1' else
 			i_cpu_D_out_dly_hold when (i_phi2_D_hold = '1' and i_phi2_D_dly = '1') and i_RnW_hold = '0' else
 		 	(others => 'Z');
 
