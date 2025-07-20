@@ -369,8 +369,12 @@ begin
                         end if;
                      end if;
                   else
-                     --TODO: log2 phys
-                     r_A <= x"FF" & MEM_A_io(15 downto 0);
+                     --TODO: 65816 boot mode
+                     if MEM_D_io = x"00" then
+                        r_A <= x"FF" & MEM_A_io(15 downto 0);
+                     else
+                        r_A <= MEM_D_io & MEM_A_io(15 downto 0);
+                     end if;
                      r_VPA <= MEM_A_io(16);
                      r_VDA <= MEM_A_io(17);
                      r_MLB <= MEM_A_io(18);
