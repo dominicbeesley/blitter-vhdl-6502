@@ -59,7 +59,7 @@ entity C20KFirstLight816 is
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT_PATH             : string  := "../../../../..";
-      G_MOSROMFILE                  : string  := "../../../../../src/hdl/modelC20K/asm/C20KFirstLight/build/C20K-boot-rom.vec"
+      G_MOSROMFILE                  : string  := "../../../../../src/hdl/modelC20K/asm/C20KFirstLight816/build/C20KBareMOS816/C20KBareMOS816.vec"
    );
    port (
 

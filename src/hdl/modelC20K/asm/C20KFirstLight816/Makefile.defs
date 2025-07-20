@@ -1,0 +1,37 @@
+AS=ca65
+LD=ld65
+AR=ar65
+
+MLCa:=$(words $(MAKEFILE_LIST))
+MLCb:=$(shell echo "$(MLCa) - 1" | bc)
+
+# CALLER - path to Makefile that included this .defs file
+CALLER_MAKE=$(realpath $(lastword $(wordlist 1,$(MLCb),$(MAKEFILE_LIST))))
+
+# TOP - the directory containing the .defs file
+TOP:=$(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# INC - global includes folder
+INC:=$(TOP)/includes
+
+OSINCS:=$(wildcard $(INC)/*.inc)
+
+# SCRIPTS - global scripts folder
+SCRIPTS:=$(TOP)/../../../../scripts
+
+# RELDIR - directory "difference" between TOP and CALLER directory
+RELDIR:=$(shell realpath --relative-to=$(TOP) $(shell dirname $(CALLER_MAKE)))
+
+# BUILD_TOP topmost build path - may be overridden
+BUILD_TOP?=$(TOP)/build
+
+# current build folder
+BUILD=$(BUILD_TOP)/$(RELDIR)
+
+x:=$(shell mkdir -p $(BUILD))
+
+# common target names
+TOPTARGETS:= all clean deploy ssd
+
+all:
+
