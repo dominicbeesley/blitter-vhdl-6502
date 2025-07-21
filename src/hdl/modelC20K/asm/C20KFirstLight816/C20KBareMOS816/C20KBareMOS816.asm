@@ -75,11 +75,15 @@ deice_nat2emu_rti:
 uart_tx:	
 		php
 		rep	#$10		; big X
+		sep	#$20		; small x
+		pha
 		.i16
 		.a8	
-@lp:		bit	UART_STAT
-		bvs	@lp
-		sta	UART_DAT
+@lp:		lda	f:UART_STAT
+		and	#$40
+		bne	@lp
+		pla
+		sta	f:UART_DAT
 		plp
 		rts
 
@@ -102,10 +106,10 @@ deice_GETCHAR:	php
 		.a8
 		phx
 		ldx	#0		
-@l1:		lda	UART_STAT
+@l1:		lda	f:UART_STAT
 		bpl	@sk1
 		beq	@sk1
-		lda	UART_DAT
+		lda	f:UART_DAT
 		plx
 		plp
 		clc
@@ -122,7 +126,14 @@ mos_handle_cop_nat:
 mos_handle_brk_nat:
 		jmp	mos_handle_brk_nat
 mos_handle_abt_nat:
-		jmp	mos_handle_abt_nat
+		.a16
+		.i16
+		rep	#$30
+		pha
+		lda	#DEICE_STATE_ABORT
+		jml	deice_enter_nat
+		.a8
+		.i8
 mos_handle_irq_nat:
 		jmp	mos_handle_irq_nat
 mos_handle_nmi_nat:
@@ -133,12 +144,18 @@ mos_handle_nmi_nat:
 mos_handle_cop_emu:
 		jmp	mos_handle_cop_emu
 mos_handle_abt_emu:
-		jmp	mos_handle_abt_emu
+		pha
+		lda	#DEICE_STATE_ABORT
+		clc
+		xce				; switch to native mode
+		jml	deice_enter_emu
 
 mos_handle_nmi_emu:
 		jmp	mos_handle_nmi_emu
 
 mos_handle_irq_emu:
+		.a8
+		.i8
 		; check for BRK
 		pha
 		txa

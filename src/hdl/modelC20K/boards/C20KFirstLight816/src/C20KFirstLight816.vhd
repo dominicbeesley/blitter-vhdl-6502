@@ -460,8 +460,9 @@ end generate;
    port map (
 
       -- direct CPU control signals from system
-      nmi_n_i                       => icipo_btn1,
+      nmi_n_i                       => i_sys_nNMI,
       irq_n_i                       => i_sys_nIRQ,
+      debug_btn_n_i                 => icipo_btn1,
       cpu_halt_i                    => '0',
 
       -- fishbone signals

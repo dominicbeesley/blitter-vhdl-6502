@@ -67,6 +67,9 @@ entity fb_C20K_mem_cpu_65816 is
       nmi_n_i                          : in  std_logic;
       irq_n_i                          : in  std_logic;
 
+      -- debug button (NoIce / DeIce)
+      debug_btn_n_i                    : in  std_logic;
+
       -- fishbone signals
       fb_syscon_i                      : in  fb_syscon_t;
       fb_c2p_o                         : out fb_con_o_per_i_t;
@@ -151,7 +154,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
       write_fb,      -- a fishbone write cycle is in progress, wait for fb ack,
       read_local,    -- a local memory access, cpu frees bus, address modified
       write_local0,  -- a local write access, latch write data then another cycle to do the write
-      write_local1   -- a local write access, data latched cpu frees bus and 
+      write_local1,  -- a local write access, data latched cpu frees bus and 
+      dead           -- VPA and VDA both null, assert ready and wait for another cycle
       );
 
    signal r_state          : t_state := reset;
@@ -171,6 +175,9 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
    signal i_peripheral_sel_oh : std_logic_vector(PERIPHERAL_COUNT-1 downto 0);
 
+
+   signal r_debug_abort_n_ack    : std_logic;
+   signal r_WDM                  : std_logic;
 begin
 
    assert CLOCKSPEED > CPU_SPEED report "CLOCKSPEED must be greater than CPU_SPEED" severity error;
@@ -340,32 +347,38 @@ begin
 
                   if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
 
-                     CPU_RDY_io <= '0';
-                     r_was_ready <= '0';
-
-
-                     if i_peripheral_sel_oh(PERIPHERAL_NO_MEM_BRD) = '1' then
-                        -- local memory cycle
-                        if r_RnW = '1' then
-                           r_state <= read_local;
-                           CPU_BE_o <= '0';
-                           CPU_A_nOE_o <= '1';
-                           CPU_RDY_io <= '1'; -- assume it completes!
-                           mem_sel;
-                        else
-                           r_state <= write_local0;
-                        end if;
+                     if r_VPA = '0' and r_VDA = '0' then
+                        CPU_RDY_io <= '1';
+                        r_state <= dead;
                      else
-                        -- not local memory start a fishbone cycle
-                        fb_c2p_o.cyc <= '1';
-                        fb_c2p_o.A <= i_log_A;
-                        fb_c2p_o.A_stb <= '1';                     
-                        r_had_fb_ack <= '0';
-                        if r_RnW = '1' then
-                           r_state <= read_fb;
+                        
+                        CPU_RDY_io <= '0';
+                        r_was_ready <= '0';
+
+
+                        if i_peripheral_sel_oh(PERIPHERAL_NO_MEM_BRD) = '1' then
+                           -- local memory cycle
+                           if r_RnW = '1' then
+                              r_state <= read_local;
+                              CPU_BE_o <= '0';
+                              CPU_A_nOE_o <= '1';
+                              CPU_RDY_io <= '1'; -- assume it completes!
+                              mem_sel;
+                           else
+                              r_state <= write_local0;
+                           end if;
                         else
-                           fb_c2p_o.we <= '1';
-                           r_state <= write_fb;
+                           -- not local memory start a fishbone cycle
+                           fb_c2p_o.cyc <= '1';
+                           fb_c2p_o.A <= i_log_A;
+                           fb_c2p_o.A_stb <= '1';                     
+                           r_had_fb_ack <= '0';
+                           if r_RnW = '1' then
+                              r_state <= read_fb;
+                           else
+                              fb_c2p_o.we <= '1';
+                              r_state <= write_fb;
+                           end if;
                         end if;
                      end if;
                   else
@@ -456,12 +469,62 @@ begin
                      mem_unsel;
                      MEM_D_io <= (others => 'Z');
                   end if;
+               when dead =>
+                  if i_ring_next(0) = '1' then
+                     r_state <= wait_asetup;
+                  end if;
 
             end case;
          end if;
       end if;
       
    end process;
+
+   -- ================================================================================================ --
+   -- WDM detect
+   -- ================================================================================================ --
+
+   p_wdm:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_WDM <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         if i_ring_next(0) = '1' and r_VDA = '1' and r_VPA = '1' then
+            if MEM_D_io = x"42" then
+               r_WDM <= '1';
+            else
+               r_WDM <= '0';
+            end if;
+         end if;
+      end if;
+   end process;
+
+   -- ================================================================================================ --
+   -- ABORT generation
+   -- ================================================================================================ --
+
+   p_abort:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         CPU_nABORT_o <= '1';
+         r_debug_abort_n_ack <= '1';
+      elsif rising_edge(fb_syscon_i.clk) then
+         if i_ring_next(C_CPU_DIV_PHI2) = '1' then                    
+            if debug_btn_n_i = '1' then
+               r_debug_abort_n_ack <= '1';
+            end if;
+
+            if (debug_btn_n_i = '0' and r_debug_abort_n_ack = '1') or r_WDM = '1' then
+               r_debug_abort_n_ack <= '0';
+               CPU_nABORT_o <= '0';
+            else
+               CPU_nABORT_o <= '1';
+            end if;
+
+         end if;
+      end if;
+   end process;
+
 
    -- ================================================================================================ --
    -- associate generated
@@ -495,7 +558,6 @@ begin
    -- Unused / static 
    -- ================================================================================================ --
 
-   CPU_nABORT_o <= '1';
 
 
 
