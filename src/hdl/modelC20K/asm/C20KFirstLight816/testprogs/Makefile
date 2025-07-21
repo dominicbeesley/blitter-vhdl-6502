@@ -1,6 +1,6 @@
-	include ./Makefile.defs
+	include ../Makefile.defs
 
-SUBDIRSWIMAKE:=C20KBareMOS816 testprogs
+SUBDIRSWIMAKE:= flashinfo 
 
 $(TOPTARGETS): $(SUBDIRSWIMAKE)
 
