@@ -616,6 +616,7 @@ translation *is* performed
 | FF FE37      | "Low Mem Turbo" register.                   |   |   |
 | FF FE38,9    | Per ROM auto-hazel                          | 1 | 3 |
 | FF FE3E..3F  | Mk.2 config registers (deprecated)          |   |   |
+| FF FE3E..3F  | 65816 MOS/RAM window **dev/test**           | 1 | 4 |
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -705,9 +706,10 @@ use OR or AND to set/clear bits rather than writing direct.
     |----------|----------------------------------------------------------------
     | "00"     | Addresses mapped direct, no remapping, throttle applies in all modes
     | "01"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in all modes
-    | "10"     | logical Bank FF maps onto logical bank 00 in all modes only, throttle applies in all modes
-    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, turbo applies in emulation mode only
+    | "10"*    | logical Bank FF maps onto logical bank 00 in all modes, throttle applies in all modes
+    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in emulation mode only
 
+   [\*] The default setting is "10"
 
    Note: changes to the memory mapping take 2 cycles to complete to allow a 
    jump to follow the instruction performing the swap to continue in another bank.
@@ -834,6 +836,23 @@ Information about the old registers is contained in the [Old Mk.2 Firmware
 Documentaton.md] file.
 
 
+### FF FE3E..3F - 65816 RAM window                  
+
+Using the registers at these locations it is possible to remap the memory 
+that is usually seen by the 6502/65816 at FF Exxx to any 4k region in 
+physical memory. This mapping is only visible from emu/boot mode 
+
+The bottom 3 bits of FE3E are ignored and should be set to 0
+These bits are reset to map to the MOS rom at boot (dependent on the memi/swmos/mosram/map)
+
+The mapping is only updated when the high order register is written
+
+The mapping is the base address, and lies on any **2K** boundary to allow for the
+window to be set such that strings of data up to 2K can be allowed to straddle
+
+These registers are WRITE ONLY and will continue to return the mk.2 config bits for now
+
+
 ## Boot Time Configuration 
 
 **Blitter only**
@@ -924,7 +943,9 @@ indicate the API level at which a feature was introduced.
 |-----|-----|--------------------------------------------------------|
 |  1  |  0  | API level/sublevel registers introduced                |
 |  1  |  1  | Added new CPU types, per-ROM throttle registers        |
-|  1  |  2  | Auto-hazel for Model B / Elk                           |
+|  1  |  2  | Per-rom throttle                                       |
+|  1  |  3  | Auto-hazel for Model B / Elk                           |
+|  1  |  4  | 65816 MOS/RAM window **dev**                           |
 
 #### Configuration bits
 

@@ -87,6 +87,10 @@ entity log2phys is
 
 		rom_autohazel_map_i				: in  std_logic_vector(15 downto 0);
 
+		-- when active set a "window" from logical address space 00/FF E000-F000
+		-- resets to point at MOS rom at boot time
+		window_65816_i						: in	std_logic_vector(12 downto 0);
+		window_65816_wr_en_i				: in	std_logic;
 
 		-- memctl signals in
 		jim_en_i								: in  std_logic;		-- local jim override
@@ -105,6 +109,8 @@ entity log2phys is
 end log2phys;
 
 architecture rtl of log2phys is
+
+
 	signal map0n1 : boolean;
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
@@ -116,9 +122,24 @@ architecture rtl of log2phys is
 	signal r_rom_autohazel_cur : std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
 	signal r_instr_autohazel_cur : std_logic; -- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
 	signal i_autohazel 			: std_logic; 	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
+	signal r_window_65815_l		: std_logic_vector(12 downto 0);
+	signal r_window_65815_h		: std_logic_vector(12 downto 0);
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
+
+	p_window:process(fb_syscon_i, r_mosrom_A)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_window_65815_l <= r_mosrom_A & "100";
+			r_window_65815_h <= r_mosrom_A & "101";
+		elsif rising_edge(fb_syscon_i.clk) then
+			if window_65816_wr_en_i = '1' then
+				r_window_65815_l <= window_65816_i;
+				r_window_65815_h <= std_logic_vector(unsigned(window_65816_i) + 1);
+			end if;
+		end if;
+	end process;
 
 	p_romadd:process(fb_syscon_i)
 	begin
@@ -181,7 +202,7 @@ begin
 		end if;
 	end process;
 
-	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur, i_autohazel)
+	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur, i_autohazel, r_window_65815_l, r_window_65815_h)
 	begin
 		A_o <= A_i;
 		rom_throttle_act_o <= '0';
@@ -207,7 +228,13 @@ begin
 						-- Hazel from 00 C000-DFFF
 						A_o <= x"00" & "110" & A_i(12 downto 0);
 					else
-						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
+						if A_i(13 downto 11) = "100" then
+							A_o <= r_window_65815_l & A_i(10 downto 0);
+						elsif A_i(13 downto 11) = "101" then
+							A_o <= r_window_65815_h & A_i(10 downto 0);
+						else
+							A_o <= r_mosrom_A & A_i(13 downto 0);			
+						end if;
 					end if;
 				end if;
 			elsif G_C20K and unsigned(A_i(15 downto 12)) < 3 then

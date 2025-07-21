@@ -279,8 +279,6 @@ begin
 		-- debug signals
 		debug_SYS_VIA_block_o				=> open,
 
-
-
 		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch
 
 

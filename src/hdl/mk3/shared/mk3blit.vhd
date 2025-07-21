@@ -293,7 +293,9 @@ architecture rtl of mk3blit is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
-	signal i_65816_bool_act				: std_logic;
+	signal i_debug_65816_boot_act		: std_logic;
+	signal i_window_65816				: std_logic_vector(12 downto 0);
+	signal i_window_65816_wr_en		: std_logic;
 
 	signal i_throttle_cpu_2MHz			: std_logic;
 
@@ -608,6 +610,8 @@ END GENERATE;
 		-- cpu specific
 
 		boot_65816_o						=> i_boot_65816,
+		window_65816_o						=> i_window_65816,
+		window_65816_wr_en_o				=> i_window_65816_wr_en,
 
 		rom_throttle_map_o				=> i_rom_throttle_map,
 		rom_autohazel_map_o				=> i_rom_autohazel_map
@@ -781,6 +785,8 @@ END GENERATE;
 		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
+		window_65816_i						=> i_window_65816,
+		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
@@ -793,7 +799,7 @@ END GENERATE;
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
 		debug_80188_state_o				=> i_debug_80188_state,
-		debug_65816_boot_act_o			=> i_65816_bool_act
+		debug_65816_boot_act_o			=> i_debug_65816_boot_act
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;

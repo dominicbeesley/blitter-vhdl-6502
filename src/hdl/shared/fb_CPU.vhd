@@ -137,6 +137,8 @@ entity fb_cpu is
 		-- cpu specific signals
 
 		boot_65816_i							: in 	std_logic_vector(1 downto 0);
+		window_65816_i							: in	std_logic_vector(12 downto 0);
+		window_65816_wr_en_i					: in	std_logic;
 
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
@@ -329,13 +331,13 @@ architecture rtl of fb_cpu is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic_vector(1 downto 0);
+		boot_65816_i							: in	std_logic_vector(1 downto 0);
 
-		debug_vma_o								: out		std_logic;
+		debug_vma_o								: out	std_logic;
 
-		debug_addr_meta_o						: out		std_logic;
+		debug_addr_meta_o						: out	std_logic;
 
-		debug_65816_boot_act_o					: out		std_logic
+		debug_65816_boot_act_o				: out	std_logic
 
 	);
 	end component;
@@ -789,7 +791,11 @@ begin
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
 
 		-- debug
-		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o 				
+		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o,
+
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
 
 	);
 
