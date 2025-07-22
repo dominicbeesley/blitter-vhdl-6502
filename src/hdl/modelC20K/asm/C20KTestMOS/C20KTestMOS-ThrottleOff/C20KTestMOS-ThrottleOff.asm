@@ -32,6 +32,22 @@ mos_handle_res:
 	ora	#7
 	sta	sheila_SYSVIA_orb
 
+	lda	#$64
+	sta	$FE10
+
+	lda	#3
+	sta	$FE08
+
+	lda	$FE40	; wait
+
+	lda	#$E5
+	sta	$FE08
+
+	lda	$FE40	; wait
+
+	lda	#'A'
+	sta	$FE09	
+
 	ldx	zp_CTR
 	inx
 	stx	zp_CTR

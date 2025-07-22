@@ -15,7 +15,7 @@ all:	$(TARGETS_O)
 $(BUILD)/C20KTestMOS-ThrottleOff.rom : $(OBJS_O) C20KTestMOS-ThrottleOff.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_O)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
-		da65 -S 0xE000 --comments 4 $(basename $@).rom >$(basename $@).da.s
+		da65 -S 0xC000 --comments 4 $(basename $@).rom >$(basename $@).da.s
 		$(SCRIPTS)/perl/bin2bitvector.pl $@ >$(basename $@).vec
 
 

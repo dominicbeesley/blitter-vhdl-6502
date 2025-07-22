@@ -358,7 +358,6 @@ architecture rtl of C20K is
    signal r_clken_baud16  : std_logic;
    signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV-1) downto 0); -- note 1 bigger to catch carry out
 
-   signal i_ser_tx      : std_logic;
 
    signal i_clk_pll_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
    attribute syn_keep of i_clk_pll_48M : signal is 1; -- keep for SDC
@@ -372,8 +371,6 @@ architecture rtl of C20K is
 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
-   signal icipo_ser_cts    : std_logic;
-   signal icipo_ser_rx     : std_logic;
    signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
    signal i_sys_nIRQ        : std_logic;
@@ -388,9 +385,6 @@ architecture rtl of C20K is
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
 
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_SER_TX     : std_logic;
-   signal icopi_SER_RTS    : std_logic;
 
    -- multiplex out from core, in to peripheral (O0 phase)   
    signal icopi_j_ds_nCS2  : std_logic;
@@ -746,8 +740,6 @@ END GENERATE;
       sys_nNMI_o                    => i_sys_nNMI,
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_ser_cts_o                   => icipo_ser_cts,
-      p_ser_rx_o                    => icipo_ser_rx,
       p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
 
@@ -760,9 +752,6 @@ END GENERATE;
       p_btn2_o                      => icipo_btn2,
       p_btn3_o                      => icipo_btn3,
 
-      -- random other multiplexed pins in from FPGA (O0 phase)
-      p_SER_TX_i                    => icopi_SER_TX,
-      p_SER_RTS_i                   => icopi_SER_RTS,
 
       -- random other multiplexed pins in from FPGA (O1 phase)
       p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
