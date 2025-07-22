@@ -103,8 +103,6 @@ entity fb_SYS_c20k is
       sys_nNMI_o                       : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_ser_cts_o                      : out    std_logic;
-      p_ser_rx_o                       : out    std_logic;
       p_d_cas_o                        : out    std_logic;
       p_kb_nRST_o                      : out    std_logic;
 
@@ -117,9 +115,6 @@ entity fb_SYS_c20k is
       p_btn2_o                         : out    std_logic;
       p_btn3_o                         : out    std_logic;
 
-      -- random other multiplexed pins in from FPGA (O0 phase)
-      p_SER_TX_i                       : in     std_logic;
-      p_SER_RTS_i                      : in     std_logic;
 
       -- random other multiplexed pins in from FPGA (O1 phase)
       p_j_ds_nCS2_i                    : in     std_logic;
@@ -232,8 +227,11 @@ architecture rtl of fb_SYS_c20k is
    signal   i_MHz4_clken      : std_logic;
 
    signal   i_sysvia_d_o      : std_logic_vector(7 downto 0);
-   signal   r_sysvia_d_o      : std_logic_vector(7 downto 0);
+   signal   i_acia_d_o        : std_logic_vector(7 downto 0);
+   signal   r_local_d_o       : std_logic_vector(7 downto 0);
    signal   r_sysvia_nCS2     : std_logic;
+   signal   r_serproc_nCS     : std_logic;
+   signal   r_acia_nCS        : std_logic;
    signal   i_sysvia_nIRQ     : std_logic;
    signal   i_sysvia_ca2      : std_logic;
    signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
@@ -246,11 +244,27 @@ architecture rtl of fb_SYS_c20k is
 
    signal   i_psg_audio_u     : unsigned(13 downto 0);
 
+   signal   i_acia_IRQ       : std_logic;
+   signal   i_acia_rxc        : std_logic;
+   signal   i_acia_txc        : std_logic;
+   signal   i_acia_rxd        : std_logic;
+   signal   i_acia_txd        : std_logic;
+   signal   i_acia_dcd_n      : std_logic;
+   signal   i_acia_cts_n      : std_logic;
+   signal   i_acia_rts_n      : std_logic;
+
+   signal   r_serula_cken1316 : std_logic;
+
+   signal   i_p_ser_cts       : std_logic;
+   signal   i_p_ser_rx        : std_logic;
+   signal   i_p_ser_rts       : std_logic;
+   signal   i_p_ser_tx        : std_logic;
+
 begin
 
    ip_VID_CS <= not (p_VID_HS_i xor p_VID_VS_i);
 
-   sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ;
+   sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ and not i_acia_IRQ;
    sys_nNMI_o <= i_p_nmi;
 
    --TODO: get 2mhzE clken
@@ -260,7 +274,7 @@ begin
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
 
-   fb_p2c_o.D_rd <=  r_sysvia_d_o when r_sysvia_nCS2 = '0' else
+   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' else                     
                      r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
 	sys_ROMPG_o <= r_sys_ROMPG;
@@ -304,6 +318,8 @@ begin
 
                   r_had_d_stb <= '0';
                   r_sysvia_nCS2 <= '1';
+                  r_acia_nCS <= '1';
+                  r_serproc_nCS <= '1';
 
                   if i_SYScyc_st_clken = '1' then
                      -- default idle cycle, drop buses
@@ -358,6 +374,10 @@ begin
 
                            if fb_c2p_i.A(15 downto 4) = x"FE4" then
                               r_sysvia_nCS2 <= '0';
+                           elsif fb_c2p_i.A(15 downto 3) = x"FE0" & "1" then
+                              r_acia_nCS <= '0';
+                           elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "0" and fb_c2p_i.we = '1' then
+                              r_serproc_nCS <= '0';
                            end if;  
                         end if;
 
@@ -592,8 +612,8 @@ begin
       mux_bus_io              => mux_bus_io,
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_ser_cts_o             => p_ser_cts_o,
-      p_ser_rx_o              => p_ser_rx_o,
+      p_ser_cts_o             => i_p_ser_cts,
+      p_ser_rx_o              => i_p_ser_rx,
       p_d_cas_o               => p_d_cas_o,
       p_kb_nRST_o             => p_kb_nRST_o,
       p_kb_CA2_o              => i_sysvia_ca2,
@@ -612,8 +632,8 @@ begin
       p_kb_pa7_o              => i_p_kb_pa7,
 
       -- random other multiplexed pins in from FPGA (O0 phase)
-      p_SER_TX_i              => p_SER_TX_i,
-      p_SER_RTS_i             => p_SER_RTS_i,
+      p_SER_TX_i              => not i_p_SER_TX,
+      p_SER_RTS_i             => not i_p_SER_RTS,
 
       -- random other multiplexed pins in from FPGA (O1 phase)
       p_j_ds_nCS2_i           => p_j_ds_nCS2_i,
@@ -635,10 +655,14 @@ begin
    -- Emulated motherboard chips   
    --==========================================================
 
+
+   --------------------------------------------------------
+   -- SYSVIA and slow latch IC32
+   --------------------------------------------------------
+
    -- slow latch
    beeb_ic32_o <= i_beeb_ic32;
 
-   -- SYS VIA
 
    -- TODO: speech
    g_pa_back:for i in 0 to 6 generate
@@ -650,8 +674,6 @@ begin
 
    i_sysvia_PB_i <= (others => '1');
    
-
-
    e_sys_via:entity work.M6522
    port map (
       I_RS                  => r_sys_A(3 downto 0),
@@ -697,8 +719,12 @@ begin
    p_reg_sysvia_do:process(fb_syscon_i)
    begin 
       if rising_edge(fb_syscon_i.clk) then
-         if r_sys_RnW = '1' and r_sysvia_nCS2 = '0' and mux_mhz1E_clk_o = '1' and i_MHz4_clken = '1' then
-            r_sysvia_d_o <= i_sysvia_d_o;
+         if r_sys_RnW = '1' and mux_mhz1E_clk_o = '1' and i_MHz4_clken = '1' then
+            if r_sysvia_nCS2 = '0' then
+               r_local_d_o <= i_sysvia_d_o;
+            else
+               r_local_d_o <= i_acia_d_o;
+            end if;
          end if;
       end if;
    end process;
@@ -722,5 +748,97 @@ begin
    );   
 
    psg_audio_o <= signed(i_psg_audio_u);
+
+
+   --------------------------------------------------------
+   -- ACIA 6850
+   --------------------------------------------------------
+   e_acia : entity work.acia6850
+   port map (
+      -- CPU signals
+      clk      => not fb_syscon_i.clk,
+      rst      => i_reset_hard,
+      cs       => not r_acia_nCS,
+      rw       => r_sys_RnW,
+      irq      => i_acia_IRQ,
+      addr     => r_sys_A(0),
+      data_in  => r_d_wr,
+      data_out => i_acia_d_o,
+      -- Uart Signals
+      RxC      => i_acia_rxc,
+      TxC      => i_acia_txc,
+      RxD      => i_acia_rxd,
+      TxD      => i_acia_txd,
+      DCD_n    => i_acia_dcd_n,
+      CTS_n    => i_acia_cts_n,
+      RTS_n    => i_acia_rts_n
+   );
+
+   --------------------------------------------------------
+   -- SERIAL ULA CLOCK DIVIDER
+   --------------------------------------------------------
+
+   p_serual_clk:process(fb_syscon_i, i_reset_hard)
+   variable vr_ring_16 : std_logic_vector((CLOCKSPEED / 16) - 1 downto 0) := (0 => '1', others => '0');
+   variable vr_ring_13 : std_logic_vector(12 downto 0) := (0 => '1', others => '0');
+   begin
+
+      assert CLOCKSPEED mod 16 = 0 report "CLOCKSPEED must be a multiple of 16" severity error;
+
+      if i_reset_hard = '1' then
+         r_serula_cken1316 <= '0';
+         vr_ring_16 := (0 => '1', others => '0');
+         vr_ring_13 := (0 => '1', others => '0');
+      elsif rising_edge(fb_syscon_i.clk) then
+
+         r_serula_cken1316 <= '0';
+         if vr_ring_16(0) = '1' then
+            if vr_ring_13(0) = '1' then
+               r_serula_cken1316 <= '1';
+            end if;
+            vr_ring_13  := vr_ring_13(0) & vr_ring_13(vr_ring_13'high downto 1);
+         end if;
+         
+         vr_ring_16 := vr_ring_16(0) & vr_ring_16(vr_ring_16'high downto 1);
+      end if;
+
+   end process;
+
+   --------------------------------------------------------
+   -- SERIAL ULA
+   --------------------------------------------------------
+   inst_serialula : entity work.serialula
+   generic map (
+      BOARD_REV      => 1,
+      MODEL_VLSI     => false,
+      MODEL_FERRANTI => true
+   )
+   port map (
+      clk      => fb_syscon_i.clk,
+      clken    => r_serula_cken1316,
+      -- Interface to 6502
+      E        => not fb_syscon_i.clk,
+      Data     => r_d_wr,
+      nCS      => r_serproc_ncs,
+      -- Interface to Cassette Port
+      CasMotor => open,
+      CasIn    => '1',
+      CasOut   => open,
+      -- Interface to ACIA
+      TxC      => i_acia_txc,
+      TxD      => i_acia_txd,
+      RxC      => i_acia_rxc,
+      RxD      => i_acia_rxd,
+      DCD      => i_acia_dcd_n,
+      RTSI     => i_acia_rts_n,
+      CTSO     => i_acia_cts_n,
+      -- Interface to RS423 Port
+      Din      => not i_p_ser_rx,
+      Dout     => i_p_ser_tx,
+      CTSI     => not i_p_ser_cts,
+      RTSO     => i_p_SER_rts
+   );
+
+   --TODO: intercept writes to cassette motor and finagle the mux into writing the slow latch
 
 end rtl;
