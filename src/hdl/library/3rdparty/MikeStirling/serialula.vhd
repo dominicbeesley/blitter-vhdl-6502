@@ -42,7 +42,13 @@ entity serialula is
         Din      : in  std_logic;
         Dout     : out std_logic;
         CTSI     : in  std_logic;
-        RTSO     : out std_logic
+        RTSO     : out std_logic;
+
+        -- sine wave phase out
+
+        sine_ph  : out unsigned(2 downto 0) -- 8 position sine "phase"
+
+
         );
 end serialula;
 
@@ -321,6 +327,8 @@ begin
         end if;
     end process;
 
+
+    sine_ph <= sine_in;      -- raw sine output for c20k
 
     -- =================================================
     -- Sine Wave Synthesis
