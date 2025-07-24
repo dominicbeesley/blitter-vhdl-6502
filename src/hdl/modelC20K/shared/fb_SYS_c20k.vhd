@@ -103,7 +103,6 @@ entity fb_SYS_c20k is
       sys_nNMI_o                       : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_d_cas_o                        : out    std_logic;
       p_kb_nRST_o                      : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I1 phase)
@@ -131,7 +130,9 @@ entity fb_SYS_c20k is
       -- emulated / synthesized beeb signals
       beeb_ic32_o                      : out    std_logic_vector(7 downto 0);
       c20k_latch_o                     : out    std_logic_vector(7 downto 0);
-      psg_audio_o                      : out    signed(13 downto 0)
+      psg_audio_o                      : out    signed(13 downto 0);
+
+      p_d_cas_o                        : out    std_logic
 
    );
 end fb_SYS_c20k;
@@ -220,6 +221,7 @@ architecture rtl of fb_SYS_c20k is
    signal   i_p_nmi           : std_logic;
    signal   i_p_kb_pa7        : std_logic;
    signal   i_beeb_ic32       : std_logic_vector(7 downto 0);
+   signal   i_p_cas_i         : std_logic;
 
    -- emulated peripherals signals
    signal   i_MHz1E_clken     : std_logic;
@@ -259,6 +261,9 @@ architecture rtl of fb_SYS_c20k is
    signal   i_p_ser_rx        : std_logic;
    signal   i_p_ser_rts       : std_logic;
    signal   i_p_ser_tx        : std_logic;
+   
+   signal   i_serula_sine_ph  : unsigned(2 downto 0);
+   signal   r_dac_cas_val     : signed(5 downto 0);
 
 begin
 
@@ -614,7 +619,7 @@ begin
       -- random other multiplexed pins out to FPGA (I0 phase)
       p_ser_cts_o             => i_p_ser_cts,
       p_ser_rx_o              => i_p_ser_rx,
-      p_d_cas_o               => p_d_cas_o,
+      p_d_cas_o               => i_p_cas_i,
       p_kb_nRST_o             => p_kb_nRST_o,
       p_kb_CA2_o              => i_sysvia_ca2,
       p_netint_o              => i_p_netint,
@@ -822,7 +827,7 @@ begin
       nCS      => r_serproc_ncs,
       -- Interface to Cassette Port
       CasMotor => open,
-      CasIn    => '1',
+      CasIn    => i_p_cas_i,
       CasOut   => open,
       -- Interface to ACIA
       TxC      => i_acia_txc,
@@ -836,9 +841,49 @@ begin
       Din      => not i_p_ser_rx,
       Dout     => i_p_ser_tx,
       CTSI     => not i_p_ser_cts,
-      RTSO     => i_p_SER_rts
+      RTSO     => i_p_SER_rts,
+
+      sine_ph  => i_serula_sine_ph
+   );
+
+   -- map sine phase to 16 bit signed values and output via 1 bit dac
+
+   p_sine2:process(fb_syscon_i.clk)
+   variable v:integer;
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+         if r_serula_cken1316 = '1' then
+            case i_serula_sine_ph is
+               when "000" => v := -5;
+               when "001" => v := -8;
+               when "010" => v := -8;
+               when "011" => v := -5;
+               when "100" => v := 4;
+               when "101" => v := 7;
+               when "110" => v := 7;
+               when "111" => v := 5;
+               when others => v := 0;
+            end case;
+
+            r_dac_cas_val <= shift_left(resize(to_signed(v, 4), 6), 2);
+         end if;
+      end if;
+   end process;
+
+   e_dac_cas_o:entity work.dac_1bit
+   generic map (
+      G_SAMPLE_SIZE     => 6 
+   )
+   port map (
+      rst_i             => i_reset_hard,
+      clk_dac           => fb_syscon_i.clk,
+      clken_dac         => r_serula_cken1316,
+      sample            => r_dac_cas_val,      
+      bitstream         => p_d_cas_o
    );
 
    --TODO: intercept writes to cassette motor and finagle the mux into writing the slow latch
+
+   
 
 end rtl;

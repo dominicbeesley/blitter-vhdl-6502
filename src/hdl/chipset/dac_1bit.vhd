@@ -53,6 +53,7 @@ entity dac_1bit is
    Port (
 		rst_i					: in  	std_logic;
 		clk_dac				: in		std_logic;
+		clken_dac			: in     std_logic := '1';
 
 		sample				: in		signed(G_SAMPLE_SIZE-1 downto 0);				-- sample in, will be registered in dac domain
 		
@@ -73,9 +74,11 @@ begin
 		p_sync_sample:process(clk_dac)
 		begin
 			if rising_edge(clk_dac) then
-				for I in 1 to G_SYNC_DEPTH loop
-					r_arr_clk_dac(I-1) <= r_arr_clk_dac(I);
-				end loop;
+				if clken_dac = '1' then
+					for I in 1 to G_SYNC_DEPTH loop
+						r_arr_clk_dac(I-1) <= r_arr_clk_dac(I);
+					end loop;
+				end if;
 			end if;
 		end process;
 	end generate;
@@ -88,12 +91,14 @@ GG_PWM:IF G_PWM GENERATE
 			ctr := ('1', others => '0');			-- max neg value
 			bitstream <= '0';											
 		elsif rising_edge(clk_dac) then
-			if (ctr >= r_arr_clk_dac(0)) then
-				bitstream <= '0';
-			else
-				bitstream <= '1';
+			if clken_dac = '1' then
+				if (ctr >= r_arr_clk_dac(0)) then
+					bitstream <= '0';
+				else
+					bitstream <= '1';
+				end if;
+				ctr := ctr + 1;
 			end if;
-			ctr := ctr + 1;
 		end if;
 	end process;
 END GENERATE;
@@ -104,10 +109,12 @@ GG_SIG:IF not G_PWM GENERATE
    variable sum:unsigned(G_SAMPLE_SIZE downto 0);
    begin		
 		if rising_edge(clk_dac) then
-		   samu := unsigned(to_signed(2**(G_SAMPLE_SIZE-1), G_SAMPLE_SIZE+1) + r_arr_clk_dac(0));
-			bitstream <= sum(G_SAMPLE_SIZE);
-			-- signed to unsigned expand to 9 bits
-         sum := unsigned("0" & sum(G_SAMPLE_SIZE-1 downto 0)) + unsigned("0" & samu(G_SAMPLE_SIZE-1 downto 0));
+			if clken_dac = '1' then
+			   samu := unsigned(to_signed(2**(G_SAMPLE_SIZE-1), G_SAMPLE_SIZE+1) + r_arr_clk_dac(0));
+				bitstream <= sum(G_SAMPLE_SIZE);
+				-- signed to unsigned expand to 9 bits
+	         sum := unsigned("0" & sum(G_SAMPLE_SIZE-1 downto 0)) + unsigned("0" & samu(G_SAMPLE_SIZE-1 downto 0));
+	      end if;
 		end if; 
    end process;
 

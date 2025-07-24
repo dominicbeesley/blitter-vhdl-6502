@@ -371,7 +371,6 @@ architecture rtl of C20K is
 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
-   signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
    signal i_sys_nIRQ        : std_logic;
    signal i_sys_nNMI        : std_logic;
@@ -740,7 +739,6 @@ END GENERATE;
       sys_nNMI_o                    => i_sys_nNMI,
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
@@ -768,7 +766,9 @@ END GENERATE;
       -- emulated / synthesized beeb signals
       beeb_ic32_o                   => i_beeb_ic32,
       c20k_latch_o                  => i_c20k_latch,
-      psg_audio_o                   => i_psg_audio
+      psg_audio_o                   => i_psg_audio,
+
+      p_d_cas_o                     => cassette_o
    );
    
 
@@ -1074,8 +1074,6 @@ END GENERATE;
 
 
       p_8MHZ_FDC_o         <= '0';
-
-      cassette_o           <= '0';
 
       sd0_cs_o             <= '0';
       sd0_mosi_o           <= '0';
