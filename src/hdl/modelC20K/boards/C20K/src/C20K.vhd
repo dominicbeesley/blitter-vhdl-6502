@@ -455,9 +455,10 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    generic map (
       SIM                     => SIM,
       G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET		  => G_INCL_CHIPSET,
+      G_INCL_CHIPSET		      => G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI,
-		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS
+		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS,
+      G_C20K                  => true
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
