@@ -210,8 +210,6 @@ begin
 						A_o <= r_mosrom_A & A_i(13 downto 0);			-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
 					end if;
 				end if;
-			elsif G_C20K and unsigned(A_i(15 downto 12)) < 3 then
-				A_o <= x"00" & A_i(15 downto 0);							-- C20K 
 			elsif A_i(15) = '0' and turbo_lo_mask_i(to_integer(unsigned(A_i(14 downto 12)))) = '1' then
 				A_o <= x"00" & A_i(15 downto 0);							-- turbo RAM														00 0000 - 00 7FFF
 			end if;

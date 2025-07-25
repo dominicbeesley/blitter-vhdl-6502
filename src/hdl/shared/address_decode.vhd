@@ -56,6 +56,7 @@ entity address_decode is
 		G_PERIPHERAL_COUNT		: natural;
 		G_INCL_CHIPSET				: boolean;
 		G_INCL_HDMI					: boolean;
+		G_C20K						: boolean;
 		G_HDMI_SHADOW_SYS			: boolean := false							-- when true chipset hdmi shadows/hides motherboard graphics
 	);
 	port(
@@ -93,7 +94,7 @@ begin
 						-- (n)ula
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
-					elsif unsigned(addr_i(15 downto 12)) < 8 and unsigned(addr_i(15 downto 12)) >= 3 and G_INCL_HDMI and G_HDMI_SHADOW_SYS then
+					elsif unsigned(addr_i(15 downto 12)) < 8 and (unsigned(addr_i(15 downto 12)) >= 3 or G_C20K) and G_INCL_HDMI and G_HDMI_SHADOW_SYS then
 						-- memory
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
