@@ -117,7 +117,8 @@ architecture rtl of fb_HDMI_vidproc is
 	signal   r_vid_wr48_ack   			: std_logic;
 	signal   r_vid_wr48_clken			: std_logic;
 
-	signal   r_reset_48					: std_logic;
+	signal   r_reset_48					: std_logic := '1';
+	signal   r_reset_48_hard			: std_logic := '1';
 
 	signal r_A_48							: std_logic_vector(1 downto 0);
 	signal r_d_wr_48						: std_logic_vector(7 downto 0);
@@ -140,7 +141,7 @@ begin
 		CLOCK				=> CLK_48M_i,
 		CLKEN				=> r_CLKEN16,				
 
-		nRESET			=> not r_reset_48,
+		nRESET			=> not r_reset_48_hard,
 		
 		CLKEN_CRTC		=> CLKEN_CRTC_o,
 		CLKEN_SPR		=> CLKEN_SPR_o,
@@ -183,6 +184,7 @@ begin
 			r_reset_48 <= '1';
 		elsif rising_edge(CLK_48M_i) then
 			r_reset_48 <= '0';
+			r_reset_48_hard <= '0';
 		end if;
 	end process;
 
