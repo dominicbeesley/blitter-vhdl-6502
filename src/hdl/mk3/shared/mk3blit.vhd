@@ -266,6 +266,10 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
+	signal i_SD_CS							: std_logic;
+	signal i_SD_CLK						: std_logic;
+	signal i_SD_MOSI						: std_logic;
+
 	-----------------------------------------------------------------------------
 	-- sound signals
 	-----------------------------------------------------------------------------
@@ -516,10 +520,21 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
+		SD_CS_o			=> i_SD_CS,
+		SD_CLK_o			=> i_SD_CLK,
+		SD_MOSI_o		=> i_SD_MOSI,
+		SD_MISO_i		=> SD_MISO_i,
+		SD_DET_i			=> SD_DET_i,
+
 		snd_dat_o		=> i_dac_sample,
 		snd_dat_change_clken_o => open
 
 	);
+
+	SD_CS_o <= i_SD_CS;
+	SD_CLK_o <= i_SD_CLK;
+	SD_MOSI_o <= i_SD_MOSI;
+	
 
 	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
@@ -550,6 +565,9 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_dac_snd_pwm <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
+	SD_CS_o <= 'Z';
+	SD_CLK_o <= 'Z';
+	SD_MOSI_o <= 'Z';
 END GENERATE;
 
 	SND_R_o <= i_dac_snd_pwm;
@@ -1023,9 +1041,6 @@ SYS_AUX_io(3) <= i_vga_debug_blank;
 SYS_AUX_io <= (others => 'Z');
 
 
-SD_CS_o <= '1';
-SD_CLK_o <= '1';
-SD_MOSI_o <= '1';
 
 
 
