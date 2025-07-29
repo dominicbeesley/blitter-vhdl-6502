@@ -571,7 +571,13 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SCL_io		=> I2C_SCL_io,
 
 		snd_dat_o		=> i_paula_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_change_clken_o => open,
+
+      SD_CS_o              => sd0_cs_o,
+      SD_CLK_o             => sd0_sclk_o,
+      SD_MOSI_o            => sd0_mosi_o,
+      SD_MISO_i            => sd0_miso_i,
+      SD_DET_i             => '1'
 
 	);
 
@@ -1075,10 +1081,6 @@ END GENERATE;
 
 
       p_8MHZ_FDC_o         <= '0';
-
-      sd0_cs_o             <= '0';
-      sd0_mosi_o           <= '0';
-      sd0_sclk_o           <= '0';
       
       sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
