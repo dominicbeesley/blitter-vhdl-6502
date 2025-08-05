@@ -58,6 +58,7 @@
         <File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/dmac_int_dma.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/dmac_int_dma_cha.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_spi.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />

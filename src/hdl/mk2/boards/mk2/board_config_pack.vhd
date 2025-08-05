@@ -59,6 +59,7 @@ package board_config_pack is
 	constant G_SND_CHANNELS				: natural := 4;
 	constant G_INCL_CS_AERIS			: boolean := true;
 	constant G_INCL_CS_EEPROM			: boolean := true;
+	constant G_INCL_CS_SDCARD			: boolean := false;		-- TODO: figure out if there are pins available?
 		
 	constant C_CPU_BYTELANES			: positive := 1;		
 	constant G_INCL_CPU_T65				: boolean := true;

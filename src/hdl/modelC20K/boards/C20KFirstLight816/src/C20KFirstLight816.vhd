@@ -115,7 +115,7 @@ entity C20KFirstLight816 is
 
       tmds_clk_o_p         : out           std_logic;
       tmds_d_o_p           : out           std_logic_vector(2 downto 0);
-      edid_scl_o           : out           std_logic;
+      edid_scl_io          : inout         std_logic;
       edid_sda_io          : inout         std_logic;
       hdmi_cec_io          : inout         std_logic;
       hdmi_hpd_io          : inout         std_logic;
@@ -125,7 +125,7 @@ entity C20KFirstLight816 is
       vid_g_o              : out           std_logic;
       vid_r_o              : out           std_logic;
 
-      i2c_scl_o            : out           std_logic;
+      i2c_scl_io           : inout         std_logic;
       i2c_sda_io           : inout         std_logic;
 
       mux_D_nOE_o          : out           std_logic;
@@ -252,9 +252,6 @@ end component;
    attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
 
    -- multiplex in to core, out from peripheral (I0 phase)   
-   signal icipo_ser_cts    : std_logic;
-   signal icipo_ser_rx     : std_logic;
-   signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
    signal i_sys_nIRQ        : std_logic;
    signal i_sys_nNMI        : std_logic;
@@ -267,10 +264,6 @@ end component;
    signal icipo_btn1       : std_logic;
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
-
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_SER_TX     : std_logic;
-   signal icopi_SER_RTS    : std_logic;
 
    -- multiplex out from core, in to peripheral (O0 phase)   
    signal icopi_j_ds_nCS2  : std_logic;
@@ -562,9 +555,6 @@ end generate;
       sys_nNMI_o                    => i_sys_nNMI,
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_ser_cts_o                   => icipo_ser_cts,
-      p_ser_rx_o                    => icipo_ser_rx,
-      p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
@@ -575,10 +565,6 @@ end generate;
       p_btn1_o                      => icipo_btn1,
       p_btn2_o                      => icipo_btn2,
       p_btn3_o                      => icipo_btn3,
-
-      -- random other multiplexed pins in from FPGA (O0 phase)
-      p_SER_TX_i                    => icopi_SER_TX,
-      p_SER_RTS_i                   => icopi_SER_RTS,
 
       -- random other multiplexed pins in from FPGA (O1 phase)
       p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
@@ -644,7 +630,7 @@ end generate;
 
       tmds_clk_o_p         <= '1';
       tmds_d_o_p           <= (others => '1');
-      edid_scl_o           <= '1';
+      edid_scl_io          <= '1';
       edid_sda_io          <= 'Z';
       hdmi_cec_io          <= 'Z';
       hdmi_hpd_io          <= 'Z';
@@ -654,7 +640,7 @@ end generate;
       vid_g_o              <= '0';
       vid_r_o              <= '0';
 
-      i2c_scl_o            <= '1';
+      i2c_scl_io           <= '1';
       i2c_sda_io           <= 'Z';
 
       p_8MHZ_FDC_o         <= i_fb_syscon.clk;
