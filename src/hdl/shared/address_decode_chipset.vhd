@@ -59,6 +59,7 @@ entity address_decode_chipset is
 		G_PERIPHERAL_NO_CHIPSET_BLIT		: natural;
 		G_PERIPHERAL_NO_CHIPSET_AERIS		: natural;
 		G_PERIPHERAL_NO_CHIPSET_EEPROM	: natural;
+		G_PERIPHERAL_NO_CHIPSET_SDCARD	: natural;
 		G_PERIPHERAL_COUNT_CHIPSET			: natural
 
 	);
@@ -83,7 +84,6 @@ begin
 			a := addr_i(7 downto 4);
 
 			peripheral_sel_oh_o <= (others => '0');
-
 			if le = '0' then
 				-- BIG ENDIAN original ABI
 				if a = x"8" and G_INCL_CS_SND then
@@ -98,6 +98,9 @@ begin
 				elsif a = x"D" and G_INCL_CS_EEPROM then
 					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_EEPROM, peripheral_sel_o'length);
 					peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_EEPROM) <= '1';
+				elsif a = x"E" and G_INCL_CS_SDCARD then
+					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_SDCARD, peripheral_sel_o'length);
+					peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_SDCARD) <= '1';
 				elsif (a = x"6" or a = x"7" or a = x"A") and G_INCL_CS_BLIT then -- official address 6,7,A
 					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_BLIT, peripheral_sel_o'length);
 					peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_BLIT) <= '1';
@@ -122,6 +125,9 @@ begin
 				elsif a = x"D" and G_INCL_CS_EEPROM then
 					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_EEPROM, peripheral_sel_o'length);
 					peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_EEPROM) <= '1';
+				elsif a = x"E" and G_INCL_CS_SDCARD then
+					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_SDCARD, peripheral_sel_o'length);
+					peripheral_sel_oh_o(G_PERIPHERAL_NO_CHIPSET_SDCARD) <= '1';
 				elsif (a = x"0" or a = x"1" or a = x"2") and G_INCL_CS_BLIT then 
 					-- new blitter ABI in different range 0x..3x
 					peripheral_sel_o <= to_unsigned(G_PERIPHERAL_NO_CHIPSET_BLIT, peripheral_sel_o'length);

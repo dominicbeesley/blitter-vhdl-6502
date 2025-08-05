@@ -83,9 +83,19 @@ component fb_chipset
 		vsync_i					: in std_logic;
 		hsync_i					: in std_logic;
 
-		-- top level ports -- TODO: should EEPROM really be part of chipset? - probably due to where it sits in address map
+		-- top level ports 
+		-- TODO: should EEPROM/SDCARD  really be part of chipset? - probably due to where it sits in address map
+
+		-- i2c eeprom / rtc etc
 		I2C_SCL_io				: inout std_logic;
-		I2C_SDA_io				: inout std_logic
+		I2C_SDA_io				: inout std_logic;
+
+		-- SDCARD spi
+		SD_CS_o					: out		std_logic;
+		SD_CLK_o					: out		std_logic;
+		SD_MOSI_o				: out		std_logic;
+		SD_MISO_i				: in		std_logic;
+		SD_DET_i					: in		std_logic
 
 	);
 	end component;
