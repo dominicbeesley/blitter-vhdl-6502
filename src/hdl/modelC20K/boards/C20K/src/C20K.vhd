@@ -866,7 +866,7 @@ end generate;
 
       -- direct CPU control signals from system
       nmi_n_i                       => icipo_btn1, -- TODO: NMI
-      irq_n_i                       => i_sys_nIRQ,
+      irq_n_i                       => i_cpu_IRQ_n,
       cpu_halt_i                    => i_chipset_cpu_halt,
 
       -- fishbone signals
