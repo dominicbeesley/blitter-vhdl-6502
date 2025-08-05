@@ -90,6 +90,9 @@ begin
 		elsif addr_i(23 downto 16) = x"F0" then
 			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_LED_ARR, peripheral_sel_o'length);
 			peripheral_sel_oh_o(PERIPHERAL_NO_LED_ARR) <= '1';		
+		elsif addr_i(23 downto 16) = x"FA" or addr_i(23 downto 16) = x"FB" then
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';		
 		else
 			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_BRD, peripheral_sel_o'length);
 			peripheral_sel_oh_o(PERIPHERAL_NO_MEM_BRD) <= '1';			

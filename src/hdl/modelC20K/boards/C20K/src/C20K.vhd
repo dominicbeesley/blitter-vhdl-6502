@@ -600,22 +600,20 @@ END GENERATE;
 
 
    --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-   G_SND_DAC:IF G_INCL_CS_SND GENERATE
 
-      e_dac_snd: entity work.dac_1bit 
-      generic map (
-         G_SAMPLE_SIZE     => 11,
-         G_SYNC_DEPTH      => 0
-      )
-      port map (
-         rst_i             => i_fb_syscon.rst,
-         clk_dac           => i_fb_syscon.clk,
+  e_dac_snd: entity work.dac_1bit 
+  generic map (
+     G_SAMPLE_SIZE     => 11,
+     G_SYNC_DEPTH      => 0
+  )
+  port map (
+     rst_i             => i_fb_syscon.rst,
+     clk_dac           => i_fb_syscon.clk,
 
-         sample            => r_dac_sample,
-      
-         bitstream         => i_dac_snd_pwm
-      );
-   END GENERATE;
+     sample            => r_dac_sample,
+  
+     bitstream         => i_dac_snd_pwm
+  );
 
 
 	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;

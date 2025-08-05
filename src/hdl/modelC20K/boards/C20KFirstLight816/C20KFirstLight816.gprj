@@ -9,9 +9,19 @@
         <File path="src/c20k-pins.cst" type="file.cst" enable="1"/>
         <File path="src/C20KFirstLight816.sdc" type="file.sdc" enable="1"/>
         <File path="src/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
+        <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_48_128.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
 
         <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="src/gowin_rpll/pll_pal_sc.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_rgb_dac.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/1bitvid/dac1_oser.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dac1_oserx2.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dossy_chroma.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/ws2812_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/ws2812.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/fb_ws2812.vhd" type="file.vhdl" enable="1" />
@@ -40,6 +50,36 @@
         <File path="../../../shared/fb_uart.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
+
+
+
+<!-- HDMI -->
+
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/encoder.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi//hdmi_out_gowin_2A.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/mc6845.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_crtc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/saa5050.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_vidproc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_ram.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/HDMI_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_enabled.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/fb_HDMI_seq_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprites_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/fb_sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sprites/sprite_int.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/vidmem_sequencer.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
 
 
     </FileList>

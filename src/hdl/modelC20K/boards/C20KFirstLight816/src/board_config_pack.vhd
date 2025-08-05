@@ -25,7 +25,7 @@
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
--- Create Date:    		25/4/2023
+-- Create Date:    		25/6/2025
 -- Design Name: 
 -- Module Name:    		work.board_config_pack
 -- Project Name: 
@@ -42,22 +42,36 @@
 
 library ieee;
 use IEEE.math_real.all;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
 
 library work;
 
 package board_config_pack is
 		
+--  ______    ______   ______   __   __
+-- /______\  |______\ /______\ |__|_/__/
+--(____(___   /_____/(_______) |__|___|
+-- \______/  |______| \______/ |__| \__\
+--
+--  F I R S T   L I G H T   8 1 6
+   constant G_1BIT_DAC_VIDEO  : boolean := true;
+	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
+	constant G_INCL_HDMI		: boolean := true;
+
 	constant C_CPU_BYTELANES	: positive := 1;		
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
-	constant PERIPHERAL_COUNT 			: natural 		:= 6;
+	constant PERIPHERAL_COUNT 			: natural 		:= 7;
 	constant PERIPHERAL_NO_MEM_RAM 	: natural		:= 0;
 	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
 	constant PERIPHERAL_NO_MEM_BRD 	: natural		:= 2;
 	constant PERIPHERAL_NO_SYS			: natural      := 3;
 	constant PERIPHERAL_NO_LED_ARR	: natural      := 4;
 	constant PERIPHERAL_NO_UART 		: natural		:= 5;
+	constant PERIPHERAL_NO_HDMI 		: natural		:= 6;
 
 end board_config_pack;
 
