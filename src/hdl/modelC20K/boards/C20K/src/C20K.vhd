@@ -1244,8 +1244,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       bitstream_o       => i_vid_b_0
    );
 
-   G_SND_CLK:if G_INCL_CHIPSET and G_INCL_CS_SND generate
-      
+     
       clkdiv5 : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
@@ -1257,8 +1256,6 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
          CLKOUT => i_clk_snd,
          CALIB  => '1'
       );
-
-   end generate;
 
    e_obuf_vid_chroma:obuf
    port map (
