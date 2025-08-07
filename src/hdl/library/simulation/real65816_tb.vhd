@@ -195,7 +195,11 @@ BEGIN
 		VPA 		=> i_VPA,
 		VDA 		=> i_VDA,
 		MLB 		=> i_MLB,
-		VPB 		=> i_VPB
+		VPB 		=> i_VPB,
+
+		EF_o		=> i_EF,
+		MF_o		=> i_MF,
+		XF_o		=> i_XF
     );
 
 	RDY <= 	'0' when i_RDY_o = '0' else 
