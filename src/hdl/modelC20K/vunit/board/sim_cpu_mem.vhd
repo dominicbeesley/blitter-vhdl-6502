@@ -46,6 +46,8 @@ use ieee.numeric_std.all;
 
 library fmf;
 
+library lib816;
+
 entity sim_cpu_mem is
    generic (
        G_MOSROMFILE : string 
@@ -127,7 +129,7 @@ begin
 
 
 
-   e_U38:entity work.real_65816_tb
+   e_U38:entity lib816.real_65816_tb
    port map (
       A(7 downto 0)  => MEM_A_io(7 downto 0),
       A(15 downto 8) => i_CPU_A,
