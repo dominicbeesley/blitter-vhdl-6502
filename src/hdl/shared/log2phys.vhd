@@ -130,11 +130,11 @@ begin
 
 	p_window:process(fb_syscon_i, r_mosrom_A)
 	begin
-		if fb_syscon_i.rst = '1' then
-			r_window_65815_l <= r_mosrom_A & "100";
-			r_window_65815_h <= r_mosrom_A & "101";
-		elsif rising_edge(fb_syscon_i.clk) then
-			if window_65816_wr_en_i = '1' then
+		if rising_edge(fb_syscon_i.clk) then
+			if fb_syscon_i.rst = '1' then
+				r_window_65815_l <= r_mosrom_A & "100";
+				r_window_65815_h <= r_mosrom_A & "101";
+			elsif window_65816_wr_en_i = '1' then
 				r_window_65815_l <= window_65816_i;
 				r_window_65815_h <= std_logic_vector(unsigned(window_65816_i) + 1);
 			end if;
