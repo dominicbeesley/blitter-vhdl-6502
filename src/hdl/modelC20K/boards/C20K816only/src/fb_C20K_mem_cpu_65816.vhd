@@ -189,9 +189,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
       wait_asetup,   -- wait for previous cycle to release and address / bank to be ready
       read_fb,       -- a fishbone read cycle is in progress, wait for fb ack
       write_fb,      -- a fishbone write cycle is in progress, wait for fb ack,
-      read_local,    -- a local memory access, cpu frees bus, address modified
-      write_local0,  -- a local write access, latch write data then another cycle to do the write
-      write_local1,  -- a local write access, data latched cpu frees bus and 
+      read_local,    -- a local memory access, A(20..8) modified to phys A
+      write_local,   -- a local write access, A(20..8) modified to phys A
       dead           -- VPA and VDA both null, assert ready and wait for another cycle
       );
 
@@ -430,10 +429,10 @@ begin
                            -- local memory cycle
                            if r_RnW = '1' then
                               r_state <= read_local;
-                              CPU_RDY_io <= '1'; -- assume it completes!
                            else
-                              r_state <= write_local0;
+                              r_state <= write_local;
                            end if;
+                           CPU_RDY_io <= '1'; -- assume it completes!
                         else
                            -- not local memory start a fishbone cycle
                            fb_c2p_o.cyc <= '1';
@@ -517,34 +516,12 @@ begin
                         r_state <= wait_asetup;
                      end if;
                   end if;
-               when read_local =>
+               when read_local|write_local =>
                   -- assumes all reads complete in time - check
                   if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                      r_state <= wait_asetup;
                      CPU_A_nOE_o <= '0';
                      mem_unsel;
-                  end if;
-               when write_local0 =>
-                  if i_ring_next(C_CPU_DIV_MDS) = '1' then
-                     CPU_A_nOE_o <= '1';
-                     r_D_wr_local <= MEM_D_io;
-                  end if;
-
-                  if i_ring_next(0) = '1' then
-                     MEM_D_io <= r_D_wr_local;
-                     CPU_RDY_io <= '1'; -- assume it completes!
-                     r_state <= write_local1;
-                  end if;
-               when write_local1 =>
-
-                  if i_ring_next(C_DIV_TOTAL - 1) then
-                     MEM_nWE_o <= '1';  -- latch one cycle early for hold
-                  end if;
-
-                  if i_ring_next(0) = '1' then
-                     r_state <= wait_asetup;
-                     mem_unsel;
-                     MEM_D_io <= (others => 'Z');
                   end if;
                when dead =>
                   if i_ring_next(0) = '1' then
