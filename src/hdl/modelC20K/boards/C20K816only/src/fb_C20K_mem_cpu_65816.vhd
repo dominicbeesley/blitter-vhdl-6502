@@ -364,7 +364,7 @@ begin
       procedure mem_sel is
       begin
          mem_unsel;
-         MEM_A_io <= i_phys_A(20 downto 0);
+         MEM_A_io(20 downto 8) <= i_phys_A(20 downto 8);
 
          if i_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
@@ -387,7 +387,6 @@ begin
 
          fb_c2p_o <= fb_c2p_unsel;
 
-         CPU_BE_o <= '0';
          CPU_A_nOE_o <= '0';
          mem_unsel;
          MEM_D_io <= (others => '1');        -- pull D(5) high at reset (reconfig_n)
@@ -403,8 +402,11 @@ begin
                   end if;
                when wait_asetup =>
                   fb_c2p_o <= fb_c2p_unsel;
-                  CPU_BE_o <= '1';
-                  CPU_A_nOE_o <= '0';
+                  if i_ring_next(C_CPU_DIV_ADS) = '0' and i_ring_next(C_CPU_DIV_ADS + 1) = '0' then
+                     CPU_A_nOE_o <= '0';
+                  else
+                     CPU_A_nOE_o <= '1';
+                  end if;
                   mem_unsel;
                   MEM_D_io <= (others => 'Z');
 
@@ -424,13 +426,11 @@ begin
 
 
                         if i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
+                           mem_sel;
                            -- local memory cycle
                            if r_RnW = '1' then
                               r_state <= read_local;
-                              CPU_BE_o <= '0';
-                              CPU_A_nOE_o <= '1';
                               CPU_RDY_io <= '1'; -- assume it completes!
-                              mem_sel;
                            else
                               r_state <= write_local0;
                            end if;
@@ -522,18 +522,15 @@ begin
                   if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                      r_state <= wait_asetup;
                      CPU_A_nOE_o <= '0';
-                     CPU_BE_o <= '1';
                      mem_unsel;
                   end if;
                when write_local0 =>
                   if i_ring_next(C_CPU_DIV_MDS) = '1' then
-                     CPU_BE_o <= '0';
                      CPU_A_nOE_o <= '1';
                      r_D_wr_local <= MEM_D_io;
                   end if;
 
                   if i_ring_next(0) = '1' then
-                     mem_sel;
                      MEM_D_io <= r_D_wr_local;
                      CPU_RDY_io <= '1'; -- assume it completes!
                      r_state <= write_local1;
@@ -662,5 +659,6 @@ begin
 
 
 
+   CPU_BE_o <= '1';
 
 end rtl;
