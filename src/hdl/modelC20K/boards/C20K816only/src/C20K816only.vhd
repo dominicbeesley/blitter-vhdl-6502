@@ -238,14 +238,6 @@ architecture rtl of C20K816only is
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
-   -- led array wrapper
-   signal i_c2p_led_arr       : fb_con_o_per_i_t;
-   signal i_p2c_led_arr       : fb_con_i_per_o_t;
-
-   -- debug uart wrapper
-   signal i_c2p_uart       : fb_con_o_per_i_t;
-   signal i_p2c_uart       : fb_con_i_per_o_t;
-
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
    signal i_con_p2c_intcon    : fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
@@ -707,40 +699,6 @@ begin
    end if;
 end process;
 
-G_DBG_UART:if G_INCL_DBG_UART generate
-   i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
-   i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
-
-   p_uart_clk:process(i_fb_syscon)
-   begin
-      if rising_edge(i_fb_syscon.clk) then
-         r_clken_baud16 <= '0';
-         if i_fb_syscon.rst = '1' then
-            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
-         elsif r_clk_baud_div(r_clk_baud_div'high) = '1' then
-            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
-            r_clken_baud16 <= '1';
-         else
-            r_clk_baud_div <= r_clk_baud_div - 1;
-         end if;
-      end if;
-   end process;
-
-   e_fb_uart: entity work.fb_uart
-   port map (
-      baud16_clken_i => r_clken_baud16,
-      ser_rx_i       => uart2_rx_i,
-      ser_tx_o       => uart2_tx_o,
-
-      -- fishbone signals
-
-      fb_syscon_i    => i_fb_syscon,
-      fb_c2p_i    => i_c2p_uart,
-      fb_p2c_o    => i_p2c_uart
-
-   );
-end generate;
-
 
    e_mem_cpu_65816: entity work.fb_C20K_mem_cpu_65816
    generic map (
@@ -819,32 +777,6 @@ end generate;
 
 
    );
-
-
-g_led_arr:if G_INCL_LED_ARR generate
-   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
-   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
-
-
-
---   TODO: move to chipset?
-   e_fb_led_arr:entity work.fb_ws2812
-   generic map (
-      G_CLOCKSPEED => CLOCKSPEED * 1000000,
-      G_N_CHAIN => 8
-      )
-   port map (
-
-      -- fishbone signals
-
-      fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_led_arr,
-      fb_p2c_o                      => i_p2c_led_arr,
-
-      led_serial_o                  => open --ui_leds_o
-   );
-end generate;
-
 
 
 
@@ -1013,6 +945,18 @@ END GENERATE;
       sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
+
+
+
+
+e_null_brd_mem:entity work.fb_null
+   port map (
+
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_c2p_i             => i_c2p_mem,
+      fb_p2c_o             => i_p2c_mem
+   );
 
 
 G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
