@@ -24,18 +24,18 @@
 -- Company:          Dossytronics
 -- Engineer:         Dominic Beesley
 -- 
--- Create Date:      25/04/2023
+-- Create Date:      8/8/2025
 -- Design Name: 
--- Module Name:      fishbone bus - CPU wrapper component, cut down
+-- Module Name:      fb_C20K_mem_cpu_65816
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description:      A fishbone wrapper for just the T65 core
+-- Description:      A fishbone wrapper for just the on-board 65816 shared with memory bus
 -- Dependencies: 
 --
 -- Revision: 
 -- Additional Comments: 
---    This component provides a fishbone master wrapper around the T65 core. 
+--    
 --
 ----------------------------------------------------------------------------------
 
