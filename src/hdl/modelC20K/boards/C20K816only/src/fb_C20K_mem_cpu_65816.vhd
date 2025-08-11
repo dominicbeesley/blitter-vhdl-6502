@@ -373,7 +373,6 @@ begin
             MEM_RAM_nCE_o(to_integer(unsigned(i_phys_A(22 downto 21)))+1) <= '0';
          end if;
 
-         MEM_nOE_o <= not r_RnW;
          MEM_nWE_o <= r_RnW;
       end mem_sel;
 
@@ -518,6 +517,10 @@ begin
                   end if;
                when read_local|write_local =>
                   -- assumes all reads complete in time - check
+                  if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
+                     MEM_nOE_o <= not r_RnW;
+                  end if;
+
                   if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                      r_state <= wait_asetup;
                      CPU_A_nOE_o <= '0';
