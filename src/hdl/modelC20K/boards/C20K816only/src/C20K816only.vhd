@@ -735,7 +735,7 @@ end process;
       JIM_page_i                    => i_JIM_page,
 
       -- direct CPU control signals from system
-      nmi_n_i                       => icipo_btn1, -- TODO: NMI
+      nmi_n_i                       => i_sys_nNMI,
       irq_n_i                       => i_sys_nIRQ,
       debug_btn_n_i                 => icipo_btn1,
       cpu_halt_i                    => '0',
@@ -841,15 +841,23 @@ end process;
    );
 
 
+p_boot_mosram:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      if i_fb_syscon.rst = '1' then
+         r_cfg_mosram <= not icipo_btn0;
+      end if;
+   end if;
+end process;
+
                      
 r_cfg_ver_boot <= (others => '1');
-r_cfg_cpu_use_t65 <= '1';
-r_cfg_swromx <= '1';
-r_cfg_mosram <= '0';
+r_cfg_cpu_use_t65 <= '0';
+r_cfg_swromx <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
-r_cfg_cpu_type <= NONE;
+r_cfg_cpu_type <= CPU_65816;
 r_cfg_cpu_speed_opt <= NONE;
 r_cfg_mk2_cpubits <= "000";   --TODO: check!
 
