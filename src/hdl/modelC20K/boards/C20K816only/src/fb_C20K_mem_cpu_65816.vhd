@@ -546,8 +546,8 @@ begin
       if fb_syscon_i.rst = '1' then
          r_WDM <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(0) = '1' and r_VDA = '1' and r_VPA = '1' then
-            if MEM_D_io = x"42" then
+         if i_ring_next(0) = '1' then
+            if MEM_D_io = x"42" and r_VDA = '1' and r_VPA = '1' then
                r_WDM <= '1';
             else
                r_WDM <= '0';
@@ -566,7 +566,7 @@ begin
          CPU_nABORT_o <= '1';
          r_debug_abort_n_ack <= '1';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(C_CPU_DIV_PHI2) = '1' then                    
+         if i_ring_next(C_CPU_DIV_PHI2-2) = '1' then                    
             if debug_btn_n_i = '1' then
                r_debug_abort_n_ack <= '1';
             end if;
