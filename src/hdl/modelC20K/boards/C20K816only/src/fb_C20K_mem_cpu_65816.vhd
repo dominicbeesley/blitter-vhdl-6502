@@ -520,6 +520,10 @@ begin
                   if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
                      MEM_nOE_o <= not r_RnW;
                   end if;
+                  
+                  if i_ring_next(0) = '1' then
+                     MEM_nWE_o <= '1';                -- must do this now or else get weird memory writes to even banks
+                  end if;
 
                   if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                      r_state <= wait_asetup;
