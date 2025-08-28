@@ -930,9 +930,9 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA27_R_o				=> open,
 		VGA27_G_o				=> open,
 		VGA27_B_o				=> open,
-		VGA27_HS_o				=> open,
-		VGA27_VS_o				=> open,
-		VGA27_BLANK_o			=> open,
+		VGA27_HS_o				=> sd1_cs_o,
+		VGA27_VS_o				=> sd1_sclk_o,
+		VGA27_BLANK_o			=> sd1_mosi_o,
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
@@ -965,9 +965,9 @@ END GENERATE;
 
       p_8MHZ_FDC_o         <= '0';
       
-      sd1_cs_o             <= '0';
-      sd1_mosi_o           <= '0';
-      sd1_sclk_o           <= '0';
+-- hdmi debug --      sd1_cs_o             <= '0';
+-- hdmi debug --      sd1_mosi_o           <= '0';
+-- hdmi debug --      sd1_sclk_o           <= '0';
 
 
 
