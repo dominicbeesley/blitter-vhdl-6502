@@ -534,8 +534,7 @@ END GENERATE;
 
 
 
---TODO: CHIPSET
---TODO: sn74689 sound
+
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
