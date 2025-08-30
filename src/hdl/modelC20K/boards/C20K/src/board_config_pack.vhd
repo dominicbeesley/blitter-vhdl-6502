@@ -109,7 +109,7 @@ package board_config_pack is
 
 	constant CONTROLLER_COUNT 			: natural 		:= 2;
 	constant MAS_NO_CPU					: natural		:= 1;
-	constant MAS_NO_CHIPSET				: natural		:= 0; -- not used
+	constant MAS_NO_CHIPSET				: natural		:= 0;
 
 end board_config_pack;
 

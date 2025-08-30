@@ -43,7 +43,12 @@
         <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
         <File path="../../../mk3/shared/fb_MEM.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_memctl.vhd" type="file.vhdl" enable="1" />
-        <File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../shared/address_decode_chipset.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/fb_chipset_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/fb_chipset.vhd" type="file.vhdl" enable="1" />
+		<File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />        
+        <File path="../../../shared/fb_spi.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />

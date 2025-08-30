@@ -52,6 +52,7 @@ use work.board_config_pack.all;
 use work.HDMI_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_chipset_pack.all;
 use work.fb_intcon_pack.all;
 use work.ws2812_pack.all;
 
@@ -238,6 +239,14 @@ architecture rtl of C20K816only is
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
+	--chipset peripheral
+	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_per	: fb_con_i_per_o_t;
+
+	-- chipset controller
+	signal i_c2p_chipset_con	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_con	: fb_con_i_per_o_t;
+
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
    signal i_con_p2c_intcon    : fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
@@ -288,6 +297,8 @@ architecture rtl of C20K816only is
 	-----------------------------------------------------------------------------
 	-- cpu control signals
 	-----------------------------------------------------------------------------
+	signal i_chipset_cpu_halt			: std_logic; -- TODO: ignored
+	signal i_chipset_cpu_int			: std_logic; -- TODO: ignored
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
    signal i_window_65816            : std_logic_vector(12 downto 0);
@@ -366,6 +377,7 @@ architecture rtl of C20K816only is
    signal i_c20k_latch     : std_logic_vector(7 downto 0);
    signal i_psg_audio      : signed(13 downto 0);
    signal r_dac_sample     : signed(10 downto 0);
+   signal i_paula_sample   : signed(9 downto 0);
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -423,7 +435,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    generic map (
       SIM                     => SIM,
       G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET		      => false,
+      G_INCL_CHIPSET		      => G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI,
 		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS,
       G_C20K                  => true
@@ -503,10 +515,66 @@ END GENERATE;
 
 
 
+GCHIPSET: IF G_INCL_CHIPSET GENERATE
+--TODO:NO MASTERS	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
+--TODO:NO MASTERS   i_p2c_chipset_con    <= i_con_p2c_intcon(MAS_NO_CHIPSET);
+
+
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
+
+	e_chipset:fb_chipset
+	generic map (
+		SIM => SIM,
+		CLOCKSPEED => CLOCKSPEED
+	)
+	port map (
+		fb_syscon_i		=> i_fb_syscon,
+
+		-- peripheral port connect to controllers
+		fb_per_c2p_i 	=> i_c2p_chipset_per,
+		fb_per_p2c_o 	=> i_p2c_chipset_per,
+
+		-- controller port connecto to peripherals
+		fb_con_c2p_o	=> i_c2p_chipset_con,
+		fb_con_p2c_i	=> i_p2c_chipset_con,
+
+		clk_snd_i		=> i_clk_snd,
+
+		cpu_halt_o		=> i_chipset_cpu_halt,
+		cpu_int_o		=> i_chipset_cpu_int,
+
+		vsync_i			=> not i_vid_48_vs,
+		hsync_i			=> not i_vid_48_hs,
+
+		I2C_SDA_io		=> I2C_SDA_io,
+		I2C_SCL_io		=> I2C_SCL_io,
+
+		snd_dat_o		=> i_paula_sample,
+		snd_dat_change_clken_o => open,
+
+      SD_CS_o              => sd0_cs_o,
+      SD_CLK_o             => sd0_sclk_o,
+      SD_MOSI_o            => sd0_mosi_o,
+      SD_MISO_i            => sd0_miso_i,
+      SD_DET_i             => '1'
+
+	);
+
+
+END GENERATE;
+GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
+	i_chipset_cpu_halt <= '0';
+	i_chipset_cpu_int <= '0';
+	i_paula_sample <= (others => '0');
+	I2C_SDA_io <= 'Z';
+	I2C_SCL_io <= 'Z';
+END GENERATE;
+
    p_reg_snd:process(i_fb_syscon)
    begin 
       if rising_edge(i_fb_syscon.clk) then
-         r_dac_sample <= resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+         r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
       end if;
    end process;
 
