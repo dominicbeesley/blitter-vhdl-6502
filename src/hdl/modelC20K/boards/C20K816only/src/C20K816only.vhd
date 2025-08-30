@@ -772,7 +772,7 @@ end process;
    generic map (
       SIM => SIM,
       CLOCKSPEED => CLOCKSPEED * 1000000,
-      CPU_SPEED => 2000000
+      CPU_SPEED => 8000000
    )
    port map (
 

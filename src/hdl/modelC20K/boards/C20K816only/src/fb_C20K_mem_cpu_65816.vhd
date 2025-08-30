@@ -218,10 +218,29 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_boot_65816_dly : std_logic_vector(2 downto 0) := (others => '1');
    signal i_boot           : std_logic;
 
+   signal r_cyc_2M_before  : std_logic;         -- a phi2 was detected this cycle, next will be valid for throttled cycles
+   signal r_cyc_2M         : std_logic;         -- qualifies a cpu cycle as being the first after phi2 ended
+
 begin
 
    assert CLOCKSPEED > CPU_SPEED report "CLOCKSPEED must be greater than CPU_SPEED" severity error;
    assert CLOCKSPEED mod CPU_SPEED = 0 report "CLOCKSPEED must be an integer multiple of CPU_SPEED" severity error;
+
+
+   p_det_2m:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_cyc_2M <= '0';
+         r_cyc_2M_before <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         if i_ring_next(0) = '1' then
+            r_cyc_2M <= r_cyc_2M_before;
+            r_cyc_2M_before <= cpu_2MHz_phi2_clken_i;
+         else
+            r_cyc_2M_before <= r_cyc_2M_before or cpu_2MHz_phi2_clken_i;
+         end if;
+      end if;
+   end process;
 
    -- ================================================================================================ --
    -- NMI registration - kept from Blitter, might be unnecessary
@@ -315,6 +334,7 @@ begin
       sys_ROMPG_i                   => sys_ROMPG_i,
       JIM_page_i                    => JIM_page_i,
       turbo_lo_mask_i               => turbo_lo_mask_i,
+      mos_throttle_i                => '1',                    --TODO: configure somewhere in memctl
       rom_throttle_map_i            => rom_throttle_map_i,
       rom_throttle_act_o            => rom_throttle_act_o,
       rom_autohazel_map_i           => rom_autohazel_map_i,
@@ -412,6 +432,9 @@ begin
 
                      if r_VPA = '0' and r_VDA = '0' then
                         CPU_RDY_io <= '1';
+                        r_state <= dead;
+                     elsif  r_cyc_2M = '0'  then
+                        CPU_RDY_io <= '0';
                         r_state <= dead;
                      else
 

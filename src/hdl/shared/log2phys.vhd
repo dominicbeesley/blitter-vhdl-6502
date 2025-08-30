@@ -82,6 +82,7 @@ entity log2phys is
 		JIM_page_i							: in  std_logic_vector(15 downto 0);
 		turbo_lo_mask_i					: in	std_logic_vector(7 downto 0);
 
+		mos_throttle_i						: in  std_logic								:= '0';
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
 		rom_throttle_act_o				: out std_logic;
 
@@ -118,12 +119,13 @@ architecture rtl of log2phys is
 	signal i_rom_acc		: std_logic;		-- current address is accessing rom
 	signal i_nmi_acc		: std_logic;		-- current address is accessing NMI region
 
-	signal r_rom_throttle_cur : std_logic;		-- set to '1' when the currently selected ROM is throttled
-	signal r_rom_autohazel_cur : std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
-	signal r_instr_autohazel_cur : std_logic; -- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
-	signal i_autohazel 			: std_logic; 	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
-	signal r_window_65815_l		: std_logic_vector(12 downto 0);
-	signal r_window_65815_h		: std_logic_vector(12 downto 0);
+	signal r_rom_throttle_cur 		: std_logic;	-- set to '1' when the currently selected ROM is throttled
+	signal r_mos_throttle_cur		: std_logic;	-- set to '1' then the mos is throttled
+	signal r_rom_autohazel_cur 	: std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
+	signal r_instr_autohazel_cur 	: std_logic;	-- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
+	signal i_autohazel 				: std_logic;	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
+	signal r_window_65815_l			: std_logic_vector(12 downto 0);
+	signal r_window_65815_h			: std_logic_vector(12 downto 0);
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
@@ -199,6 +201,7 @@ begin
 					r_mosrom_A <= x"9F" & "00";								-- SWMOS from slot #9 map 0 on C20K							9F 0000 - 9F 3FFF
 				end if;
 			end if;
+			r_mos_throttle_cur <= mos_throttle_i;
 		end if;
 	end process;
 
@@ -233,7 +236,8 @@ begin
 						elsif A_i(13 downto 11) = "101" then
 							A_o <= r_window_65815_h & A_i(10 downto 0);
 						else
-							A_o <= r_mosrom_A & A_i(13 downto 0);			
+							A_o <= r_mosrom_A & A_i(13 downto 0);		
+							rom_throttle_act_o <= r_mos_throttle_cur;	
 						end if;
 					end if;
 				end if;
