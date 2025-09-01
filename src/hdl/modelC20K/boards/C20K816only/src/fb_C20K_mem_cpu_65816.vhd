@@ -91,7 +91,6 @@ entity fb_C20K_mem_cpu_65816 is
       turbo_lo_mask_i               : in  std_logic_vector(7 downto 0);
 
       rom_throttle_map_i            : in  std_logic_vector(15 downto 0);
-      rom_throttle_act_o            : out std_logic;
 
       rom_autohazel_map_i           : in  std_logic_vector(15 downto 0);
       throttle_cpu_2MHz_i           : in  std_logic;
@@ -142,7 +141,9 @@ entity fb_C20K_mem_cpu_65816 is
       CPU_nABORT_o                     : out    std_logic;
 
       CPU_MX_i                         : in     std_logic;
-      CPU_E_i                          : in     std_logic
+      CPU_E_i                          : in     std_logic;
+
+      debug_cpu_state_o                : out    std_logic_vector(2 downto 0)
 
    );
 end fb_C20K_mem_cpu_65816;
@@ -191,7 +192,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
       write_fb,      -- a fishbone write cycle is in progress, wait for fb ack,
       read_local,    -- a local memory access, A(20..8) modified to phys A
       write_local,   -- a local write access, A(20..8) modified to phys A
-      dead           -- VPA and VDA both null, assert ready and wait for another cycle
+      dead ,         -- VPA and VDA both null, assert ready and wait for another cycle
+      cpu_skip       -- cpu is being throttled, suppress phi2
       );
 
    signal r_state          : t_state := reset;
@@ -220,6 +222,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
    signal r_cyc_2M_before  : std_logic;         -- a phi2 was detected this cycle, next will be valid for throttled cycles
    signal r_cyc_2M         : std_logic;         -- qualifies a cpu cycle as being the first after phi2 ended
+
+   signal i_throttle_act  : std_logic;   
 
 begin
 
@@ -267,6 +271,7 @@ begin
    -- ================================================================================================ --
    
    p_cpu_phi:process(fb_syscon_i)
+   variable v_p_rst : std_logic;
    begin
 --      if fb_syscon_i.rst = '1' then
 --         r_cpu_div_ring <= (0 => '1', others => '0');
@@ -274,23 +279,30 @@ begin
 --         r_cpu_phi_DHR <= '1';
 --      els
       if rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(C_CPU_DIV_PHI1) = '1' then
-            r_cpu_phi <= '0';
+
+         if fb_syscon_i.rst = '1' and v_p_rst = '0' then
+            r_cpu_div_ring   <= (0 => '1', others => '0');
+         else
+            if i_ring_next(C_CPU_DIV_PHI1) = '1' then
+               r_cpu_phi <= '0';
+            end if;
+
+            if i_ring_next(C_CPU_DIV_PHI2) = '1' and r_state /= cpu_skip then
+               r_cpu_phi <= '1';
+            end if;
+
+            if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+               r_cpu_phi_DHR <= '0';
+            end if;
+
+            if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' and r_state /= cpu_skip then
+               r_cpu_phi_DHR <= '1';
+            end if;
+
+            r_cpu_div_ring <= i_ring_next;         
          end if;
 
-         if i_ring_next(C_CPU_DIV_PHI2) = '1' then
-            r_cpu_phi <= '1';
-         end if;
-
-         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-            r_cpu_phi_DHR <= '0';
-         end if;
-
-         if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
-            r_cpu_phi_DHR <= '1';
-         end if;
-
-         r_cpu_div_ring <= i_ring_next;
+         v_p_rst := fb_syscon_i.rst;
       end if;
    end process;
 
@@ -335,8 +347,9 @@ begin
       JIM_page_i                    => JIM_page_i,
       turbo_lo_mask_i               => turbo_lo_mask_i,
       mos_throttle_i                => '1',                    --TODO: configure somewhere in memctl
+      throttle_all_i                => throttle_cpu_2MHz_i,
       rom_throttle_map_i            => rom_throttle_map_i,
-      rom_throttle_act_o            => rom_throttle_act_o,
+      throttle_act_o                => i_throttle_act,
       rom_autohazel_map_i           => rom_autohazel_map_i,
       window_65816_i                => window_65816_i,
       window_65816_wr_en_i          => window_65816_wr_en_i,
@@ -406,6 +419,7 @@ begin
          fb_c2p_o <= fb_c2p_unsel;
 
          CPU_A_nOE_o <= '0';
+         CPU_RDY_io <= '1';
          mem_unsel;
          MEM_D_io <= (others => '1');        -- pull D(5) high at reset (reconfig_n)
          r_A <= (others => '0');
@@ -430,14 +444,12 @@ begin
 
                   if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
 
-                     if r_VPA = '0' and r_VDA = '0' then
+                     if r_cyc_2M = '0' and i_throttle_act = '1' then
+                        r_state <= cpu_skip;
+                     elsif r_VPA = '0' and r_VDA = '0' then
                         CPU_RDY_io <= '1';
                         r_state <= dead;
-                     elsif  r_cyc_2M = '0'  then
-                        CPU_RDY_io <= '0';
-                        r_state <= dead;
                      else
-
                         if r_VPA = '1' and r_VDA = '1' then
                            debug_cpu_instr_a <= r_A;
                         end if;
@@ -554,6 +566,10 @@ begin
                   if i_ring_next(0) = '1' then
                      r_state <= wait_asetup;
                   end if;
+               when cpu_skip =>
+                  if i_ring_next(0) = '1' then
+                     r_state <= wait_asetup;
+                  end if;
 
             end case;
          end if;
@@ -665,4 +681,5 @@ begin
 
    CPU_BE_o <= '1';
 
+   debug_cpu_state_o <= std_logic_vector(to_unsigned(t_state'pos(r_state), 3));
 end rtl;
