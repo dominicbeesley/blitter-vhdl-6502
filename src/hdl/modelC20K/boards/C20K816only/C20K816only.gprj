@@ -35,7 +35,6 @@
         <File path="../../shared/fb_ws2812.vhd" type="file.vhdl" enable="1" />
 
 
-        <File path="../../../shared/fb_cpu_log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
