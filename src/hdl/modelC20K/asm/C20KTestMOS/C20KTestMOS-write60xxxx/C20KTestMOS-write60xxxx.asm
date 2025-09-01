@@ -26,8 +26,23 @@ mos_handle_res:
 	lda	#$55
 	sta	JIM
 
+	lda	#$55
+	pha
+	lda	#$AA
+	pla
+	pha
+	pla
+	jsr	t1
+
+
+	
+
 
 here:	jmp	here
+
+t1:	pla
+	pha
+	rts
 
 
 
