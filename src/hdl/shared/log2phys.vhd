@@ -82,9 +82,10 @@ entity log2phys is
 		JIM_page_i							: in  std_logic_vector(15 downto 0);
 		turbo_lo_mask_i					: in	std_logic_vector(7 downto 0);
 
-		mos_throttle_i						: in  std_logic								:= '0';
+		mos_throttle_i						: in  std_logic;
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
-		rom_throttle_act_o				: out std_logic;
+		throttle_all_i						: in  std_logic;
+		throttle_act_o						: out std_logic;
 
 		rom_autohazel_map_i				: in  std_logic_vector(15 downto 0);
 
@@ -120,7 +121,10 @@ architecture rtl of log2phys is
 	signal i_nmi_acc		: std_logic;		-- current address is accessing NMI region
 
 	signal r_rom_throttle_cur 		: std_logic;	-- set to '1' when the currently selected ROM is throttled
-	signal r_mos_throttle_cur		: std_logic;	-- set to '1' then the mos is throttled
+	signal r_mos_throttle_reg		: std_logic;	-- set to '1' when the mos is throttled
+	signal r_all_throttle_reg		: std_logic;	-- set to '1' when everything is throttled
+	signal i_throttle_rom			: std_logic;	-- temporary signal during instr fetch, latched in r_instr_rom_throttle
+	signal r_instr_rom_throttle	: std_logic;	-- latched i_throttle rom throughout instruction
 	signal r_rom_autohazel_cur 	: std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
 	signal r_instr_autohazel_cur 	: std_logic;	-- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
 	signal i_autohazel 				: std_logic;	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
@@ -201,21 +205,22 @@ begin
 					r_mosrom_A <= x"9F" & "00";								-- SWMOS from slot #9 map 0 on C20K							9F 0000 - 9F 3FFF
 				end if;
 			end if;
-			r_mos_throttle_cur <= mos_throttle_i;
+			r_mos_throttle_reg <= mos_throttle_i;
+			r_all_throttle_reg <= throttle_all_i;
 		end if;
 	end process;
 
-	p_A0:process(A_i, noice_debug_shadow_i, jim_en_i, JIM_page_i, r_mosrom_A, r_pagrom_A, turbo_lo_mask_i, cfg_sys_type_i, r_rom_throttle_cur, i_autohazel, r_window_65815_l, r_window_65815_h)
+	p_A0:process(all)
 	begin
 		A_o <= A_i;
-		rom_throttle_act_o <= '0';
+		i_throttle_rom <= '0';
 		i_rom_acc <= '0';
 		i_nmi_acc <= '0';
 		if A_i(23 downto 16) = x"FF" then -- system access
 			if A_i(15 downto 14) = "10" then -- paged rom access
 				i_rom_acc <= '1';
 				A_o <= r_pagrom_A & A_i(13 downto 0);
-				rom_throttle_act_o <= r_rom_throttle_cur; -- throttle accesses to current ROM if needed, TODO: consider making this for whole instruction from ROM using SYNC?
+				i_throttle_rom <= r_rom_throttle_cur; -- throttle accesses to current ROM if needed, TODO: consider making this for whole instruction from ROM using SYNC?
 			elsif A_i(15 downto 8) = x"FD" then
 				if jim_en_i = '1' then
 					A_o <= JIM_page_i & A_i(7 downto 0);
@@ -237,7 +242,7 @@ begin
 							A_o <= r_window_65815_h & A_i(10 downto 0);
 						else
 							A_o <= r_mosrom_A & A_i(13 downto 0);		
-							rom_throttle_act_o <= r_mos_throttle_cur;	
+							i_throttle_rom <= r_mos_throttle_reg;	
 						end if;
 					end if;
 				end if;
@@ -271,6 +276,22 @@ begin
 			end if;
 		end if;
 	end process;
+
+
+	throttle_act_o <= (i_throttle_rom or r_all_throttle_reg) when instruction_fetch_i = '1' else
+						r_instr_rom_throttle;
+
+	p_instr_throt:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_instr_rom_throttle <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if instruction_fetch_i = '1' then
+				r_instr_rom_throttle <= i_throttle_rom or r_all_throttle_reg;
+			end if;
+		end if;
+	end process;
+
 
 
 end rtl;
