@@ -346,7 +346,7 @@ begin
       sys_ROMPG_i                   => sys_ROMPG_i,
       JIM_page_i                    => JIM_page_i,
       turbo_lo_mask_i               => turbo_lo_mask_i,
-      mos_throttle_i                => '1',                    --TODO: configure somewhere in memctl
+      mos_throttle_i                => not swmos_shadow_i,           --TODO: configure somewhere in memctl
       throttle_all_i                => throttle_cpu_2MHz_i,
       rom_throttle_map_i            => rom_throttle_map_i,
       throttle_act_o                => i_throttle_act,
