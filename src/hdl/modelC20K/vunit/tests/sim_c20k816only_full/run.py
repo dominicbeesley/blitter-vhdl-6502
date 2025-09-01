@@ -57,6 +57,12 @@ lib.add_source_files("../../../../shared/fb_i2c.vhd")
 lib.add_source_files("../../../../mk3/shared/fb_MEM.vhd")
 lib.add_source_files("../../../../shared/fb_memctl.vhd")
 
+lib.add_source_files("../../../../shared/address_decode_chipset.vhd")
+lib.add_source_files("../../../../chipset/fb_chipset_pack.vhd")
+lib.add_source_files("../../../../chipset/fb_chipset.vhd")
+lib.add_source_files("../../../../chipset/dac_1bit.vhd")
+lib.add_source_files("../../../../shared/fb_spi.vhd")
+
 lib.add_source_files("../../../../chipset/dac_1bit.vhd")
 
 lib.add_source_files("../../../../library/bbc/bbc_slow_cyc.vhd")
