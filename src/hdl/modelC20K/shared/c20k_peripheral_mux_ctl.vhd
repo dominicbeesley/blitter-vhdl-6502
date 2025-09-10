@@ -102,6 +102,8 @@ port (
    mux_mhz1E_clk_o         : out    std_logic;                        -- 1MHzE clock for main board
    mux_mhz2E_clk_o         : out    std_logic;                        -- 2MHzE clock for main board - cycle stretched
 
+   mhz8_fdc_clk_o          : out    std_logic;                        -- 8MHz clock for FDC
+
    -- mux control outputs
    mux_nALE_o              : out    std_logic;
    mux_D_nOE_o             : out    std_logic;
@@ -163,6 +165,9 @@ architecture rtl of c20k_peripherals_mux_ctl is
    constant C_MHZ2_CTR_LEN       : natural := numbits(C_CLKS_MHZ2-1);
    constant C_BIG_CTR_LEN        : natural := numbits(C_CLKS_MHZ2 * 3 - 1);       -- needs to fit at least 3 2MHz cycles for long clock stetch
 
+   constant C_CLKS_MHZ8          : natural := G_FAST_CLOCKSPEED / 8000000;
+   constant C_CLKS_MHZ8_HALF     : natural := C_CLKS_MHZ8 / 2;
+
    --imaginary 32MHz slices within a 2MHz cycle
    constant C_32_D_hold          : natural := 0;
    constant C_32_I0              : natural := 2;
@@ -221,6 +226,9 @@ architecture rtl of c20k_peripherals_mux_ctl is
    signal r_mhz2E_up_clken       : std_logic := '0';
    signal r_mhz1E_clk            : std_logic := '0';
    signal r_mhz2E_clk            : std_logic := '0';
+
+   signal r_mhz8_fdc_clk         : std_logic := '0';
+   signal r_mhz8_ring            : std_logic_vector(C_CLKS_MHZ8_HALF-1 downto 0) := (0 => '1', others => '0');
 
    signal i_bbc_slow_cyc         : std_logic;
 
@@ -334,6 +342,24 @@ begin
          end if;
       end if;
    end process;
+
+   p_clk_8:process(clk_fast_i)
+   
+   begin
+      if rising_edge(clk_fast_i) then
+         if reset_i = '1' then
+            r_mhz8_ring <= (0 => '1', others => '0');
+            r_mhz8_fdc_clk <= '0';
+         else
+            if r_mhz8_ring(0) = '1' then
+               r_mhz8_fdc_clk <= not r_mhz8_fdc_clk;
+            end if;
+            r_mhz8_ring <= r_mhz8_ring(0) & r_mhz8_ring(r_mhz8_ring'high downto 1);
+         end if;
+      end if;
+   end process;
+
+   mhz8_fdc_clk_o <= r_mhz8_fdc_clk;
 
 
    p_clk_2i:process(clk_fast_i)
