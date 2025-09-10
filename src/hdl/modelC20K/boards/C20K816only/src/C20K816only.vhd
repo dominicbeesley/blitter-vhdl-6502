@@ -701,6 +701,9 @@ END GENERATE;
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
       mux_mhz2E_clk_o               => p_2MHZ_E_o,
 
+      mhz8_fdc_clk_o                => p_8MHZ_FDC_o,
+
+
       -- mux control outputs
       mux_nALE_o                    => mux_nALE_o,
       mux_D_nOE_o                   => mux_D_nOE_o,
@@ -1031,7 +1034,6 @@ END GENERATE;
       flash_mosi_o         <= '1';
 
 
-      p_8MHZ_FDC_o         <= '0';
       
 -- hdmi debug --      sd1_cs_o             <= '0';
 -- hdmi debug --      sd1_mosi_o           <= '0';

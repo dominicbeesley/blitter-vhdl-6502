@@ -60,7 +60,6 @@ entity fb_SYS_c20k is
       G_JIM_DEVNO                   : std_logic_vector(7 downto 0);
       -- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
       DEFAULT_SYS_ADDR              : std_logic_vector(15 downto 0) := x"FFEF"   -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
-
    );
    port(
 
@@ -74,6 +73,8 @@ entity fb_SYS_c20k is
       -- mux clock outputs
       mux_mhz1E_clk_o         : out    std_logic;                        -- 1MHzE clock for main board
       mux_mhz2E_clk_o         : out    std_logic;                        -- 2MHzE clock for main board - cycle stretched
+
+      mhz8_fdc_clk_o          : out    std_logic;                        -- floppy disc controller 8M clock
 
       -- mux control outputs
       mux_nALE_o              : out    std_logic;
@@ -429,8 +430,8 @@ begin
 	                        -- TODO: fix this properly, for now just munge the number to match
 	                        -- the mappings from the BBC, this will not allow any external ROMs!
 	                        r_sys_ROMPG <= r_D_wr xor "00001100";       -- write to both shadow register and SYS
-						 elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
-							r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
+						      elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
+                           r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
                         end if;
                         if r_sys_A(15 downto 0) = x"FCFF" then
                            if r_D_wr = G_JIM_DEVNO then
@@ -604,6 +605,8 @@ begin
       -- mux clock outputs
       mux_mhz1E_clk_o         => mux_mhz1E_clk_o,
       mux_mhz2E_clk_o         => mux_mhz2E_clk_o,
+
+      mhz8_fdc_clk_o          => mhz8_fdc_clk_o,
 
       -- mux control outputs
       mux_nALE_o              => mux_nALE_o,
