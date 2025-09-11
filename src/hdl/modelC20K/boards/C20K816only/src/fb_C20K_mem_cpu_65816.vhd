@@ -547,7 +547,7 @@ begin
                         fb_c2p_o.cyc <= '0';
                      end if;
 
-                     if i_ring_next(C_CPU_DIV_MDS + 1) = '1' then
+                     if i_ring_next(C_CPU_DIV_MDS) = '1' then
                         fb_c2p_o.D_wr <= MEM_D_io;
                         fb_c2p_o.D_wr_stb <= '1';
                      end if;
@@ -563,12 +563,11 @@ begin
                   end if;
                when read_local|write_local =>
                   MEM_nWE_o <= r_RnW;
-                  -- assumes all reads complete in time - check
-                  if CPU_RDY_io = '1' then
-                     if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
-                        MEM_nOE_o <= not r_RnW;
-                     end if;
-                     
+                  if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
+                     MEM_nOE_o <= not r_RnW;
+                  end if;
+
+                  if CPU_RDY_io = '1' then   -- memsel will have set this to 0 for slow (4MHz) accesses
                      if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                         CPU_A_nOE_o <= '0';
