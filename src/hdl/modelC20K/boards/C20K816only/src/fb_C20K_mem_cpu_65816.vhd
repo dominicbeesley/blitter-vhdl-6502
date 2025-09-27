@@ -178,7 +178,7 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_nmi            : std_logic;
    signal r_nmi_meta       : std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
-   signal r_cpu_div_ring   : std_logic_vector(C_DIV_TOTAL - 1 downto 0) := (0 => '1', others => '0');
+   signal r_cpu_div_ring   : std_logic_vector(C_DIV_TOTAL - 1 downto 0) := (C_DIV_TOTAL - 2 => '1', others => '0');
    signal r_cpu_phi        : std_logic := '0';
    signal r_cpu_phi_DHR    : std_logic := '1';
 
@@ -211,7 +211,6 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_had_fb_ack     : std_logic;
    signal r_fb_D_rd        : std_logic_vector(7 downto 0);
    signal r_D_wr_local     : std_logic_vector(7 downto 0);
-   signal r_was_ready      : std_logic;
 
    signal i_peripheral_sel_oh : std_logic_vector(PERIPHERAL_COUNT-1 downto 0);
    signal r_peripheral_sel_oh : std_logic_vector(PERIPHERAL_COUNT-1 downto 0);
@@ -240,7 +239,7 @@ begin
          r_cyc_2M <= '0';
          r_cyc_2M_before <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(0) = '1' then
+         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' and CPU_RDY_io = '1' then
             r_cyc_2M <= r_cyc_2M_before;
             r_cyc_2M_before <= cpu_2MHz_phi2_clken_i;
          else
@@ -284,7 +283,7 @@ begin
       if rising_edge(fb_syscon_i.clk) then
 
          if fb_syscon_i.rst = '1' and v_p_rst = '0' then
-            r_cpu_div_ring   <= (0 => '1', others => '0');
+            r_cpu_div_ring   <= (C_DIV_TOTAL - 2 => '1', others => '0');
          else
             if i_ring_next(C_CPU_DIV_PHI1) = '1' then
                r_cpu_phi <= '0';
@@ -419,7 +418,6 @@ begin
       if fb_syscon_i.rst = '1' then
          r_state      <= reset;
          r_had_fb_ack <= '0';
-         r_was_ready  <= '0';
          r_fb_D_rd       <= (others => '0');
 
          fb_c2p_o <= fb_c2p_unsel;
@@ -461,7 +459,6 @@ begin
                         end if;
                         
                         CPU_RDY_io <= '0';
-                        r_was_ready <= '0';
 
                         r_phys_A <= i_phys_A;
                         r_peripheral_sel_oh <= i_peripheral_sel_oh;
@@ -530,10 +527,9 @@ begin
 
                      if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
                         CPU_RDY_io <= '1';
-                        r_was_ready <= '1';
                      end if;
 
-                     if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     if CPU_RDY_io = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
 
@@ -553,11 +549,10 @@ begin
                      end if;
 
                      if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and (r_had_fb_ack = '1' or fb_p2c_i.ack = '1') then
-                        r_was_ready <= '1';
                         CPU_RDY_io <= '1';
                      end if;
 
-                     if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     if CPU_RDY_io = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
                   end if;
