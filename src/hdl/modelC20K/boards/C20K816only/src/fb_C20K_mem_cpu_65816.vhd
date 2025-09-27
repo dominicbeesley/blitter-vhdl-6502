@@ -543,7 +543,7 @@ begin
                         fb_c2p_o.cyc <= '0';
                      end if;
 
-                     if i_ring_next(C_CPU_DIV_MDS) = '1' then
+                     if i_ring_next(C_CPU_DIV_MDS + 1) = '1' then  -- TODO:BODGED: else model-c-mos font corrupted when LA attached!
                         fb_c2p_o.D_wr <= MEM_D_io;
                         fb_c2p_o.D_wr_stb <= '1';
                      end if;
