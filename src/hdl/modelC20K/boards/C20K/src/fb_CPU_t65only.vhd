@@ -146,7 +146,7 @@ architecture rtl of fb_cpu_t65only is
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
 
 	signal i_fb_c2p_extra_instr_fetch : std_logic;
-	signal i_rom_throttle_act		: std_logic;
+	signal i_throttle_act		: std_logic;
 
 begin
 
@@ -265,12 +265,14 @@ begin
 		sys_via_blocker_en_i					=> '1',					-- TODO: Other CPUs
 
 		-- memctl signals
-		swmos_shadow_i							=> swmos_shadow_i,
+		swmos_shadow_i							=> swmos_shadow_i,		-- TODO: get from memctl in some way
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
-		rom_throttle_map_i					=> rom_throttle_map_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		rom_throttle_act_o					=> i_rom_throttle_act,
+		mos_throttle_i							=> not swmos_shadow_i,
+		throttle_all_i							=> throttle_cpu_2MHz_i,
+		rom_throttle_map_i					=> rom_throttle_map_i,
+		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
@@ -319,7 +321,7 @@ begin
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_rom_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;

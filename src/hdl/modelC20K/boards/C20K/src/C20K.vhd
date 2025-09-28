@@ -441,7 +441,8 @@ begin
    port map (
       fb_syscon_o                   => i_fb_syscon,
 
-      EXT_nRESET_i                  => sup_nRST_i and icipo_kb_nRST,    -- TODO: make supervisor/reset button do power-up reset
+      EXT_nRESET_i                  => icipo_kb_nRST,
+      EXT_nRESET_power_i            => sup_nRST_i,
 
       clk_fish_i                    => i_clk_pll_128M,
       clk_lock_i                    => '1',
@@ -718,6 +719,9 @@ END GENERATE;
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
       mux_mhz2E_clk_o               => p_2MHZ_E_o,
 
+      mhz8_fdc_clk_o                => p_8MHZ_FDC_o,
+
+
       -- mux control outputs
       mux_nALE_o                    => mux_nALE_o,
       mux_D_nOE_o                   => mux_D_nOE_o,
@@ -969,17 +973,40 @@ end generate;
    );
 
 
+p_boot_mosram:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      if i_fb_syscon.rst = '1' then
+         r_cfg_mosram <= not icipo_btn0;
+      end if;
+   end if;
+end process;
+
                      
-r_cfg_ver_boot <= (others => '1');
 r_cfg_cpu_use_t65 <= '1';
 r_cfg_swromx <= '0';
-r_cfg_mosram <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
-r_cfg_cpu_type <= NONE;
+r_cfg_cpu_type <= CPU_65816;
 r_cfg_cpu_speed_opt <= NONE;
-r_cfg_mk2_cpubits <= "000";   --TODO: check!
+r_cfg_mk2_cpubits <= "001";   --TODO: check!
+
+-- synthesize from above
+p_cfgboot:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      if i_fb_syscon.rst = '1' then
+         r_cfg_ver_boot <= (others => '1');
+         r_cfg_ver_boot(15 downto 9) <= "1100101"; -- CPU=65816
+         r_cfg_ver_boot(3) <= not r_cfg_cpu_use_t65;
+         r_cfg_ver_boot(4) <= not r_cfg_swromx;
+         r_cfg_ver_boot(5) <= not r_cfg_mosram;
+         r_cfg_ver_boot(6) <= r_cfg_swram_enable;
+      end if;
+   end if;
+end process;
+
 
 
 --TODO: MK2/MK3 harmonize
@@ -1076,8 +1103,6 @@ END GENERATE;
       flash_cs_o           <= '1';
       flash_mosi_o         <= '1';
 
-
-      p_8MHZ_FDC_o         <= '0';
       
       sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
@@ -1244,7 +1269,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
      
-      clkdiv5 : CLKDIV
+      clkdiv5_snd : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
          GSREN => "false"
