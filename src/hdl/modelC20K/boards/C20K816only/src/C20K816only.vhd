@@ -421,7 +421,8 @@ begin
    port map (
       fb_syscon_o                   => i_fb_syscon,
 
-      EXT_nRESET_i                  => sup_nRST_i and icipo_kb_nRST,    -- TODO: make supervisor/reset button do power-up reset
+      EXT_nRESET_i                  => icipo_kb_nRST,
+      EXT_nRESET_power_i            => sup_nRST_i,
 
       clk_fish_i                    => i_clk_pll_128M,
       clk_lock_i                    => '1',
