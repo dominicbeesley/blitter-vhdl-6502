@@ -19,7 +19,7 @@ lib.add_source_files("../../../../library/common.vhd")
 lib.add_source_files("../../../../library/simulation/real65816_tb.vhd")
 lib.add_source_files("../../../../library/simulation/rom_tb.vhd")
 lib.add_source_files("../../../../library/simulation/ram_tb.vhd")
-lib.add_source_files("../../../../library/3rdparty/Missing/P65C816/*.vhd")
+lib.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
 
 
 fmf = vu.add_library("fmf")
