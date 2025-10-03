@@ -40,7 +40,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 use work.fishbone.all;
 use work.common.all;
@@ -128,7 +127,7 @@ end generate;
 			);		
 	end generate;
 
-	i_a_stb_any <= or_reduce(i_cyc_a_stb);
+	i_a_stb_any <= my_or_reduce(i_cyc_a_stb);
 
 	fb_per_c2p_o.cyc 			<= r_cyc_per;
 	fb_per_c2p_o.we 			<= r_c2p_we;
@@ -143,7 +142,7 @@ end generate;
 	begin
 		ir_p2c_stall <= (others => '1');
 		for I in G_CONTROLLER_COUNT-1 downto 0 loop
-			if or_reduce(i_cyc) = '1' then
+			if my_or_reduce(i_cyc) = '1' then
 				if r_state = idle and i_cyc_grant_ix = I then
 					ir_p2c_stall(I) <= '0';
 				end if;

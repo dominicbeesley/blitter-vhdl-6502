@@ -30,12 +30,11 @@
 --    - registered masks etc used to improve timing closure
 --    - functions used to make masks instead of (slower) arithmetic
 --    - comments and renaming of signals and ports
---    - or_reduce used instead of compare to 0 - fewer resources, faster timing
+--    - my_or_reduce used instead of compare to 0 - fewer resources, faster timing
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 use work.common.all;
 
 entity fb_arbiter_roundrobin is

@@ -42,7 +42,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
-use IEEE.STD_LOGIC_MISC.ALL;
 
 
 library work;
@@ -420,7 +419,7 @@ begin
 			case r_con_state is
 				when idle => 
 					--arbitrate, simple priority
-					if or_reduce(i_cha_data_req) = '1' then
+					if my_or_reduce(i_cha_data_req) = '1' then
 						for I in G_CHANNELS-1 downto 0 loop
 							if i_cha_data_req(I) = '1' then
 								r_cha_data_cur_ix <= to_unsigned(I, r_cha_data_cur_ix'length);
@@ -450,7 +449,7 @@ begin
 						r_con_a_stb <= '0';
 					end if;
 
-					if or_reduce(i_cha_data_req and r_cha_data_cur_oh) /= '1' then
+					if my_or_reduce(i_cha_data_req and r_cha_data_cur_oh) /= '1' then
 						r_con_state <= idle;
 						r_con_cyc <= '0';
 						r_con_a_stb <= '0';
