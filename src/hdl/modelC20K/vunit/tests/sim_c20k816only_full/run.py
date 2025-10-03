@@ -119,7 +119,7 @@ lib.add_source_files("../../../../library/simulation/rom_tb.vhd")
 #need a separate lib for 816 files - they clash with gowin prim sims
 lib816 = vu.add_library("lib816")
 lib816.add_source_files("../../../../library/simulation/real65816_tb.vhd")
-lib816.add_source_files("../../../../library/3rdparty/Missing/P65C816/*.vhd")
+lib816.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
 
 
 fmf = vu.add_library("fmf")

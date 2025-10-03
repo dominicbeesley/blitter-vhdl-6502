@@ -1,6 +1,6 @@
 from vunit import VUnit
 
-GOWIN = "C:/Gowin/Gowin_V1.9.11_x64/IDE/simlib/gw2a"
+GOWIN = "C:/Gowin/Gowin_V1.9.12_x64/IDE/simlib/gw2a"
 
 def encode(tb_cfg):
     return ", ".join(["%s:%s" % (key, str(tb_cfg[key])) for key in tb_cfg])
@@ -21,7 +21,6 @@ lib.add_source_files("../../../shared/fb_SYS_c20k.vhd")
 lib.add_source_files("../../../../library/bbc/*.vhd")
 lib.add_source_files("../../../../library/simulation/hct574.vhd")
 lib.add_source_files("../../../../library/simulation/ac245.vhd")
-lib.add_source_files("../../../../library/simulation/real65816_tb.vhd")
 lib.add_source_files("../../../../library/simulation/cy74FCT2543.vhd")
 lib.add_source_files("../../../../library/simulation/ls74245.vhd")
 lib.add_source_files("../../../../library/common.vhd")
@@ -130,11 +129,14 @@ lib.add_source_files("../../../shared/hdmi/vid15tohdmi.vhd")
 
 lib.add_source_files("../../../../library/simulation/ram_tb.vhd")
 lib.add_source_files("../../../../library/simulation/rom_tb.vhd")
-lib.add_source_files("../../../../library/3rdparty/Missing/P65C816/*.vhd")
 
 fmf = vu.add_library("fmf")
 
 fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
+
+lib816 = vu.add_library("lib816")
+lib816.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
+lib816.add_source_files("../../../../library/simulation/real65816_tb.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
 
