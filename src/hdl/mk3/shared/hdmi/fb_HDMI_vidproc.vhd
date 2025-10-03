@@ -21,7 +21,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -157,7 +156,7 @@ begin
 			r_CLKEN16_DIV <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_CLKEN16_DIV <= std_logic_vector(unsigned(r_CLKEN16_DIV) + 1);
-			if or_reduce(r_CLKEN16_DIV) = '0' then
+			if my_or_reduce(r_CLKEN16_DIV) = '0' then
 				r_CLKEN16 <= '1';
 			else
 				r_CLKEN16 <= '0';

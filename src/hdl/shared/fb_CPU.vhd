@@ -49,7 +49,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -685,9 +684,9 @@ begin
 			r_nmi <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_nmi_meta <= nmi_n_i & r_nmi_meta(G_NMI_META_LEVELS-1 downto 1);
-			if or_reduce(r_nmi_meta) = '0' then
+			if my_or_reduce(r_nmi_meta) = '0' then
 				r_nmi <= '0';
-			elsif and_reduce(r_nmi_meta) = '1' then
+			elsif my_and_reduce(r_nmi_meta) = '1' then
 				r_nmi <= '1';
 			end if;
 		end if;

@@ -42,7 +42,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
-use IEEE.STD_LOGIC_MISC.ALL;
 
 library work;
 use work.fishbone.all;
@@ -101,8 +100,8 @@ architecture Behavioral of fb_DMAC_int_dma is
 begin
 
 
-	int_o <= or_reduce(i_child_int);
-	cpu_halt_o <= or_reduce(i_child_cpu_halt);
+	int_o <= my_or_reduce(i_child_int);
+	cpu_halt_o <= my_or_reduce(i_child_cpu_halt);
 
 	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
 	i_reg_sel_sel <= '1' when fb_per_c2p_i.A(3 downto 0) = A_CHA_SEL 

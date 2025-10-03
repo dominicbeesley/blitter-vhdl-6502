@@ -43,10 +43,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
+use work.common.all;
 
 entity sprite_int is
    generic (
@@ -369,7 +369,7 @@ begin
 
          if v_wr_dptr2 then
             r_listinit_ptr <= v_cur_D & r_lat_list_ptr;
-            r_list_en <= or_reduce(v_cur_D & r_lat_list_ptr);
+            r_list_en <= my_or_reduce(v_cur_D & r_lat_list_ptr);
          end if;
 
       end if;
