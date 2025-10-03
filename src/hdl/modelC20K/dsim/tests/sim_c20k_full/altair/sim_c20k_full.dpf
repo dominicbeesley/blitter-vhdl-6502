@@ -1,0 +1,33 @@
+---
+# Note: The contents of this file are automatically generated.
+# Any changes made by hand may be overwritten.
+version: '0.2'
+work_dir: .
+design_root_dir: ..\..\..\..\..\
+simulations:
+  - name: top test
+    options: '-top work.test_tb -iter-limit 1000000'
+source_files:
+  - language: vhdl
+    path: ..\filelist_fmf_vhd.txt
+    library_name: fmf
+    file_list: relative-to-file
+  - language: verilog
+    path: ..\filelist_verilog.txt
+    file_list: relative-to-file
+  - language: vhdl
+    path: ..\filelist_vhdl.txt
+    options: '-vhdl2008'
+    file_list: relative-to-file
+  - language: vhdl
+    path: ..\test_tb.vhd
+    options: '-vhdl2008'
+  - language: vhdl
+    path: ..\filelist_lib816.txt
+    library_name: lib816
+    options: '-vhdl2008'
+    file_list: relative-to-file
+  - language: vhdl
+    path: ../prim_sim.vhd
+library_search_paths:
+  - $STD_LIBS\ieee93

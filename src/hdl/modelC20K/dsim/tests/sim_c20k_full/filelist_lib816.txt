@@ -1,0 +1,9 @@
+../../../../library/3rdparty/P65C816/P65816_pkg.vhd
+../../../../library/3rdparty/P65C816/AddrGen.vhd
+../../../../library/3rdparty/P65C816/BCDAdder.vhd
+../../../../library/3rdparty/P65C816/AddSubBCD.vhd
+../../../../library/3rdparty/P65C816/ALU.vhd
+../../../../library/3rdparty/P65C816/MCode.vhd
+../../../../library/3rdparty/P65C816/P65C816.vhd
+
+../../../../library/simulation/real65816_tb.vhd

@@ -1,0 +1,39 @@
+dvhcom -lib fmf -F ../filelist_fmf_vhd.txt
+Copyright (C) 2017-2025 Altair Engineering Inc. All rights reserved.
+=N:[LibUpdate] Updated library fmf.
+dvlcom -F ../filelist_verilog.txt
+Copyright (C) 2017-2025 Altair Engineering Inc. All rights reserved.
+=N:[LibUpdate] Updated library work.
+dvhcom -vhdl2008 -F ../filelist_vhdl.txt
+Copyright (C) 2017-2025 Altair Engineering Inc. All rights reserved.
+=E:[FileNotFound]:
+    The following files specified on the command line could not be opened:    
+
+    ../../../../boards/C20k/src/board_config_pack.vhd          
+
+    ../../../../boards/C20k/version.vhd                        
+
+    ../../../../boards/C20k/src/gowin_dpb/hdmi_blockram.vhd    
+
+    ../../../../boards/C20k/src/gowin_rpll/pll_27_48.vhd       
+
+    ../../../../boards/C20k/src/gowin_rpll/pll_48_128.vhd      
+
+    ../../../../boards/C20k/src/gowin_rpll/pll_hdmi.vhd        
+
+    ../../../../boards/C20k/src/gowin_sdpb/linebuffer.vhd      
+
+    ../../../../boards/C20k/src/gowin_rpll/pll_pal_sc.vhd      
+
+    ../../../../boards/C20k/src/gowin_rpll/pll_rgb_dac.vhd     
+
+    ../../../../../shared/fb_cpu_log2phys.vhd                  
+
+    ../../../../boards/C20k/src/fb_CPU_t65only.vhd             
+
+    ../../../../shared/hdmi/hdmi_out_gowin_2A.vhd              
+
+    ../../../../boards/C20k/src/C20K.vhd                       
+
+    Simulator invoked from directory: /remote/disk/work/modelC20K/dsim/tests/sim_c20k_full/altair    
+
