@@ -30,3 +30,9 @@ release/release/*
 release/*.tgz
 
 **/version.tmp
+
+**/altair/dsim_work/**
+**/.mdc/**
+mdc_config.yml
+**/mdc_ignore
+
