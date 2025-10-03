@@ -653,31 +653,38 @@ GNOSDCARD: IF NOT G_INCL_CS_SDCARD GENERATE
 END GENERATE;
 
 GSDCARD: IF G_INCL_CS_SDCARD GENERATE
-	i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
+	b_sd:block is
+	signal i_spi_cs : std_logic_vector(7 downto 0);
+	begin
+	
+		i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
+		i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
 
-	e_fb_sdcard:fb_spi
-	generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED,
-		PRESCALE								=> 4
-	)
-	port map (
+		e_fb_sdcard:fb_spi
+		generic map (
+			SIM									=> SIM,
+			CLOCKSPEED							=> CLOCKSPEED,
+			PRESCALE								=> 4
+		)
+		port map (
 
-		-- eeprom signals
-		SPI_CS_o(0)							=> SD_CS_o,
-		SPI_CLK_o							=> SD_CLK_o,
-		SPI_MOSI_o							=> SD_MOSI_o,
-		SPI_MISO_i							=> SD_MISO_i,
-		SPI_DET_i							=> SD_DET_i,
+			-- eeprom signals
+			SPI_CS_o								=> i_spi_cs,
+			SPI_CLK_o							=> SD_CLK_o,
+			SPI_MOSI_o							=> SD_MOSI_o,
+			SPI_MISO_i							=> SD_MISO_i,
+			SPI_DET_i							=> SD_DET_i,
 
-		-- fishbone signals
+			-- fishbone signals
 
-		fb_syscon_i							=> fb_syscon_i,
-		fb_c2p_i								=> i_c2p_sdcard_per,
-		fb_p2c_o								=> i_p2c_sdcard_per
-	);
+			fb_syscon_i							=> fb_syscon_i,
+			fb_c2p_i								=> i_c2p_sdcard_per,
+			fb_p2c_o								=> i_p2c_sdcard_per
+		);
 
+		SD_CS_o <= i_spi_cs(0);
+
+	end block b_sd;
 
 END GENERATE;
 GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
