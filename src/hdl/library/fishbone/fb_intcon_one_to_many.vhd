@@ -41,7 +41,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 use work.fishbone.all;
 use work.common.all;
@@ -72,6 +71,8 @@ entity fb_intcon_one_to_many is
 		peripheral_sel_oh_i			: in std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
 	);
+attribute syn_maxfan : integer;
+attribute syn_maxfan of fb_per_c2p_o : signal is 4;
 end fb_intcon_one_to_many;
 
 

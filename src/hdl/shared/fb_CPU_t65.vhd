@@ -41,7 +41,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -82,7 +81,8 @@ architecture rtl of fb_cpu_t65 is
 	signal r_prev_A0			: std_logic;
 
 	-- count down to next cycle - when all 1's can proceed
-	signal r_cpu_clk			: std_logic_vector((CLOCKSPEED/MAXSPEED)-2 downto 0) := (others => '0');
+	constant CLK_BITS : natural := (CLOCKSPEED/MAXSPEED) - 1;
+	signal r_cpu_clk			: std_logic_vector(CLK_BITS - 1 downto 0) := (others => '0');
 
 	-- r_t65_clken '1' for one cycle to complete a cycle/start another
 	signal r_t65_clken		: std_logic := '0';

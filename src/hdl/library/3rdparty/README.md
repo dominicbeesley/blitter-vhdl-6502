@@ -101,3 +101,9 @@ https://freemodelfoundry.com/
 Models taken and adapted from Free Model Foundry for various components for
 simulation
 
+
+# P65816 core
+
+Developed by [@pgate1](http://pgate1.at-ninja.jp/SNES_on_FPGA/index.html#release) and used in the [Mister SNES Core](https://github.com/MiSTer-devel/SNES_MiSTer)
+
+Edited to expose the E, X, M flags

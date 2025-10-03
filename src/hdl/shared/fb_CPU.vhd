@@ -49,7 +49,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -137,6 +136,8 @@ entity fb_cpu is
 		-- cpu specific signals
 
 		boot_65816_i							: in 	std_logic_vector(1 downto 0);
+		window_65816_i							: in	std_logic_vector(12 downto 0);
+		window_65816_wr_en_i					: in	std_logic;
 
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
@@ -329,13 +330,13 @@ architecture rtl of fb_cpu is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic_vector(1 downto 0);
+		boot_65816_i							: in	std_logic_vector(1 downto 0);
 
-		debug_vma_o								: out		std_logic;
+		debug_vma_o								: out	std_logic;
 
-		debug_addr_meta_o						: out		std_logic;
+		debug_addr_meta_o						: out	std_logic;
 
-		debug_65816_boot_act_o					: out		std_logic
+		debug_65816_boot_act_o				: out	std_logic
 
 	);
 	end component;
@@ -683,9 +684,9 @@ begin
 			r_nmi <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_nmi_meta <= nmi_n_i & r_nmi_meta(G_NMI_META_LEVELS-1 downto 1);
-			if or_reduce(r_nmi_meta) = '0' then
+			if my_or_reduce(r_nmi_meta) = '0' then
 				r_nmi <= '0';
-			elsif and_reduce(r_nmi_meta) = '1' then
+			elsif my_and_reduce(r_nmi_meta) = '1' then
 				r_nmi <= '1';
 			end if;
 		end if;
@@ -789,7 +790,11 @@ begin
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
 
 		-- debug
-		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o 				
+		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o,
+
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
 
 	);
 

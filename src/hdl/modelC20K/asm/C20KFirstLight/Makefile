@@ -1,6 +1,6 @@
 	include ./Makefile.defs
 
-SUBDIRSWIMAKE:=C20KBareMOS testprogs
+SUBDIRSWIMAKE:=C20KBareMOS C20KTestMOS testprogs
 
 $(TOPTARGETS): $(SUBDIRSWIMAKE)
 

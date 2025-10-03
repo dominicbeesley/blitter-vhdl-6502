@@ -441,7 +441,8 @@ begin
    port map (
       fb_syscon_o                   => i_fb_syscon,
 
-      EXT_nRESET_i                  => sup_nRST_i and icipo_kb_nRST,    -- TODO: make supervisor/reset button do power-up reset
+      EXT_nRESET_i                  => icipo_kb_nRST,
+      EXT_nRESET_power_i            => sup_nRST_i,
 
       clk_fish_i                    => i_clk_pll_128M,
       clk_lock_i                    => '1',
@@ -534,8 +535,7 @@ END GENERATE;
 
 
 
---TODO: CHIPSET
---TODO: sn74689 sound
+
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
@@ -571,7 +571,13 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SCL_io		=> I2C_SCL_io,
 
 		snd_dat_o		=> i_paula_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_change_clken_o => open,
+
+      SD_CS_o              => sd0_cs_o,
+      SD_CLK_o             => sd0_sclk_o,
+      SD_MOSI_o            => sd0_mosi_o,
+      SD_MISO_i            => sd0_miso_i,
+      SD_DET_i             => '1'
 
 	);
 
@@ -594,22 +600,20 @@ END GENERATE;
 
 
    --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-   G_SND_DAC:IF G_INCL_CS_SND GENERATE
 
-      e_dac_snd: entity work.dac_1bit 
-      generic map (
-         G_SAMPLE_SIZE     => 11,
-         G_SYNC_DEPTH      => 0
-      )
-      port map (
-         rst_i             => i_fb_syscon.rst,
-         clk_dac           => i_fb_syscon.clk,
+  e_dac_snd: entity work.dac_1bit 
+  generic map (
+     G_SAMPLE_SIZE     => 11,
+     G_SYNC_DEPTH      => 0
+  )
+  port map (
+     rst_i             => i_fb_syscon.rst,
+     clk_dac           => i_fb_syscon.clk,
 
-         sample            => r_dac_sample,
-      
-         bitstream         => i_dac_snd_pwm
-      );
-   END GENERATE;
+     sample            => r_dac_sample,
+  
+     bitstream         => i_dac_snd_pwm
+  );
 
 
 	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
@@ -714,6 +718,9 @@ END GENERATE;
       -- mux clock outputs
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
       mux_mhz2E_clk_o               => p_2MHZ_E_o,
+
+      mhz8_fdc_clk_o                => p_8MHZ_FDC_o,
+
 
       -- mux control outputs
       mux_nALE_o                    => mux_nALE_o,
@@ -862,7 +869,7 @@ end generate;
 
       -- direct CPU control signals from system
       nmi_n_i                       => icipo_btn1, -- TODO: NMI
-      irq_n_i                       => i_sys_nIRQ,
+      irq_n_i                       => i_cpu_IRQ_n,
       cpu_halt_i                    => i_chipset_cpu_halt,
 
       -- fishbone signals
@@ -966,17 +973,40 @@ end generate;
    );
 
 
+p_boot_mosram:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      if i_fb_syscon.rst = '1' then
+         r_cfg_mosram <= not icipo_btn0;
+      end if;
+   end if;
+end process;
+
                      
-r_cfg_ver_boot <= (others => '1');
 r_cfg_cpu_use_t65 <= '1';
 r_cfg_swromx <= '0';
-r_cfg_mosram <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
-r_cfg_cpu_type <= NONE;
+r_cfg_cpu_type <= CPU_65816;
 r_cfg_cpu_speed_opt <= NONE;
-r_cfg_mk2_cpubits <= "000";   --TODO: check!
+r_cfg_mk2_cpubits <= "001";   --TODO: check!
+
+-- synthesize from above
+p_cfgboot:process(i_fb_syscon)
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      if i_fb_syscon.rst = '1' then
+         r_cfg_ver_boot <= (others => '1');
+         r_cfg_ver_boot(15 downto 9) <= "1100101"; -- CPU=65816
+         r_cfg_ver_boot(3) <= not r_cfg_cpu_use_t65;
+         r_cfg_ver_boot(4) <= not r_cfg_swromx;
+         r_cfg_ver_boot(5) <= not r_cfg_mosram;
+         r_cfg_ver_boot(6) <= r_cfg_swram_enable;
+      end if;
+   end if;
+end process;
+
 
 
 --TODO: MK2/MK3 harmonize
@@ -1073,12 +1103,6 @@ END GENERATE;
       flash_cs_o           <= '1';
       flash_mosi_o         <= '1';
 
-
-      p_8MHZ_FDC_o         <= '0';
-
-      sd0_cs_o             <= '0';
-      sd0_mosi_o           <= '0';
-      sd0_sclk_o           <= '0';
       
       sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
@@ -1244,9 +1268,8 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       bitstream_o       => i_vid_b_0
    );
 
-   G_SND_CLK:if G_INCL_CHIPSET and G_INCL_CS_SND generate
-      
-      clkdiv5 : CLKDIV
+     
+      clkdiv5_snd : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
          GSREN => "false"
@@ -1257,8 +1280,6 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
          CLKOUT => i_clk_snd,
          CALIB  => '1'
       );
-
-   end generate;
 
    e_obuf_vid_chroma:obuf
    port map (

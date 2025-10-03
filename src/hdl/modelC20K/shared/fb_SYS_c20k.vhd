@@ -60,7 +60,6 @@ entity fb_SYS_c20k is
       G_JIM_DEVNO                   : std_logic_vector(7 downto 0);
       -- TODO: horrendous bodge - need to prep the databus with the high byte of address for "nul" reads of hw addresses where no hardware is present
       DEFAULT_SYS_ADDR              : std_logic_vector(15 downto 0) := x"FFEF"   -- this reads as x"EE" which should satisfy the TUBE detect code in the MOS and DFS/ADFS startup code
-
    );
    port(
 
@@ -74,6 +73,8 @@ entity fb_SYS_c20k is
       -- mux clock outputs
       mux_mhz1E_clk_o         : out    std_logic;                        -- 1MHzE clock for main board
       mux_mhz2E_clk_o         : out    std_logic;                        -- 2MHzE clock for main board - cycle stretched
+
+      mhz8_fdc_clk_o          : out    std_logic;                        -- floppy disc controller 8M clock
 
       -- mux control outputs
       mux_nALE_o              : out    std_logic;
@@ -210,7 +211,6 @@ architecture rtl of fb_SYS_c20k is
 
    -- control
    signal   i_reset_full      : std_logic;      -- reset mux state machine before clocking out full reset
-   signal   i_reset_hard      : std_logic;      -- "power up" reset for sys via --TODO: distinguish between reset button and break key?
    signal   r_reset_bus       : std_logic := '0';      -- single cycle reset
    signal   r_reset_bus_pre   : std_logic := '0';      -- single cycle reset baulk
 
@@ -429,8 +429,8 @@ begin
 	                        -- TODO: fix this properly, for now just munge the number to match
 	                        -- the mappings from the BBC, this will not allow any external ROMs!
 	                        r_sys_ROMPG <= r_D_wr xor "00001100";       -- write to both shadow register and SYS
-						 elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
-							r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
+						      elsif r_sys_A(15 downto 0) = x"FE30" and cfg_sys_type_i /= SYS_ELK then
+                           r_sys_ROMPG <= r_D_wr;			-- write to both shadow register and SYS
                         end if;
                         if r_sys_A(15 downto 0) = x"FCFF" then
                            if r_D_wr = G_JIM_DEVNO then
@@ -549,8 +549,6 @@ begin
 
    i_reset_full <= '1' when fb_syscon_i.rst = '1' and (fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup) else
                    '0';
-   i_reset_hard <= '1' when fb_syscon_i.rst = '1' and fb_syscon_i.rst_state = powerup else
-                   '0';
 
 
    p_reset_bus:process(fb_syscon_i)
@@ -604,6 +602,8 @@ begin
       -- mux clock outputs
       mux_mhz1E_clk_o         => mux_mhz1E_clk_o,
       mux_mhz2E_clk_o         => mux_mhz2E_clk_o,
+
+      mhz8_fdc_clk_o          => mhz8_fdc_clk_o,
 
       -- mux control outputs
       mux_nALE_o              => mux_nALE_o,
@@ -716,7 +716,7 @@ begin
       O_PB_OE_L             => open,
 
       I_P2_H                => mux_mhz1E_clk_o,
-      RESET_L               => not i_reset_hard,
+      RESET_L               => not i_reset_full,
       ENA_4                 => i_MHz4_clken,
       CLK                   => fb_syscon_i.clk
    );
@@ -743,7 +743,7 @@ begin
    port  map (
       clk_i => fb_syscon_i.clk,
       en_clk_psg_i => i_MHz4_clken,
-      reset_n_i => not i_reset_hard,
+      reset_n_i => not i_reset_full,
       data_i => i_sysvia_PA_o,
       wr_n_i => i_beeb_ic32(0),
       ce_n_i => '0',
@@ -762,7 +762,7 @@ begin
    port map (
       -- CPU signals
       clk      => not fb_syscon_i.clk,
-      rst      => i_reset_hard,
+      rst      => i_reset_full,
       cs       => not r_acia_nCS,
       rw       => r_sys_RnW,
       irq      => i_acia_IRQ,
@@ -783,14 +783,14 @@ begin
    -- SERIAL ULA CLOCK DIVIDER
    --------------------------------------------------------
 
-   p_serual_clk:process(fb_syscon_i, i_reset_hard)
+   p_serual_clk:process(fb_syscon_i, i_reset_full)
    variable vr_ring_16 : std_logic_vector((CLOCKSPEED / 16) - 1 downto 0) := (0 => '1', others => '0');
    variable vr_ring_13 : std_logic_vector(12 downto 0) := (0 => '1', others => '0');
    begin
 
       assert CLOCKSPEED mod 16 = 0 report "CLOCKSPEED must be a multiple of 16" severity error;
 
-      if i_reset_hard = '1' then
+      if i_reset_full = '1' then
          r_serula_cken1316 <= '0';
          vr_ring_16 := (0 => '1', others => '0');
          vr_ring_13 := (0 => '1', others => '0');
@@ -875,7 +875,7 @@ begin
       G_SAMPLE_SIZE     => 6 
    )
    port map (
-      rst_i             => i_reset_hard,
+      rst_i             => i_reset_full,
       clk_dac           => fb_syscon_i.clk,
       clken_dac         => r_serula_cken1316,
       sample            => r_dac_cas_val,      

@@ -44,7 +44,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -146,7 +145,7 @@ architecture rtl of fb_cpu_t65only is
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
 
 	signal i_fb_c2p_extra_instr_fetch : std_logic;
-	signal i_rom_throttle_act		: std_logic;
+	signal i_throttle_act		: std_logic;
 
 begin
 
@@ -163,9 +162,9 @@ begin
 			r_nmi <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_nmi_meta <= nmi_n_i & r_nmi_meta(G_NMI_META_LEVELS-1 downto 1);
-			if or_reduce(r_nmi_meta) = '0' then
+			if my_or_reduce(r_nmi_meta) = '0' then
 				r_nmi <= '0';
-			elsif and_reduce(r_nmi_meta) = '1' then
+			elsif my_and_reduce(r_nmi_meta) = '1' then
 				r_nmi <= '1';
 			end if;
 		end if;
@@ -262,15 +261,17 @@ begin
 		jim_en_i									=> jim_en_i,
 
 		-- SYS VIA slowdown enable
-		sys_via_blocker_en_i					=> '1',					-- TODO: Other CPUs
+		sys_via_blocker_en_i					=> '0',					-- TODO: Other CPUs
 
 		-- memctl signals
-		swmos_shadow_i							=> swmos_shadow_i,
+		swmos_shadow_i							=> swmos_shadow_i,		-- TODO: get from memctl in some way
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
-		rom_throttle_map_i					=> rom_throttle_map_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		rom_throttle_act_o					=> i_rom_throttle_act,
+		mos_throttle_i							=> not swmos_shadow_i,
+		throttle_all_i							=> throttle_cpu_2MHz_i,
+		rom_throttle_map_i					=> rom_throttle_map_i,
+		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
@@ -278,8 +279,6 @@ begin
 
 		-- debug signals
 		debug_SYS_VIA_block_o				=> open,
-
-
 
 		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch
 
@@ -321,7 +320,7 @@ begin
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_rom_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;

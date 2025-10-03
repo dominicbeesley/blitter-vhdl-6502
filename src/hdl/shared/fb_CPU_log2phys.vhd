@@ -41,7 +41,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -89,16 +88,24 @@ entity fb_cpu_log2phys is
 		-- memctl signals
 		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
-		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
-		rom_throttle_act_o					: out std_logic;
+
+		mos_throttle_i							: in std_logic;
+		throttle_all_i							: in std_logic;
+		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		throttle_act_o							: out std_logic;
 
 		-- noice signals
 		noice_debug_shadow_i					: in std_logic;
 
 
 		-- debug signals
-		debug_SYS_VIA_block_o				: out std_logic
+		debug_SYS_VIA_block_o				: out std_logic;
+
+		-- 65816/model-C extras
+		window_65816_i							: in	std_logic_vector(12 downto 0) := x"FF" & "11100";
+		window_65816_wr_en_i					: in	std_logic := '0'
+
 
 	);
 end fb_cpu_log2phys;
@@ -124,8 +131,8 @@ architecture rtl of fb_cpu_log2phys is
 
 	signal i_sysvia_clken			: std_logic;
 
-	signal i_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
-	signal r_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
+	signal i_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
+	signal r_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 
 begin
 
@@ -143,7 +150,7 @@ begin
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
 
-	rom_throttle_act_o <= r_rom_throttle_act;
+	throttle_act_o <= r_throttle_act;
 
 	-- ================================================================================================ --
 	-- State Machine 
@@ -176,7 +183,7 @@ begin
 					if fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' then
 						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
-						r_rom_throttle_act <= i_rom_throttle_act;
+						r_throttle_act <= i_throttle_act;
 						r_we <= fb_con_c2p_i.we;
 						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
@@ -303,14 +310,22 @@ begin
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
-		rom_throttle_map_i				=> rom_throttle_map_i,
 		rom_autohazel_map_i				=> rom_autohazel_map_i,
-		rom_throttle_act_o				=> i_rom_throttle_act,
+
+		mos_throttle_i						=> mos_throttle_i,
+		throttle_all_i						=> throttle_all_i,
+		rom_throttle_map_i				=> rom_throttle_map_i,
+		throttle_act_o						=> i_throttle_act,
 
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
 
-		A_o									=> i_phys_A
+		A_o									=> i_phys_A,
+
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		
 	);
 
 	debug_SYS_VIA_block_o <= i_SYS_VIA_block;

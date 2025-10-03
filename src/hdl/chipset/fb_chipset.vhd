@@ -43,7 +43,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -83,9 +82,20 @@ entity fb_chipset is
 		vsync_i					: in std_logic;
 		hsync_i					: in std_logic;
 
-		-- top level ports -- TODO: should EEPROM really be part of chipset? - probably due to where it sits in address map
+		-- top level ports 
+		-- TODO: should EEPROM/SDCARD  really be part of chipset? - probably due to where it sits in address map
+
+		-- i2c eeprom / rtc etc
 		I2C_SCL_io				: inout std_logic;
-		I2C_SDA_io				: inout std_logic
+		I2C_SDA_io				: inout std_logic;
+
+		-- SDCARD spi
+		SD_CS_o					: out		std_logic;
+		SD_CLK_o					: out		std_logic;
+		SD_MOSI_o				: out		std_logic;
+		SD_MISO_i				: in		std_logic;
+		SD_DET_i					: in		std_logic
+
 
 	);
 end fb_chipset;
@@ -122,7 +132,8 @@ architecture rtl of fb_chipset is
 	constant PERIPHERAL_NO_CHIPSET_BLIT		: natural := PERIPHERAL_NO_CHIPSET_SOUND + B2OZ(G_INCL_CS_SND);
 	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := PERIPHERAL_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
 	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := PERIPHERAL_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
-	constant PERIPHERAL_COUNT_CHIPSET		: natural := PERIPHERAL_NO_CHIPSET_EEPROM + B2OZ(G_INCL_CS_EEPROM);
+	constant PERIPHERAL_NO_CHIPSET_SDCARD	: natural := PERIPHERAL_NO_CHIPSET_EEPROM + B2OZ(G_INCL_CS_EEPROM);
+	constant PERIPHERAL_COUNT_CHIPSET		: natural := PERIPHERAL_NO_CHIPSET_SDCARD + B2OZ(G_INCL_CS_SDCARD);
 
 
 	-----------------------------------------------------------------------------
@@ -250,6 +261,33 @@ architecture rtl of fb_chipset is
 		);
 	end component;
 
+	component fb_spi is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
+		PRESCALE								: positive := 4								-- prescaler to apply before clock divider
+	);
+	port(
+
+		-- SPI signals
+
+		SPI_CS_o								: out		std_logic_vector(7 downto 0);
+		SPI_CLK_o							: out		std_logic;
+		SPI_MOSI_o							: out		std_logic;
+		SPI_MISO_i							: in		std_logic;
+		SPI_DET_i							: in		std_logic;
+
+
+		-- fishbone signals
+
+		fb_syscon_i							: in		fb_syscon_t;
+		fb_c2p_i								: in		fb_con_o_per_i_t;
+		fb_p2c_o								: out		fb_con_i_per_o_t
+
+	);
+	end component;
+
+
 	-----------------------------------------------------------------------------
 	-- fishbone signals
 	-----------------------------------------------------------------------------
@@ -285,6 +323,11 @@ architecture rtl of fb_chipset is
 	-- i2c eeprom control registers wrapper
 	signal i_c2p_eeprom_per		: fb_con_o_per_i_t;
 	signal i_p2c_eeprom_per		: fb_con_i_per_o_t;
+
+	-- SD/SPI control registers wrapper
+	signal i_c2p_sdcard_per		: fb_con_o_per_i_t;
+	signal i_p2c_sdcard_per		: fb_con_i_per_o_t;
+
 
 	-- null peripheral for out-of range addresses
 	signal i_c2p_null_per		: fb_con_o_per_i_t;
@@ -383,6 +426,7 @@ begin
 		G_PERIPHERAL_NO_CHIPSET_BLIT		=> PERIPHERAL_NO_CHIPSET_BLIT,
 		G_PERIPHERAL_NO_CHIPSET_AERIS		=> PERIPHERAL_NO_CHIPSET_AERIS,
 		G_PERIPHERAL_NO_CHIPSET_EEPROM 	=> PERIPHERAL_NO_CHIPSET_EEPROM,
+		G_PERIPHERAL_NO_CHIPSET_SDCARD 	=> PERIPHERAL_NO_CHIPSET_SDCARD,
 		G_PERIPHERAL_COUNT_CHIPSET 		=> PERIPHERAL_COUNT_CHIPSET
 	)
 	port map (
@@ -602,11 +646,44 @@ GEEPROM: IF G_INCL_CS_EEPROM GENERATE
 	);
 
 END GENERATE;
+GNOSDCARD: IF NOT G_INCL_CS_SDCARD GENERATE
+	SD_CS_o <= 'Z';
+	SD_CLK_o <= 'Z';
+	SD_MOSI_o <= 'Z';
+END GENERATE;
+
+GSDCARD: IF G_INCL_CS_SDCARD GENERATE
+	i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
+	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
+
+	e_fb_sdcard:fb_spi
+	generic map (
+		SIM									=> SIM,
+		CLOCKSPEED							=> CLOCKSPEED,
+		PRESCALE								=> 4
+	)
+	port map (
+
+		-- eeprom signals
+		SPI_CS_o(0)							=> SD_CS_o,
+		SPI_CLK_o							=> SD_CLK_o,
+		SPI_MOSI_o							=> SD_MOSI_o,
+		SPI_MISO_i							=> SD_MISO_i,
+		SPI_DET_i							=> SD_DET_i,
+
+		-- fishbone signals
+
+		fb_syscon_i							=> fb_syscon_i,
+		fb_c2p_i								=> i_c2p_sdcard_per,
+		fb_p2c_o								=> i_p2c_sdcard_per
+	);
+
+
+END GENERATE;
 GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
 END GENERATE;
-
 
 
 	cpu_halt_o <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;

@@ -69,6 +69,9 @@ entity fb_memctl is
 
 		boot_65816_o						: out std_logic_vector(1 downto 0);
 
+		window_65816_o						: out std_logic_vector(12 downto 0);
+		window_65816_wr_en_o				: out std_logic;								-- single cycle strobe when register is updated (high nybble written), invalid otherwise
+
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				: out	std_logic;		-- debugger is forcing a cpu NMI
 		noice_debug_shadow_o				: out std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
@@ -140,6 +143,9 @@ architecture rtl of fb_memctl is
 
 	signal   r_65816_boot					: 	std_logic_vector(1 downto 0);
 
+	signal	r_window_65816					:	std_logic_vector(12 downto 0);
+	signal	r_window_65816_wr_en			:	std_logic;
+
 	signal	r_throttle_cpu_2MHz			: 	std_logic;
 	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
 
@@ -156,6 +162,9 @@ begin
 	turbo_lo_mask_o <= r_turbo_lo;
 
 	swmos_shadow_o <= r_swmos_shadow;
+
+	window_65816_o <= r_window_65816;
+	window_65816_wr_en_o <= r_window_65816_wr_en;
 
 	noice_debug_nmi_n_o <= 
 		r_noice_debug_nmi_n when do6502_debug_i = '1' else
@@ -225,30 +234,30 @@ begin
 					r_swmos_shadow <= '0';
 				end if;		
 			else
-					v_dowrite := false;
+				v_dowrite := false;
+				r_con_ack <= '0';
+				r_window_65816_wr_en <= '0';
 
-					r_con_ack <= '0';
-
-					case fb_state is
-					when idle =>
-						if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
-							if fb_c2p_i.we = '1' then
-								if fb_c2p_i.D_wr_stb = '1' then
-									v_dowrite := true;
-								else
-									fb_state <= wait_write;
-								end if;
+				case fb_state is
+				when idle =>
+					if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+						if fb_c2p_i.we = '1' then
+							if fb_c2p_i.D_wr_stb = '1' then
+								v_dowrite := true;
 							else
-								fb_state <= idle;
-								r_con_ack <= '1';
+								fb_state <= wait_write;
 							end if;
+						else
+							fb_state <= idle;
+							r_con_ack <= '1';
 						end if;
-					when wait_write =>
-						if fb_c2p_i.D_wr_stb = '1' then
-							v_dowrite := true;
-						end if;
-					when others =>
-						fb_state <= idle;
+					end if;
+				when wait_write =>
+					if fb_c2p_i.D_wr_stb = '1' then
+						v_dowrite := true;
+					end if;
+				when others =>
+					fb_state <= idle;
 				end case;
 
 				if fb_c2p_i.cyc = '0' then
@@ -257,6 +266,11 @@ begin
 					fb_state <= idle;
 					r_con_ack <= '1';
 					case to_integer(unsigned(fb_c2p_i.A(3 downto 0))) is
+						when 15 =>
+							r_window_65816(12 downto 5) <= fb_c2p_i.D_wr;
+							r_window_65816_wr_en <= '1';
+						when 14 =>
+							r_window_65816(4 downto 0) <= fb_c2p_i.D_wr(7 downto 3);
 						when 8 =>
 							r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
 						when 9 =>

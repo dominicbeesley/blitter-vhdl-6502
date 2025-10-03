@@ -3,7 +3,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
-use IEEE.STD_LOGIC_MISC.ALL;
 entity version_rom is port (
  A : in std_logic_vector(6 downto 0);
  Q : out std_logic_vector(7 downto 0)

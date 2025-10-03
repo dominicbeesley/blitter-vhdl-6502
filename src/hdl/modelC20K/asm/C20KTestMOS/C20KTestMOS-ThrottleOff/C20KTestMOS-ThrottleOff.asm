@@ -54,7 +54,10 @@ mos_handle_res:
 @wl:	dex
 	bne	@wl
 
-	jmp	@lp
+@lp2:
+	inc	$fc00
+	jmp	@ask
+@ask:	jmp	@lp2
 
 
 

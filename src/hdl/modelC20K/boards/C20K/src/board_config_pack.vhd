@@ -74,6 +74,7 @@ package board_config_pack is
 	constant G_SND_CHANNELS		: natural := 4;
 	constant G_INCL_CS_AERIS	: boolean := false;
 	constant G_INCL_CS_EEPROM	: boolean := true;
+	constant G_INCL_CS_SDCARD  : boolean := true;
 	constant G_INCL_LED_ARR		: boolean := false;
 	constant G_INCL_DBG_UART	: boolean := false;
 	
@@ -108,7 +109,7 @@ package board_config_pack is
 
 	constant CONTROLLER_COUNT 			: natural 		:= 2;
 	constant MAS_NO_CPU					: natural		:= 1;
-	constant MAS_NO_CHIPSET				: natural		:= 0; -- not used
+	constant MAS_NO_CHIPSET				: natural		:= 0;
 
 end board_config_pack;
 

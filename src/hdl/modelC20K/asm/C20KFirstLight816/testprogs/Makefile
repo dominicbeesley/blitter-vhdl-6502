@@ -1,0 +1,10 @@
+	include ../Makefile.defs
+
+SUBDIRSWIMAKE:= flashinfo 
+
+$(TOPTARGETS): $(SUBDIRSWIMAKE)
+
+$(SUBDIRSWIMAKE): 
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
+.PHONY:		$(TOPTARGETS) $(SUBDIRSWIMAKE)
