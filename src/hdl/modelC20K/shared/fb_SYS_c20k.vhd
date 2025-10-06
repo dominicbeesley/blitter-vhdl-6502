@@ -345,23 +345,9 @@ begin
                         if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
                            v_next_state := jim_dev_rd;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-                           if fb_c2p_i.D_wr_stb = '1' then
-                              r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
-                              r_ack <= '1';
-                              r_rdy <= '1';
-                              v_next_state := idle;
-                           else
-                              v_next_state := jim_page_lo_wr;
-                           end if;
+                           v_next_state := jim_page_lo_wr;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-                           if fb_c2p_i.D_wr_stb = '1' then
-                              r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
-                              r_ack <= '1';
-                              r_rdy <= '1';
-                              v_next_state := idle;
-                           else
-                              v_next_state := jim_page_hi_wr;
-                           end if;
+                           v_next_state := jim_page_hi_wr;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
                            v_next_state := jim_page_lo_rd;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
@@ -369,8 +355,6 @@ begin
                         else
 
                            if fb_c2p_i.we = '1' then
-                              r_had_d_stb <= fb_c2p_i.D_wr_stb;
-                              r_d_wr <= fb_c2p_i.d_wr;
                               r_sys_RnW <= '0';                   
                               v_next_state := addrlatched_wr;
                               r_wr_setup_ctr <= (others => '0');
@@ -422,10 +406,6 @@ begin
                         v_next_state := wait_sys_end;
                      end if;
                   else
-                     if fb_c2p_i.D_wr_stb = '1' and r_had_d_stb = '0' then
-                        r_had_d_stb <= '1';
-                        r_d_wr <= fb_c2p_i.d_wr;
-                     end if;
                      if r_had_d_stb = '1' then
 	                     if r_sys_A(15 downto 0) = x"FE05" and cfg_sys_type_i = SYS_ELK then
 	                        -- TODO: fix this properly, for now just munge the number to match
@@ -496,8 +476,8 @@ begin
                      else
                         v_next_state := wait_sys_end;
                      end if;
-                  elsif fb_c2p_i.D_wr_stb = '1' then
-                     r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
+                  elsif r_had_d_stb = '1' then
+                     r_JIM_page(7 downto 0) <= r_d_wr;
                      r_ack <= '1';
                      r_rdy <= '1';
                      v_next_state := idle;
@@ -509,8 +489,8 @@ begin
                      else
                         v_next_state := wait_sys_end;
                      end if;
-                  elsif fb_c2p_i.D_wr_stb = '1' then
-                     r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
+                  elsif r_had_d_stb = '1' then
+                     r_JIM_page(15 downto 8) <= r_d_wr;
                      r_ack <= '1';
                      r_rdy <= '1';
                      v_next_state := idle;
@@ -524,6 +504,11 @@ begin
                   r_con_cyc <= '0';
 
             end case;
+
+            if fb_c2p_i.D_wr_stb = '1' and (r_state = idle or r_had_d_stb = '0') then
+               r_had_d_stb <= '1';
+               r_d_wr <= fb_c2p_i.d_wr;
+            end if;
 
             r_state <= v_next_state;
 
