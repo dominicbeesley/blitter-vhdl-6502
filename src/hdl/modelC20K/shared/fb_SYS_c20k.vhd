@@ -287,6 +287,7 @@ begin
    fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
 
    p_state:process(fb_syscon_i)
+   variable v_next_state : state_sys_t;
    begin
 
       if fb_syscon_i.rst = '1' then
@@ -314,6 +315,7 @@ begin
          if rising_edge(fb_syscon_i.clk) then
 
             r_ack <= '0';
+            v_next_state := r_state;
 
             case r_state is
                when idle =>
@@ -341,40 +343,40 @@ begin
 
 
                         if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           r_state <= jim_dev_rd;
+                           v_next_state := jim_dev_rd;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
                            if fb_c2p_i.D_wr_stb = '1' then
                               r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
                               r_ack <= '1';
                               r_rdy <= '1';
-                              r_state <= idle;
+                              v_next_state := idle;
                            else
-                              r_state <= jim_page_lo_wr;
+                              v_next_state := jim_page_lo_wr;
                            end if;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
                            if fb_c2p_i.D_wr_stb = '1' then
                               r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
                               r_ack <= '1';
                               r_rdy <= '1';
-                              r_state <= idle;
+                              v_next_state := idle;
                            else
-                              r_state <= jim_page_hi_wr;
+                              v_next_state := jim_page_hi_wr;
                            end if;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           r_state <= jim_page_lo_rd;
+                           v_next_state := jim_page_lo_rd;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           r_state <= jim_page_hi_rd;
+                           v_next_state := jim_page_hi_rd;
                         else
 
                            if fb_c2p_i.we = '1' then
                               r_had_d_stb <= fb_c2p_i.D_wr_stb;
                               r_d_wr <= fb_c2p_i.d_wr;
                               r_sys_RnW <= '0';                   
-                              r_state <= addrlatched_wr;
+                              v_next_state := addrlatched_wr;
                               r_wr_setup_ctr <= (others => '0');
                            else
                               r_sys_RnW <= '1';
-                              r_state <= addrlatched_rd;
+                              v_next_state := addrlatched_rd;
                            end if;
 
                            if fb_c2p_i.A(15 downto 4) = x"FE4" then
@@ -393,9 +395,9 @@ begin
 
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
-                        r_state <= idle;
+                        v_next_state := idle;
                      else
-                        r_state <= wait_sys_end;
+                        v_next_state := wait_sys_end;
                      end if;
                   else
 
@@ -403,7 +405,7 @@ begin
                         r_rdy <= '1';
                      end if;
                      if i_SYScyc_end_clken = '1' then
-                        r_state <= idle;     
+                        v_next_state := idle;     
                         r_ack <= '1';     
                         r_D_rd <= i_D_rd;          
                      end if;
@@ -415,9 +417,9 @@ begin
 
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
-                        r_state <= idle;
+                        v_next_state := idle;
                      else
-                        r_state <= wait_sys_end;
+                        v_next_state := wait_sys_end;
                      end if;
                   else
                      if fb_c2p_i.D_wr_stb = '1' and r_had_d_stb = '0' then
@@ -442,16 +444,16 @@ begin
                         r_sys_D_wr <= r_D_wr;
                         r_ack <= '1';
                         r_rdy <= '1';
-                        r_state <= wait_sys_end_wr;
+                        v_next_state := wait_sys_end_wr;
                      end if;
                   end if;
 
                when wait_sys_end_wr =>
                   if i_SYScyc_end_clken = '1' then
                      if r_wr_setup_ctr < C_WRITE_SETUP then
-                        r_state <= wait_sys_repeat_wr;
+                        v_next_state := wait_sys_repeat_wr;
                      else
-                        r_state <= idle;
+                        v_next_state := idle;
                      end if;
                   else
                      if r_wr_setup_ctr < C_WRITE_SETUP then
@@ -461,61 +463,61 @@ begin
 
                when wait_sys_repeat_wr => 
                   if i_SYScyc_st_clken = '1' then
-                     r_state <= wait_sys_end_wr;
+                     v_next_state := wait_sys_end_wr;
                      r_wr_setup_ctr <= (others => '0');
                   end if;
 
                when wait_sys_end =>
                   -- controller has released wait for end of this cycle
                   if i_SYScyc_end_clken = '1' then
-                     r_state <= idle;
+                     v_next_state := idle;
                   end if;
 
                when jim_dev_rd =>
                   r_rdy <= '1';
-                  r_state <= idle;     
+                  v_next_state := idle;     
                   r_ack <= '1';     
                   r_D_rd <= G_JIM_DEVNO xor x"FF";          
                when jim_page_lo_rd =>
                   r_rdy <= '1';
-                  r_state <= idle;     
+                  v_next_state := idle;     
                   r_ack <= '1';     
                   r_D_rd <= r_JIM_page(7 downto 0);            
                when jim_page_hi_rd =>
                   r_rdy <= '1';
-                  r_state <= idle;     
+                  v_next_state := idle;     
                   r_ack <= '1';     
                   r_D_rd <= r_JIM_page(15 downto 8);           
 
                when jim_page_lo_wr =>
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
-                        r_state <= idle;
+                        v_next_state := idle;
                      else
-                        r_state <= wait_sys_end;
+                        v_next_state := wait_sys_end;
                      end if;
                   elsif fb_c2p_i.D_wr_stb = '1' then
                      r_JIM_page(7 downto 0) <= fb_c2p_i.D_wr;
                      r_ack <= '1';
                      r_rdy <= '1';
-                     r_state <= idle;
+                     v_next_state := idle;
                   end if;
                when jim_page_hi_wr =>
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
-                        r_state <= idle;
+                        v_next_state := idle;
                      else
-                        r_state <= wait_sys_end;
+                        v_next_state := wait_sys_end;
                      end if;
                   elsif fb_c2p_i.D_wr_stb = '1' then
                      r_JIM_page(15 downto 8) <= fb_c2p_i.D_wr;
                      r_ack <= '1';
                      r_rdy <= '1';
-                     r_state <= idle;
+                     v_next_state := idle;
                   end if;
                when others =>
                   -- catch all
-                  r_state <= idle;
+                  v_next_state := idle;
                   
                   r_sys_RnW <= '1';
                   r_rdy <= '0';
@@ -523,15 +525,8 @@ begin
 
             end case;
 
---          if cfg_sys_type_i = SYS_BBC and r_con_cyc = '1' and i_SYScyc_st_clken = '1' then
---             -- a cycle has overrun, release the bus
---             r_sys_RnW <= '1';
---             fb_p2c_o.rdy_ctdn <= RDY_CTDN_MIN;
---             r_ack <= '1';
---             r_state <= idle;
---             r_sys_A <= DEFAULT_SYS_ADDR;
---             r_sys_RnW <= '1';
---          end if;
+            r_state <= v_next_state;
+
 
             if fb_c2p_i.cyc = '0' then
                -- controller has dropped the cycle
