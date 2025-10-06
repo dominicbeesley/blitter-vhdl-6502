@@ -159,8 +159,7 @@ architecture rtl of fb_SYS_c20k is
       jim_dev_rd,
       jim_page_lo_wr,
       jim_page_hi_wr,
-      jim_page_lo_rd,
-      jim_page_hi_rd,
+      jim_page_rd,
       sys_via_rd,
       sys_via_wr
    );
@@ -348,10 +347,8 @@ begin
                            v_next_state := jim_page_lo_wr;
                         elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
                            v_next_state := jim_page_hi_wr;
-                        elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           v_next_state := jim_page_lo_rd;
-                        elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           v_next_state := jim_page_hi_rd;
+                        elsif (fb_c2p_i.A(15 downto 0) = x"FCFE" or fb_c2p_i.A(15 downto 0) = x"FCFD") and fb_c2p_i.we = '0' and r_JIM_en = '1' then
+                           v_next_state := jim_page_rd;
                         else
 
                            if fb_c2p_i.we = '1' then
@@ -458,17 +455,15 @@ begin
                   v_next_state := idle;     
                   r_ack <= '1';     
                   r_D_rd <= G_JIM_DEVNO xor x"FF";          
-               when jim_page_lo_rd =>
+               when jim_page_rd =>
                   r_rdy <= '1';
                   v_next_state := idle;     
                   r_ack <= '1';     
-                  r_D_rd <= r_JIM_page(7 downto 0);            
-               when jim_page_hi_rd =>
-                  r_rdy <= '1';
-                  v_next_state := idle;     
-                  r_ack <= '1';     
-                  r_D_rd <= r_JIM_page(15 downto 8);           
-
+                  if r_sys_A(0) = '0' then
+                     r_D_rd <= r_JIM_page(7 downto 0);            
+                  else
+                     r_D_rd <= r_JIM_page(15 downto 8);
+                  end if;
                when jim_page_lo_wr =>
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
