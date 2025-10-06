@@ -179,14 +179,16 @@ begin
 
 	p_rst_48:process(fb_syscon_i.rst, CLK_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
-			r_reset_48 <= '1';
-			if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-				r_reset_48_hard <= '1';
+		if rising_edge(CLK_48M_i) then
+			if fb_syscon_i.rst = '1' then
+				r_reset_48 <= '1';
+				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+					r_reset_48_hard <= '1';
+				end if;
+			else
+				r_reset_48 <= '0';
+				r_reset_48_hard <= '0';
 			end if;
-		elsif rising_edge(CLK_48M_i) then
-			r_reset_48 <= '0';
-			r_reset_48_hard <= '0';
 		end if;
 	end process;
 
