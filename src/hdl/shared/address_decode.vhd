@@ -56,7 +56,7 @@ entity address_decode is
 		G_PERIPHERAL_COUNT		: natural;
 		G_INCL_CHIPSET				: boolean;
 		G_INCL_HDMI					: boolean;
-		G_C20K						: boolean;
+		G_C20K						: boolean := false;
 		G_HDMI_SHADOW_SYS			: boolean := false							-- when true chipset hdmi shadows/hides motherboard graphics
 	);
 	port(

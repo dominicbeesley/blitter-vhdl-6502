@@ -50,6 +50,8 @@ package board_config_pack is
 
 	constant FW_BOARD_LEVEL				: firmware_board_level := MK2;
 
+	constant G_IORB_BLOCK		: boolean := true;
+
 	constant G_INCL_HDMI					: boolean := false;
 	constant G_INCL_CHIPSET				: boolean := true;
 	constant G_INCL_CS_DMA				: boolean := true;

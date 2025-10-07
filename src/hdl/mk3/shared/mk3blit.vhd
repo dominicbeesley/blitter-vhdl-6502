@@ -328,9 +328,9 @@ architecture rtl of mk3blit is
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
 
-	signal i_vga_debug_r					: std_logic;
-	signal i_vga_debug_g					: std_logic;
-	signal i_vga_debug_b					: std_logic;
+	signal i_vga_debug_r					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_g					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_b					: std_logic_vector(3 downto 0);
 	signal i_vga_debug_hs				: std_logic;
 	signal i_vga_debug_vs				: std_logic;
 	signal i_vga_debug_blank			: std_logic;
@@ -1040,7 +1040,7 @@ LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
 SYS_AUX_o			<= "0" & i_debug_80188_state;
 SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);
-SYS_AUX_io(1) <= i_vga_debug_r;
+SYS_AUX_io(1) <= i_vga_debug_r(i_vga_debug_r'high);
 SYS_AUX_io(2) <= i_debug_odd;
 SYS_AUX_io(3) <= i_vga_debug_blank;
 
@@ -1085,16 +1085,18 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_R_o				=> i_vga_debug_r,
 		VGA_G_o				=> i_vga_debug_g,
 		VGA_B_o				=> i_vga_debug_b,
-		VGA_HS_o			=> i_vga_debug_hs,
-		VGA_VS_o			=> i_vga_debug_vs,
+		VGA_HS_o				=> i_vga_debug_hs,
+		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank,
 
 		PCM_L_i				=> i_dac_sample,
 
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,
-		debug_hsync_crtc_o => i_debug_hsync_crtc,
-		debug_odd_o => i_debug_odd
+		debug_hsync_crtc_o=> i_debug_hsync_crtc,
+		debug_odd_o 		=> i_debug_odd,
+
+		scroll_latch_c_i	=> (others => '1')
 
 	);
 END GENERATE;

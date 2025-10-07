@@ -363,7 +363,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
+		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI
 	)
@@ -475,7 +475,14 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SCL_io		=> I2C_SCL_io,
 
 		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_change_clken_o => open,
+
+      SD_CS_o              => open,
+      SD_CLK_o             => open,
+      SD_MOSI_o            => open,
+      SD_MISO_i            => '1',
+      SD_DET_i             => '1'
+
 
 	);
 

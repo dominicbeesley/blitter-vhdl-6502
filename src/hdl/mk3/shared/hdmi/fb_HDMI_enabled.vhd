@@ -31,7 +31,8 @@ entity fb_HDMI is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		SIM_NODVI							: boolean := false;
 		CLOCKSPEED							: natural;
-		G_N_SPRITES							: natural := 4
+		G_N_SPRITES							: natural := 4;
+		G_EXT_TMDS_CLOCKS					: boolean := false
 	);
 	port(
 
@@ -52,7 +53,6 @@ entity fb_HDMI is
 		HDMI_B_o								: out		std_logic;
 
 		-- analogue video	
-
 		VGA_R_o								: out		std_logic_vector(3 downto 0);
 		VGA_G_o								: out		std_logic_vector(3 downto 0);
 		VGA_B_o								: out		std_logic_vector(3 downto 0);
@@ -72,13 +72,20 @@ entity fb_HDMI is
 		scroll_latch_c_i					: in		std_logic_vector(1 downto 0);
 
 
-		PCM_L_i								: in		signed(9 downto 0);
+		-- sound in 
+		PCM_L_i								: in		signed(15 downto 0);
+		PCM_R_i								: in		signed(15 downto 0);
 
-		debug_vsync_det_o			: out std_logic;
-		debug_hsync_det_o			: out std_logic;
-		debug_hsync_crtc_o			: out std_logic;
-		debug_odd_o					: out std_logic;
-		debug_spr_mem_clken_o		: out std_logic
+		-- debug
+		debug_vsync_det_o					: out std_logic;
+		debug_hsync_det_o					: out std_logic;
+		debug_hsync_crtc_o				: out std_logic;
+		debug_odd_o							: out std_logic;
+		debug_spr_mem_clken_o			: out std_logic;
+
+		-- external clocks (optional)
+		clk_ext_hdmi_pixel_i				: in std_logic := '1';
+		clk_ext_hdmi_tmds_i				: in std_logic := '1'
 
 
 	);

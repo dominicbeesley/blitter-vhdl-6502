@@ -49,7 +49,8 @@ use work.firmware_info_pack.all;
 package board_config_pack is
 
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
-
+	constant G_IORB_BLOCK		: boolean := true;
+	
 	constant G_INCL_HDMI		: boolean := true;
 	constant G_HDMI_SHADOW_SYS	: boolean := true;
 		

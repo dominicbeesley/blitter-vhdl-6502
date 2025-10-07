@@ -241,6 +241,7 @@ begin
 		-- controller interface from the cpu
 		fb_con_c2p_i							=> i_fb_c2p_log,
 		fb_con_p2c_o							=> i_fb_p2c_log,
+		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch,
 
 		fb_per_c2p_o							=> fb_c2p_o,
 		fb_per_p2c_i							=> fb_p2c_i,
@@ -280,7 +281,6 @@ begin
 		-- debug signals
 		debug_SYS_VIA_block_o				=> open,
 
-		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch
 
 
 
