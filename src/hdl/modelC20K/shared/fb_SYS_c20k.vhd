@@ -269,6 +269,7 @@ begin
 
    sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ and not i_acia_IRQ;
    sys_nNMI_o <= i_p_nmi;
+	sys_ROMPG_o <= r_sys_ROMPG;
 
    --TODO: get 2mhzE clken
    -- used to synchronise throttled cpu
@@ -280,7 +281,6 @@ begin
    fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' else                     
                      r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
-	sys_ROMPG_o <= r_sys_ROMPG;
    fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
    fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
 
@@ -367,7 +367,6 @@ begin
                               r_serproc_nCS <= '0';
                            end if;  
                         end if;
-
                      end if;
                   end if;
 
