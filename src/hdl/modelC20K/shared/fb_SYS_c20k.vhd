@@ -157,8 +157,7 @@ architecture rtl of fb_SYS_c20k is
       wait_sys_end, 
       --jim_dev_wr, -- this needs to be in parallel with a normal write to pass thru to SYS
       jim_dev_rd,
-      jim_page_lo_wr,
-      jim_page_hi_wr,
+      jim_page_wr,
       jim_page_rd,
       sys_via_rd,
       sys_via_wr
@@ -343,12 +342,12 @@ begin
 
                         if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
                            v_next_state := jim_dev_rd;
-                        elsif fb_c2p_i.A(15 downto 0) = x"FCFE" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-                           v_next_state := jim_page_lo_wr;
-                        elsif fb_c2p_i.A(15 downto 0) = x"FCFD" and fb_c2p_i.we = '1' and r_JIM_en = '1' then
-                           v_next_state := jim_page_hi_wr;
-                        elsif (fb_c2p_i.A(15 downto 0) = x"FCFE" or fb_c2p_i.A(15 downto 0) = x"FCFD") and fb_c2p_i.we = '0' and r_JIM_en = '1' then
-                           v_next_state := jim_page_rd;
+                        elsif (fb_c2p_i.A(15 downto 0) = x"FCFE" or fb_c2p_i.A(15 downto 0) = x"FCFD") and r_JIM_en = '1' then
+                           if fb_c2p_i.we = '1' then
+                              v_next_state := jim_page_wr;
+                           else
+                              v_next_state := jim_page_rd;
+                           end if;
                         else
 
                            if fb_c2p_i.we = '1' then
@@ -464,7 +463,7 @@ begin
                   else
                      r_D_rd <= r_JIM_page(15 downto 8);
                   end if;
-               when jim_page_lo_wr =>
+               when jim_page_wr =>
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
                         v_next_state := idle;
@@ -472,20 +471,11 @@ begin
                         v_next_state := wait_sys_end;
                      end if;
                   elsif r_had_d_stb = '1' then
-                     r_JIM_page(7 downto 0) <= r_d_wr;
-                     r_ack <= '1';
-                     r_rdy <= '1';
-                     v_next_state := idle;
-                  end if;
-               when jim_page_hi_wr =>
-                  if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
-                     if i_SYScyc_end_clken = '1' then
-                        v_next_state := idle;
+                     if r_sys_A(0) = '0' then
+                        r_JIM_page(7 downto 0) <= r_d_wr;
                      else
-                        v_next_state := wait_sys_end;
+                        r_JIM_page(15 downto 8) <= r_d_wr;
                      end if;
-                  elsif r_had_d_stb = '1' then
-                     r_JIM_page(15 downto 8) <= r_d_wr;
                      r_ack <= '1';
                      r_rdy <= '1';
                      v_next_state := idle;
