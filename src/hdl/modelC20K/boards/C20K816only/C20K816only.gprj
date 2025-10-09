@@ -9,7 +9,7 @@
         <File path="src/c20k-pins.cst" type="file.cst" enable="1"/>
         <File path="src/C20K816only.sdc" type="file.sdc" enable="1"/>
 
-        <File path="version.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/version.vhd" type="file.vhdl" enable="1"/>
 
         <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1"/>
