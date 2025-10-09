@@ -301,7 +301,10 @@ architecture rtl of mk3blit is
 	signal i_window_65816				: std_logic_vector(12 downto 0);
 	signal i_window_65816_wr_en		: std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_cpu_2MHz			: std_logic;							-- throttle all cycles / instructions to 2MHz
+	signal i_throttle_act				: std_logic;							-- throttle currently active
+	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);	-- throttle per-rom map
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
@@ -310,8 +313,6 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTF_nOE			: std_logic;
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
-	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
-	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
@@ -764,6 +765,7 @@ END GENERATE;
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
+		throttle_act_o						=> i_throttle_act,
 
 		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,
@@ -813,7 +815,6 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
 		debug_80188_state_o				=> i_debug_80188_state,
@@ -1034,7 +1035,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
 				'1'			 when i_fb_syscon.rst_state = run else
 				i_flasher(1);
-LED_o(1) <= not i_debug_SYS_VIA_block;
+LED_o(1) <= not i_throttle_act;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 

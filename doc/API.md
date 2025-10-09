@@ -500,8 +500,8 @@ accessed direct on 8-bit CPUs]
 
  | Phys Address | Contents                         
  |--------------|----------------------------------
+ | FF FCFD      | JIM paging register high byte
  | FF FCFE      | JIM paging register low byte
- | FF FCFD      | JIM paging register low byte
  | FF FCFF      | JIM device register
 
 Note: when the device register is read back, if the Blitter/Paula device

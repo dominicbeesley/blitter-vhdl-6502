@@ -48,9 +48,9 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.common.all;
-use work.fb_CPU_pack.all;
 use work.board_config_pack.all;
-use work.fb_sys_pack.all;
+use work.fb_CPU_pack.all;
+use work.fb_SYS_pack.all;
 
 entity fb_cpu_t65only is
 	generic (
@@ -72,6 +72,7 @@ entity fb_cpu_t65only is
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);	
+		throttle_act_o							: out std_logic;
 
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
@@ -143,9 +144,11 @@ architecture rtl of fb_cpu_t65only is
 
 	signal i_fb_c2p_log			: fb_con_o_per_i_t;
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
+	signal i_fb_c2p_extra_instr_fetch : std_logic;		-- extra signal to qualify a cycle as an instruction fetch
 
-	signal i_fb_c2p_extra_instr_fetch : std_logic;
+
 	signal i_throttle_act		: std_logic;
+	signal i_sys_via_blocker_en	: std_logic;
 
 begin
 
@@ -231,8 +234,7 @@ begin
 		SIM			=> SIM,
 		CLOCKSPEED	=> CLOCKSPEED,
 		G_MK3			=> false,
-		G_C20K		=> true, 
-		G_IORB_BLOCK=> G_IORB_BLOCK
+		G_C20K		=> true
 	)
 	port map(
 
@@ -261,9 +263,6 @@ begin
 		JIM_page_i								=> JIM_page_i,
 		jim_en_i									=> jim_en_i,
 
-		-- SYS VIA slowdown enable
-		sys_via_blocker_en_i					=> '0',					-- TODO: Other CPUs
-
 		-- memctl signals
 		swmos_shadow_i							=> swmos_shadow_i,		-- TODO: get from memctl in some way
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
@@ -275,15 +274,7 @@ begin
 		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
-
-
-		-- debug signals
-		debug_SYS_VIA_block_o				=> open,
-
-
-
-
+		noice_debug_shadow_i					=> noice_debug_shadow_i
 	);
 
 	

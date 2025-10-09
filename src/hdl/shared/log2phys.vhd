@@ -58,12 +58,14 @@ use ieee.numeric_std.all;
 library work;
 use work.fishbone.all;
 use work.fb_sys_pack.all;
+use work.common.all;
 
 entity log2phys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_MK3									: boolean := false;
-		G_C20K								: boolean := false
+		G_C20K								: boolean := false;
+		G_SYSVIA_BLOCK_LEN				: natural := 20								-- number of 2MHz cycles to throttle for
 	);
 	port(
 
@@ -75,6 +77,7 @@ entity log2phys is
 		cfg_swromx_i						: in std_logic;
 		cfg_mosram_i						: in std_logic;
 		cfg_t65_i							: in std_logic;
+		cfg_sys_via_block_i				: in std_logic;
 		cfg_sys_type_i						: in sys_type;
 
 		-- CPU address control signals from other components
@@ -104,6 +107,7 @@ entity log2phys is
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
 		instruction_fetch_i				: in  std_logic;		-- qualify current cycle as an instruction fetch
+		A_stb_i								: in  std_logic;		-- qualify cycle start
 		-- mapped address
 		A_o									: out std_logic_vector(23 downto 0)
 
@@ -112,6 +116,8 @@ end log2phys;
 
 architecture rtl of log2phys is
 
+	constant SYS_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
+	constant USR_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
 
 	signal map0n1 : boolean;
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
@@ -130,6 +136,11 @@ architecture rtl of log2phys is
 	signal i_autohazel 				: std_logic;	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
 	signal r_window_65815_l			: std_logic_vector(12 downto 0);
 	signal r_window_65815_h			: std_logic_vector(12 downto 0);
+
+	-- via blocker
+	signal r_sysvia_block_counter	: unsigned(numbits(G_SYSVIA_BLOCK_LEN)-1 downto 0);
+	signal r_sysvia_blocking			: std_logic;
+
 begin
 
 	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
@@ -278,7 +289,7 @@ begin
 	end process;
 
 
-	throttle_act_o <= (i_throttle_rom or r_all_throttle_reg) when instruction_fetch_i = '1' else
+	throttle_act_o <= (i_throttle_rom or r_all_throttle_reg or r_sysvia_blocking) when instruction_fetch_i = '1' else
 						r_instr_rom_throttle;
 
 	p_instr_throt:process(fb_syscon_i)
@@ -287,11 +298,30 @@ begin
 			r_instr_rom_throttle <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			if instruction_fetch_i = '1' then
-				r_instr_rom_throttle <= i_throttle_rom or r_all_throttle_reg;
+				r_instr_rom_throttle <= i_throttle_rom or r_all_throttle_reg or r_sysvia_blocking;
 			end if;
 		end if;
 	end process;
 
-
+	p_sys_via_block:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_sysvia_blocking <= '0';
+			r_sysvia_block_counter <= (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
+			if A_stb_i = '1' then
+				if cfg_sys_via_block_i = '1' and (A_i(23 downto 4) = SYS_VIA_ADDR or A_i(23 downto 4) = USR_VIA_ADDR) then
+					r_sysvia_blocking <= '1';
+					r_sysvia_block_counter <= to_unsigned(G_SYSVIA_BLOCK_LEN, r_sysvia_block_counter'length);
+				elsif r_sysvia_blocking = '1' then
+					if r_sysvia_block_counter = 0 then
+						r_sysvia_blocking <= '0';
+					else
+						r_sysvia_block_counter <= r_sysvia_block_counter - 1;
+					end if;
+				end if;
+			end if;
+		end if;
+	end process;
 
 end rtl;

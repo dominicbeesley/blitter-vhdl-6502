@@ -198,6 +198,7 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
    signal r_state          : t_state := reset;
    signal r_A              : std_logic_vector(23 downto 0);
+   signal r_A_stb          : std_logic;
    signal i_phys_A         : std_logic_vector(23 downto 0);
    signal r_phys_A         : std_logic_vector(23 downto 0);
 
@@ -343,6 +344,7 @@ begin
       cfg_swromx_i                  => cfg_swromx_i,
       cfg_mosram_i                  => cfg_mosram_i,
       cfg_t65_i                     => '0',
+      cfg_sys_via_block_i           => '1',
       cfg_sys_type_i                => cfg_sys_type_i,
       sys_ROMPG_i                   => sys_ROMPG_i,
       JIM_page_i                    => JIM_page_i,
@@ -358,6 +360,7 @@ begin
       swmos_shadow_i                => swmos_shadow_i,
       noice_debug_shadow_i          => noice_debug_shadow_i,
       A_i                           => r_A,
+      A_stb_i                       => r_A_stb,
       instruction_fetch_i           => r_VPA and r_VDA,
       A_o                           => i_phys_A
 
@@ -426,8 +429,12 @@ begin
          mem_unsel;
          MEM_D_io <= (others => '1');        -- pull D(5) high at reset (reconfig_n)
          r_A <= (others => '0');
+         r_A_stb <= '0';
       else
          if rising_edge(fb_syscon_i.clk) then
+
+            r_A_stb <= '0';
+
             case r_state is
                when reset =>
                   fb_c2p_o <= fb_c2p_unsel;
@@ -444,6 +451,10 @@ begin
                   end if;
                   mem_unsel;
                   MEM_D_io <= (others => 'Z');
+
+                  if i_ring_next(C_CPU_DIV_ADS) = '1' then
+                     r_A_stb <= '1';
+                  end if;                  
 
                   if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
 
