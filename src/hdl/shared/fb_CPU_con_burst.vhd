@@ -38,13 +38,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
 use work.common.all;
-use work.fb_sys_pack.all;
-
 
 entity fb_cpu_con_burst is
 generic (
@@ -149,7 +146,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_cyc <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_cyc then
+			if r_cyc = '1' then
 				if cyc_i = '0' then
 					r_cyc <= '0';
 				end if;
@@ -178,8 +175,8 @@ begin
 				r_D_wr_stb <= D_wr_stb_i;
 				r_instr_fetch <= instr_fetch_i;
 			elsif r_cyc = '1' then
-				if (fb_con_p2c_i.stall = '0' and or_reduce(i_tx_cur) = '1') or r_wait_d_stb = '1' then
-					if we_i = '0' or or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb)) = '1' then
+				if (fb_con_p2c_i.stall = '0' and my_or_reduce(i_tx_cur) = '1') or r_wait_d_stb = '1' then
+					if we_i = '0' or my_or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb)) = '1' then
 						r_tx_mas <= r_tx_mas and not i_tx_cur;
 						r_A <= std_logic_vector(unsigned(r_A) + 1);
 						r_wait_d_stb <= '0';
@@ -212,7 +209,7 @@ begin
 				r_ack <= '0';
 				r_ack_lane <= (others => '0');
 			elsif r_cyc = '1' and cyc_i = '1' then
-				if fb_con_p2c_i.ack then
+				if fb_con_p2c_i.ack = '1' then
 					for i in 0 to G_BYTELANES-1 loop
 						if i_rx_cur(i) = '1' then
 							r_d_Rd(((i+1)*8)-1 downto (i*8)) <= fb_con_p2c_i.D_rd;
@@ -220,13 +217,13 @@ begin
 					end loop;
 					r_rx_mas <= r_rx_mas and not i_rx_cur;
 					r_ack_lane <= r_ack_lane or i_rx_cur;
-					if or_reduce(lane_req_i and r_rx_mas and not i_rx_cur) = '0' then
+					if my_or_reduce(lane_req_i and r_rx_mas and not i_rx_cur) = '0' then
 						r_ack <= '1';
 						r_rdy <= '1';
 					end if;
 				end if;
 
-				if fb_con_p2c_i.rdy = '1' and or_reduce(lane_req_i and r_rx_mas and not i_rx_cur) = '0' and r_cyc = '1' then
+				if fb_con_p2c_i.rdy = '1' and my_or_reduce(lane_req_i and r_rx_mas and not i_rx_cur) = '0' and r_cyc = '1' then
 					r_rdy <= '1';
 				end if;
 			else
@@ -239,11 +236,11 @@ begin
 	end process;
 
 	fb_con_c2p_o.cyc <= r_cyc;
-	fb_con_c2p_o.A_stb <= or_reduce(i_tx_cur) and not r_wait_d_stb;
+	fb_con_c2p_o.A_stb <= my_or_reduce(i_tx_cur) and not r_wait_d_stb;
 	fb_con_c2p_o.A <= r_A;
 	fb_con_c2p_o.we <= we_i;
 	fb_con_c2p_o.rdy_ctdn <= rdy_ctdn_i;
-	fb_con_c2p_o.D_wr_stb <= or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb));
+	fb_con_c2p_o.D_wr_stb <= my_or_reduce(i_tx_cur and (D_wr_stb_i or r_D_wr_stb));
 	fb_con_c2pinstr_fetch_o <= r_instr_fetch;
 
 	p_d_wr_mux:process(D_wr_i, i_tx_cur)

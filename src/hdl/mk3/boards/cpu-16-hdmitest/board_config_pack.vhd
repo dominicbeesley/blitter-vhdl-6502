@@ -48,6 +48,7 @@ use work.firmware_info_pack.all;
 package board_config_pack is
 
 	constant FW_BOARD_LEVEL		: firmware_board_level := MK3;
+	constant G_IORB_BLOCK		: boolean := true;	
 
 	constant G_INCL_HDMI		: boolean := true;
 	constant G_INCL_CHIPSET		: boolean := true;
@@ -58,6 +59,7 @@ package board_config_pack is
 	constant G_SND_CHANNELS		: natural := 4;
 	constant G_INCL_CS_AERIS	: boolean := true;
 	constant G_INCL_CS_EEPROM	: boolean := true;
+	constant G_INCL_CS_SDCARD	: boolean := true;
 		
 	constant C_CPU_BYTELANES	: positive := 4;
 	constant G_INCL_CPU_T65		: boolean := true;

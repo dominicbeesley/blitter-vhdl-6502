@@ -1,6 +1,9 @@
 -- ****
 -- T65(b) core. In an effort to merge and maintain bug fixes ....
 --
+-- Ver 316 Dominic July 2025
+--   Two cycle reset delay was ignoring clock enable
+--
 -- Ver 315 SzGy April 2020
 --   Reduced the IRQ detection delay when RDY is not asserted (NMI?)
 --   Undocumented opcodes behavior change during not RDY and page boundary crossing (VICE tests - cpu/sha, cpu/shs, cpu/shxy)
@@ -325,8 +328,10 @@ begin
       Res_n_i <= '0';
       Res_n_d <= '0';
     elsif Clk'event and Clk = '1' then
-      Res_n_i <= Res_n_d;
-      Res_n_d <= '1';
+      if Enable = '1'  then
+        Res_n_i <= Res_n_d;
+        Res_n_d <= '1';
+      end if;
     end if;
   end process;
 

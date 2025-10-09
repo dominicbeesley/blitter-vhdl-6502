@@ -273,7 +273,7 @@ begin
       tercData=0;
    end
 
-   ctsTimer <= ctsTimer + 1;
+   ctsTimer = ctsTimer + 1'b1;
 
    if((prevBlank == 0) && (i_blank == 1))
       firstHSyncChange <= 1;
@@ -288,11 +288,11 @@ begin
          counterX  <= 0;
          allowGeneration <= 1;
       end else begin
-         counterX  <= counterX + 1;
+         counterX  <= counterX + 1'b1;
       end
       firstHSyncChange <= !firstHSyncChange;
    end else
-      counterX  <= counterX + 1;
+      counterX  <= counterX + 1'b1;
 
    prevBlank <= i_blank;
    prevHSync <= i_hSync;

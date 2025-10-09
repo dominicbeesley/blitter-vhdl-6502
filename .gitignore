@@ -8,6 +8,7 @@ src/hdl/mk3/simulation/sim_asm/test_asm68k/boot68008_testbench_mos.lst
 *.sublime-project
 *.sublime-workspace
 *~
+*.gprj.user
 
 
 src/hdl/mk3/shared/hdmi/greybox_tmp/cbx_args.txt
@@ -27,3 +28,15 @@ work_syn/
 
 release/release/*
 release/*.tgz
+
+**/version.tmp
+
+**/altair/dsim_work/**
+**/.mdc/**
+mdc_config.yml
+**/mdc_ignore
+
+src/hdl/modelC20K/boards/C20K/version.tag
+src/hdl/modelC20K/boards/C20K816only/version.tag
+src/hdl/modelC20K/boards/C20K816only/version_strings.vec
+src/hdl/modelC20K/boards/C20K/version_strings.vec

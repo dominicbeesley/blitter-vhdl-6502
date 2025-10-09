@@ -80,7 +80,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity vidproc is
     port (
-        -- CLOCK is the Beeb's 32MHz master clock
+        -- CLOCK is the 48MHz master clock
         CLOCK       :   in  std_logic;
 
         -- CPUCLKEN qualifies CPU cycles, wrt. CLOCK
@@ -98,9 +98,6 @@ entity vidproc is
 
         -- Clock enable output to CRTC
         CLKEN_CRTC  :   out std_logic;
-
-        -- Clock enable output to CRTC, to update the RAM address
-        CLKEN_CRTC_ADR  : out std_logic;
 
         -- Clock enable counter, so memory timing can be slaved to the video processor
         CLKEN_COUNT :   out unsigned(3 downto 0);
@@ -126,18 +123,24 @@ entity vidproc is
 
         -- Control interface
         nINVERT     :   in  std_logic;
-        DISEN       :   in  std_logic;
+        DISEN       :   in  std_logic;                      -- masked by RA(3) for pixel blanking
+        DISEN_U     :   in  std_logic;                      -- unmasked
         CURSOR      :   in  std_logic;
 
         -- Video in (teletext mode)
         R_IN        :   in  std_logic;
         G_IN        :   in  std_logic;
         B_IN        :   in  std_logic;
+        PIXDE_IN    :   in  std_logic;
+        PIXCLKEN_IN :   in  std_logic;
 
         -- Video out
         R           :   out std_logic_vector(3 downto 0);
         G           :   out std_logic_vector(3 downto 0);
-        B           :   out std_logic_vector(3 downto 0)
+        B           :   out std_logic_vector(3 downto 0);
+
+        PIXCLKEN    :   out std_logic;
+        PIXDE       :   out std_logic                       -- a per-pixel display enable not masked by nula scroll offsets, same delays as pixel data
         );
 end entity;
 
@@ -164,13 +167,19 @@ architecture rtl of vidproc is
     signal disen2           :   std_logic; -- needed to pipeline in speccy mode
     signal disenout         :   std_logic;
 
+    signal disen0_u         :   std_logic;
+    signal disen1_u         :   std_logic;
+    signal disen2_u         :   std_logic; -- needed to pipeline in speccy mode
+    signal disenout_u       :   std_logic;
+
+
 -- Internal clock enable generation
     signal modeIs12MHz      :   std_logic;
     signal clken_pixel      :   std_logic;
     signal clken_shift      :   std_logic;
     signal clken_load       :   std_logic;
     signal clken_fetch      :   std_logic;
-    signal clken_counter    :   unsigned(3 downto 0);
+    signal clken_counter    :   unsigned(3 downto 0) := (others => '0');
     signal clken_zero       :   std_logic;
     signal pixen_prescale   :   unsigned(1 downto 0);
     signal pixen_counter    :   unsigned(3 downto 0);
@@ -183,18 +192,24 @@ architecture rtl of vidproc is
     signal cursor_active    :   std_logic;
     signal cursor_counter   :   unsigned(1 downto 0);
 
-    signal ttxt_R           :   std_logic_vector(6 downto 0);
-    signal ttxt_G           :   std_logic_vector(6 downto 0);
-    signal ttxt_B           :   std_logic_vector(6 downto 0);
+    signal ttxt_R           :   std_logic;
+    signal ttxt_G           :   std_logic;
+    signal ttxt_B           :   std_logic;
+    signal ttxt_PIXDE       :   std_logic;
 
 -- Pass physical colour to VideoNuLA
     signal phys_col                   : std_logic_vector(3 downto 0);
 
 -- Delay line for physical colour to support horirontal scroll offset
-    signal phys_col_delay_reg         : std_logic_vector(27 downto 0);
-    signal phys_col_delay_mux         : std_logic_vector(31 downto 0);
+    signal phys_col_delay_reg         : std_logic_vector(31 downto 0);
     signal phys_col_delay_out         : std_logic_vector(3 downto 0);
     signal phys_col_final             : std_logic_vector(3 downto 0);
+
+-- Delay line for DISEN - this is character cell rather than pixel based
+    signal disen_delay_reg            : std_logic_vector(15 downto 0);
+
+    signal invert_delay_reg           : std_logic_vector(7 downto 0);
+    signal invert_final               : std_logic;
 
 -- Attribue bits
     signal mode1                      : std_logic;
@@ -207,7 +222,7 @@ architecture rtl of vidproc is
 -- Additional VideoNuLA registers
     signal nula_palette_mode          : std_logic;
     signal nula_hor_scroll_offset     : std_logic_vector(2 downto 0);
-    signal nula_left_banking_size     : std_logic_vector(3 downto 0);
+    signal nula_left_blanking_size    : std_logic_vector(3 downto 0);
     signal nula_disable_a1            : std_logic;
     signal nula_normal_attr_mode      : std_logic;
     signal nula_text_attr_mode        : std_logic;
@@ -227,6 +242,8 @@ architecture rtl of vidproc is
     signal nula_nreset                 : std_logic := '0';
 
 begin
+
+    PIXCLKEN <= clken_pixel;
 
     -- Original VideoULA Registers
     -- Synchronous register access, enabled on every clock
@@ -286,7 +303,7 @@ begin
                 if nula_nreset = '0' then
                     nula_palette_mode          <= '0';
                     nula_hor_scroll_offset     <= (others => '0');
-                    nula_left_banking_size     <= (others => '0');
+                    nula_left_blanking_size     <= (others => '0');
                     nula_disable_a1            <= '0';
                     nula_reg6                  <= (others => '0');
                     nula_reg7                  <= (others => '0');
@@ -320,7 +337,7 @@ begin
                             when x"2" =>
                                 nula_hor_scroll_offset     <= DI_CPU(2 downto 0);
                             when x"3" =>
-                                nula_left_banking_size     <= DI_CPU(3 downto 0);
+                                nula_left_blanking_size     <= DI_CPU(3 downto 0);
                             when x"4" =>
                                 nula_nreset                <= '0';
                             when x"5" =>
@@ -359,33 +376,20 @@ begin
     -- Decode which attribute mode is active
     nula_normal_attr_mode <= '1' when nula_reg6(1 downto 0) = "01" and nula_reg7(0) = '0' else '0';
     nula_text_attr_mode   <= '1' when nula_reg6(1 downto 0) = "01" and nula_reg7(0) = '1' else '0';
-    nula_speccy_attr_mode <= '1' when nula_reg6(1 downto 0) = "10"                        else '0';
+    nula_speccy_attr_mode <= '1' when nula_reg6(1)          = '1'                         else '0';
 
-    -- The CRT controller is always enabled in the 15th cycle, so that the result
-    -- is ready for latching into the shift register in cycle 0.  If 2 MHz mode is
-    -- selected then the CRTC is also enabled in the 7rd cycle
-    CLKEN_CRTC <= CLKEN and
-                  clken_counter(0) and clken_counter(1) and clken_counter(2) and
-                  (clken_counter(3) or r0_crtc_2mhz or (r0_teletext and VGA));
+    -- The CRTC is clocked out of phase with the CPU, and the result loaded into the
+    -- the shift register on the next CRTC clock edge
+    clken_fetch <= CLKEN and
+                  (not clken_counter(0)) and (not clken_counter(1)) and (not clken_counter(2)) and
+                  ((not clken_counter(3)) or r0_crtc_2mhz or (r0_teletext and VGA));
 
-    -- To allow for some latency through slow RAM, increment the address earlier
-    CLKEN_CRTC_ADR <= CLKEN and
-                  clken_counter(0) and clken_counter(1) and (not clken_counter(2)) and
-                  (clken_counter(3) or r0_crtc_2mhz or (r0_teletext and VGA));
-
+    CLKEN_CRTC  <= clken_fetch;
     CLKEN_COUNT <= clken_counter;
-
-    -- The result is fetched from the CRTC in cycle 0 and also cycle 8 if 2 MHz
-    -- mode is selected.  This is used for reloading the shift register as well as
-    -- counting cursor pixels
-    clken_fetch <= CLKEN and not (clken_counter(0) or clken_counter(1) or clken_counter(2) or
-                                  (clken_counter(3) and not r0_crtc_2mhz and not (r0_teletext and VGA)));
 
     process(CLOCK)
     begin
-        if nRESET = '0' then
-            clken_counter <= (others => '0');
-        elsif rising_edge(CLOCK) then
+        if rising_edge(CLOCK) then
             if CLKEN = '1' then
                 -- Increment internal cycle counter during each video clock
                 clken_counter <= clken_counter + 1;
@@ -393,6 +397,7 @@ begin
                     -- Sample all inputs, so there are stable for a whole character
                     di <= DI_RAM;
                     disen0 <= DISEN;
+                    disen0_u <= DISEN_U;
                     cursor0 <= CURSOR;
                 end if;
             end if;
@@ -443,7 +448,7 @@ begin
                 end if;
 
                 -- clken_load is either 1MHz or 2MHz
-                if pixen_counter(2 downto 0) = 0 and (pixen_counter(3) = '1' or r0_crtc_2mhz = '1') then
+                if pixen_counter(2 downto 0) = 0 and (pixen_counter(3) = '0' or r0_crtc_2mhz = '1') then
                     clken_load <= '1';
                 end if;
 
@@ -465,7 +470,7 @@ begin
             -- Syncronize pixen_prescale and pixen_counter to clken_counter
             -- (otherwise there is a random shift of the cursor alignment on hard reset)
             if clken_counter = 0 then
-                if clken_zero <= '0' then
+                if clken_zero = '0' then
                     pixen_counter  <= (others => '0');
                     pixen_prescale <= (others => '0');
                 end if;
@@ -488,7 +493,6 @@ begin
             shiftreg <= (others => '0');
             -- there must be a better way of syncing this, but this seems to work
             first_byte <= '0';
-            attr_bits <= (others => '0');
         elsif rising_edge(PIXCLK) then
             if clken_load = '1' then
                 -- Fetch next byte from RAM into shift register.  This always occurs in
@@ -518,11 +522,14 @@ begin
                         -- beeb colour is <B G R>
                         fg := speccy_attr(6) & speccy_attr(0) & speccy_attr(2) & speccy_attr(1);
                         bg := speccy_attr(6) & speccy_attr(3) & speccy_attr(5) & speccy_attr(4);
+                        -- Bit 0 of R6 is a recent enhancement that selects between Spectrum and Thomson Attribute modes
+                        if nula_reg6(0) = '0' then
+                            -- Spectrum mode (mode 2) specific behaviour
+                            if speccy_attr = x"80" then
                         -- attribute 0x80 is used to indicate border
                         -- which is then mapped to logical colour 0
-                        if speccy_attr = x"80" then
-                            speccy_fg <= x"0";
-                            speccy_bg <= x"0";
+                                fg := x"0";
+                                bg := x"0";
                         else
                             -- remap light black (0) to dark black (8) so
                             -- logical colour zero can only be border
@@ -532,6 +539,11 @@ begin
                             if bg = x"0" then
                                 bg := x"8";
                             end if;
+                            end if;
+                        else
+                            -- Thomson mode (mode 3) specific behaviour
+                            bg(3) := speccy_attr(7);
+                        end if;
                             -- now handle flashing
                             if speccy_attr(7) = '1' and r0_flash = '1' then
                                 speccy_fg <= bg;
@@ -541,7 +553,6 @@ begin
                                 speccy_bg <= bg;
                             end if;
                         end if;
-                    end if;
                     if disen1 = '0' and disen2 = '1' then
                         first_byte <= '1';
                     else
@@ -571,7 +582,16 @@ begin
         elsif rising_edge(PIXCLK) then
             if clken_load = '1' then
                 -- Display enable signal delayed by one character
+                if nula_left_blanking_size = "0000" then
                 disen1 <= disen0;
+                else
+                    -- add left hand blanking
+                    disen1 <= disen0 and disen_delay_reg(to_integer(unsigned(nula_left_blanking_size)) - 1);
+                end if;
+                disen1_u <= disen0_u;
+
+                disen_delay_reg <= disen_delay_reg(disen_delay_reg'high - 1 downto 0) & disen0;
+
                 disen2 <= disen1;
                 if cursor0 = '1' or cursor_active = '1' then
                     -- Latch cursor
@@ -609,6 +629,7 @@ begin
         variable green_val : std_logic;
         variable blue_val : std_logic;
         variable do_flash : std_logic;
+        variable mode16 : std_logic;
     begin
         if nRESET = '0' then
             phys_col <= (others =>'0');
@@ -646,45 +667,80 @@ begin
                 green_val := (dot_val(3) and do_flash) xor not dot_val(1);
                 blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
 
+                -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
+                -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
+                -- cols=10 and f=1Mhz
+                if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
+                    mode16 := '1';
+                elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
+                    mode16 := '1';
+                elsif nula_reg6 /= "00" then
+                    mode16 := '1';
+                else
+                    mode16 := '0';
+                end if;
+
                 -- Output physical colour, to be used by VideoNuLA
                 if nula_palette_mode = '1' or nula_speccy_attr_mode = '1' then
                     phys_col <= palette_a;
-                else
+                elsif mode16 = '1' then
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;
+                else
+                    phys_col <= '0' & blue_val & green_val & red_val;
                 end if;
             end if;
         end if;
     end process;
 
     -- Infer a large mux to select the appropriate hor scroll delay tap
-    phys_col_delay_mux <= phys_col_delay_reg & phys_col;
-    phys_col_delay_out <= phys_col_delay_mux(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
-    phys_col_final <= phys_col_delay_out when r0_teletext = '0' else '0' & ttxt_B(0) & ttxt_G(0) & ttxt_R(0);
+    phys_col_delay_out <= phys_col_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
+
+    phys_col_final <= phys_col_delay_out            when r0_teletext = '0' else
+                      '0' & B_IN   & G_IN   & R_IN  when VGA         = '0' else
+                      '0' & ttxt_B & ttxt_G & ttxt_R;
+
+    invert_final <= invert_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)));
 
     process (PIXCLK)
-        variable invert : std_logic_vector(3 downto 0);
+    variable vr_disen_reg:std_logic;
     begin
         if rising_edge(PIXCLK) then
 
             if clken_pixel = '1' then
-                -- Delay teletext R, G, B slightly to align with cursor
-                ttxt_R <= R_IN & ttxt_R(6 downto 1);
-                ttxt_G <= G_IN & ttxt_G(6 downto 1);
-                ttxt_B <= B_IN & ttxt_B(6 downto 1);
+
+                -- One more pixel delay was needed in for VideoNuLA in VGA mode; this was the easist place to do it.
+                ttxt_R <= R_IN;
+                ttxt_G <= G_IN;
+                ttxt_B <= B_IN;
+                ttxt_PIXDE <= PIXDE_IN;
 
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
-                phys_col_delay_reg <= phys_col_delay_reg(23 downto 0) & phys_col;
+                if r0_crtc_2mhz = '1' or clken_counter(0) = '1' then
+                    phys_col_delay_reg <= phys_col_delay_reg(27 downto 0) & phys_col;
+                    invert_delay_reg <= invert_delay_reg(6 downto 0) & cursor_invert;
+                    -- delay disen by one more pixel
+                    disenout <= vr_disen_reg;
+                end if;
+
+                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
-                    disenout <= disen2;
+                    vr_disen_reg := disen2;
                 else
-                    disenout <= disen1;
+                    vr_disen_reg := disen1;
                 end if;
                 if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
-                    nula_RGB <= invert & invert & invert;
+                    nula_RGB <= (others => invert_final);
                 else
-                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor invert)));
+                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
                 end if;
-                invert := (others => cursor_invert);
+
+                if r0_teletext = '0' then
+                    PIXDE <= disen1_u;
+                else
+                    PIXDE <= ttxt_PIXDE;
+                end if;
+
+
             end if;
         end if;
     end process;

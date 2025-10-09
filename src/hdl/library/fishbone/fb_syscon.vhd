@@ -53,15 +53,15 @@ entity fb_syscon is
 	generic (
 		SIM										: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED								: natural := 128								-- fast clock speed in mhz		
-
 	);
 	port(
 
 
-		EXT_nRESET_i							: in		std_logic;
+		EXT_nRESET_i							: in		std_logic;					-- break key
+		EXT_nRESET_power_i						: in		std_logic := '1';			-- power reset key
 
-		clk_fish_i								: in 		std_logic;							-- main fast fishbone clock in 
-		clk_lock_i								: in 		std_logic;							-- pll lock indication
+		clk_fish_i								: in 		std_logic;					-- main fast fishbone clock in 
+		clk_lock_i								: in 		std_logic;					-- pll lock indication
 		sys_dll_lock_i							: in		std_logic;
 
 		fb_syscon_o								: out 	fb_syscon_t						-- fishbone syscon record
@@ -96,19 +96,22 @@ architecture rtl of fb_syscon is
 	signal	r_rst_counter					: unsigned(RST_CTR_LEN-1 downto 0) := (others => '0');
 
 
-	signal	i_r_in							: std_logic_vector(0 downto 0);
-	signal	i_r_out							: std_logic_vector(0 downto 0);
+	signal	i_r_in							: std_logic_vector(1 downto 0);
+	signal	i_r_out							: std_logic_vector(1 downto 0);
 
 	signal	rr_EXT_nRESET					: std_logic; -- metastabilised
+	signal	rr_EXT_nRESET_power				: std_logic; -- metastabilised
+
+	signal  i_any_reset_n					: std_logic;
 
 	signal	r_prerun_shift					: std_logic_vector(3 downto 0);
+	signal  r_need_full						: std_logic;
 
 begin
 
 	fb_syscon_o <= i_fb_syscon;
 
 	i_fb_syscon.clk <= clk_fish_i;
-	i_fb_syscon.rst <= '0' when r_rst_state = run else '1';
 	i_fb_syscon.rst_state <= r_rst_state;
 	i_fb_syscon.prerun <= r_prerun_shift;
 
@@ -116,7 +119,7 @@ begin
 	e_regsigs:entity work.clockreg
 	generic map (
 		G_DEPTH => 2,
-		G_WIDTH => 1
+		G_WIDTH => 2
 	)
 	port map (
 		clk_i	=> i_fb_syscon.clk,
@@ -125,9 +128,11 @@ begin
 	);
 
 	i_r_in(0) <= EXT_nRESET_i;
+	i_r_in(1) <= EXT_nRESET_power_i;
 	rr_EXT_nRESET <= i_r_out(0);
+	rr_EXT_nRESET_power <= i_r_out(1);
 
-
+	i_any_reset_n <= rr_EXT_nRESET and rr_EXT_nRESET_power;
 
 
 	p_reset_state:process(i_fb_syscon.clk)
@@ -143,8 +148,11 @@ begin
 						r_rst_counter <= r_rst_counter + 1;
 					end if;
 					r_prerun_shift <= ( others => '0');
+					i_fb_syscon.rst <= '1';
+					r_need_full <= '1';
 				when reset =>
-					if rr_EXT_nRESET = '0' then
+					if i_any_reset_n = '0' then
+						-- detect reset button held down and start a "full" reset
 						r_rst_counter <= r_rst_counter + 1;
 						if r_rst_counter = to_unsigned(RST_COUNT_FULL, RST_CTR_LEN) then
 							r_rst_state <= resetfull;
@@ -152,18 +160,26 @@ begin
 						end if;
 					else
 						r_rst_counter <= (others => '0');
-						r_rst_state <= prerun;
+						if r_need_full = '1' then
+							r_rst_state <= resetfull;
+						else
+							r_rst_state <= prerun;
+						end if;
 						r_prerun_shift <= ( 0 => '1', others => '0');
 					end if;
+					i_fb_syscon.rst <= '1';
+					r_need_full <= r_need_full or not rr_EXT_nRESET_power;
 				when resetfull =>
-					if rr_EXT_nRESET = '1' then
+					if i_any_reset_n = '1' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= prerun;
 						r_prerun_shift <= ( 0 => '1', others => '0');
 					end if;
+					i_fb_syscon.rst <= '1';
 				when prerun =>
 					r_rst_counter <= r_rst_counter + 1;
-					if rr_EXT_nRESET = '0' then
+					r_need_full <= '0';
+					if i_any_reset_n = '0' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= reset;
 					elsif r_rst_counter = to_unsigned(RST_RUN, RST_CTR_LEN) then
@@ -175,20 +191,24 @@ begin
 							r_prerun_shift <= r_prerun_shift(r_prerun_shift'HIGH-1 downto 0) & '0';
 						end if;
 					end if;
+					i_fb_syscon.rst <= '1';
 				when run =>
 					if clk_lock_i = '0' or sys_dll_lock_i = '0' then
 						r_rst_state <= lockloss;
-					elsif rr_EXT_nRESET = '0' then
+					elsif i_any_reset_n = '0' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= reset;
 					end if;
+					i_fb_syscon.rst <= '0';
 				when lockloss =>
-					if rr_EXT_nRESET = '0' then
+					if i_any_reset_n = '0' then
 						r_rst_counter <= (others => '0');
 						r_rst_state <= reset;
 					end if;
+					i_fb_syscon.rst <= '1';					
 				when others => 
 					r_rst_state <= lockloss;
+					i_fb_syscon.rst <= '1';					
 			end case;
 		end if;
 	end process;

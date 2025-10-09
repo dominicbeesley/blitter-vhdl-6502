@@ -155,7 +155,6 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_VIA_blocker.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_clock_dll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_VERSION.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_exp_pack.vhd
@@ -186,6 +185,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_spi.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd

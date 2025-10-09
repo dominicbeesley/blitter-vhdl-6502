@@ -220,13 +220,20 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | 0 | BB RAM    | 7E 0000 - 7E 3FFF  |                                       
   | 1 | EEPROM    | 9E 0000 - 9E 3FFF  |                                       
   | 2 | BB RAM    | 7E 4000 - 7E 7FFF  |                                       
-  | 3 | EEPROM    | 9E 4000 - 9E 7FFF  |                                       
-  | 4 | SYS IC 52 | FF 8000 - FF BFFF  |                                       
-  | 5 | SYS IC 88 | FF 8000 - FF BFFF  |                                       
-  | 6 | SYS IC 100| FF 8000 - FF BFFF  |                                       
-  | 7 | SYS IC 101| FF 8000 - FF BFFF  |                                       
+  | 3 | EEPROM    | 9E 4000 - 9E 7FFF  |                    
+
+  | 4 | SYS IC 52 | FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 5 | SYS IC 88 | FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 6 | SYS IC 100| FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  | 7 | SYS IC 101| FF 8000 - FF BFFF  | Mk.1 / Mk.2 / Mk.3                                      
+  
+  | 4 | BB        | 7E 8000 - 7E BFFF  | C20K                                      
+  | 5 | EEPROM    | 9E 8000 - 9E BFFF  | C20K                                      
+  | 6 | BB        | 7E C000 - 7E FFFF  | C20K                                      
+  | 7 | EEPROM    | 9E C000 - 9E FFFF  | C20K                                      
+
   | 8 | BB RAM    | 7F 0000 - 7F 3FFF  | NB: also used as the MOS ROM when MOSRAM in effect
-  | 9 | EEPROM    | 9F 0000 - 9F 3FFF  |                                       
+  | 9 | EEPROM    | 9F 0000 - 9F 3FFF  | NB: also used as the MOS on C20K                                      
   | A | BB RAM    | 7F 4000 - 7F 7FFF  |                                       
   | B | EEPROM    | 9F 4000 - 9F 7FFF  |                                       
   | C | BB RAM    | 7F 8000 - 7F BFFF  |                                       
@@ -493,8 +500,8 @@ accessed direct on 8-bit CPUs]
 
  | Phys Address | Contents                         
  |--------------|----------------------------------
+ | FF FCFD      | JIM paging register high byte
  | FF FCFE      | JIM paging register low byte
- | FF FCFD      | JIM paging register low byte
  | FF FCFF      | JIM device register
 
 Note: when the device register is read back, if the Blitter/Paula device
@@ -609,6 +616,7 @@ translation *is* performed
 | FF FE37      | "Low Mem Turbo" register.                   |   |   |
 | FF FE38,9    | Per ROM auto-hazel                          | 1 | 3 |
 | FF FE3E..3F  | Mk.2 config registers (deprecated)          |   |   |
+| FF FE3E..3F  | 65816 MOS/RAM window **dev/test**           | 1 | 4 |
 
 Note: the registers at FE3x may be moved to a different location in future
 firmware releases to minimize incompatibilities with other memory expansion
@@ -698,9 +706,10 @@ use OR or AND to set/clear bits rather than writing direct.
     |----------|----------------------------------------------------------------
     | "00"     | Addresses mapped direct, no remapping, throttle applies in all modes
     | "01"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in all modes
-    | "10"     | logical Bank FF maps onto logical bank 00 in all modes only, throttle applies in all modes
-    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, turbo applies in emulation mode only
+    | "10"*    | logical Bank FF maps onto logical bank 00 in all modes, throttle applies in all modes
+    | "11"     | logical Bank FF maps onto logical bank 00 in emulation mode only, throttle applies in emulation mode only
 
+   [\*] The default setting is "10"
 
    Note: changes to the memory mapping take 2 cycles to complete to allow a 
    jump to follow the instruction performing the swap to continue in another bank.
@@ -827,6 +836,23 @@ Information about the old registers is contained in the [Old Mk.2 Firmware
 Documentaton.md] file.
 
 
+### FF FE3E..3F - 65816 RAM window                  
+
+Using the registers at these locations it is possible to remap the memory 
+that is usually seen by the 6502/65816 at FF Exxx to any 4k region in 
+physical memory. This mapping is only visible from emu/boot mode 
+
+The bottom 3 bits of FE3E are ignored and should be set to 0
+These bits are reset to map to the MOS rom at boot (dependent on the memi/swmos/mosram/map)
+
+The mapping is only updated when the high order register is written
+
+The mapping is the base address, and lies on any **2K** boundary to allow for the
+window to be set such that strings of data up to 2K can be allowed to straddle
+
+These registers are WRITE ONLY and will continue to return the mk.2 config bits for now
+
+
 ## Boot Time Configuration 
 
 **Blitter only**
@@ -917,7 +943,9 @@ indicate the API level at which a feature was introduced.
 |-----|-----|--------------------------------------------------------|
 |  1  |  0  | API level/sublevel registers introduced                |
 |  1  |  1  | Added new CPU types, per-ROM throttle registers        |
-|  1  |  2  | Auto-hazel for Model B / Elk                           |
+|  1  |  2  | Per-rom throttle                                       |
+|  1  |  3  | Auto-hazel for Model B / Elk                           |
+|  1  |  4  | 65816 MOS/RAM window **dev**                           |
 
 #### Configuration bits
 
@@ -960,11 +988,11 @@ in the current build
  | address     | bit # | descriptions                   |API|Sub|
  |-------------|-------|--------------------------------|---|---|
  | FC 0088     | 0     | Chipset                        | 1 | 0 |
- |             | 1     | DMA                            | 1 | 0 |
- |             | 2     | Blitter                        | 1 | 0 |
- |             | 3     | Aeris                          | 1 | 0 |
- |             | 4     | i2c                            | 1 | 0 |
- |             | 5     | Paula sound                    | 1 | 0 |
+ |             | 1     | Chipset + DMA                  | 1 | 0 |
+ |             | 2     | Chipset + Blitter              | 1 | 0 |
+ |             | 3     | Chipset + Aeris                | 1 | 0 |
+ |             | 4     | Chipset + i2c                  | 1 | 0 |
+ |             | 5     | Chipset + Paula sound          | 1 | 0 |
  |             | 6     | HDMI framebuffer               | 1 | 0 |
  |             | 7     | T65 soft CPU                   | 1 | 0 |
  | FC 0089     | 0     | 65C02 hard CPU                 | 1 | 0 |
@@ -978,9 +1006,9 @@ in the current build
  | FC 008A     | 0     | ARM2 hard CPU                  | 1 | 1 |
  |             | 1     | Z180 hard CPU                  | 1 | 1 |
  |             | 2     | George Foot Supershadow        | 1 | 1 |
- |             | 3     | 0                              | 1 | 1 |
- |             | 4     | 0                              | 1 | 1 |
- |             | 5     | 0                              | 1 | 1 |
+ |             | 3     | Fast RAM @ 10ns (else 45ns)    | 1 | 1 |
+ |             | 4     | Slow RAM @ 45ns (else 55ns)    | 1 | 1 |
+ |             | 5     | Chipset + SDCARD / SPI         | 1 | 4 |
  |             | 6     | 0                              | 1 | 1 |
  |             | 7     | 0                              | 1 | 1 |
  | FC 008B..8F | *     | - reserved - all bits read 0   |

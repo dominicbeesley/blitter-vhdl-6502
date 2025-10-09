@@ -266,6 +266,10 @@ architecture rtl of mk3blit is
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
+	signal i_SD_CS							: std_logic;
+	signal i_SD_CLK						: std_logic;
+	signal i_SD_MOSI						: std_logic;
+
 	-----------------------------------------------------------------------------
 	-- sound signals
 	-----------------------------------------------------------------------------
@@ -293,9 +297,14 @@ architecture rtl of mk3blit is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
-	signal i_65816_bool_act				: std_logic;
+	signal i_debug_65816_boot_act		: std_logic;
+	signal i_window_65816				: std_logic_vector(12 downto 0);
+	signal i_window_65816_wr_en		: std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_cpu_2MHz			: std_logic;							-- throttle all cycles / instructions to 2MHz
+	signal i_throttle_act				: std_logic;							-- throttle currently active
+	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);	-- throttle per-rom map
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
@@ -304,8 +313,6 @@ architecture rtl of mk3blit is
 	signal i_cpu_exp_PORTF_nOE			: std_logic;
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
-	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
-	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
@@ -322,9 +329,9 @@ architecture rtl of mk3blit is
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
 
-	signal i_vga_debug_r					: std_logic;
-	signal i_vga_debug_g					: std_logic;
-	signal i_vga_debug_b					: std_logic;
+	signal i_vga_debug_r					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_g					: std_logic_vector(3 downto 0);
+	signal i_vga_debug_b					: std_logic_vector(3 downto 0);
 	signal i_vga_debug_hs				: std_logic;
 	signal i_vga_debug_vs				: std_logic;
 	signal i_vga_debug_blank			: std_logic;
@@ -332,6 +339,7 @@ architecture rtl of mk3blit is
 	signal i_debug_hsync_det			: std_logic;
 	signal i_debug_vsync_det			: std_logic;
 	signal i_debug_hsync_crtc			: std_logic;
+	signal i_debug_odd					: std_logic;
 
 
 	-----------------------------------------------------------------------------
@@ -515,10 +523,21 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
+		SD_CS_o			=> i_SD_CS,
+		SD_CLK_o			=> i_SD_CLK,
+		SD_MOSI_o		=> i_SD_MOSI,
+		SD_MISO_i		=> SD_MISO_i,
+		SD_DET_i			=> SD_DET_i,
+
 		snd_dat_o		=> i_dac_sample,
 		snd_dat_change_clken_o => open
 
 	);
+
+	SD_CS_o <= i_SD_CS;
+	SD_CLK_o <= i_SD_CLK;
+	SD_MOSI_o <= i_SD_MOSI;
+	
 
 	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
@@ -549,6 +568,9 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_dac_snd_pwm <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
+	SD_CS_o <= 'Z';
+	SD_CLK_o <= 'Z';
+	SD_MOSI_o <= 'Z';
 END GENERATE;
 
 	SND_R_o <= i_dac_snd_pwm;
@@ -607,6 +629,8 @@ END GENERATE;
 		-- cpu specific
 
 		boot_65816_o						=> i_boot_65816,
+		window_65816_o						=> i_window_65816,
+		window_65816_wr_en_o				=> i_window_65816_wr_en,
 
 		rom_throttle_map_o				=> i_rom_throttle_map,
 		rom_autohazel_map_o				=> i_rom_autohazel_map
@@ -741,6 +765,7 @@ END GENERATE;
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
+		throttle_act_o						=> i_throttle_act,
 
 		-- wrapper expansion header/socket pins
 		wrap_exp_i							=> i_wrap_exp_i,
@@ -780,6 +805,8 @@ END GENERATE;
 		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
+		window_65816_i						=> i_window_65816,
+		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
@@ -788,11 +815,10 @@ END GENERATE;
 		JIM_en_i								=> i_JIM_en,
 		JIM_page_i							=> i_JIM_page,
 
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
 		debug_80188_state_o				=> i_debug_80188_state,
-		debug_65816_boot_act_o			=> i_65816_bool_act
+		debug_65816_boot_act_o			=> i_debug_65816_boot_act
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
@@ -926,6 +952,8 @@ begin
          case exp_PORTEFG_io(2 downto 0) is
             when "110" => 
                r_cfg_sys_type <= SYS_ELK;
+            when "100" => 
+               r_cfg_sys_type <= SYS_MODEL_BC;
             when others =>
                r_cfg_sys_type <= SYS_BBC;
          end case;
@@ -1007,22 +1035,19 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
 				'1'			 when i_fb_syscon.rst_state = run else
 				i_flasher(1);
-LED_o(1) <= not i_debug_SYS_VIA_block;
+LED_o(1) <= not i_throttle_act;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
 
 SYS_AUX_o			<= "0" & i_debug_80188_state;
-SYS_AUX_io(0) <= i_vga_debug_hs;
-SYS_AUX_io(1) <= i_vga_debug_vs;
-SYS_AUX_io(2) <= i_noice_debug_opfetch;
-SYS_AUX_io(3) <= i_65816_bool_act;
+SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);
+SYS_AUX_io(1) <= i_vga_debug_r(i_vga_debug_r'high);
+SYS_AUX_io(2) <= i_debug_odd;
+SYS_AUX_io(3) <= i_vga_debug_blank;
 
 SYS_AUX_io <= (others => 'Z');
 
 
-SD_CS_o <= '1';
-SD_CLK_o <= '1';
-SD_MOSI_o <= '1';
 
 
 
@@ -1069,7 +1094,10 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,
-		debug_hsync_crtc_o => i_debug_hsync_crtc
+		debug_hsync_crtc_o=> i_debug_hsync_crtc,
+		debug_odd_o 		=> i_debug_odd,
+
+		scroll_latch_c_i	=> (others => '1')
 
 	);
 END GENERATE;

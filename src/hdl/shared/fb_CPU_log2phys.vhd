@@ -41,7 +41,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -52,7 +51,8 @@ entity fb_cpu_log2phys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		G_MK3									: boolean := false		
+		G_MK3									: boolean := false;							-- TODO: get from board_config?
+		G_C20K								: boolean := false
 	);
 	port(
 
@@ -67,8 +67,8 @@ entity fb_cpu_log2phys is
 		fb_per_p2c_i							: in	fb_con_i_per_o_t;
 
 		-- per cpu config
-		cfg_sys_via_block_i					: in std_logic;
 		cfg_t65_i								: in std_logic;
+		cfg_sys_via_block_i					: in std_logic;
 
 		-- system type
 		cfg_sys_type_i							: in sys_type;
@@ -81,22 +81,25 @@ entity fb_cpu_log2phys is
 		JIM_page_i								: in std_logic_vector(15 downto 0);
 		jim_en_i									: in std_logic;		-- jim enable, this is handled here 
 
-		-- SYS VIA slowdown enable
-		sys_via_blocker_en_i					: in std_logic;
 
 		-- memctl signals
 		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
-		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
-		rom_throttle_act_o					: out std_logic;
+
+		mos_throttle_i							: in std_logic;
+		throttle_all_i							: in std_logic;
+		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
+		throttle_act_o							: out std_logic;
 
 		-- noice signals
 		noice_debug_shadow_i					: in std_logic;
 
 
-		-- debug signals
-		debug_SYS_VIA_block_o				: out std_logic
+		-- 65816/model-C extras
+		window_65816_i							: in	std_logic_vector(12 downto 0) := x"FF" & "11100";
+		window_65816_wr_en_i					: in	std_logic := '0'
+
 
 	);
 end fb_cpu_log2phys;
@@ -104,12 +107,13 @@ end fb_cpu_log2phys;
 
 architecture rtl of fb_cpu_log2phys is 
 
-	type state_t is (idle, waitstall, viablock, wait_d_stb);
+	type state_t is (idle, waitstall, wait_d_stb);
 
 	signal r_state 		: state_t;
 
 	signal r_cyc						: std_logic;
-	signal r_A_stb						: std_logic;
+	signal r_A_stb						: std_logic;							-- output address strobe
+	signal i_A_stb						: std_logic;							-- input qualified address strobe
 	signal i_phys_A					: std_logic_vector(23 downto 0);
 	signal r_phys_A					: std_logic_vector(23 downto 0);
 	signal r_we							: std_logic;
@@ -117,13 +121,10 @@ architecture rtl of fb_cpu_log2phys is
 	signal r_D_wr						: std_logic_vector(7 downto 0);
 	signal r_rdy_ctdn					: t_rdy_ctdn;
 
-	signal i_SYS_VIA_block			: std_logic;
 	signal r_done_r_d_wr_stb		: std_logic;
 
-	signal i_sysvia_clken			: std_logic;
-
-	signal i_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
-	signal r_rom_throttle_act		: std_logic; -- set to '1' when current cycle should be throttled
+	signal i_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
+	signal r_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 
 begin
 
@@ -141,11 +142,14 @@ begin
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
 
-	rom_throttle_act_o <= r_rom_throttle_act;
+	throttle_act_o <= r_throttle_act;
 
 	-- ================================================================================================ --
 	-- State Machine 
 	-- ================================================================================================ --
+
+	i_A_stb 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
+					'0';
 
 
 	p_state:process(fb_syscon_i)
@@ -171,28 +175,15 @@ begin
 				when idle =>
 					r_done_r_d_wr_stb <= '0';
 					r_D_wr_stb <= '0';
-					if fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' then
+					if i_A_stb then
 						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
-						r_rom_throttle_act <= i_rom_throttle_act;
+						r_throttle_act <= i_throttle_act;
 						r_we <= fb_con_c2p_i.we;
 						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
-
-						if cfg_sys_via_block_i = '1' and i_SYS_VIA_block = '1' then
-							r_state <= viablock;
-						else
-							r_state <= waitstall;
-							r_a_stb <= '1';
-						end if;
-
 						r_cyc <= '1';
-					end if;
-				when viablock =>
-					v_accept_wr_stb := true;
-					if i_SYS_VIA_block = '0' then
 						r_state <= waitstall;
 						r_a_stb <= '1';
-						r_cyc <= '1';
 					end if;
 				when waitstall =>
 					v_accept_wr_stb := true;
@@ -247,29 +238,6 @@ begin
 
 
 	-- ================================================================================================ --
-	-- SYS VIA blocker
-	-- ================================================================================================ --
-
-	e_sys_via_block:entity work.fb_sys_via_blocker
-	generic map (
-		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED		
-		)
-	port map (
-		fb_syscon_i => fb_syscon_i,
-		cfg_sys_type_i => cfg_sys_type_i,
-		clken => i_sysvia_clken,
-		enable_i => sys_via_blocker_en_i,
-		A_i => i_phys_A,
-		RnW_i => not fb_con_c2p_i.we,
-		SYS_VIA_block_o => i_SYS_VIA_block
-		);
-
-	i_sysvia_clken <= '1' when r_state = idle and fb_con_c2p_i.a_stb = '1' else
-							'0';
-
-
-	-- ================================================================================================ --
 	-- Logical to physical address mapping 
 	-- ================================================================================================ --
 
@@ -277,7 +245,8 @@ begin
 	e_log2phys: entity work.log2phys
 	generic map (
 		SIM									=> SIM,
-		G_MK3									=> G_MK3
+		G_MK3									=> G_MK3,
+		G_C20K								=> G_C20K
 	)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,	
@@ -288,6 +257,7 @@ begin
 		cfg_swromx_i						=> cfg_swromx_i,
 		cfg_mosram_i						=> cfg_mosram_i,
 		cfg_t65_i							=> cfg_t65_i,
+		cfg_sys_via_block_i				=> cfg_sys_via_block_i,
       cfg_sys_type_i                => cfg_sys_type_i,
 
 		jim_en_i								=> jim_en_i,
@@ -295,16 +265,23 @@ begin
 		turbo_lo_mask_i					=> turbo_lo_mask_i,
 		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
-		rom_throttle_map_i				=> rom_throttle_map_i,
 		rom_autohazel_map_i				=> rom_autohazel_map_i,
-		rom_throttle_act_o				=> i_rom_throttle_act,
+
+		mos_throttle_i						=> mos_throttle_i,
+		throttle_all_i						=> throttle_all_i,
+		rom_throttle_map_i				=> rom_throttle_map_i,
+		throttle_act_o						=> i_throttle_act,
 
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
+		A_stb_i								=> i_A_stb,
 
-		A_o									=> i_phys_A
+		A_o									=> i_phys_A,
+
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		
 	);
-
-	debug_SYS_VIA_block_o <= i_SYS_VIA_block;
 
 end rtl;

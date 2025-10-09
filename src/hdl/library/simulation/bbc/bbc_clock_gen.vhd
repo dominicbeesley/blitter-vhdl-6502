@@ -48,17 +48,17 @@ use IEEE.std_logic_1164.all;
 entity bbc_clk_gen is
 port (
     clk_16_i        : in    std_logic;
-    clk_8_o         : out   std_logic;
-    clk_4_o         : out   std_logic;
-    clk_2_o         : out   std_logic;
-    clk_1_o         : out   std_logic;
     
     bbc_SLOW_i      : in    std_logic;      -- slow address detected i.e. pin 8 of IC23
-    bbc_phi1_i      : in    std_logic;
+    bbc_phi1_i      : in    std_logic;    
 
     bbc_1MHzE_o     : out   std_logic;
     bbc_ROMSEL_clk_o: out   std_logic;
-    bbc_phi0_o      : out   std_logic
+    bbc_phi0_o      : out   std_logic;
+
+    bbc_2MHzE_o     : out   std_logic;
+
+    clken4_o        : out   std_logic       -- needed for Hoglet's 6522 implementation
 );
 end bbc_clk_gen;
 
@@ -66,7 +66,6 @@ architecture rtl of bbc_clk_gen is
     signal r_clk_8      : std_logic := '0';
     signal r_clk_4      : std_logic := '0';
     signal r_clk_2      : std_logic := '0';
-    signal r_clk_1      : std_logic := '0';
     signal i_bbc_1MHzE  : std_logic := '0';
     signal i_bbc_n1MHzE : std_logic := '0';
     signal i_IC30B_Q	: std_logic := '0';
@@ -78,6 +77,8 @@ architecture rtl of bbc_clk_gen is
     signal i_phi0       : std_logic := '0';
     signal i_IC28A_Q      : std_logic;
 begin
+
+    clken4_o <= r_clk_8 and r_clk_4;
 
     p_clk_8:process(clk_16_i)
     begin
@@ -99,19 +100,7 @@ begin
             r_clk_2 <= not r_clk_2;
         end if;
     end process;
-
-    p_clk_1:process(r_clk_2)
-    begin
-        if falling_edge(r_clk_2) then
-            r_clk_1 <= not r_clk_1;
-        end if;
-    end process;
-    
-    clk_8_o <= r_clk_8;
-    clk_4_o <= r_clk_4;
-    clk_2_o <= r_clk_2;
-    clk_1_o <= r_clk_1;
-    
+        
     e_IC34B:entity work.ls74
     port map (
         d => i_bbc_n1MHzE,
@@ -123,6 +112,12 @@ begin
     );
     
     bbc_1MHzE_o <= i_bbc_1MHzE;
+
+    e_IC37E:entity work.ls04
+    port map (
+        d => bbc_phi1_i,
+        q => bbc_2MHzE_o
+        );
 
     e_IC30B:entity work.ls74
     port map (

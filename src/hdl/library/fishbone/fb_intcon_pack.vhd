@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.common.all;
@@ -15,7 +14,8 @@ component fb_intcon_shared is
 		G_CONTROLLER_COUNT			: POSITIVE;
 		G_PERIPHERAL_COUNT			: POSITIVE;
 		G_ARB_ROUND_ROBIN 			: boolean := false;
-		G_REGISTER_CONTROLLER_P2C	: boolean := false
+		G_REGISTER_CONTROLLER_P2C	: boolean := false;
+		G_REGISTER_PERIPHERAL_C2P	: boolean := false
 	);
 	port (
 
