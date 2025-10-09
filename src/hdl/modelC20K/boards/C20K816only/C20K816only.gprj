@@ -63,7 +63,6 @@
         <File path="../../../library/3rdparty/T6502/T65_ALU.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
-        <File path="../../../shared/fb_SYS_VIA_blocker.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_VERSION.vhd" type="file.vhdl" enable="1" />
 
 
