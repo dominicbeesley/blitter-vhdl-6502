@@ -162,7 +162,7 @@ begin
 								when 9 =>
 									r_Q <= i_cap_bits(15 downto 8);
 								when 10 =>
-									r_Q <= "0" & i_cap_bits(23 downto 16);
+									r_Q <= i_cap_bits(23 downto 16);
 								when others =>
 									r_Q <= x"00";
 							end case;
