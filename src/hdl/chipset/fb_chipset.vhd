@@ -653,6 +653,9 @@ GNOSDCARD: IF NOT G_INCL_CS_SDCARD GENERATE
 END GENERATE;
 
 GSDCARD: IF G_INCL_CS_SDCARD GENERATE
+	b_spi:BLOCK
+	SIGNAL i_SD_CS : std_logic_vector(7 downto 0);
+	BEGIN
 	i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
 	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
 
@@ -665,7 +668,7 @@ GSDCARD: IF G_INCL_CS_SDCARD GENERATE
 	port map (
 
 		-- eeprom signals
-		SPI_CS_o(0)							=> SD_CS_o,
+		SPI_CS_o								=> i_SD_CS,
 		SPI_CLK_o							=> SD_CLK_o,
 		SPI_MOSI_o							=> SD_MOSI_o,
 		SPI_MISO_i							=> SD_MISO_i,
@@ -677,6 +680,8 @@ GSDCARD: IF G_INCL_CS_SDCARD GENERATE
 		fb_c2p_i								=> i_c2p_sdcard_per,
 		fb_p2c_o								=> i_p2c_sdcard_per
 	);
+	SD_CS_o <= i_SD_CS(0);
+	END BLOCK;
 
 
 END GENERATE;
