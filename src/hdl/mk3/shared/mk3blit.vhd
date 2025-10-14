@@ -263,7 +263,9 @@ architecture rtl of mk3blit is
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
 
+   -----------------------------------------------------------------------------
 	-- intcon to peripheral sel
+   -----------------------------------------------------------------------------
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
