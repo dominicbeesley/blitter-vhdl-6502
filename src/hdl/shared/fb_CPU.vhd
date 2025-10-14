@@ -536,6 +536,9 @@ architecture rtl of fb_cpu is
 	signal r_cpu_run_ix_act		: natural range 0 to C_IX_CPU_COUNT-1;				-- index of currently selected hard OR soft cpu
 
 
+	-----------------------------------------------------------------------------
+	-- fishbone before log2phys wrapper
+	-----------------------------------------------------------------------------
 	signal i_fb_c2p_log			: fb_con_o_per_i_t;
 	signal i_fb_p2c_log			: fb_con_i_per_o_t;
 	signal i_fb_c2p_extra_instr_fetch : std_logic;		-- extra signal to qualify a cycle as an instruction fetch
