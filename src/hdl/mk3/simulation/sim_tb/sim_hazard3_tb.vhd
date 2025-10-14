@@ -313,8 +313,8 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram0.bin",
-		romfile => "C:/Users/Dominic/Documents/GitHub/blitter-riscv-code/build/HAZARD3/roms/mos/mos.mos",
-		romfile_offset => 16#1CC000#,
+		romfile => G_MOSROMFILE,
+		romfile_offset => 16#1D0000#,
 		tco => 10 ns,
 		taa => 10 ns,
 		toh => 2 ns,		
