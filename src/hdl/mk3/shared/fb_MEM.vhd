@@ -30,7 +30,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for the blitter/cpu board's SRAM
+-- Description: 		A fishbone wrapper for the blitter/cpu board's SRAM / EEPROM
 -- Dependencies: 
 --
 -- Revision: 

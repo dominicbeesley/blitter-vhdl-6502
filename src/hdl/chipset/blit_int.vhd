@@ -88,11 +88,11 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
-use IEEE.STD_LOGIC_MISC.ALL;
 
 library work;
 use work.fishbone.all;
 use work.blit_types.ALL;
+use work.common.all;
 
 entity fb_dmac_blit is
 	generic (
@@ -853,7 +853,7 @@ begin
 			r_FUNCGEN <= (others => '0');		
 			r_mask_first <= (others => '0');	
 			r_mask_last <= (others => '0');		
-			v_reg_line_minor := '0';
+--			v_reg_line_minor := '0';					-- was making Gowin Syn infer a latch!?
 		elsif rising_edge(fb_syscon_i.clk) then
 						
 			if r_blit_state = sFinish then
@@ -925,7 +925,7 @@ begin
 				end case;
 			end if;
 			
-			if (r_blit_state = sMemAccD) and (or_reduce(i_cha_D_data) /= '0') then
+			if (r_blit_state = sMemAccD) and (my_or_reduce(i_cha_D_data) /= '0') then
 				r_BLTCON_collision <= '0';
 			end if;
 

@@ -43,7 +43,11 @@ library ieee;
 use IEEE.math_real.all;
 
 package fb_SYS_pack is
-	type sys_type is (SYS_BBC, SYS_ELK);
+	type sys_type is (
+		SYS_BBC, 		-- Model A/B
+		SYS_ELK, 		-- Electron
+		SYS_MODEL_BC	-- "Testbed B/C", output sound/gfx on HDMI, intercept SYS for latch, irq, vsync etc
+		);
 
 end fb_SYS_pack;
 

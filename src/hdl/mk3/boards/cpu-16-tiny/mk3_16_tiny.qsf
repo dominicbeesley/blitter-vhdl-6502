@@ -131,7 +131,6 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/T6502/T65.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_VIA_blocker.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_clock_dll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_VERSION.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_exp_pack.vhd
@@ -162,6 +161,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_spi.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd
 set_global_assignment -name VHDL_FILE ../../shared/mk3blit.vhd
@@ -177,7 +177,7 @@ set_global_assignment -name QIP_FILE pllmain.qip
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_z180_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
 
 set_global_assignment -name FINAL_PLACEMENT_OPTIMIZATION ALWAYS
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"

@@ -473,7 +473,7 @@ begin
 	end process;
 
 	-- boot (or not boot) is taken one cpu cycle early when instruction fetch
-	-- NOTE: This allows too instruction in the previous mode before switching - not one!
+	-- NOTE: This allows two instruction in the previous mode before switching - not one!
 	i_boot <= 	i_CPUSKT_6E_c2b when boot_65816_i(0) = '1' else
 					r_boot_65816_dly(1) when i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' else
 				 	r_boot_65816_dly(2);

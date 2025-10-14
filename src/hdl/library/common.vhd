@@ -49,12 +49,32 @@ package common is
   function numbits(w : natural) return natural;
   function b2s(b:boolean) return std_logic;
   function max(a:integer; b:integer) return integer;
+  function my_or_reduce(s:std_logic_vector) return std_logic;
+  function my_and_reduce(s:std_logic_vector) return std_logic;
 end package;
 
 library ieee;
 use ieee.math_real.all;
 
 package body common is
+
+	function my_or_reduce(s:std_logic_vector) return std_logic is
+	variable ret : std_logic := '0';
+	begin
+		for i in s'range loop
+			ret := ret or s(i);
+		end loop;
+		return ret;
+	end function;
+
+	function my_and_reduce(s:std_logic_vector) return std_logic is
+	variable ret : std_logic := '1';
+	begin
+		for i in s'range loop
+			ret := ret and s(i);
+		end loop;
+		return ret;
+	end function;
 
 	function max(a:integer; b:integer) return integer is
 	begin

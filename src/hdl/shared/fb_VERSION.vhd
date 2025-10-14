@@ -75,7 +75,7 @@ architecture rtl of fb_version is
 	signal	r_A		: std_logic_vector(7 downto 0);
 	signal	r_Q		: std_logic_vector(7 downto 0);
 
-	signal	i_cap_bits : std_logic_vector(22 downto 0);
+	signal	i_cap_bits : std_logic_vector(23 downto 0);
 
 	function to_std(b: boolean) return std_ulogic is
 	begin
@@ -111,6 +111,7 @@ begin
 	i_cap_bits(20)				<= to_std(G_MEM_SLOW_IS_45);
 	i_cap_bits(21)				<= to_std(G_INCL_CPU_PICORV32);
 	i_cap_bits(22)				<= to_std(G_INCL_CPU_HAZARD3);
+	i_cap_bits(23) 				<= to_std(G_INCL_CS_SDCARD and G_INCL_CHIPSET);
 
 	fb_p2c_o.rdy <= r_ack;
 	fb_p2c_o.ack <= r_ack;
@@ -161,7 +162,7 @@ begin
 								when 9 =>
 									r_Q <= i_cap_bits(15 downto 8);
 								when 10 =>
-									r_Q <= "0" & i_cap_bits(22 downto 16);
+									r_Q <= "0" & i_cap_bits(23 downto 16);
 								when others =>
 									r_Q <= x"00";
 							end case;

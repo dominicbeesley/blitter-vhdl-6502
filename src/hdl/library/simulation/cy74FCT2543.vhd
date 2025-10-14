@@ -43,6 +43,10 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+USE IEEE.VITAL_timing.ALL;
+USE IEEE.VITAL_primitives.ALL;
+
+library fmf;
 
 entity cy74FCT2543 is
     port(
@@ -67,24 +71,46 @@ begin
 
 	G_L:FOR I in 7 downto 0 GENERATE
 
-		A(I) <= i_BA_Q(I) when nOEBA = '0' and nCEBA = '0' else 'Z';
-		B(I) <= i_AB_Q(I) when nOEAB = '0' and nCEAB = '0' else 'Z';
-
-		p_lat_BA:process(nCEBA, nLEBA, B)
-		begin
-			if nCEBA = '0' and nLEBA = '0' then
-				i_BA_Q(I) <= B(I);
-			end if;
-		end process;
-
-		p_lat_AB:process(nCEAB, nLEAB, A)
-		begin
-			if nCEAB = '0' and nLEAB = '0' then
-				i_AB_Q(I) <= A(I);
-			end if;
-		end process;
-
-
+		e_fmf_543:entity fmf.std543
+		GENERIC MAP (
+        -- tipd delays: interconnect path delays
+--        tipd_A                   : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_B                   : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_OEBANeg             : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_CEBANeg             : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_LEBANeg             : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_OEABNeg             : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_CEABNeg             : VitalDelayType01 := VitalZeroDelay01;
+--        tipd_LEABNeg             : VitalDelayType01 := VitalZeroDelay01;
+        -- tpd delays
+        tpd_A_B                  => (8 ns, 8 ns),
+        tpd_B_A                  => (8 ns, 8 ns),
+        tpd_OEBANeg_A            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
+        tpd_LEBANeg_A            => (12 ns, 12 ns),
+        tpd_OEABNeg_B            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
+        tpd_LEABNeg_B            => (12 ns, 12 ns),
+        tpd_CEABNeg_B            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
+        tpd_CEBANeg_A            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
+        -- tsetup values: setup times
+        tsetup_A_LEABNeg         => 2 ns,
+        tsetup_B_LEBANeg         => 2 ns,
+        -- thold values: hold times
+        thold_A_LEABNeg          => 2 ns,
+        thold_B_LEBANeg          => 2 ns,
+        -- tpw values: pulse widths
+        tpw_LEBANeg_negedge      => 5 ns,
+        tpw_LEABNeg_negedge      => 5 ns
+       	)
+		port map (
+	        A                => A(I),
+    	    B                => B(I),
+        	OEBANeg          => nOEBA,
+        	CEBANeg          => nCEBA,
+        	LEBANeg          => nLEBA,
+        	OEABNeg          => nOEAB,
+        	CEABNeg          => nCEAB,
+        	LEABNeg          => nLEAB
+			);
 	END GENERATE;
 	
 

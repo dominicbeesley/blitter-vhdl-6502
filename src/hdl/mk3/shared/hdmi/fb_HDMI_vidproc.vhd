@@ -21,7 +21,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -44,10 +43,13 @@ entity fb_HDMI_vidproc is
 
 		-- Clock enable output to CRTC
 		CLKEN_CRTC_o						:	out	std_logic;
-		CLKEN_CRTC_ADR_o					:	out	std_logic;
 		
+		-- Clock enable output for sprite data fetches (always at 2MHz)
+		CLKEN_SPR_o						:	out	std_logic;
+
 		-- Display RAM data bus (for display data fetch)
-		RAM_D_i								:	in	std_logic_vector(7 downto 0);
+		RAM_D0_i								:	in	std_logic_vector(7 downto 0);
+		RAM_D1_i								:	in	std_logic_vector(7 downto 0);
 		
 		-- Control interface
 		nINVERT_i							:	in	std_logic;
@@ -56,6 +58,16 @@ entity fb_HDMI_vidproc is
 		
 		-- Teletext enabled
 		TTX_o									:  out std_logic;
+
+		-- Model B/C attribute in
+		MODE_ATTR_i							:  in  std_logic;
+
+		-- Model B/C sprites out
+		SPR_PX_CLKEN						: out  std_logic;
+
+		-- Model B/C sprites in 
+		SPR_PX_ACT							: in   std_logic;
+		SPR_PX_DAT  						: in   std_logic_vector(3 downto 0);
 
 		-- Video in (teletext mode)
 		R_TTX_i								:	in	std_logic;
@@ -107,13 +119,14 @@ begin
 		nRESET			=> not fb_syscon_i.rst,
 		
 		CLKEN_CRTC		=> CLKEN_CRTC_o,
-		CLKEN_CRTC_ADR	=> CLKEN_CRTC_ADR_o,
+		CLKEN_SPR		=> CLKEN_SPR_o,
 		
 		CPUCLKEN			=> '1',
 		ENABLE			=> r_d_wr_stb,
 		A					=> r_A,
 		DI_CPU			=> r_d_wr,
-		DI_RAM			=> RAM_D_i,
+		DI_RAM_0			=> RAM_D0_i,
+		DI_RAM_1			=> RAM_D1_i,
 		nINVERT			=> nINVERT_i,
 		DISEN				=> DISEN_i,
 		CURSOR			=> CURSOR_i,
@@ -126,7 +139,12 @@ begin
 
 		VGA				=> '0',
 
-		TTXT				=> TTX_o
+		TTXT				=> TTX_o,
+
+		MODE_ATTR		=> MODE_ATTR_i,
+		SPR_PX_CLKEN	=> SPR_PX_CLKEN,
+		SPR_PX_ACT		=> SPR_PX_ACT,
+		SPR_PX_DAT		=> SPR_PX_DAT
 	);
 
 
@@ -138,7 +156,7 @@ begin
 			r_CLKEN16_DIV <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_CLKEN16_DIV <= std_logic_vector(unsigned(r_CLKEN16_DIV) + 1);
-			if or_reduce(r_CLKEN16_DIV) = '0' then
+			if my_or_reduce(r_CLKEN16_DIV) = '0' then
 				r_CLKEN16 <= '1';
 			else
 				r_CLKEN16 <= '0';

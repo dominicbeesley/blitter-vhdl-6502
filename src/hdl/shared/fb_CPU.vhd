@@ -49,15 +49,14 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
 use work.common.all;
 use work.board_config_pack.all;
 use work.fb_CPU_pack.all;
-use work.fb_CPU_exp_pack.all;
 use work.fb_SYS_pack.all;
+use work.fb_CPU_exp_pack.all;
 
 entity fb_cpu is
 	generic (
@@ -98,6 +97,7 @@ entity fb_cpu is
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
+		throttle_act_o							: out std_logic;
 
 
 		wrap_exp_o								: out t_cpu_wrap_exp_o;
@@ -143,6 +143,8 @@ entity fb_cpu is
 		-- cpu specific signals
 
 		boot_65816_i							: in 	std_logic_vector(1 downto 0);
+		window_65816_i							: in	std_logic_vector(12 downto 0);
+		window_65816_wr_en_i					: in	std_logic;
 
 		-- temporary debug signals
 		debug_wrap_cyc_o						: out std_logic;
@@ -375,13 +377,13 @@ architecture rtl of fb_cpu is
 
 		-- 65816 specific signals
 
-		boot_65816_i							: in		std_logic_vector(1 downto 0);
+		boot_65816_i							: in	std_logic_vector(1 downto 0);
 
-		debug_vma_o								: out		std_logic;
+		debug_vma_o								: out	std_logic;
 
-		debug_addr_meta_o						: out		std_logic;
+		debug_addr_meta_o						: out	std_logic;
 
-		debug_65816_boot_act_o					: out		std_logic
+		debug_65816_boot_act_o				: out	std_logic
 
 	);
 	end component;
@@ -568,11 +570,10 @@ architecture rtl of fb_cpu is
 
 	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
-	signal r_do_sys_via_block		: std_logic;
 
-	signal i_rom_throttle_act		: std_logic; -- qualifies the current cycle as being to/from a ROM slot that is throttled
+	signal i_throttle_act		: std_logic;
 
-	signal i_sys_via_blocker_en	: std_logic;
+	signal r_do_sys_via_block		: std_logic;		-- per cpu enable
 begin
 
 	-- ================================================================================================ --
@@ -706,25 +707,6 @@ begin
 		end if;
 	end process;
 
-	p_blk_en:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			if throttle_cpu_2MHz_i = '0' and (
-				r_cpu_en_t65 = '1' or
-					(
-						r_hard_cpu_en = '1' and (
-							r_cpu_en_65816 = '1' or
-							r_cpu_en_65c02 = '1'
-						)
-					)
-				) then
-				i_sys_via_blocker_en <= '1';
-			else
-				i_sys_via_blocker_en <= '0';
-			end if;
-		end if;
-	end process;
-
 	-- ================================================================================================ --
 	-- NMI registration 
 	-- ================================================================================================ --
@@ -737,9 +719,9 @@ begin
 			r_nmi <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 			r_nmi_meta <= nmi_n_i & r_nmi_meta(G_NMI_META_LEVELS-1 downto 1);
-			if or_reduce(r_nmi_meta) = '0' then
+			if my_or_reduce(r_nmi_meta) = '0' then
 				r_nmi <= '0';
-			elsif and_reduce(r_nmi_meta) = '1' then
+			elsif my_and_reduce(r_nmi_meta) = '1' then
 				r_nmi <= '1';
 			end if;
 		end if;
@@ -799,7 +781,8 @@ begin
 	generic map (
 		SIM			=> SIM,
 		CLOCKSPEED	=> CLOCKSPEED,
-		G_MK3			=> G_MK3
+		G_MK3			=> G_MK3,
+		G_C20K		=> false
 	)
 	port map(
 
@@ -814,17 +797,14 @@ begin
 		fb_per_p2c_i							=> fb_p2c_i,
 
 		-- per cpu config
-		cfg_sys_via_block_i					=> r_do_sys_via_block,
 		cfg_t65_i								=> r_cpu_en_t65,
-
+		cfg_sys_via_block_i					=> r_do_sys_via_block,
+		
 		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
 		cfg_mosram_i							=> cfg_mosram_i,
 		cfg_swromx_i							=> cfg_swromx_i,
-
-		-- SYS VIA slowdown enable
-		sys_via_blocker_en_i					=> i_sys_via_blocker_en,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
@@ -834,20 +814,23 @@ begin
 		-- memctl signals
 		swmos_shadow_i							=> swmos_shadow_i,
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
-		rom_throttle_map_i					=> rom_throttle_map_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		rom_throttle_act_o					=> i_rom_throttle_act,
+		mos_throttle_i							=> not swmos_shadow_i,			-- TODO: get from a chipset register
+		throttle_all_i							=> throttle_cpu_2MHz_i,
+		rom_throttle_map_i					=> rom_throttle_map_i,
+		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
 		noice_debug_shadow_i					=> noice_debug_shadow_i,
 
-		-- debug
-		debug_SYS_VIA_block_o				=> debug_SYS_VIA_block_o 				
+		-- 65816/model C extras
+		window_65816_i							=> window_65816_i,
+		window_65816_wr_en_i					=> window_65816_wr_en_i		
 
 	);
 
-	
+	throttle_act_o <= i_throttle_act;
 
 
 	-- ================================================================================================ --
@@ -1192,7 +1175,7 @@ END GENERATE;
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_rom_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= i_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;

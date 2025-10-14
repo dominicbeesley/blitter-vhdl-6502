@@ -18,7 +18,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_misc.all;
 
 library work;
 use work.fishbone.all;
@@ -59,7 +58,9 @@ entity dvi_synchro is
 
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
-		debug_hsync_crtc_o		: out std_logic
+		debug_hsync_crtc_o			: out std_logic;
+
+		debug_odd_o					: out std_logic
 
 	);
 end dvi_synchro;
@@ -112,12 +113,12 @@ architecture rtl of dvi_synchro is
 	constant	C_VSYNC_LINES		 	: natural := 3;
 
 
-	constant C_PIXELS_PER_LINE  	: natural := 1728; -- 64us * 27
-	constant C_LINE_BLANK_FRONT 	: natural := 24;	
-	constant C_LINE_BLANK_BACK  	: natural := 264; 	-- +1 for "odd" frames, includes hsync
-	constant C_HSYNC_PIXELS			: natural := 126;
+	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 27
+	constant C_LINE_BLANK_FRONT 	: natural := 48;	
+	constant C_HSYNC_PIXELS			: natural := 252;
+	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
-	constant C_LINE_MARGIN			: natural := 300;		-- margin from start of line to start ouputting pixels
+	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 48;		-- margin from start of line to start ouputting pixels
 
 	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 
@@ -133,12 +134,8 @@ architecture rtl of dvi_synchro is
 
 	constant C_BUFMAX : natural := 720;
 
-	type		linebuffer_t is array (0 to C_BUFMAX*2) of std_logic_vector(11 downto 0);
-
-	signal	linebuffer: linebuffer_t;
-
 	signal 	r_field_counter		: unsigned(9 downto 0) := (others => '0');	
-	signal   r_line_counter			: unsigned(11 downto 0) := (others => '0');
+	signal   r_line_counter			: unsigned(NUMBITS((C_PIXELS_PER_LINE)-1)-1 downto 0) := (others => '0');
 
 	signal	r_blank_line			: std_logic := '0';
 	signal	r_blank_field			: std_logic := '0';
@@ -165,6 +162,7 @@ begin
 	debug_vsync_det_o <= r_vsync_lead_ack;
 	debug_hsync_det_o <= r_hsync_lead_ack;
 	debug_hsync_crtc_o <= HSYNC_CRTC_i;
+	debug_odd_o <= r_odd;
 
 
 	BLANK_DVI_o <= r_blank_field or r_blank_line;
@@ -282,7 +280,7 @@ begin
 				r_vsync_lead_pulse <= '1';
 			end if;
 
-			if r_line_counter(0) = '0' or pixel_double_i = '0' then
+			if r_line_counter(1 downto 0) = "00" or pixel_double_i = '0' then
 				if r_line_counter < C_LINE_MARGIN then
 					r_linebuf_ctr_dvi_max <= r_linebuf_ctr_ula_prev_max;
 					if r_hsync_lead_ack = '0' then
@@ -302,9 +300,9 @@ begin
 
 						r_linebuf_ctr_dvi <= r_linebuf_ctr_dvi + 1;
 					else
-						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
-						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
-						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));				
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(10),8));
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(7),8));				
 					end if;
 				end if;
 			end if;
@@ -361,7 +359,7 @@ begin
 
 			if r_line_counter < C_LINE_BLANK_BACK
 				--or (r_odd = '1' and r_line_counter = C_LINE_BLANK_BACK)
-				or r_line_counter > C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
+				or r_line_counter >= C_PIXELS_PER_LINE - C_LINE_BLANK_FRONT
 				then
 				r_blank_line <= '1';
 			else

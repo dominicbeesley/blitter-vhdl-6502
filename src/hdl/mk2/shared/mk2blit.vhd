@@ -282,6 +282,9 @@ architecture rtl of mk2blit is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
+	signal i_debug_65816_boot_act		: std_logic;
+	signal i_window_65816				: std_logic_vector(12 downto 0);
+	signal i_window_65816_wr_en		: std_logic;
 
 	signal i_throttle_cpu_2MHz			: std_logic;
 
@@ -360,7 +363,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	e_addr2s:entity work.address_decode
 	generic map (
 		SIM							=> SIM,
-		G_PERIPHERAL_COUNT				=> PERIPHERAL_COUNT,
+		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
 		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
 		G_INCL_HDMI					=> G_INCL_HDMI
 	)
@@ -472,7 +475,14 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SCL_io		=> I2C_SCL_io,
 
 		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_change_clken_o => open,
+
+      SD_CS_o              => open,
+      SD_CLK_o             => open,
+      SD_MOSI_o            => open,
+      SD_MISO_i            => '1',
+      SD_DET_i             => '1'
+
 
 	);
 
@@ -564,6 +574,8 @@ END GENERATE;
 		-- cpu specific
 
 		boot_65816_o						=> i_boot_65816,
+		window_65816_o						=> i_window_65816,
+		window_65816_wr_en_o				=> i_window_65816_wr_en,
 
 		rom_throttle_map_o				=> i_rom_throttle_map,		
 		rom_autohazel_map_o				=> i_rom_autohazel_map		
@@ -718,6 +730,8 @@ END GENERATE;
 		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
+		window_65816_i						=> i_window_65816,
+		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
 
