@@ -59,6 +59,7 @@ entity clocks_pll is
 		clk_fish_o								: out 	std_logic;							-- main fast fishbone clock in 
 		clk_lock_o								: out		std_logic;							-- pll lock indication
 		clk_snd_o								: out		std_logic;							-- 3.5ish MHz clock for sound
+		clk_32_o									: out		std_logic;							-- 32M clock 0 phase with 128M
 
 		flasher_o								: out		std_logic_vector(3 downto 0)	-- flashes at approx 3=>0.5Hz, 1=2Hz, 1=2Hz, 0=4Hz
 
@@ -135,6 +136,16 @@ begin
 			wait for 141 ns;
 		end process;
 
+		p_pll_32:process
+		begin
+			clk_32_o <= '0';
+			wait until rising_edge(i_clk_fish);
+			wait until rising_edge(i_clk_fish);
+			clk_32_o <= '1';
+			wait until rising_edge(i_clk_fish);
+			wait until rising_edge(i_clk_fish);
+		end process;
+
 	end generate;
 
 	g_not_sim_pll:if not SIM generate
@@ -143,6 +154,7 @@ begin
 			inclk0 => EXT_CLK_48M_i,
 			c0 => i_clk_fish,
 			c1 => clk_snd_o,
+			c2 => clk_32_o,
 			locked => clk_lock_o
 		);
 

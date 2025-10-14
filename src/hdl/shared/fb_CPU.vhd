@@ -64,6 +64,8 @@ entity fb_cpu is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
 		G_INCL_CPU_T65						: boolean := false;
+		G_INCL_CPU_PICORV32				: boolean := false;
+		G_INCL_CPU_HAZARD3				: boolean := false;
 		G_INCL_CPU_65C02					: boolean := false;
 		G_INCL_CPU_6800					: boolean := false;
 		G_INCL_CPU_80188					: boolean := false;
@@ -82,6 +84,7 @@ entity fb_cpu is
 
 		cfg_cpu_type_i							: in cpu_type;
 		cfg_cpu_use_t65_i						: in std_logic;
+		cfg_cpu_use_riscv_i					: in std_logic;
 		cfg_cpu_speed_opt_i					: in cpu_speed_opt;
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
@@ -121,6 +124,9 @@ entity fb_cpu is
 		noice_debug_cpu_clken_o				: out	std_logic;		-- clken and cpu rdy
 		noice_debug_A0_tgl_o					: out	std_logic;		-- 1 when current A0 is different to previous fetched
 		noice_debug_opfetch_o				: out	std_logic;		-- this cycle is an opcode fetch
+
+		-- optional clocks for riscv / hazard3
+		clk_32m_i								: in std_logic;	
 
 		-- direct CPU control signals from system
 		nmi_n_i									: in	std_logic;
@@ -174,6 +180,46 @@ architecture rtl of fb_cpu is
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
 		wrap_i									: in t_cpu_wrap_i
+
+	);
+	end component;
+
+	component fb_cpu_picorv32 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
+		CLKEN_DLY_MAX						: natural 	:= 2								-- used to time latching of address etc signals			
+	);
+	port(
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i
+
+	);
+	end component;
+
+	component fb_cpu_hazard3 is
+	generic (
+		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
+		CLKEN_DLY_MAX						: natural 	:= 2								-- used to time latching of address etc signals			
+	);
+	port(
+		-- configuration
+		cpu_en_i									: in std_logic;				-- 1 when this cpu is the current one
+		fb_syscon_i								: in	fb_syscon_t;
+
+		-- state machine signals
+		wrap_o									: out t_cpu_wrap_o;
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- cpu clock
+
+		clk_32m_i								: in std_logic
 
 	);
 	end component;
@@ -458,7 +504,8 @@ architecture rtl of fb_cpu is
 	end function;
 
 	constant C_IX_CPU_T65						: natural := 0;
-	constant C_IX_CPU_65C02						: natural := C_IX_CPU_T65 + B2OZ(G_INCL_CPU_T65);
+	constant C_IX_CPU_RISCV						: natural := C_IX_CPU_T65 + B2OZ(G_INCL_CPU_T65);
+	constant C_IX_CPU_65C02						: natural := C_IX_CPU_RISCV + B2OZ(G_INCL_CPU_PICORV32 OR G_INCL_CPU_HAZARD3);
 	constant C_IX_CPU_6800						: natural := C_IX_CPU_65C02 + B2OZ(G_INCL_CPU_65C02);
 	constant C_IX_CPU_80188						: natural := C_IX_CPU_6800 + B2OZ(G_INCL_CPU_6800);
 	constant C_IX_CPU_65816						: natural := C_IX_CPU_80188 + B2OZ(G_INCL_CPU_80188);
@@ -500,6 +547,7 @@ architecture rtl of fb_cpu is
 	-- wrapper enable signals
 
 	signal r_cpu_en_t65 : std_logic;
+	signal r_cpu_en_riscv : std_logic;
 	signal r_cpu_en_6x09 : std_logic;
 	signal r_cpu_en_z80 : std_logic;
 	signal r_cpu_en_z180 : std_logic;
@@ -544,6 +592,7 @@ begin
 				r_hard_cpu_en <= '0';
 
 				r_cpu_en_t65 <= '0';
+				r_cpu_en_riscv <= '0';
 				r_cpu_en_6x09 <= '0';
 				r_cpu_en_z80 <= '0';
 				r_cpu_en_z180 <= '0';
@@ -565,6 +614,11 @@ begin
 				if cfg_cpu_use_t65_i = '1' then
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
+				elsif cfg_cpu_use_riscv_i = '1' and (G_INCL_CPU_PICORV32 or G_INCL_CPU_HAZARD3) then
+					r_do_sys_via_block <= '0';	
+					r_cpu_en_riscv <= '1';				
+					r_cpu_run_ix_act <= C_IX_CPU_RISCV;
+					r_cpu_run_ix_hard <= C_IX_CPU_RISCV; -- dummy value
 				else
 					if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
 						r_cpu_run_ix_act <= C_IX_CPU_65816;
@@ -802,6 +856,49 @@ gt65: IF G_INCL_CPU_T65 GENERATE
 	);
 
 END GENERATE;
+
+assert G_INCL_CPU_PICORV32 = false or G_INCL_CPU_HAZARD3 = false report "Can only include one of PICORV32 or HAZARD3" severity error;
+
+gpicorv32: IF G_INCL_CPU_PICORV32 GENERATE
+	e_picorv32:fb_cpu_picorv32
+	generic map (
+		SIM									=> SIM,
+		CLOCKSPEED							=> CLOCKSPEED
+	)
+	port map (
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_riscv,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_RISCV),
+		wrap_i									=> i_wrap_i
+
+	);
+
+END GENERATE;
+
+ghazard3: IF G_INCL_CPU_HAZARD3 GENERATE
+	e_hazard3:fb_cpu_hazard3
+	generic map (
+		SIM									=> SIM,
+		CLOCKSPEED							=> CLOCKSPEED
+	)
+	port map (
+
+		-- configuration
+		cpu_en_i									=> r_cpu_en_riscv,
+		fb_syscon_i								=> fb_syscon_i,
+
+		wrap_o									=> i_wrap_o_all(C_IX_CPU_RISCV),
+		wrap_i									=> i_wrap_i,
+
+		clk_32m_i								=> clk_32m_i
+
+	);
+
+END GENERATE;
+
 
 g6x09:IF G_INCL_CPU_6x09 GENERATE
 	e_wrap_6x09:fb_cpu_6x09
@@ -1052,9 +1149,14 @@ END GENERATE;
 	-- Dummy exp out for when no external CPU is selected
 	-- ================================================================================================ --
 
-	G_DEF_EXP:IF G_INCL_CPU_T65 GENERATE
+	G_DEF_EXP_T65:IF G_INCL_CPU_T65 GENERATE
 		i_wrap_exp_o_all(C_IX_CPU_T65) <= C_EXP_O_DUMMY;
 	END GENERATE;
+
+	G_DEF_EXP_PICORV32:IF G_INCL_CPU_PICORV32 GENERATE
+		i_wrap_exp_o_all(C_IX_CPU_RISCV) <= C_EXP_O_DUMMY;
+	END GENERATE;
+
 
 	-- ================================================================================================ --
 	-- multiplex wrapper signals

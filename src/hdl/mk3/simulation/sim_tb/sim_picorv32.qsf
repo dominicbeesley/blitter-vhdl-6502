@@ -1,0 +1,25 @@
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_picorv32_tb -section_id eda_simulation
+set_global_assignment -name EDA_TEST_BENCH_NAME sim_picorv32_tb -section_id eda_simulation
+set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME sim_picorv32_tb -section_id sim_picorv32_tb
+
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/I2C_minion/debounce.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/3rdparty/I2C_minion/I2C_minion.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/common.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/rom_tb.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ram_tb.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls02.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74244.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74245.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_pack.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/buskeep.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_tb.vhd -section_id sim_picorv32_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_picorv32_tb.vhd -section_id sim_picorv32_tb

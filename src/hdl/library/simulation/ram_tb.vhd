@@ -65,7 +65,8 @@ entity RAM_tb is
 		
 		dump_filename : string := "d:\temp\ram";
 		
-		romfile	: string := ""
+		romfile	: string := "";
+		romfile_offset : natural := 0
 	);
 	port (
 		A				: in		std_logic_vector(numbits(size)-1 downto 0);
@@ -141,7 +142,7 @@ begin
 		if (init) then
 			if (romfile /= "") then
 				report "FILE:" & romfile severity note;
-				i := 0;
+				i := romfile_offset;
 				file_open(char_file, romfile );
 				while not endfile(char_file) and i < size loop
 					read(char_file, char_v);

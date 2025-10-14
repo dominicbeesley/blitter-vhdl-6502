@@ -171,11 +171,12 @@ architecture rtl of mk3blit is
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
-	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
-	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
-	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
-	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
-	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
+	signal r_cfg_do6502_debug		: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits		: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type			: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65		: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_use_riscv		: std_logic;							-- if '1' boot to Soft RiscV
+	signal r_cfg_cpu_speed_opt 	: cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
@@ -256,6 +257,7 @@ architecture rtl of mk3blit is
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
 																							-- use fb_syscon.clk
+	signal i_clk_32M						: std_logic;							-- used in hazard3 core if present
 	signal i_clk_lock						: std_logic;							-- indicates whether the main pll is locked
 	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
@@ -383,6 +385,7 @@ begin
 
 		clk_fish_o							=> i_clk_fish_128M,
 		clk_snd_o							=> i_clk_snd,
+		clk_32_o								=> i_clk_32M,
 
 		clk_lock_o							=> i_clk_lock,
 
@@ -736,13 +739,15 @@ END GENERATE;
 		G_MK3 => true,
 
 		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
+		G_INCL_CPU_PICORV32				=> G_INCL_CPU_PICORV32,
+		G_INCL_CPU_HAZARD3				=> G_INCL_CPU_HAZARD3,
 		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
 		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
 		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
 		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
 		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
 		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_Z180						=> G_INCL_CPU_Z180,
+		G_INCL_CPU_Z180					=> G_INCL_CPU_Z180,
 		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
 		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
 		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
@@ -753,6 +758,7 @@ END GENERATE;
 
 		cfg_cpu_type_i						=> r_cfg_cpu_type,
 		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_use_riscv_i				=> r_cfg_cpu_use_riscv,
 		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
@@ -785,6 +791,10 @@ END GENERATE;
 		noice_debug_cpu_clken_o			=> i_noice_debug_cpu_clken,
 		noice_debug_A0_tgl_o				=> i_noice_debug_A0_tgl,
 		noice_debug_opfetch_o			=> i_noice_debug_opfetch,
+
+		
+		-- optional clocks for riscv / hazard3
+		clk_32m_i							=> i_clk_32M,
 
 
 		-- extra memory map control signals
@@ -944,7 +954,8 @@ begin
 		elsif i_fb_syscon.prerun(1) = '1' then
 			r_cfg_ver_boot(11 downto 0) <= exp_PORTEFG_io;
 			-- read port G at boot time
-			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3);
+			r_cfg_cpu_use_t65 <= not exp_PORTEFG_io(3) and exp_PORTEFG_io(7);
+			r_cfg_cpu_use_riscv <= not exp_PORTEFG_io(3) and not exp_PORTEFG_io(7);
 			v_cfg_pins_cpu_type_and_speed(2 downto 0) := exp_PORTEFG_io(11 downto 9);
 			r_cfg_swromx <= not exp_PORTEFG_io(4);
 			r_cfg_mosram <= not exp_PORTEFG_io(5);
@@ -1037,7 +1048,7 @@ LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
 				i_flasher(1);
 LED_o(1) <= not i_throttle_act;
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
+LED_o(3) <= SYS_nNMI_i;
 
 SYS_AUX_o			<= "0" & i_debug_80188_state;
 SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);

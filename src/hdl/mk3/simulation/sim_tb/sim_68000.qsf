@@ -13,10 +13,13 @@ set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls04
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls32.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls51.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74244.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/ls74245.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/bbc_clock_gen.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/bbc_slow_cyc.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/bbc/elk_clock_gen.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/bbc/elk_slow_cyc.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_pack.vhd -section_id sim_68000_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../../../library/simulation/buskeep.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../../simulation_shared/sim_SYS_tb.vhd -section_id sim_68000_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE ../../simulation/sim_tb/sim_68000_tb.vhd -section_id sim_68000_tb

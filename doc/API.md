@@ -1006,11 +1006,11 @@ in the current build
  | FC 008A     | 0     | ARM2 hard CPU                  | 1 | 1 |
  |             | 1     | Z180 hard CPU                  | 1 | 1 |
  |             | 2     | George Foot Supershadow        | 1 | 1 |
- |             | 3     | Fast RAM @ 10ns (else 45ns)    | 1 | 1 |
- |             | 4     | Slow RAM @ 45ns (else 55ns)    | 1 | 1 |
+ |             | 3     | ChipRAM is 10ns (else 45ns)    | 1 | 1 |
+ |             | 4     | BBRAM is 45ns (else 55ns)      | 1 | 1 |
+ |             | 5     | RiscV soft-core PicoRV32       | 1 | 3 |
+ |             | 6     | RiscV soft-core Hazard3        | 1 | 3 |
  |             | 5     | Chipset + SDCARD / SPI         | 1 | 4 |
- |             | 6     | 0                              | 1 | 1 |
- |             | 7     | 0                              | 1 | 1 |
  | FC 008B..8F | *     | - reserved - all bits read 0   |
 
 

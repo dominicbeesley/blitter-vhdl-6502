@@ -47,12 +47,26 @@ port (
 	SYS_BUF_D_nOE_i: in		std_logic;
 	SYS_BUF_D_DIR_i: in		std_logic;
 
+	
+	-- 1MHZ bus 
+	MHZ1_E_o			: out		std_logic;
+	MHZ1_nRST_o		: out		std_logic;
+	MHZ1_nPGFC_o	: out		std_logic;
+	MHZ1_nPGFD_o	: out		std_logic;
+	MHZ1_A_o			: out		std_logic_vector(7 downto 0);
+	MHZ1_RnW_o		: out		std_logic;
+	MHZ1_D_io		: inout	std_logic_vector(7 downto 0)		:= (others => 'Z');
+	MHZ1_nIRQ_i		: in		std_logic								:= '1';
+	MHZ1_nNMI_i		: in		std_logic								:= '1';
+
+	-- debug
 	SYS_1MHzE_o		: out		std_logic;
 	SYS_2MHzE_o		: out		std_logic;
 
 	hsync_o			: out		std_logic;
 	vsync_o			: out		std_logic;
 
+	-- simulation control
 	sim_ENDSIM		: in		std_logic;
 	sim_dump_ram	: in		std_logic;
 	sim_reg_halt_o : out		std_logic
@@ -60,6 +74,21 @@ port (
 end sim_SYS_tb;
 
 architecture Behavioral of sim_SYS_tb is
+
+	signal	i_SYS_TB_nPGFC_0			: std_logic;
+	signal	i_SYS_TB_nPGFD_0			: std_logic;
+	signal	i_SYS_TB_nPGFE_0			: std_logic;
+	signal	i_SYS_TB_RAM_nCS_0		: std_logic;
+	signal	i_SYS_TB_MOSROM_nCS_0	: std_logic;
+
+
+	signal	i_SYS_TB_nPGFC_dly		: std_logic;
+	signal	i_SYS_TB_nPGFD_dly		: std_logic;
+	signal	i_SYS_TB_nPGFE_dly		: std_logic;
+	signal	i_SYS_TB_RAM_nCS_dly		: std_logic;
+	signal	i_SYS_TB_MOSROM_nCS_dly	: std_logic;
+
+	signal	i_SYS_TB_RAM_RnW			: std_logic;
 
 	component M6522 is
    port (
@@ -132,11 +161,11 @@ architecture Behavioral of sim_SYS_tb is
 	signal	i_SYS_RnW				: std_logic;
 	signal	i_SYS_SYNC				: std_logic;
 
-	signal	i_SYS_BUF_D_nOE_dly	: std_logic;
-	signal	i_SYS_BUF_D_DIR_dly	: std_logic;
-
 	signal	r_CLK_16					: std_logic;
 
+	-- 1MHZ bus mocking
+	signal	i_MHz1E					: std_logic;
+	signal   i_MHz1_dbuf_nOE		: std_logic;
 	signal	i_clken4					: std_logic;	 -- Hoglet 6522 clocken
 
 	-- sysvia
@@ -148,6 +177,8 @@ architecture Behavioral of sim_SYS_tb is
 
 begin
 
+	SYS_nIRQ_o <= MHZ1_nIRQ_i;
+	SYS_nNMI_o <= MHZ1_nNMI_i;
 	SYS_1MHzE_o	<= i_SYS_1MHzE;
 	SYS_2MHzE_o	<= i_SYS_2MHzE;
 
@@ -156,15 +187,50 @@ begin
 	hsync_o <= r_hsync;
 	vsync_o <= r_vsync;
 
-	g_sys_buf:IF G_MK3 GENERATE
-		-- model the 74LVC4245 on the data lines
-		i_SYS_BUF_D_nOE_dly <= SYS_BUF_D_nOE_i after 8 ns;
-		i_SYS_BUF_D_DIR_dly <= SYS_BUF_D_DIR_i after 8 ns;
+	MHZ1_E_o <= i_MHz1E;
+	MHZ1_nPGFC_o <= i_SYS_TB_nPGFC_dly;
+	MHZ1_nPGFD_o <= i_SYS_TB_nPGFD_dly;
+	i_MHz1_dbuf_nOE <= i_SYS_TB_nPGFD_dly and i_SYS_TB_nPGFC_dly;		-- TODO: delay ? --TODO: A glitches
+	MHZ1_RnW_o <= SYS_Rnw_i;
+	MHZ1_nRST_o <= SYS_nRESET_i;
 
-		SYS_D_io 	<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '0' or i_SYS_BUF_D_nOE_dly = '1' else
-						   i_SYS_D after 6 ns;
-		i_SYS_D 		<= 	(others => 'Z') when i_SYS_BUF_D_DIR_dly = '1' or i_SYS_BUF_D_nOE_dly = '1' else
-					      SYS_D_io after 6 ns;
+	g_1MHZ_D_buf:entity work.LS74245
+	port map (
+		dirA2BnB2a 	=> SYS_Rnw_i,
+		nOE			=> i_MHz1_dbuf_nOE,
+		A				=> MHZ1_D_io,
+		B				=> i_SYS_D
+	);
+
+	g_1MHZ_A_buf:entity work.LS74244
+	port map (
+		D				=> i_SYS_A(7 downto 0),
+		Q				=> MHZ1_A_o,
+		nOE_A			=> '0',
+		nOE_B			=> '0'
+	);
+
+	
+	g_sys_buf:IF G_MK3 GENERATE
+		BRD_D_BUF: BLOCK
+		signal i_SYS_D1 : std_logic_vector(7 downto 0);
+		begin
+
+			e_brd_d_buf:entity work.LS74245
+			generic map (
+				tprop	=> 6 ns,
+				toe	=> 8 ns,
+				ttr	=> 6 ns
+				)
+			port map (
+				A => i_SYS_D,
+				B => SYS_D_io,
+				dirA2BnB2a => SYS_BUF_D_DIR_i,
+				nOE => SYS_BUF_D_nOE_i
+				);
+		
+		END BLOCK;
+
 	END GENERATE;
 
 
@@ -173,17 +239,14 @@ begin
 		--SYS_D_io 	<= 	i_SYS_D;
 		--i_SYS_D 		<= 	SYS_D_io;
 
-		-- try and do a bidirectional assign
 		GA:FOR I IN 7 downto 0 GENERATE
 
 			p:process
 			variable v_t:time;
-			variable presv:boolean;
 			begin
 				wait on i_SYS_D(I)'transaction, SYS_D_io(I)'transaction until v_t /= now;
 
 				v_t := now;
-
 
 				SYS_D_io(I) <= 'Z';
 				i_SYS_D(I)  <= 'Z';
@@ -195,6 +258,15 @@ begin
 			end process;
 		END GENERATE GA;
 	END GENERATE;
+
+
+	e_keep_D:entity work.buskeep
+	generic map (
+		WIDTH => 8
+	)
+	port map (
+		D_io => i_SYS_D
+	);
 
 
 	-- model the 74LVC4245 on the address lines
@@ -210,23 +282,31 @@ begin
 
 
 
-	i_SYS_TB_nPGFE <= 	'0' when i_SYS_A(15 downto 8) = x"FE" else
+	i_SYS_TB_nPGFE_0 <= 	'0' when i_SYS_A(15 downto 8) = x"FE" else
 								'1';
 
-	i_SYS_TB_nPGFD <= 	'0' when i_SYS_A(15 downto 8) = x"FD" else
+	i_SYS_TB_nPGFD_0 <= 	'0' when i_SYS_A(15 downto 8) = x"FD" else
 								'1';
 
-	i_SYS_TB_nPGFC <= 	'0' when i_SYS_A(15 downto 8) = x"FC" else
+	i_SYS_TB_nPGFC_0 <= 	'0' when i_SYS_A(15 downto 8) = x"FC" else
 								'1';
 
-	i_SYS_TB_RAM_nCS <= 	'0' when i_SYS_A(15) = '0' and i_SYS_phi2 = '1' and sys_ram_en = '1' else
-								'1' after 30 ns;
+	i_SYS_TB_RAM_nCS_0 <= 	'0' when i_SYS_A(15) = '0' and i_SYS_phi2 = '1' and sys_ram_en = '1' else
+								'1';
 								
+	i_SYS_TB_MOSROM_nCS_0 <= 	'0' when i_SYS_A(15 downto 14) = "11" and i_SYS_TB_nPGFE_dly = '1' and i_SYS_TB_nPGFD_dly = '1' and i_SYS_TB_nPGFC_dly = '1' else
+								'1';
+
+
 	i_SYS_TB_RAM_RnW <= 	'0' when i_SYS_RnW = '0' and i_SYS_phi2 = '1' else
 								'1';
 
-	i_SYS_TB_MOSROM_nCS <= 	'0' when i_SYS_A(15 downto 14) = "11" and i_SYS_TB_nPGFE = '1' and i_SYS_TB_nPGFD = '1' and i_SYS_TB_nPGFC = '1' else
-								'1' after 30 ns;
+
+	i_SYS_TB_nPGFE_dly <= transport i_SYS_TB_nPGFE_0 after 30 ns;
+	i_SYS_TB_nPGFD_dly <= transport i_SYS_TB_nPGFD_0 after 30 ns;
+	i_SYS_TB_nPGFC_dly <= transport i_SYS_TB_nPGFC_0 after 30 ns;
+	i_SYS_TB_RAM_nCS_dly <= transport i_SYS_TB_RAM_nCS_0 after 30 ns;
+	i_SYS_TB_MOSROM_nCS_dly <= transport i_SYS_TB_MOSROM_nCS_0 after 30 ns;
 
 	e_sys_ram_32: entity work.ram_tb 
 	generic map (
@@ -238,7 +318,7 @@ begin
 	port map (
 		A				=> i_SYS_A(14 downto 0),
 		D				=> i_SYS_D,
-		nCS			=> i_SYS_TB_RAM_nCS,
+		nCS			=> i_SYS_TB_RAM_nCS_dly,
 		nOE			=> '0',
 		nWE			=> i_SYS_TB_RAM_RnW,
 		
@@ -255,7 +335,7 @@ begin
 	port map (
 		A 				=> i_SYS_A(13 downto 0),
 		D 				=> i_SYS_D,
-		nCS 			=> i_SYS_TB_MOSROM_nCS,
+		nCS 			=> i_SYS_TB_MOSROM_nCS_dly,
 		nOE 			=> '0'
 	);
 
@@ -407,11 +487,11 @@ begin
 	end process;
 
 	-- a phony hardware register to halt the sim
-	p_reg_halt: process(SYS_nRESET_i, i_SYS_TB_nPGFE, i_SYS_A, i_SYS_D, i_SYS_phi2)
+	p_reg_halt: process(SYS_nRESET_i, i_SYS_TB_nPGFE_dly, i_SYS_A, i_SYS_D, i_SYS_phi2)
 	begin
 		if (SYS_nRESET_i = '0') then
 			sim_reg_halt_o <= '0';
-		elsif falling_edge(i_SYS_phi2) and i_SYS_RnW = '0' and i_SYS_TB_nPGFE = '0' and unsigned(i_SYS_A(7 downto 0)) = 16#FF# then
+		elsif falling_edge(i_SYS_phi2) and i_SYS_RnW = '0' and i_SYS_TB_nPGFE_dly = '0' and unsigned(i_SYS_A(7 downto 0)) = 16#FF# then
 			sim_reg_halt_o <= i_SYS_D(7);
 			if i_SYS_D(7) = '1' then
 				report "Simulation stop requested from code" severity note;
