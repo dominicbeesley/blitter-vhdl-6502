@@ -7,7 +7,7 @@
 
 -mod_name pll_48_128
 -file_name pll_48_128
--path C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC20K/FirstLight/P20KBare/src/gowin_rpll/
+-path C:/Users/domin/OneDrive/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC20K/boards/C20K/src/gowin_rpll/
 -type PLL
 -rPll true
 -file_type vhdl
@@ -18,6 +18,7 @@
 -fbdiv_sel 8
 -dyn_odiv_sel false
 -odiv_sel 4
+-dyn_sdiv_sel 4
 -dyn_da_en true
 -rst_sig false
 -rst_sig_p false
@@ -28,6 +29,7 @@
 -clkout_ft_dir 1
 -en_clkoutp false
 -clkoutp_bypass false
--en_clkoutd false
+-en_clkoutd true
 -clkoutd_bypass false
+-clkoutd_src CLKOUT
 -en_clkoutd3 false

@@ -78,7 +78,7 @@ package board_config_pack is
 	constant G_INCL_LED_ARR		: boolean := false;
 	constant G_INCL_DBG_UART	: boolean := false;
 	
-	constant C_CPU_BYTELANES	: positive := 1;		
+	constant C_CPU_BYTELANES	: positive := 4;		
 	constant G_INCL_CPU_T65		: boolean := true;
 	constant G_INCL_CPU_65C02	: boolean := false;
 	constant G_INCL_CPU_6800	: boolean := false;
@@ -89,7 +89,9 @@ package board_config_pack is
 	constant G_INCL_CPU_68008	: boolean := false;
 	constant G_INCL_CPU_680x0	: boolean := false;
 	constant G_INCL_CPU_ARM2	: boolean := false;
-	constant G_INCL_CPU_Z180	: boolean := false;
+	constant G_INCL_CPU_Z180	: boolean := false;	
+	constant G_INCL_CPU_PICORV32: boolean := false;
+	constant G_INCL_CPU_HAZARD3: boolean := true;
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
 --	constant G_MEM_FAST_IS_10	: boolean := false;		-- for testing put back (TODO: constrain mem pins)

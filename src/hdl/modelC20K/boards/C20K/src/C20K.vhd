@@ -210,6 +210,7 @@ architecture rtl of C20K is
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
 	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
 	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_use_riscv		: std_logic;							-- if '1' boot to Soft RiscV
 	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
@@ -295,6 +296,7 @@ architecture rtl of C20K is
 																							-- LED sfishals
 	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
 																							-- use fb_syscon.clk
+	signal i_clk_32M						: std_logic;							-- used in hazard3 core if present
 	signal i_clk_lock						: std_logic;							-- indicates whether the main pll is locked
 	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
@@ -430,6 +432,7 @@ begin
    e_pll_48_128: entity work.pll_48_128
    port map (
       clkout => i_clk_pll_128M,
+      clkoutd => i_clk_32M,
       clkin => i_clk_pll_48M
    );
 
@@ -826,15 +829,17 @@ end generate;
    e_fb_cpu_t65only: entity work.fb_cpu_t65only
    generic map (
       SIM => SIM,
-      CLOCKSPEED => CLOCKSPEED
+      CLOCKSPEED => CLOCKSPEED,
+      G_INCL_CPU_T65						=> G_INCL_CPU_T65,
+      G_INCL_CPU_PICORV32				=> G_INCL_CPU_PICORV32,
+      G_INCL_CPU_HAZARD3				=> G_INCL_CPU_HAZARD3
    )
    port map (
 
 		-- configuration
 
---		cfg_cpu_type_i						=> r_cfg_cpu_type,
---		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
---		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_use_riscv_i				=> r_cfg_cpu_use_riscv,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_swromx_i						=> r_cfg_swromx,
@@ -860,6 +865,8 @@ end generate;
       noice_debug_A0_tgl_o          => i_noice_debug_A0_tgl,
       noice_debug_opfetch_o         => i_noice_debug_opfetch,
 
+		-- optional clocks for riscv / hazard3
+		clk_32m_i							=> i_clk_32M,
 
       -- logical mappings
 		sys_ROMPG_i 						=> i_sys_ROMPG,	
@@ -883,7 +890,7 @@ end generate;
 
    );
 
-	i_cpu_IRQ_n <= not i_chipset_cpu_int and i_sys_nIRQ;
+	i_cpu_IRQ_n <= i_sys_nIRQ and not i_chipset_cpu_int;
 
 g_led_arr:if G_INCL_LED_ARR generate
    i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
@@ -978,12 +985,13 @@ begin
    if rising_edge(i_fb_syscon.clk) then
       if i_fb_syscon.rst = '1' then
          r_cfg_mosram <= not icipo_btn0;
+         r_cfg_cpu_use_riscv <= not icipo_btn3;
+         r_cfg_cpu_use_t65 <= icipo_btn3;
       end if;
    end if;
 end process;
 
                      
-r_cfg_cpu_use_t65 <= '1';
 r_cfg_swromx <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;

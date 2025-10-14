@@ -86,7 +86,7 @@
  "VCCAUX" : 3.3,
  "VCCX" : "3.3",
  "VHDL_Standard" : "VHDL_Std_2008",
- "Verilog_Standard" : "Vlg_Std_2001",
+ "Verilog_Standard" : "Vlg_Std_Sysv2017",
  "WAKE_UP" : "0",
  "show_all_warnings" : false,
  "turn_off_bg" : false

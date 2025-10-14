@@ -1,11 +1,11 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.11 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Mon Jun  2 18:11:55 2025
+--Created Time: Tue Oct 14 15:54:50 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -13,6 +13,7 @@ use IEEE.std_logic_1164.all;
 entity pll_48_128 is
     port (
         clkout: out std_logic;
+        clkoutd: out std_logic;
         clkin: in std_logic
     );
 end pll_48_128;
@@ -21,7 +22,6 @@ architecture Behavioral of pll_48_128 is
 
     signal lock_o: std_logic;
     signal clkoutp_o: std_logic;
-    signal clkoutd_o: std_logic;
     signal clkoutd3_o: std_logic;
     signal gw_gnd: std_logic;
     signal FBDSEL_i: std_logic_vector(5 downto 0);
@@ -107,7 +107,7 @@ begin
             CLKOUT_BYPASS => "false",
             CLKOUTP_BYPASS => "false",
             CLKOUTD_BYPASS => "false",
-            DYN_SDIV_SEL => 2,
+            DYN_SDIV_SEL => 4,
             CLKOUTD_SRC => "CLKOUT",
             CLKOUTD3_SRC => "CLKOUT"
         )
@@ -115,7 +115,7 @@ begin
             CLKOUT => clkout,
             LOCK => lock_o,
             CLKOUTP => clkoutp_o,
-            CLKOUTD => clkoutd_o,
+            CLKOUTD => clkoutd,
             CLKOUTD3 => clkoutd3_o,
             RESET => gw_gnd,
             RESET_P => gw_gnd,

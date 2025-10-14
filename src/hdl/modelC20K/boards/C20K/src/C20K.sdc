@@ -34,8 +34,8 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clock
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_SOUND}] -group [get_clocks {CLOCK_128M}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
 
-set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -setup 4
-set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -hold 3
+set_multicycle_path -from [get_regs {e_fb_cpu_t65only/gt65.e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/gt65.e_t65/e_cpu/*}]  -setup 4
+set_multicycle_path -from [get_regs {e_fb_cpu_t65only/gt65.e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/gt65.e_t65/e_cpu/*}]  -hold 3
 
 set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2
 set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2

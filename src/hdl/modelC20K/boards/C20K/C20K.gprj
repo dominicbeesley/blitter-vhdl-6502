@@ -36,6 +36,8 @@
 
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_picorv32.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU_hazard3.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../shared/fb_cpu_log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
@@ -119,6 +121,37 @@
         <File path="../../shared/hdmi/sprites/sprites.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/sprites/sprite_int.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/vidmem_sequencer.vhd" type="file.vhdl" enable="1" />
+
+        <File path="../../../library/3rdparty/picorv32/picorv32.v" type="file.verilog" enable="1" />
+
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_alu.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_branchcmp.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_muldiv_seq.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_mul_fast.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_onehot_encode.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority_dynamic.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_priority_encode.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/arith/hazard3_shift_barrel.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/cdc/hazard3_apb_async_bridge.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/cdc/hazard3_reset_sync.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/cdc/hazard3_sync_1bit.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/dm/hazard3_dm.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/dm/hazard3_sbus_to_ahb.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/dtm/hazard3_ecp5_jtag_dtm.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm_core.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_core.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_cpu_1port.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_csr.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_decode.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_frontend.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_instr_decompress.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_irq_ctrl.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_pmp.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_power_ctrl.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_regfile_1w2r.v" type="file.verilog" enable="1" />
+        <File path="../../../library/3rdparty/hazard3/hazard3_triggers.v" type="file.verilog" enable="1" />
 
 
     </FileList>
