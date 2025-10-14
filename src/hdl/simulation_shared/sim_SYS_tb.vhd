@@ -88,8 +88,6 @@ architecture Behavioral of sim_SYS_tb is
 	signal	i_SYS_TB_RAM_nCS_dly		: std_logic;
 	signal	i_SYS_TB_MOSROM_nCS_dly	: std_logic;
 
-	signal	i_SYS_TB_RAM_RnW			: std_logic;
-
 	component M6522 is
    port (
       I_RS                  : in    std_logic_vector(3 downto 0);
