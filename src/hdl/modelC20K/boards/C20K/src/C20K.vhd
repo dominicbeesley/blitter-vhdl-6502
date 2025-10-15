@@ -875,7 +875,7 @@ end generate;
       JIM_page_i                    => i_JIM_page,
 
       -- direct CPU control signals from system
-      nmi_n_i                       => icipo_btn1, -- TODO: NMI
+      nmi_n_i                       => i_sys_nNMI,
       irq_n_i                       => i_cpu_IRQ_n,
       cpu_halt_i                    => i_chipset_cpu_halt,
 
@@ -980,6 +980,29 @@ end generate;
    );
 
 
+   p_debug_btn:process(i_fb_syscon)
+   variable vcnt:unsigned(7 downto 0);
+   begin
+      if i_fb_syscon.rst = '1' then
+         vcnt := (others => '1');
+         r_noice_debug_btn <= '0';        
+      else
+         if rising_edge(i_fb_syscon.clk) then
+            if icipo_btn1 = '0' then
+               if vcnt = 0 then
+                  r_noice_debug_btn <= '1';
+               else
+                  vcnt := vcnt - 1;
+               end if;
+            else
+               vcnt := (others => '1');
+               r_noice_debug_btn <= '0';
+            end if;
+         end if;
+      end if;
+   end process;
+
+
 p_boot_mosram:process(i_fb_syscon)
 begin
    if rising_edge(i_fb_syscon.clk) then
@@ -987,6 +1010,7 @@ begin
          r_cfg_mosram <= not icipo_btn0;
          r_cfg_cpu_use_riscv <= not icipo_btn3;
          r_cfg_cpu_use_t65 <= icipo_btn3;
+         r_cfg_do6502_debug <= icipo_btn3; 
       end if;
    end if;
 end process;
@@ -995,7 +1019,6 @@ end process;
 r_cfg_swromx <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
-r_cfg_do6502_debug <= '1'; 
 r_cfg_cpu_type <= CPU_65816;
 r_cfg_cpu_speed_opt <= NONE;
 r_cfg_mk2_cpubits <= "001";   --TODO: check!
