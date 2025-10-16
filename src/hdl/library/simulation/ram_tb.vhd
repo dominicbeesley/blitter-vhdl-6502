@@ -107,20 +107,24 @@ architecture Behavioral of RAM_tb is
 begin
 
 
-	i_A_nCS_DLY <= nCS after tco;
-	i_A_DLY <= A after taa;
+	i_A_nCS_DLY <= transport nCS after tco;
+	i_A_DLY <= transport A after taa;
 	i_D_in_dly <= transport D after tco;			-- huge bodge!
 
 	p_add2d: process(i_A_DLY, i_A_nCS_DLY)
+	variable v_prev_a:std_logic_vector(i_A_DLY'range);
 	begin
-		if (i_A_DLY'event or i_A_nCS_DLY'event) and i_A_nCS_DLY = '0' then
+		-- note: this was i_A_DLY'event but bodged to work around Questa/ModelSim bug? in 2024.09
+		if (i_A_DLY /= v_prev_a or  i_A_nCS_DLY'event) and i_A_nCS_DLY = '0' then
+			v_prev_a := i_A_DLY;
+			report "H" severity note;
 			if has_meta(i_A_DLY) then
-				i_D <= (others => 'Z');
+				i_D <= (others => 'X');
 			elsif to_integer(unsigned(i_A_DLY)) < size then
 				i_D <= i_data(to_integer(unsigned(i_A_DLY)));
 			end if;
-		else
-			i_D <= (others => 'Z') after toh;
+		elsif (i_A_nCS_DLY'event) and i_A_nCS_DLY = '1' then
+			i_D <= (others => 'X') after toh;
 		end if;
 	end process;
 	
