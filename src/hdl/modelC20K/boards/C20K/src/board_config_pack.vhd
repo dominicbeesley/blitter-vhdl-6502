@@ -90,8 +90,8 @@ package board_config_pack is
 	constant G_INCL_CPU_680x0	: boolean := false;
 	constant G_INCL_CPU_ARM2	: boolean := false;
 	constant G_INCL_CPU_Z180	: boolean := false;	
-	constant G_INCL_CPU_PICORV32: boolean := false;
-	constant G_INCL_CPU_HAZARD3: boolean := true;
+	constant G_INCL_CPU_PICORV32: boolean := true;
+	constant G_INCL_CPU_HAZARD3: boolean := false;
 
 	constant G_MEM_SWRAM_SLOT	: natural := 0;
 --	constant G_MEM_FAST_IS_10	: boolean := false;		-- for testing put back (TODO: constrain mem pins)

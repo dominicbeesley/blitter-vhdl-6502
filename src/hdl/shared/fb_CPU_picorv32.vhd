@@ -62,7 +62,11 @@ entity fb_cpu_picorv32 is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- cpu clock
+
+		clk_32M_i								: in std_logic
 
 	);
 end fb_cpu_picorv32;
@@ -143,7 +147,11 @@ architecture rtl of fb_cpu_picorv32 is
 
 	signal i_rv_mem_instr	: std_logic;
 	signal i_rv_mem_valid	: std_logic;
-	signal r_rv_mem_ready	: std_logic;
+
+	signal r_rv_mem_ready		: std_logic;
+	signal r_rv_mem_ready_req	: std_logic;
+	signal r_rv_mem_ready_ack	: std_logic;
+
 	signal i_rv_addr 			: std_logic_vector(31 downto 0);
 	signal r_rv_rdata			: std_logic_vector(31 downto 0);
 	signal i_rv_wdata			: std_logic_vector(31 downto 0);
@@ -152,8 +160,7 @@ architecture rtl of fb_cpu_picorv32 is
 
 	signal i_rv_mem_la_wrstb: std_logic_vector(3 downto 0);   -- need to look ahead to get byte lanes
 
-	signal i_rv_res_n			: std_logic;
-	signal i_rv_nmi_n			: std_logic;
+	signal r_rv_res_n			: std_logic;
 
 	signal r_wrap_cyc			: std_logic;
 	signal r_lane_req			: std_logic_vector(3 downto 0);
@@ -182,25 +189,48 @@ begin
 	wrap_o.D_WR_stb 		<= r_lane_req;
 	wrap_o.instr_fetch  	<= r_instr;
 
-	i_rv_nmi_n 	<= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
-
-	i_rv_res_n <= not fb_syscon_i.rst when cpu_en_i = '1' else
-						'0';
-
-	p_rstrb:process(fb_syscon_i)
+	p_res_reg:process(all)
+	begin
+		if rising_edge(clk_32M_i) then
+			if cpu_en_i = '0' then
+				r_rv_res_n <= '0';
+			else
+				r_rv_res_n <= not fb_syscon_i.rst;
+			end if;
+		end if;
+	end process;
+	
+	p_rstrb:process(clk_32M_i, r_rv_res_n)
 	begin
 		-- here we synthesize a byte lane mask for reads
 		-- as mem_la_wrstb always has correct bits sets 
 		-- (for both reads and writes)
-		if fb_syscon_i.rst = '1' then
+		if r_rv_res_n = '0' then
 			r_latch_rstrb <= "0000";
-		elsif rising_edge(fb_syscon_i.clk) then
+		elsif rising_edge(clk_32M_i) then
 			if i_rv_mem_valid = '0' then
 				r_latch_rstrb <= i_rv_mem_la_wrstb;
 			end if;
 		end if;
 	end process;
 
+	p_mem_readt:process(clk_32M_i, r_rv_res_n)
+	begin
+		if r_rv_res_n = '0' then
+			r_rv_mem_ready <= '0';
+			r_rv_mem_ready_ack <= '0';
+		else
+			if rising_edge(clk_32M_i) then
+				if r_rv_mem_ready = '1' then
+					r_rv_mem_ready <= '0';
+					r_rv_mem_ready_ack <= r_rv_mem_ready_req;
+				elsif r_rv_mem_ready_ack /= r_rv_mem_ready_req then
+					r_rv_mem_ready <= '1';
+				end if;
+			end if;
+		end if;
+	end process;
+	
 	p_state:process(fb_syscon_i)
 	variable v_lanes : std_logic_vector(3 downto 0);
 	variable v_add2  : std_logic_vector(1 downto 0);
@@ -211,10 +241,9 @@ begin
 			r_wrap_cyc <= '0';
 			r_we <= '0';
 			r_addr <= (others => '0');
-			r_rv_mem_ready <= '0';
+			r_rv_mem_ready_req <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 			
-			r_rv_mem_ready <= '0';
 
 			case r_state is 
 				when idle => 
@@ -258,16 +287,21 @@ begin
 					end if;
 				when rd =>
 					if wrap_i.ack = '1' then
-						r_rv_mem_ready <= '1';
+						r_rv_mem_ready_req <= not r_rv_mem_ready_ack;
 						r_rv_rdata <= wrap_i.D_rd;
 						r_state <= goidle;
 						r_wrap_cyc <= '0';						
 					end if;
 				when wr =>
 					if wrap_i.ack = '1' then
-						r_rv_mem_ready <= '1';
+						r_rv_mem_ready_req <= not r_rv_mem_ready_ack;
 						r_state <= goidle;
 						r_wrap_cyc <= '0';						
+					end if;
+
+				when goidle =>
+					if r_rv_mem_ready_ack = r_rv_mem_ready_req then
+						r_state <= idle;
 					end if;
 
 				when others => 
@@ -314,8 +348,8 @@ begin
 		STACKADDR					=> x"00010000"
 	)
 	port map (
-		clk							=> fb_syscon_i.clk,
-		resetn						=> i_rv_res_n,
+		clk							=> clk_32M_i,
+		resetn						=> r_rv_res_n,
 		trap							=> open,
 
 		mem_valid					=> i_rv_mem_valid,

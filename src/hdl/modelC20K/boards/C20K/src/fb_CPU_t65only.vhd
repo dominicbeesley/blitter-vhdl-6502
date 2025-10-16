@@ -154,7 +154,11 @@ architecture rtl of fb_cpu_t65only is
 
 		-- state machine signals
 		wrap_o									: out t_cpu_wrap_o;
-		wrap_i									: in t_cpu_wrap_i
+		wrap_i									: in t_cpu_wrap_i;
+
+		-- cpu clock
+
+		clk_32M_i								: in std_logic
 
 	);
 	end component;
@@ -427,7 +431,9 @@ gpicorv32: IF G_INCL_CPU_PICORV32 GENERATE
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_all(C_IX_CPU_RISCV),
-		wrap_i									=> i_wrap_i
+		wrap_i									=> i_wrap_i,
+
+		clk_32m_i								=> clk_32m_i
 
 	);
 

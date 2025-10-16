@@ -26,8 +26,9 @@ end test_tb;
 architecture rtl of test_tb is
 
    --constant G_MOSROMFILE : string := "C:/Users/Dominic/Documents/Programming/HostFS/roms65/MOS120.M";
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
-
+   --constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
+   constant G_MOSROMFILE : string :=   "C:/Users/domin/OneDrive/Documents/GitHub/blitter-riscv-code/build/PICORV32/roms/mos/mos.mox";
+   
    constant BOARD_CLOCKSPEED : natural := 27;
 
    constant BOARD_CLOCK_PER : time := (1000000/BOARD_CLOCKSPEED) * 1 ps;
@@ -86,7 +87,7 @@ architecture rtl of test_tb is
    signal ibpi_btn0        : std_logic := '1';
    signal ibpi_btn1        : std_logic := '1';
    signal ibpi_btn2        : std_logic := '1';
-   signal ibpi_btn3        : std_logic := '1';
+   signal ibpi_btn3        : std_logic := '0';
    signal ibpi_kb_pa7      : std_logic := '1';
    signal ibpio_P_D        : std_logic_vector(7 downto 0);
    signal ibpo_A           : std_logic_vector(7 downto 0);
@@ -327,14 +328,14 @@ begin
    --actually just the same ROM repeated!
    e_blit_rom_512: entity work.ram_tb 
    generic map (
-      size        => 16*1024,
+      size        => 32*1024,
       dump_filename => "",
       romfile => G_MOSROMFILE,
       tco => 55 ns,
       taa => 55 ns
    )
    port map (
-      A           => i_MEM_A(13 downto 0),
+      A           => i_MEM_A(14 downto 0),
       D           => i_MEM_D,
       nCS         => i_mem_ROM_nCE,
       nOE         => i_MEM_nOE,

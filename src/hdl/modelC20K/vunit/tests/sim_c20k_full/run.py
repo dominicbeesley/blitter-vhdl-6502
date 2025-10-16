@@ -1,5 +1,8 @@
 from vunit import VUnit
 
+from pathlib import Path
+from shutil import copy
+
 GOWIN = "C:/Gowin/Gowin_V1.9.12_x64/IDE/simlib/gw2a"
 
 def encode(tb_cfg):
@@ -27,7 +30,7 @@ lib.add_source_files("../../../../library/common.vhd")
 lib.add_source_files("../../../../library/fishbone/fishbone_pack.vhd")
 lib.add_source_files("../../../../simulation_shared/fb_tester_pack.vhd")
 
-lib.add_source_files("../../../boards/C20k/version.vhd")
+lib.add_source_files("../../../shared/version.vhd")
 lib.add_source_files("../../../boards/C20k/src/C20K.vhd") 
 lib.add_source_files("../../../boards/C20k/src/gowin_dpb/hdmi_blockram.vhd")
 lib.add_source_files("../../../boards/C20k/src/gowin_rpll/pll_27_48.vhd")
@@ -49,6 +52,8 @@ lib.add_source_files("../../../shared/1bitvid/dossy_chroma.vhd")
 lib.add_source_files("../../../../shared/firmware_info_pack.vhd")
 lib.add_source_files("../../../../shared/fb_CPU_pack.vhd")
 lib.add_source_files("../../../../shared/fb_CPU_t65.vhd")
+lib.add_source_files("../../../../shared/fb_CPU_picorv32.vhd")
+lib.add_source_files("../../../../shared/fb_CPU_hazard3.vhd")
 
 lib.add_source_files("../../../../shared/fb_cpu_log2phys.vhd")
 lib.add_source_files("../../../../shared/fb_CPU_con_burst.vhd")
@@ -89,7 +94,6 @@ lib.add_source_files("../../../../library/3rdparty/T6502/T65_MCode.vhd")
 lib.add_source_files("../../../../library/3rdparty/T6502/T65_ALU.vhd")
 lib.add_source_files("../../../../library/3rdparty/T6502/T65_Pack.vhd")
 lib.add_source_files("../../../../shared/fb_SYS_pack.vhd")
-lib.add_source_files("../../../../shared/fb_SYS_VIA_blocker.vhd")
 lib.add_source_files("../../../../shared/fb_VERSION.vhd")
 
 lib.add_source_files("../../../../library/3rdparty/MikeStirling/m6522.vhd")
@@ -130,6 +134,39 @@ lib.add_source_files("../../../shared/hdmi/vid15tohdmi.vhd")
 lib.add_source_files("../../../../library/simulation/ram_tb.vhd")
 lib.add_source_files("../../../../library/simulation/rom_tb.vhd")
 
+
+lib.add_source_files("../../../../library/3rdparty/picorv32/picorv32.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_alu.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_branchcmp.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_muldiv_seq.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_mul_fast.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_onehot_encode.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_onehot_priority_dynamic.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_priority_encode.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/arith/hazard3_shift_barrel.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/cdc/hazard3_apb_async_bridge.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/cdc/hazard3_reset_sync.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/cdc/hazard3_sync_1bit.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/dm/hazard3_dm.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/dm/hazard3_sbus_to_ahb.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/dtm/hazard3_ecp5_jtag_dtm.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/debug/dtm/hazard3_jtag_dtm_core.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_core.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_cpu_1port.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_csr.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_decode.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_frontend.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_instr_decompress.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_irq_ctrl.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_pmp.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_power_ctrl.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_regfile_1w2r.v")
+lib.add_source_files("../../../../library/3rdparty/hazard3/hazard3_triggers.v")
+
+
+
 fmf = vu.add_library("fmf")
 
 fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
@@ -139,6 +176,12 @@ lib816.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
 lib816.add_source_files("../../../../library/simulation/real65816_tb.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
+
+# copy version .vec file to sim folder
+
+copy("./version_strings.vec", "./vunit_out/modelsim/version_strings.vec")
+Path("./vunit_out/modelsim/").mkdir(parents=True, exist_ok=True)
+
 
 # Run vunit function
 vu.main()

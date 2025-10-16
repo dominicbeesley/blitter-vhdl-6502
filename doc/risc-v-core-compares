@@ -1,0 +1,52 @@
+pico/hazard compare
+
+hazard3@32M
+==========
+
+fpga resources
+--------------
+Regs=647, Luts=2920, ALU=256, BSRAM=2
+
+ClockSp@32M
+-----------
+AVG=8.7MHz
+
+
+
+pico@32M
+========
+
+fpga resources
+--------------
+Regs=1238, Luts=2715, ALU=516, BSRAM=1, SSRAM=24
+
+ClockSp@32M
+-----------
+AVG=6.677MHz
+
+
+pico@64M-bodged
+========
+
+fpga resources
+--------------
+Regs=1242, Luts=2690, ALU=516, BSRAM=1, SSRAM=24
+
+ClockSp@32M
+-----------
+AVG=8.760MHz
+
+NOTE: this with unreliable start and some bodgery
+
+pico@64M
+========
+
+fpga resources
+--------------
+Regs=1242, Luts=2690, ALU=516, BSRAM=1, SSRAM=24
+
+ClockSp@32M
+-----------
+AVG=9.253MHz
+
+NOTE: this with unreliable start and some bodgery

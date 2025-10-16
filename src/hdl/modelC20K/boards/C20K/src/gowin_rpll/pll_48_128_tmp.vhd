@@ -5,7 +5,7 @@
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Tue Oct 14 15:54:50 2025
+--Created Time: Thu Oct 16 14:25:13 2025
 
 --Change the instance name and port connections to the signal names
 ----------Copy here to design--------
