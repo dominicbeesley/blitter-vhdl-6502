@@ -47,7 +47,6 @@ library work;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.fb_cpu_pack.all;
-use work.fb_cpu_exp_pack.all;
 
 entity fb_cpu_picorv32 is
 	generic (
