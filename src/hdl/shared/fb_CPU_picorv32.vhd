@@ -191,7 +191,10 @@ begin
 
 	p_res_reg:process(all)
 	begin
-		if rising_edge(clk_32M_i) then
+
+		if fb_syscon_i.rst = '1' then
+			r_rv_res_n <= '0';
+		elsif rising_edge(clk_32M_i) then
 			if cpu_en_i = '0' then
 				r_rv_res_n <= '0';
 			else
@@ -205,8 +208,8 @@ begin
 		-- here we synthesize a byte lane mask for reads
 		-- as mem_la_wrstb always has correct bits sets 
 		-- (for both reads and writes)
-		if r_rv_res_n = '0' then
-			r_latch_rstrb <= "0000";
+		if fb_syscon_i.rst = '1' or r_rv_res_n = '0' then
+			r_latch_rstrb <= "1111";	-- pico rv starts up with this as 'X' at powerup/reset
 		elsif rising_edge(clk_32M_i) then
 			if i_rv_mem_valid = '0' then
 				r_latch_rstrb <= i_rv_mem_la_wrstb;
@@ -214,9 +217,9 @@ begin
 		end if;
 	end process;
 
-	p_mem_readt:process(clk_32M_i, r_rv_res_n)
+	p_mem_ready:process(all)
 	begin
-		if r_rv_res_n = '0' then
+		if fb_syscon_i.rst = '1' or r_rv_res_n = '0' then
 			r_rv_mem_ready <= '0';
 			r_rv_mem_ready_ack <= '0';
 		else
@@ -236,12 +239,13 @@ begin
 	variable v_add2  : std_logic_vector(1 downto 0);
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_state <= idle;
+			r_state <= goidle;
 			r_instr <= '0';
 			r_wrap_cyc <= '0';
 			r_we <= '0';
 			r_addr <= (others => '0');
 			r_rv_mem_ready_req <= '0';
+			r_lane_req <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
 			
 
