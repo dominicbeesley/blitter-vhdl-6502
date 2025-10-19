@@ -18,7 +18,7 @@
 -fbdiv_sel 8
 -dyn_odiv_sel false
 -odiv_sel 4
--dyn_sdiv_sel 2
+-dyn_sdiv_sel 4
 -dyn_da_en true
 -rst_sig false
 -rst_sig_p false

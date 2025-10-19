@@ -5,7 +5,7 @@
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Thu Oct 16 14:25:13 2025
+--Created Time: Sat Oct 18 18:36:57 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -107,7 +107,7 @@ begin
             CLKOUT_BYPASS => "false",
             CLKOUTP_BYPASS => "false",
             CLKOUTD_BYPASS => "false",
-            DYN_SDIV_SEL => 2,
+            DYN_SDIV_SEL => 4,
             CLKOUTD_SRC => "CLKOUT",
             CLKOUTD3_SRC => "CLKOUT"
         )
