@@ -183,5 +183,7 @@ copy("./version_strings.vec", "./vunit_out/modelsim/version_strings.vec")
 Path("./vunit_out/modelsim/").mkdir(parents=True, exist_ok=True)
 
 
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
+
 # Run vunit function
 vu.main()

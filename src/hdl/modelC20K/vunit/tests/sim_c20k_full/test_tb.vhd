@@ -26,8 +26,8 @@ end test_tb;
 architecture rtl of test_tb is
 
    --constant G_MOSROMFILE : string := "C:/Users/Dominic/Documents/Programming/HostFS/roms65/MOS120.M";
-   --constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
-   constant G_MOSROMFILE : string :=   "C:/Users/domin/OneDrive/Documents/GitHub/blitter-riscv-code/build/PICORV32/roms/mos/mos.mox";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
+   --constant G_MOSROMFILE : string :=   "C:/Users/domin/OneDrive/Documents/GitHub/blitter-riscv-code/build/PICORV32/roms/mos/mos.mox";
    
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -84,10 +84,10 @@ architecture rtl of test_tb is
    signal ibpi_j_i0        : std_logic := '1';
    signal ibpi_j_i1        : std_logic := '1';
    signal ibpi_j_spi_miso  : std_logic := '1';
-   signal ibpi_btn0        : std_logic := '1';
+   signal ibpi_btn0        : std_logic := '0';     -- swmos active
    signal ibpi_btn1        : std_logic := '1';
    signal ibpi_btn2        : std_logic := '1';
-   signal ibpi_btn3        : std_logic := '0';
+   signal ibpi_btn3        : std_logic := '0';     -- riscV active
    signal ibpi_kb_pa7      : std_logic := '1';
    signal ibpio_P_D        : std_logic_vector(7 downto 0);
    signal ibpo_A           : std_logic_vector(7 downto 0);
@@ -371,5 +371,32 @@ begin
       tst_dump    => '0'
 
    );
+
+   e_blit_ram_bb: entity work.ram_tb 
+   generic map (
+      size        => 1*1024*1024,
+      tco => 10 ns,
+      taa => 10 ns,
+      toh => 2 ns,      
+      tohz => 3 ns,  
+      thz => 3 ns,
+      tolz => 3 ns,
+      tlz => 3 ns,
+      toe => 4.5 ns,
+      twed => 6.5 ns,
+      romfile => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-riscv-code/build/PICORV32/roms/mos/mos.mos",
+      romfile_offset => 16#0CC000#
+   )
+   port map (
+      A           => i_MEM_A(19 downto 0),
+      D           => i_MEM_D,
+      nCS         => i_MEM_RAM_nCE(0),
+      nOE         => i_MEM_nOE,
+      nWE         => i_MEM_nWE,
+      
+      tst_dump    => '0'
+
+   );
+
 
 end rtl;
