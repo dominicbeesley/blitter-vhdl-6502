@@ -224,6 +224,9 @@ begin
 			r_rv_mem_ready_ack <= '0';
 		else
 			if rising_edge(clk_32M_i) then
+				--TODO: investigate speeding up by assuming RV32 core can handle late setting of ready/data
+				-- and set r_rv_mem_ready in main state machine and just wait for an ack from her to 
+				-- indicate a valid clock
 				if r_rv_mem_ready = '1' then
 					r_rv_mem_ready <= '0';
 					r_rv_mem_ready_ack <= r_rv_mem_ready_req;
