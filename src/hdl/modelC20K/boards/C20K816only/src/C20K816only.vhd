@@ -1244,6 +1244,19 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       bitstream_o       => i_vid_b_0
    );
 
+     
+      clkdiv5_snd : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_chroma_x4_jitter,
+         CLKOUT => i_clk_snd,
+         CALIB  => '1'
+      );
+
    e_obuf_vid_chroma:obuf
    port map (
       I => i_vid_chroma_0,
