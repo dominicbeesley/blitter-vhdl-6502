@@ -47,6 +47,7 @@
         <File path="../../../chipset/fb_chipset_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/fb_chipset.vhd" type="file.vhdl" enable="1" />
 		<File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />        
+        <File path="../../../shared/i2s.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_spi.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
