@@ -59,6 +59,7 @@ package board_config_pack is
 	constant G_IORB_BLOCK		: boolean := true;
 
    constant G_1BIT_DAC_VIDEO  : boolean := true;
+   constant G_C20K_I2S			: boolean := true;
 
 	constant FW_BOARD_LEVEL		: firmware_board_level := C20K;
 	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 

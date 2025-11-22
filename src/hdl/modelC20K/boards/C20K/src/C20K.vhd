@@ -594,33 +594,62 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	I2C_SCL_io <= 'Z';
 END GENERATE;
 
-   p_reg_snd:process(i_fb_syscon)
-   begin 
-      if rising_edge(i_fb_syscon.clk) then
-         r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
-      end if;
-   end process;
+
+   G_SND_1BIT:if not G_C20K_I2S generate
+      --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
+      
+      p_reg_snd:process(i_fb_syscon)
+      begin 
+         if rising_edge(i_fb_syscon.clk) then
+            r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+         end if;
+      end process;
+
+      e_dac_snd: entity work.dac_1bit 
+      generic map (
+         G_SAMPLE_SIZE     => 11,
+         G_SYNC_DEPTH      => 0
+      )
+      port map (
+         rst_i             => i_fb_syscon.rst,
+         clk_dac           => i_fb_syscon.clk,
+
+         sample            => r_dac_sample,
+     
+         bitstream         => i_dac_snd_pwm
+      );
+
+      aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
+      aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
+      aud_i2s_dat_o        <= '1';
+
+   end generate;
+
+   G_SND_i2s:if G_C20K_I2S generate
+      p_reg_snd:process(i_clk_snd)
+      begin 
+         if rising_edge(i_clk_snd) then
+            r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+         end if;
+      end process;
+
+      e_i2s:entity work.i2s
+      port map (
+         
+         clk_i => i_clk_snd,
+         rst_i => i_fb_syscon.rst,
+         pwm_l_i => r_dac_sample & "00000",
+         pwm_r_i => r_dac_sample & "00000",
+
+         bck_o => aud_i2s_bck_pwm_L_o,
+         ws_o  => aud_i2s_ws_pwm_R_o,
+         dat_o => aud_i2s_dat_o
+
+      );
+
+   end generate;
 
 
-   --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-
-  e_dac_snd: entity work.dac_1bit 
-  generic map (
-     G_SAMPLE_SIZE     => 11,
-     G_SYNC_DEPTH      => 0
-  )
-  port map (
-     rst_i             => i_fb_syscon.rst,
-     clk_dac           => i_fb_syscon.clk,
-
-     sample            => r_dac_sample,
-  
-     bitstream         => i_dac_snd_pwm
-  );
-
-
-	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
-	aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
 
 	e_fb_version:entity work.fb_version
 	port map (
@@ -1127,8 +1156,6 @@ END GENERATE;
       cpu_nIRQ_o           <= '1';
       cpu_nNMI_o           <= '1';
       cpu_nRES_o           <= '1';
-
-      aud_i2s_dat_o        <= '1';
 
       flash_ck_o           <= '1';
       flash_cs_o           <= '1';
