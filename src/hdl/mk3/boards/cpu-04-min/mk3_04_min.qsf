@@ -150,7 +150,7 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_80188_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_80188.vhd
 
 
-set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_log2phys.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_con_burst.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
