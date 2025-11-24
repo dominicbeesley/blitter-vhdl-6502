@@ -152,105 +152,105 @@ IO_PORT "uart2_rts_o" IO_TYPE=LVCMOS33;
 IO_LOC  "uart2_dtr_i" E16;
 IO_PORT "uart2_dtr_i" IO_TYPE=LVCMOS33;
 
-// ==================================================================================
-// Locations for on MOBO
-// ==================================================================================
-
-// SUP/BTN reset
-IO_LOC	"sup_nRST_i"	T6;
+//// // ==================================================================================
+//// // Locations for on MOBO
+//// // ==================================================================================
+//// 
+//// // SUP/BTN reset
+//// IO_LOC	"sup_nRST_i"	T6;
 IO_PORT	"sup_nRST_i"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-
-// Analogue video - 1.5V bank
-//NOTE syncs come via peripherals mux
-IO_LOC	"vid_r_o" D7;
+//// 
+//// 
+//// // Analogue video - 1.5V bank
+//// //NOTE syncs come via peripherals mux
+//// IO_LOC	"vid_r_o" D7;
 IO_PORT	"vid_r_o" IO_TYPE=LVCMOS15 PULL_MODE=NONE DRIVE=4;
-IO_LOC	"vid_g_o" C7;
+//// IO_LOC	"vid_g_o" C7;
 IO_PORT	"vid_g_o" IO_TYPE=LVCMOS15 PULL_MODE=NONE DRIVE=4;
-IO_LOC	"vid_b_o" E8;
+//// IO_LOC	"vid_b_o" E8;
 IO_PORT	"vid_b_o" IO_TYPE=LVCMOS15 PULL_MODE=NONE DRIVE=4;
-IO_LOC	"vid_chroma_o" E9;
+//// IO_LOC	"vid_chroma_o" E9;
 IO_PORT	"vid_chroma_o" IO_TYPE=LVCMOS15 PULL_MODE=NONE DRIVE=4;
-IO_LOC	"clk_ext_pal_i" T5;
+//// IO_LOC	"clk_ext_pal_i" T5;
 IO_PORT	"clk_ext_pal_i" IO_TYPE=LVCMOS15 PULL_MODE=NONE;
-
-
-// MOBO memory interface 
-// note: mem_A is inout as can be to RAM or from CPU
-IO_LOC	"mem_A_io[0]"	P11;
+//// 
+//// 
+//// // MOBO memory interface 
+//// // note: mem_A is inout as can be to RAM or from CPU
+//// IO_LOC	"mem_A_io[0]"	P11;
 IO_PORT	"mem_A_io[0]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[1]"	P9;
+//// IO_LOC	"mem_A_io[1]"	P9;
 IO_PORT	"mem_A_io[1]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[2]"	L14;
+//// IO_LOC	"mem_A_io[2]"	L14;
 IO_PORT	"mem_A_io[2]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[3]"	L16;
+//// IO_LOC	"mem_A_io[3]"	L16;
 IO_PORT	"mem_A_io[3]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[4]"	T15;
+//// IO_LOC	"mem_A_io[4]"	T15;
 IO_PORT	"mem_A_io[4]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[5]"	G12;
+//// IO_LOC	"mem_A_io[5]"	G12;
 IO_PORT	"mem_A_io[5]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[6]"	F13;
+//// IO_LOC	"mem_A_io[6]"	F13;
 IO_PORT	"mem_A_io[6]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[7]"	M14;
+//// IO_LOC	"mem_A_io[7]"	M14;
 IO_PORT	"mem_A_io[7]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[8]"	H13;
+//// IO_LOC	"mem_A_io[8]"	H13;
 IO_PORT	"mem_A_io[8]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[9]"	K13;
+//// IO_LOC	"mem_A_io[9]"	K13;
 IO_PORT	"mem_A_io[9]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[10]"	N16;
+//// IO_LOC	"mem_A_io[10]"	N16;
 IO_PORT	"mem_A_io[10]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[11]"	T11;
+//// IO_LOC	"mem_A_io[11]"	T11;
 IO_PORT	"mem_A_io[11]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[12]"	M15;
+//// IO_LOC	"mem_A_io[12]"	M15;
 IO_PORT	"mem_A_io[12]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[13]"	J12;
+//// IO_LOC	"mem_A_io[13]"	J12;
 IO_PORT	"mem_A_io[13]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[14]"	H12;
+//// IO_LOC	"mem_A_io[14]"	H12;
 IO_PORT	"mem_A_io[14]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[15]"	N15;
+//// IO_LOC	"mem_A_io[15]"	N15;
 IO_PORT	"mem_A_io[15]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[16]"	T8;
+//// IO_LOC	"mem_A_io[16]"	T8;
 IO_PORT	"mem_A_io[16]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[17]"	G11;
+//// IO_LOC	"mem_A_io[17]"	G11;
 IO_PORT	"mem_A_io[17]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[18]"	R8;
+//// IO_LOC	"mem_A_io[18]"	R8;
 IO_PORT	"mem_A_io[18]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[19]"	J16;
+//// IO_LOC	"mem_A_io[19]"	J16;
 IO_PORT	"mem_A_io[19]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC	"mem_A_io[20]"	T7;
+//// IO_LOC	"mem_A_io[20]"	T7;
 IO_PORT	"mem_A_io[20]"	IO_TYPE=LVCMOS33 PULL_MODE=UP;
-
-IO_LOC	"mem_D_io[0]"	R13;
+//// 
+//// IO_LOC	"mem_D_io[0]"	R13;
 IO_PORT	"mem_D_io[0]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[1]"	T14;
+//// IO_LOC	"mem_D_io[1]"	T14;
 IO_PORT	"mem_D_io[1]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[2]"	L13;
+//// IO_LOC	"mem_D_io[2]"	L13;
 IO_PORT	"mem_D_io[2]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[3]"	K11;
+//// IO_LOC	"mem_D_io[3]"	K11;
 IO_PORT	"mem_D_io[3]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[4]"	A13;
+//// IO_LOC	"mem_D_io[4]"	A13;
 IO_PORT	"mem_D_io[4]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[5]"	B10;
+//// IO_LOC	"mem_D_io[5]"	B10;
 IO_PORT	"mem_D_io[5]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[6]"	T9;
+//// IO_LOC	"mem_D_io[6]"	T9;
 IO_PORT	"mem_D_io[6]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_D_io[7]"	P8;
+//// IO_LOC	"mem_D_io[7]"	P8;
 IO_PORT	"mem_D_io[7]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-IO_LOC	"mem_ROM_nCE_o"	P6;
+//// 
+//// IO_LOC	"mem_ROM_nCE_o"	P6;
 IO_PORT	"mem_ROM_nCE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_RAM_nCE_o[0]"	P13;
+//// IO_LOC	"mem_RAM_nCE_o[0]"	P13;
 IO_PORT	"mem_RAM_nCE_o[0]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_RAM_nCE_o[1]"	R12;
+//// IO_LOC	"mem_RAM_nCE_o[1]"	R12;
 IO_PORT	"mem_RAM_nCE_o[1]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_RAM_nCE_o[2]"	T12;
+//// IO_LOC	"mem_RAM_nCE_o[2]"	T12;
 IO_PORT	"mem_RAM_nCE_o[2]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_RAM_nCE_o[3]"	R11;
+//// IO_LOC	"mem_RAM_nCE_o[3]"	R11;
 IO_PORT	"mem_RAM_nCE_o[3]"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-IO_LOC	"mem_nOE_o"		N14;
+//// 
+//// IO_LOC	"mem_nOE_o"		N14;
 IO_PORT	"mem_nOE_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mem_nWE_o"		K12;
+//// IO_LOC	"mem_nWE_o"		K12;
 IO_PORT	"mem_nWE_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
 
 // HDMI - LVCMOS33D - check example projects use LVDS25
@@ -274,108 +274,108 @@ IO_LOC	"hdmi_cec_io"	L12;
 IO_PORT	"hdmi_cec_io"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
 
 
-// SD CARD 1 - on MOBO J16
-IO_LOC  "sd1_cs_o"		D16;
+//// // SD CARD 1 - on MOBO J16
+//// IO_LOC  "sd1_cs_o"		D16;
 IO_PORT "sd1_cs_o" 		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC  "sd1_mosi_o" 	E14;
+//// IO_LOC  "sd1_mosi_o" 	E14;
 IO_PORT "sd1_mosi_o" 	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC  "sd1_sclk_o" 	C9;
+//// IO_LOC  "sd1_sclk_o" 	C9;
 IO_PORT "sd1_sclk_o" 	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC  "sd1_miso_i"	A9;
+//// IO_LOC  "sd1_miso_i"	A9;
 IO_PORT "sd1_miso_i"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//CASSETTE out 1.5V PWM, other cassette stuff on peripherals MUX 
-IO_LOC	"cassette_o"	T2;
+//// 
+//// //CASSETTE out 1.5V PWM, other cassette stuff on peripherals MUX 
+//// IO_LOC	"cassette_o"	T2;
 IO_PORT	"cassette_o"	IO_TYPE=LVCMOS15 PULL_MODE=NONE;
-
-//CPU control
-IO_LOC	"cpu_E_i"		G14;
+//// 
+//// //CPU control
+//// IO_LOC	"cpu_E_i"		G14;
 IO_PORT	"cpu_E_i"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_MX_i"		D14;
+//// IO_LOC	"cpu_MX_i"		D14;
 IO_PORT	"cpu_MX_i"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-IO_LOC	"cpu_A_nOE_o"	J14;
+//// 
+//// IO_LOC	"cpu_A_nOE_o"	J14;
 IO_PORT	"cpu_A_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_BE_o"		G15;
+//// IO_LOC	"cpu_BE_o"		G15;
 IO_PORT	"cpu_BE_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_PHI2_o"	E15;
+//// IO_LOC	"cpu_PHI2_o"	E15;
 IO_PORT	"cpu_PHI2_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_nRES_o"	A15;
+//// IO_LOC	"cpu_nRES_o"	A15;
 IO_PORT	"cpu_nRES_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_RDY_o"		B14;
+//// IO_LOC	"cpu_RDY_o"		B14;
 IO_PORT	"cpu_RDY_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_nABORT_io"	A14;
+//// IO_LOC	"cpu_nABORT_io"	A14;
 IO_PORT	"cpu_nABORT_io"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_nIRQ_o"	B13;
+//// IO_LOC	"cpu_nIRQ_o"	B13;
 IO_PORT	"cpu_nIRQ_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"cpu_nNMI_o"	C12;
+//// IO_LOC	"cpu_nNMI_o"	C12;
 IO_PORT	"cpu_nNMI_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
 
 
-//PERIPERALS MUX 
-IO_LOC	"mux_io[0]"		C13;
+//// //PERIPERALS MUX 
+//// IO_LOC	"mux_io[0]"		C13;
 IO_PORT	"mux_io[0]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[1]"		N6;
+//// IO_LOC	"mux_io[1]"		N6;
 IO_PORT	"mux_io[1]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[2]"		N7;
+//// IO_LOC	"mux_io[2]"		N7;
 IO_PORT	"mux_io[2]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[3]"		N9;
+//// IO_LOC	"mux_io[3]"		N9;
 IO_PORT	"mux_io[3]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[4]"		R9;
+//// IO_LOC	"mux_io[4]"		R9;
 IO_PORT	"mux_io[4]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[5]"		F10;
+//// IO_LOC	"mux_io[5]"		F10;
 IO_PORT	"mux_io[5]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[6]"		D11;
+//// IO_LOC	"mux_io[6]"		D11;
 IO_PORT	"mux_io[6]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_io[7]"		D10;
+//// IO_LOC	"mux_io[7]"		D10;
 IO_PORT	"mux_io[7]"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-IO_LOC	"mux_nALE_o"	B11;
+//// 
+//// IO_LOC	"mux_nALE_o"	B11;
 IO_PORT	"mux_nALE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_D_nOE_o"	A11;
+//// IO_LOC	"mux_D_nOE_o"	A11;
 IO_PORT	"mux_D_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_i0_nOE_o"	B12;
+//// IO_LOC	"mux_i0_nOE_o"	B12;
 IO_PORT	"mux_i0_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_i1_nOE_o"	C10;
+//// IO_LOC	"mux_i1_nOE_o"	C10;
 IO_PORT	"mux_i1_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_o0_nOE_o"	C11;
+//// IO_LOC	"mux_o0_nOE_o"	C11;
 IO_PORT	"mux_o0_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"mux_o1_nOE_o"	A12;
+//// IO_LOC	"mux_o1_nOE_o"	A12;
 IO_PORT	"mux_o1_nOE_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//PERIPHERALS clocks
-IO_LOC	"p_2MHZ_E_o"	N8;
+//// 
+//// //PERIPHERALS clocks
+//// IO_LOC	"p_2MHZ_E_o"	N8;
 IO_PORT	"p_2MHZ_E_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"p_1MHZ_E_o"	L9;
+//// IO_LOC	"p_1MHZ_E_o"	L9;
 IO_PORT	"p_1MHZ_E_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"p_8MHZ_FDC_o"	R7;
+//// IO_LOC	"p_8MHZ_FDC_o"	R7;
 IO_PORT	"p_8MHZ_FDC_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//PERIPHERALS EXTRA
-IO_LOC	"pj_LPSTB_i"	R16;
+//// 
+//// //PERIPHERALS EXTRA
+//// IO_LOC	"pj_LPSTB_i"	R16;
 IO_PORT	"pj_LPSTB_i"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//I2C - eeprom, rtc
-IO_LOC	"i2c_scl_io"	P15;
+//// 
+//// //I2C - eeprom, rtc
+//// IO_LOC	"i2c_scl_io"	P15;
 IO_PORT	"i2c_scl_io"	IO_TYPE=LVCMOS33 PULL_MODE=NONE OPEN_DRAIN=ON;
-IO_LOC	"i2c_sda_io"	P16;
+//// IO_LOC	"i2c_sda_io"	P16;
 IO_PORT	"i2c_sda_io"	IO_TYPE=LVCMOS33 PULL_MODE=NONE OPEN_DRAIN=ON;
-
-//UI EXTRAS
-IO_LOC	"ui_leds_o"		E10;
+//// 
+//// //UI EXTRAS
+//// IO_LOC	"ui_leds_o"		E10;
 IO_PORT	"ui_leds_o"		IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//AUDIO
-IO_LOC	"aud_i2s_ws_pwm_R_o"	P7;
+//// 
+//// //AUDIO
+//// IO_LOC	"aud_i2s_ws_pwm_R_o"	P7;
 IO_PORT	"aud_i2s_ws_pwm_R_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"aud_i2s_bck_pwm_L_o"	L8;
+//// IO_LOC	"aud_i2s_bck_pwm_L_o"	L8;
 IO_PORT	"aud_i2s_bck_pwm_L_o"	IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-IO_LOC	"aud_i2s_dat_o"			M6;
+//// IO_LOC	"aud_i2s_dat_o"			M6;
 IO_PORT	"aud_i2s_dat_o"			IO_TYPE=LVCMOS33 PULL_MODE=NONE;
-
-//SPARE - 1.5V J10
-IO_LOC	"spare_T3"		T3;
+//// 
+//// //SPARE - 1.5V J10
+//// IO_LOC	"spare_T3"		T3;
 IO_PORT	"spare_T3"		IO_TYPE=LVCMOS15 PULL_MODE=NONE;
-IO_LOC	"spare_T4"		T4;
+//// IO_LOC	"spare_T4"		T4;
 IO_PORT	"spare_T4"		IO_TYPE=LVCMOS15 PULL_MODE=NONE;
 

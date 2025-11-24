@@ -31,7 +31,7 @@ entity fb_HDMI is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		SIM_NODVI							: boolean := false;
 		CLOCKSPEED							: natural;
-		G_N_SPRITES							: natural := 4;
+		G_N_SPRITES							: natural := 2;
 		G_EXT_TMDS_CLOCKS					: boolean := false
 	);
 	port(
