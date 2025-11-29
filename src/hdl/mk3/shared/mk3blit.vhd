@@ -263,6 +263,7 @@ architecture rtl of mk3blit is
 
 	-- intcon to peripheral sel
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+	signal i_intcon_peripheral_sel_we		: std_logic_vector(CONTROLLER_COUNT-1 downto 0);
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
 
@@ -418,6 +419,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
+		we_i							=> i_intcon_peripheral_sel_we(I),
 		peripheral_sel_o			=> i_intcon_peripheral_sel(I),
 		peripheral_sel_oh_o		=> i_intcon_peripheral_sel_oh(I)
 	);
@@ -443,6 +445,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_we_o						=> i_intcon_peripheral_sel_we,
 		peripheral_sel_i							=> i_intcon_peripheral_sel,
 		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
@@ -468,6 +471,7 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
+		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
 		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
 		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
 	);

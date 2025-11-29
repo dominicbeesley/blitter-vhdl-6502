@@ -67,6 +67,7 @@ entity fb_intcon_one_to_many is
 
 		-- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
 		peripheral_sel_addr_o		: out	std_logic_vector(G_ADDRESS_WIDTH-1 downto 0);
+		peripheral_sel_we_o		   : out	std_logic;
 		peripheral_sel_i				: in unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 		peripheral_sel_oh_i			: in std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
@@ -97,6 +98,7 @@ architecture rtl of fb_intcon_one_to_many is
 begin
 
 	peripheral_sel_addr_o <= fb_con_c2p_i.A(G_ADDRESS_WIDTH-1 downto 0);
+	peripheral_sel_we_o <= fb_con_c2p_i.we;
 
 	p_frig:process(r_con_A)
 	begin
