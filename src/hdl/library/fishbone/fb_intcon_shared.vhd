@@ -68,6 +68,7 @@ entity fb_intcon_shared is
 
 		-- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
 		peripheral_sel_addr_o		: out	fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+		peripheral_sel_we_o			: out	std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
 		peripheral_sel_i				: in fb_arr_unsigned(G_CONTROLLER_COUNT-1 downto 0)(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 		peripheral_sel_oh_i			: in fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
 
@@ -128,6 +129,7 @@ begin
 
 g_addr_decode:for I in G_CONTROLLER_COUNT-1 downto 0 generate
 	peripheral_sel_addr_o(I) <= fb_con_c2p_i(I).A;
+	peripheral_sel_we_o(I) <= fb_con_c2p_i(I).we;
 
 end generate;
 

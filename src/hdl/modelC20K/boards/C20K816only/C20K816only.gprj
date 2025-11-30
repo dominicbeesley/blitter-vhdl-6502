@@ -85,7 +85,7 @@
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v" type="file.verilog" enable="1" />
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi//hdmi_out_gowin_2A.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi//hdmi_out_gowin_2a.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />

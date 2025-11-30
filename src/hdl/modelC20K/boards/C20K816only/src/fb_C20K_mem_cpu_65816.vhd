@@ -377,6 +377,7 @@ begin
    )
    port map (
       addr_i                  => i_phys_A,
+      we_i                    => not r_RnW,
       peripheral_sel_o        => open,
       peripheral_sel_oh_o     => i_peripheral_sel_oh
    );

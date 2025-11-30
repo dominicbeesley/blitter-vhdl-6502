@@ -263,12 +263,18 @@ architecture rtl of fb_SYS_c20k is
    signal   i_serula_sine_ph  : unsigned(2 downto 0);
    signal   r_dac_cas_val     : signed(5 downto 0);
 
+   -- IC97
+   signal   r_intoff_nCS      : std_logic;
+   signal   r_inton_nCS       : std_logic;
+   signal   r_netint_gate     : std_logic;      
+
+
 begin
 
    ip_VID_CS <= not (p_VID_HS_i xor p_VID_VS_i);
 
    sys_nIRQ_o <= i_p_irq and i_sysvia_nIRQ and not i_acia_IRQ;
-   sys_nNMI_o <= i_p_nmi;
+   sys_nNMI_o <= i_p_nmi and not (r_netint_gate and not i_p_netint);
 	sys_ROMPG_o <= r_sys_ROMPG;
 
    --TODO: get 2mhzE clken
@@ -278,7 +284,7 @@ begin
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
 
-   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' else                     
+   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' or r_intoff_nCS = '0' else                     
                      r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
    fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
@@ -325,20 +331,19 @@ begin
                   r_sysvia_nCS2 <= '1';
                   r_acia_nCS <= '1';
                   r_serproc_nCS <= '1';
+                  r_inton_nCS <= '1';
+                  r_intoff_nCS <= '1';
 
                   if i_SYScyc_st_clken = '1' then
                      -- default idle cycle, drop buses
                      r_sys_A <= DEFAULT_SYS_ADDR;
                      r_sys_RnW <= '1';
 
-
-
                      if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
 
                         r_sys_A <= fb_c2p_i.A(15 downto 0);
                         r_con_cyc <= '1';
                         r_con_rdy_ctdn <= fb_c2p_i.rdy_ctdn; 
-
 
                         if fb_c2p_i.A(15 downto 0) = x"FCFF" and fb_c2p_i.we = '0' and r_JIM_en = '1' then
                            v_next_state := jim_dev_rd;
@@ -365,6 +370,10 @@ begin
                               r_acia_nCS <= '0';
                            elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "0" and fb_c2p_i.we = '1' then
                               r_serproc_nCS <= '0';
+                           elsif fb_c2p_i.A(15 downto 4) = x"FE2" and fb_c2p_i.we = '0' then
+                              r_inton_nCS <= '0';
+                           elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "1" then
+                              r_intoff_nCS <= '0';
                            end if;  
                         end if;
                      end if;
@@ -688,9 +697,11 @@ begin
    p_reg_sysvia_do:process(fb_syscon_i)
    begin 
       if rising_edge(fb_syscon_i.clk) then
-         if r_sys_RnW = '1' and mux_mhz1E_clk_o = '1' and i_MHz4_clken = '1' then
+         if r_sys_RnW = '1' and mux_mhz2E_clk_o = '1' and i_MHz4_clken = '1' then
             if r_sysvia_nCS2 = '0' then
                r_local_d_o <= i_sysvia_d_o;
+            elsif r_intoff_nCS = '0' then
+               r_local_d_o <= x"23";
             else
                r_local_d_o <= i_acia_d_o;
             end if;
@@ -742,6 +753,24 @@ begin
       CTS_n    => i_acia_cts_n,
       RTS_n    => i_acia_rts_n
    );
+
+   --------------------------------------------------------
+   -- ECONET NMI
+   --------------------------------------------------------
+   p_eco_nmi: process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_netint_gate <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         if r_inton_nCS = '0' and i_MHz2E_clken = '1' then
+            r_netint_gate <= '1';
+         elsif r_intoff_nCS = '0' and i_MHz2E_clken = '1' then
+            r_netint_gate <= '0';
+         end if;
+      end if;
+
+   end process;
+
 
    --------------------------------------------------------
    -- SERIAL ULA CLOCK DIVIDER

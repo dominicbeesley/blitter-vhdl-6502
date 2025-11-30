@@ -61,8 +61,9 @@ entity address_decode is
 	);
 	port(
 		addr_i						: in		std_logic_vector(23 downto 0);
+		we_i							: in     std_logic;
 		peripheral_sel_o			: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
-		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
+		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		
 	);
 end address_decode;
 
@@ -90,7 +91,7 @@ begin
 						-- crtc
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
-					elsif addr_i(15 downto 4) = x"FE2" and addr_i(3) = '0' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
+					elsif addr_i(15 downto 4) = x"FE2" and addr_i(3) = '0' and we_i = '1' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
 						-- (n)ula
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
