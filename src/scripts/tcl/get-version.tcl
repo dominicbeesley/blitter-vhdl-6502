@@ -128,6 +128,11 @@ for {set i 0} {$i < [string length $outdata] && $i < 256} {incr i} {
   }
 }
 
+puts $of "   x\"0D\" when unsigned(A) = $j else "
+incr j
+puts $of "   x\"00\" when unsigned(A) = $j else "
+incr j
+
 puts $of "   x\"00\";"
 
 puts $of "end rtl;"

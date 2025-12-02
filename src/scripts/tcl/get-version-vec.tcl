@@ -114,6 +114,11 @@ for {set i 0} {$i < [string length $outdata] && $i < 256} {incr i} {
   }
 }
 
+puts $of "00001101"
+incr j
+puts $of "00000000"
+incr j
+
 close $of
 
 
