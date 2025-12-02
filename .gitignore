@@ -40,3 +40,4 @@ src/hdl/modelC20K/boards/C20K/version.tag
 src/hdl/modelC20K/boards/C20K816only/version.tag
 src/hdl/modelC20K/boards/C20K816only/version_strings.vec
 src/hdl/modelC20K/boards/C20K/version_strings.vec
+*.ods#
