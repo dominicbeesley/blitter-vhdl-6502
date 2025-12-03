@@ -404,8 +404,8 @@ begin
 
          if i_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
---            CPU_RDY_io <= '0'; -- slow for 55ns rom
-            CPU_RDY_io <= '1'; 
+            CPU_RDY_io <= '0'; -- slow for 55ns rom
+--            CPU_RDY_io <= '1';  -- TESTING seems to allow this but is marginal
          elsif i_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
             CPU_RDY_io <= '1';
@@ -569,7 +569,9 @@ begin
                   end if;
                when read_local|write_local =>
                   MEM_nWE_o <= r_RnW;
-                  if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
+                  if i_ring_next(2) = '1' then
+                     MEM_nOE_o <= '1';                      --TODO: remove this bodge, if we skip a cycle we must avoid crashing into databank
+                  elsif i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
                      MEM_nOE_o <= not r_RnW;
                   end if;
 
