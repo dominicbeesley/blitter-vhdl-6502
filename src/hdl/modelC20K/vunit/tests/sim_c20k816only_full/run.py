@@ -1,6 +1,6 @@
 from vunit import VUnit
 
-GOWIN = "C:/Gowin/Gowin_V1.9.11_x64/IDE/simlib/gw2a"
+GOWIN = "C:/Gowin/Gowin_V1.9.12_x64/IDE/simlib/gw2a"
 
 def encode(tb_cfg):
     return ", ".join(["%s:%s" % (key, str(tb_cfg[key])) for key in tb_cfg])
@@ -28,7 +28,7 @@ lib.add_source_files("../../../../library/fishbone/fishbone_pack.vhd")
 lib.add_source_files("../../../../simulation_shared/fb_tester_pack.vhd")
 
 
-lib.add_source_files("../../../boards/C20k816only/version.vhd")
+lib.add_source_files("../../../shared/version.vhd")
 lib.add_source_files("../../../boards/C20k816only/src/C20k816only.vhd")
 lib.add_source_files("../../../boards/C20k816only/src/gowin_dpb/hdmi_blockram.vhd")
 lib.add_source_files("../../../boards/C20k816only/src/gowin_rpll/pll_27_48.vhd")
@@ -64,6 +64,7 @@ lib.add_source_files("../../../../chipset/dac_1bit.vhd")
 lib.add_source_files("../../../../shared/fb_spi.vhd")
 
 lib.add_source_files("../../../../chipset/dac_1bit.vhd")
+lib.add_source_files("../../../../shared/i2s.vhd")
 
 lib.add_source_files("../../../../library/bbc/bbc_slow_cyc.vhd")
 lib.add_source_files("../../../../library/fishbone/fb_syscon.vhd")
@@ -75,7 +76,6 @@ lib.add_source_files("../../../../library/fishbone/fb_null.vhd")
 lib.add_source_files("../../../../library/clockreg.vhd")
 lib.add_source_files("../../../../library/common.vhd")
 lib.add_source_files("../../../../shared/fb_SYS_pack.vhd")
-lib.add_source_files("../../../../shared/fb_SYS_VIA_blocker.vhd")
 lib.add_source_files("../../../../shared/fb_VERSION.vhd")
 
 lib.add_source_files("../../../../library/3rdparty/MikeStirling/m6522.vhd")
@@ -127,6 +127,18 @@ fmf = vu.add_library("fmf")
 fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
+
+# Make a phoney version .vec file
+
+sim_path = "./vunit_out/" + vu.get_simulator_name() + "/"
+
+with  open(sim_path + "version_strings.vec", "w") as text_file:
+    text_file.write(
+        "\n".join(
+            [format(ord(c), "08b") for c in "DOM\r\0IS\r\0ACE\r\0"]
+        )
+    )
+
 
 # Run vunit function
 vu.main()

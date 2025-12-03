@@ -116,7 +116,8 @@ begin
 	fb_p2c_o.stall <= '0' when state = idle else '0';
 	fb_p2c_o.D_rd <= r_Q;
 
-	e_version:entity work.version_rom port map (
+	e_version:entity work.version_rom 
+	port map (
 		A => r_A(6 downto 0),
 		Q => i_Q
 	);
