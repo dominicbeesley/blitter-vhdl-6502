@@ -217,7 +217,6 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
 
    signal r_debug_abort_n_ack    : std_logic;
-   signal r_WDM                  : std_logic;
 
    signal r_boot_65816_dly : std_logic_vector(2 downto 0) := (others => '1');
    signal i_boot           : std_logic;
@@ -405,7 +404,8 @@ begin
 
          if i_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
-            CPU_RDY_io <= '0'; -- slow for 55ns rom
+--            CPU_RDY_io <= '0'; -- slow for 55ns rom
+            CPU_RDY_io <= '1'; 
          elsif i_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
             CPU_RDY_io <= '1';
@@ -600,46 +600,31 @@ begin
    end process;
 
    -- ================================================================================================ --
-   -- WDM detect
+   -- WDM / ABORT detect
    -- ================================================================================================ --
 
    p_wdm:process(fb_syscon_i)
    begin
       if fb_syscon_i.rst = '1' then
-         r_WDM <= '0';
-      elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(0) = '1' then
-            if MEM_D_io = x"42" and r_VDA = '1' and r_VPA = '1' and CPU_RDY_io = '1' then
-               r_WDM <= '1';
-            else
-               r_WDM <= '0';
-            end if;
-         end if;
-      end if;
-   end process;
-
-   -- ================================================================================================ --
-   -- ABORT generation
-   -- ================================================================================================ --
-
-   p_abort:process(fb_syscon_i)
-   begin
-      if fb_syscon_i.rst = '1' then
          CPU_nABORT_o <= '1';
          r_debug_abort_n_ack <= '1';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(C_CPU_DIV_PHI2-2) = '1' then                    
+         if i_ring_next(0) = '1' and CPU_RDY_io = '1' and r_state /= cpu_skip then
+
             if debug_btn_n_i = '1' then
                r_debug_abort_n_ack <= '1';
             end if;
 
-            if (debug_btn_n_i = '0' and r_debug_abort_n_ack = '1') or r_WDM = '1' then
+            --TODO: add baulk to defend against button + WDM coinciding
+
+            if MEM_D_io = x"42" and r_VDA = '1' and r_VPA = '1' then
+               CPU_nABORT_o <= '0';
+            elsif debug_btn_n_i = '0' and r_debug_abort_n_ack = '1' then
                r_debug_abort_n_ack <= '0';
                CPU_nABORT_o <= '0';
             else
                CPU_nABORT_o <= '1';
             end if;
-
          end if;
       end if;
    end process;
