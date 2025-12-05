@@ -118,6 +118,8 @@ ARCHITECTURE Behavioral OF real_65816_tb IS
 
 	SIGNAL	i_BE_dly			: STD_LOGIC;
 
+	SIGNAL 	i_wract			: STD_LOGIC;
+
 BEGIN
 
 	i_cpu_clk <= not(PHI2);
@@ -136,17 +138,32 @@ BEGIN
 	VDA <= i_VDA AFTER dly_addr;
 	VPB <= i_VPB AFTER dly_addr;
 
-	i_PHI2_hld_bank <= PHI2 after hld_bank;
-	i_PHI2_dly_bank <= PHI2 after dly_bank;
+	p_bank:process
+	begin
+		wait until falling_edge(PHI2) and RDY = '1';
+		wait for dly_bank;
+		i_bankact <= '1';
+		wait until rising_edge(PHI2);
+		wait for hld_bank;
+		i_bankact <= '0';
+	end process;
 
-	i_bankact <= '1' when i_PHI2_dly_bank = '0' and i_PHI2_hld_bank = '0' else
-					 '0';
+	p_wract:process
+	begin
+		wait until rising_edge(PHI2);
+		wait for dly_dwrite;
+		i_wract <= '1';
+		wait until falling_edge(PHI2) and RDY = '1';
+		wait for dly_dhold;
+		i_wract <= '0';
+	end process;
+
 
 	i_cpu_D_out_dly_hold <= i_cpu_D_out AFTER dly_dhold;
 
 	D <= 	(others => 'Z') when i_BE_dly = '0' else
 			i_cpu_A(23 downto 16) when i_bankact = '1' else
-			i_cpu_D_out_dly_hold when (i_phi2_D_hold = '1' and i_phi2_D_dly = '1') and i_RnW_hold = '0' else
+			i_cpu_D_out_dly_hold when i_wract = '1' and i_RnW_hold = '0' else
 		 	(others => 'Z');
 
 	i_cpu_D_in <= D after dly_dsetup;
