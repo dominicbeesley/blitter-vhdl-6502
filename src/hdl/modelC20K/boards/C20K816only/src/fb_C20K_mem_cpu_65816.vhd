@@ -258,7 +258,7 @@ begin
          r_cyc_2M <= '0';
          r_cyc_2M_before <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' and r_CPU_RDY = '1' then
+         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
             r_cyc_2M <= r_cyc_2M_before;
             r_cyc_2M_before <= cpu_2MHz_phi2_clken_i;
          else
@@ -426,18 +426,25 @@ begin
 
          if r_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
-            r_CPU_RDY <= '0'; -- slow for 55ns rom
---            r_CPU_RDY <= '1';  -- TESTING seems to allow this but is marginal
          elsif r_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
-            r_CPU_RDY <= '1';
          else
             MEM_RAM_nCE_o(to_integer(unsigned(r_phys_A(22 downto 21)))+1) <= '0';
-            r_CPU_RDY <= '1';
          end if;
 
--- DELAY by 1 cycle         MEM_nWE_o <= r_cpu_RnW;
       end mem_sel;
+
+      procedure cpu_rdy is
+      begin
+
+         if r_phys_A(23) = '1' then
+            r_CPU_RDY <= '0'; -- slow for 55ns rom
+         elsif r_phys_A(22 downto 21) = "11" then
+            r_CPU_RDY <= '1';
+         else
+            r_CPU_RDY <= '1';
+         end if;
+      end cpu_rdy;
 
    begin
       if fb_syscon_i.rst = '1' then
@@ -480,7 +487,7 @@ begin
                   MEM_D_io <= (others => '1');
                when wait_asetup =>
 
-                  r_CPU_RDY <= '1';
+                  r_CPU_RDY <= '0';
                   CPU_BE_o <= '1';
                   fb_cpu_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_ADS) = '0' and i_ring_next(C_CPU_DIV_ADS + 1) = '0' then
@@ -539,7 +546,6 @@ begin
                      if (r_cyc_2M = '0' and i_throttle_act = '1') or cpu_halt_i = '1' then
                         r_state <= cpu_skip;
                      elsif r_VPA = '0' and r_VDA = '0' then
-                        r_CPU_RDY <= '1';
                         r_state <= cpu_dead;
                      else
                         if r_VPA = '1' and r_VDA = '1' then
@@ -553,6 +559,7 @@ begin
                when cpu_phys_a =>
                   if i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
                      mem_sel;
+                     cpu_rdy;
                      -- local memory cycle
                      if r_cpu_RnW = '1' then
                         r_state <= cpu_read_local;
@@ -561,7 +568,6 @@ begin
                      end if;
                   else
                      -- not local memory start a fishbone cycle
-                     r_CPU_RDY <= '0';
                      fb_cpu_c2p_o.cyc <= '1';
                      fb_cpu_c2p_o.A <= r_phys_A;
                      fb_cpu_c2p_o.A_stb <= '1';                     
@@ -614,7 +620,7 @@ begin
                         fb_cpu_c2p_o.D_wr_stb <= '1';
                      end if;
 
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and (r_had_fb_ack = '1' or fb_cpu_p2c_i.ack = '1') then
+                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
                         r_CPU_RDY <= '1';
                      end if;
 
@@ -624,9 +630,7 @@ begin
                   end if;
                when cpu_read_local|cpu_write_local =>
                   MEM_nWE_o <= r_cpu_RnW;
-                  if i_ring_next(2) = '1' then
-                     MEM_nOE_o <= '1';                      --TODO: remove this bodge, if we skip a cycle we must avoid crashing into databank
-                  elsif i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
+                  if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
                      MEM_nOE_o <= not r_cpu_RnW;
                   end if;
 
@@ -642,6 +646,7 @@ begin
                      end if;
                   end if;
                when cpu_dead =>
+                  r_CPU_RDY <= '1';
                   if i_ring_next(0) = '1' then
                      r_state <= wait_asetup;
                   end if;
@@ -666,7 +671,6 @@ begin
                   r_state <= mem2;
                when mem2 =>
                   mem_sel;
-                  r_CPU_RDY <= '0';
                   MEM_A_io(7 downto 0) <= r_phys_A(7 downto 0);
                   r_state <= mem3;
                when mem3 =>
@@ -691,7 +695,6 @@ begin
                      mem_unsel;
                      MEM_A_io(7 downto 0) <= (others => 'Z');
                   elsif i_ring_next(C_CPU_DIV_ADS) = '1' then
-                     r_CPU_RDY <= '1';
                      r_state <= cpu_log_a;
                   end if;
                when others =>
