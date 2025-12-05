@@ -71,7 +71,7 @@ architecture rtl of address_decode is
 begin
 
 
-	p_map:process(addr_i)
+	p_map:process(addr_i, we_i)
 	begin
 		peripheral_sel_oh_o <= (others => '0');
 		if (addr_i(23 downto 22) = "11") then								-- "11xx xxxx"
