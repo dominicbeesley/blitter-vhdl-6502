@@ -72,8 +72,14 @@ entity fb_C20K_mem_cpu_65816 is
 
       -- fishbone signals
       fb_syscon_i                      : in  fb_syscon_t;
-      fb_c2p_o                         : out fb_con_o_per_i_t;
-      fb_p2c_i                         : in  fb_con_i_per_o_t;
+
+      -- fishbone cpu controller to rest of system
+      fb_cpu_c2p_o                     : out fb_con_o_per_i_t;
+      fb_cpu_p2c_i                     : in  fb_con_i_per_o_t;
+
+      -- fishbone memory peripheral from other bus controller
+      fb_mem_c2p_i                     : in  fb_con_o_per_i_t;
+      fb_mem_p2c_o                     : out fb_con_i_per_o_t;
 
       -- chipset control signals
       cpu_halt_i                       : in  std_logic;
@@ -171,8 +177,9 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    constant C_CPU_DIV_PHI1_DHR   : integer   := cdiv(T_DHR , C_CLOCK_PER);
    constant C_CPU_DIV_PHI2_DHR   : integer   := C_CPU_DIV_PHI2 + cdiv(T_DHR , C_CLOCK_PER);
    constant C_CPU_DIV_MDS        : integer   := C_CPU_DIV_PHI2 + cdiv(T_MDS, C_CLOCK_PER);
-
    constant C_CPU_DIV_PHI2_DSR   : integer   := C_DIV_TOTAL - maximum(cdiv(T_DSR, C_CLOCK_PER), cdiv(T_PCS , C_CLOCK_PER));
+
+   constant C_CPU_DIV_END_MEM    : integer   := 2;
 
    signal r_nmi            : std_logic;
    signal r_nmi_meta       : std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
@@ -185,18 +192,24 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_cpu_n_reset    : std_logic_vector(3 downto 0) := (others => '0');
 
    type t_state is (
-      reset,         -- coming out of reset
-      wait_asetup,   -- wait for previous cycle to release and address / bank to be ready
-      phys_a,        -- act on phys a from log2phys
-      read_fb,       -- a fishbone read cycle is in progress, wait for fb ack
-      write_fb,      -- a fishbone write cycle is in progress, wait for fb ack,
-      read_local,    -- a local memory access, A(20..8) modified to phys A
-      write_local,   -- a local write access, A(20..8) modified to phys A
-      dead ,         -- VPA and VDA both null, assert ready and wait for another cycle
-      cpu_skip       -- cpu is being throttled, suppress phi2
+      reset,            -- coming out of reset
+      wait_asetup,      -- wait for previous cycle to release and address / bank to be ready
+      cpu_log_a,        -- act on phys a from log2phys
+      cpu_phys_a,       -- act on phys a from log2phys
+      cpu_read_fb,      -- a fishbone read cycle is in progress, wait for fb ack
+      cpu_write_fb,     -- a fishbone write cycle is in progress, wait for fb ack,
+      cpu_read_local,   -- a local memory access, A(20..8) modified to phys A
+      cpu_write_local,  -- a local write access, A(20..8) modified to phys A
+      cpu_dead,         -- VPA and VDA both null, assert ready and wait for another cycle
+      cpu_skip,         -- cpu is being throttled, suppress phi2
+      mem1,             -- memory access from fb slave port - BE settle
+      mem2,             -- memory access from fb slave port - ???
+      mem3,             -- memory access from fb slave port - ???
+      mem4              -- memory access from fb slave port - ???
       );
 
    signal r_state          : t_state := reset;
+   signal r_cpu_RnW        : std_logic;
    signal r_A              : std_logic_vector(23 downto 0);
    signal r_A_stb          : std_logic;
    signal i_phys_A         : std_logic_vector(23 downto 0);
@@ -205,7 +218,6 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_VPA            : std_logic;
    signal r_VDA            : std_logic;
    signal r_MLB            : std_logic;
-   signal r_RnW            : std_logic;
    signal r_VPB            : std_logic;
 
    signal r_had_fb_ack     : std_logic;
@@ -224,12 +236,20 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_cyc_2M_before  : std_logic;         -- a phi2 was detected this cycle, next will be valid for throttled cycles
    signal r_cyc_2M         : std_logic;         -- qualifies a cpu cycle as being the first after phi2 ended
 
-   signal i_throttle_act  : std_logic;   
+   signal i_throttle_act   : std_logic;   
+
+   signal r_mem_RnW        : std_logic;
+   signal r_mem_D_WR       : std_logic_vector(7 downto 0);
+
+   signal r_CPU_RDY        : std_logic;
 
 begin
 
    assert CLOCKSPEED > CPU_SPEED report "CLOCKSPEED must be greater than CPU_SPEED" severity error;
    assert CLOCKSPEED mod CPU_SPEED = 0 report "CLOCKSPEED must be an integer multiple of CPU_SPEED" severity error;
+
+
+   CPU_RDY_io <= r_CPU_RDY;
 
 
    p_det_2m:process(fb_syscon_i)
@@ -238,7 +258,7 @@ begin
          r_cyc_2M <= '0';
          r_cyc_2M_before <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' and CPU_RDY_io = '1' then
+         if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' and r_CPU_RDY = '1' then
             r_cyc_2M <= r_cyc_2M_before;
             r_cyc_2M_before <= cpu_2MHz_phi2_clken_i;
          else
@@ -292,11 +312,11 @@ begin
                r_cpu_phi <= '1';
             end if;
 
-            if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+            if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' and r_state = wait_asetup then
                r_cpu_phi_DHR <= '0';
             end if;
 
-            if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' and r_state /= cpu_skip then
+            if i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
                r_cpu_phi_DHR <= '1';
             end if;
 
@@ -376,7 +396,7 @@ begin
    )
    port map (
       addr_i                  => i_phys_A,
-      we_i                    => not r_RnW,
+      we_i                    => not r_cpu_RnW,
       peripheral_sel_o        => open,
       peripheral_sel_oh_o     => i_peripheral_sel_oh
    );
@@ -390,6 +410,8 @@ begin
       procedure mem_unsel is
       begin
          MEM_A_io <= (others => 'Z');
+         MEM_D_io <= (others => 'Z');
+
          MEM_RAM_nCE_o <= (others => '1');
          MEM_ROM_nCE_o <= '1';
          MEM_nOE_o <= '1';
@@ -402,19 +424,19 @@ begin
          mem_unsel;
          MEM_A_io(20 downto 8) <= r_phys_A(20 downto 8);
 
-         if i_phys_A(23) = '1' then
+         if r_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
-            CPU_RDY_io <= '0'; -- slow for 55ns rom
---            CPU_RDY_io <= '1';  -- TESTING seems to allow this but is marginal
-         elsif i_phys_A(22 downto 21) = "11" then
+            r_CPU_RDY <= '0'; -- slow for 55ns rom
+--            r_CPU_RDY <= '1';  -- TESTING seems to allow this but is marginal
+         elsif r_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
-            CPU_RDY_io <= '1';
+            r_CPU_RDY <= '1';
          else
             MEM_RAM_nCE_o(to_integer(unsigned(r_phys_A(22 downto 21)))+1) <= '0';
-            CPU_RDY_io <= '1';
+            r_CPU_RDY <= '1';
          end if;
 
--- DELAY by 1 cycle         MEM_nWE_o <= r_RnW;
+-- DELAY by 1 cycle         MEM_nWE_o <= r_cpu_RnW;
       end mem_sel;
 
    begin
@@ -423,60 +445,53 @@ begin
          r_had_fb_ack <= '0';
          r_fb_D_rd       <= (others => '0');
 
-         fb_c2p_o <= fb_c2p_unsel;
+         fb_cpu_c2p_o <= fb_c2p_unsel;
 
          CPU_A_nOE_o <= '0';
-         CPU_RDY_io <= '1';
+         r_CPU_RDY <= '1';
          mem_unsel;
-         MEM_D_io <= (others => '1');        -- pull D(5) high at reset (reconfig_n)
          r_A <= (others => '0');
          r_A_stb <= '0';
+         CPU_BE_o <= '1';
+         r_mem_D_WR <= (others => '1');
+         MEM_D_io <= (others => '1');
+
       else
          if rising_edge(fb_syscon_i.clk) then
 
+            fb_mem_p2c_o.stall <= '1';
+
+
+            if fb_mem_c2p_i.D_wr_stb = '1' then
+               r_mem_D_WR <= fb_mem_c2p_i.D_wr;
+            end if;
+
             r_A_stb <= '0';
+            fb_mem_p2c_o.ack <= '0';
+            fb_mem_p2c_o.rdy <= '0';
 
             case r_state is
                when reset =>
-                  fb_c2p_o <= fb_c2p_unsel;
+                  CPU_BE_o <= '1';
+                  fb_cpu_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_PHI2) = '1' then
                      r_state <= wait_asetup;
-                     MEM_D_io <= (others => 'Z');
                   end if;
+                  MEM_D_io <= (others => '1');
                when wait_asetup =>
-                  fb_c2p_o <= fb_c2p_unsel;
+
+                  r_CPU_RDY <= '1';
+                  CPU_BE_o <= '1';
+                  fb_cpu_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_ADS) = '0' and i_ring_next(C_CPU_DIV_ADS + 1) = '0' then
                      CPU_A_nOE_o <= '0';
                   else
                      CPU_A_nOE_o <= '1';
                   end if;
                   mem_unsel;
-                  MEM_D_io <= (others => 'Z');
 
                   if i_ring_next(C_CPU_DIV_ADS) = '1' then
                      r_A_stb <= '1';
-                  end if;                  
-
-                  if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
-
-                     if r_cyc_2M = '0' and i_throttle_act = '1' then
-                        r_state <= cpu_skip;
-                     elsif r_VPA = '0' and r_VDA = '0' then
-                        CPU_RDY_io <= '1';
-                        r_state <= dead;
-                     else
-                        if r_VPA = '1' and r_VDA = '1' then
-                           debug_cpu_instr_a <= r_A;
-                        end if;
-                        
-                        CPU_RDY_io <= '0';
-
-                        r_phys_A <= i_phys_A;
-                        r_peripheral_sel_oh <= i_peripheral_sel_oh;
-                        r_state <= phys_a;
-
-                     end if;
-                  else
                      if i_boot = '1' then
                         if MEM_D_io = x"00" then
                            if MEM_A_io(20) = '0' and unsigned(MEM_A_io(4 downto 0)) <= 16#19# then
@@ -499,83 +514,123 @@ begin
                      r_VPA <= MEM_A_io(16);
                      r_VDA <= MEM_A_io(17);
                      r_MLB <= MEM_A_io(18);
-                     r_RnW <= MEM_A_io(19);
+                     r_cpu_RnW <= MEM_A_io(19);
                      r_VPB <= MEM_A_io(20);
+                     r_state <= cpu_log_a;
 
+                     -- we will accept slave requests next cycle
+                     fb_mem_p2c_o.stall <= '0';
+
+                  end if;                  
+
+
+
+               when cpu_log_a =>
+                  CPU_BE_o <= '1';
+                  r_phys_A <= i_phys_A;
+                  r_peripheral_sel_oh <= i_peripheral_sel_oh;
+                  if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
+                     r_phys_A <= fb_mem_c2p_i.A;
+                     r_mem_RnW <= not fb_mem_c2p_i.we;
+                     CPU_BE_o <= '0';
+                     CPU_A_nOE_o <= '1';
+                     r_state <= mem1;
+                  else
+                     if (r_cyc_2M = '0' and i_throttle_act = '1') or cpu_halt_i = '1' then
+                        r_state <= cpu_skip;
+                     elsif r_VPA = '0' and r_VDA = '0' then
+                        r_CPU_RDY <= '1';
+                        r_state <= cpu_dead;
+                     else
+                        if r_VPA = '1' and r_VDA = '1' then
+                           debug_cpu_instr_a <= r_A;
+                        end if;
+                        
+                        r_state <= cpu_phys_a;
+
+                     end if;
                   end if;
-               when phys_a =>
+               when cpu_phys_a =>
                   if i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
                      mem_sel;
                      -- local memory cycle
-                     if r_RnW = '1' then
-                        r_state <= read_local;
+                     if r_cpu_RnW = '1' then
+                        r_state <= cpu_read_local;
                      else
-                        r_state <= write_local;
+                        r_state <= cpu_write_local;
                      end if;
                   else
                      -- not local memory start a fishbone cycle
-                     fb_c2p_o.cyc <= '1';
-                     fb_c2p_o.A <= r_phys_A;
-                     fb_c2p_o.A_stb <= '1';                     
+                     r_CPU_RDY <= '0';
+                     fb_cpu_c2p_o.cyc <= '1';
+                     fb_cpu_c2p_o.A <= r_phys_A;
+                     fb_cpu_c2p_o.A_stb <= '1';                     
                      r_had_fb_ack <= '0';
-                     if r_RnW = '1' then
-                        r_state <= read_fb;
+                     if r_cpu_RnW = '1' then
+                        r_state <= cpu_read_fb;
                      else
-                        fb_c2p_o.we <= '1';
-                        r_state <= write_fb;
+                        fb_cpu_c2p_o.we <= '1';
+                        r_state <= cpu_write_fb;
                      end if;
                   end if;
 
-               when read_fb =>
-                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.stall = '0' then
-                     fb_c2p_o.A_stb <= '0';
-                  else
-                     if fb_p2c_i.ack = '1' then
-                        r_fb_D_rd <= fb_p2c_i.D_rd;
-                        r_had_fb_ack <= '1';
-                        fb_c2p_o.cyc <= '0';
-                     end if;
-
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
-                        CPU_RDY_io <= '1';
-                     end if;
-
-                     if CPU_RDY_io = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-                        r_state <= wait_asetup;
-                     end if;
-
+               when cpu_read_fb =>
+                  if fb_cpu_c2p_o.A_stb = '1' and fb_cpu_p2c_i.stall = '0' then
+                     fb_cpu_c2p_o.A_stb <= '0';
                   end if;
-               when write_fb =>
-                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.stall = '0' then
-                     fb_c2p_o.A_stb <= '0';
+                     
+                  if r_cpu_phi_DHR = '1' then
+                     MEM_D_io <= r_fb_D_rd;
+                  end if;
+
+                  if fb_cpu_p2c_i.ack = '1' then
+                     r_fb_D_rd <= fb_cpu_p2c_i.D_rd;
+                     if r_cpu_phi_DHR = '1' then
+                        MEM_D_io <= fb_cpu_p2c_i.D_rd;
+                     end if;
+                     r_had_fb_ack <= '1';
+                     fb_cpu_c2p_o.cyc <= '0';
+                  end if;
+
+                  if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
+                     r_CPU_RDY <= '1';
+                  end if;
+
+                  if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     r_state <= wait_asetup;
+                  end if;
+
+               when cpu_write_fb =>
+                  if fb_cpu_c2p_o.A_stb = '1' and fb_cpu_p2c_i.stall = '0' then
+                     fb_cpu_c2p_o.A_stb <= '0';
                   else
-                     if fb_p2c_i.ack = '1' then
+                     if fb_cpu_p2c_i.ack = '1' then
                         r_had_fb_ack <= '1';
-                        fb_c2p_o.cyc <= '0';
+                        fb_cpu_c2p_o.cyc <= '0';
                      end if;
 
                      if i_ring_next(C_CPU_DIV_MDS + 1) = '1' then  -- TODO:BODGED: else model-c-mos font corrupted when LA attached!
-                        fb_c2p_o.D_wr <= MEM_D_io;
-                        fb_c2p_o.D_wr_stb <= '1';
+                        fb_cpu_c2p_o.D_wr <= MEM_D_io;
+                        fb_cpu_c2p_o.D_wr_stb <= '1';
                      end if;
 
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and (r_had_fb_ack = '1' or fb_p2c_i.ack = '1') then
-                        CPU_RDY_io <= '1';
+                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and (r_had_fb_ack = '1' or fb_cpu_p2c_i.ack = '1') then
+                        r_CPU_RDY <= '1';
                      end if;
 
-                     if CPU_RDY_io = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
                   end if;
-               when read_local|write_local =>
-                  MEM_nWE_o <= r_RnW;
+               when cpu_read_local|cpu_write_local =>
+                  MEM_nWE_o <= r_cpu_RnW;
                   if i_ring_next(2) = '1' then
                      MEM_nOE_o <= '1';                      --TODO: remove this bodge, if we skip a cycle we must avoid crashing into databank
                   elsif i_ring_next(C_CPU_DIV_PHI2_DHR) = '1' then
-                     MEM_nOE_o <= not r_RnW;
+                     MEM_nOE_o <= not r_cpu_RnW;
                   end if;
 
-                  if CPU_RDY_io = '1' then   -- memsel will have set this to 0 for slow (4MHz) accesses
+                  if r_CPU_RDY = '1' then   -- memsel will have set this to 0 for slow (4MHz) accesses
                      if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                         CPU_A_nOE_o <= '0';
@@ -583,18 +638,64 @@ begin
                      end if;
                   else
                      if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-                        CPU_RDY_io <= '1';
+                        r_CPU_RDY <= '1';
                      end if;
                   end if;
-               when dead =>
+               when cpu_dead =>
                   if i_ring_next(0) = '1' then
                      r_state <= wait_asetup;
                   end if;
                when cpu_skip =>
-                  if i_ring_next(0) = '1' then
-                     r_state <= wait_asetup;
+
+                  if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
+                     if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
+                        r_phys_A <= fb_mem_c2p_i.A;
+                        r_mem_RnW <= not fb_mem_c2p_i.we;
+                        CPU_BE_o <= '0';
+                        CPU_A_nOE_o <= '1';
+                        r_state <= mem1;                        
+                     elsif (r_cyc_2M = '0' and i_throttle_act = '1') or cpu_halt_i = '1' then
+                        r_state <= cpu_skip;                     
+                     else
+                        r_State <= cpu_phys_a;
+                     end if;
                   end if;
 
+               when mem1 =>
+                  -- do nothing - time for BE to take effect
+                  r_state <= mem2;
+               when mem2 =>
+                  mem_sel;
+                  r_CPU_RDY <= '0';
+                  MEM_A_io(7 downto 0) <= r_phys_A(7 downto 0);
+                  r_state <= mem3;
+               when mem3 =>
+                  MEM_nWE_o <= r_mem_RnW;
+                  MEM_nOE_o <= '0';
+                  r_state <= mem4;
+               when mem4 =>
+
+                  if r_cpu_phi_DHR = '1' and r_mem_RnW = '0' then
+                     MEM_D_io <= r_mem_D_WR;
+                  end if;
+
+                  if i_ring_next(C_CPU_DIV_END_MEM - 1) = '1' then
+                     fb_mem_p2c_o.ack <= '1';
+                     fb_mem_p2c_o.rdy <= '1';
+                     fb_mem_p2c_o.D_rd <= MEM_D_io;
+                     MEM_nWE_o <= '1';
+                     MEM_nOE_o <= '1';  
+                  elsif i_ring_next(C_CPU_DIV_END_MEM) = '1' then
+                     -- TODO: massive assumptions about timing, just hope it all fits
+                     -- TODO: write D_wr_stb check
+                     mem_unsel;
+                     MEM_A_io(7 downto 0) <= (others => 'Z');
+                  elsif i_ring_next(C_CPU_DIV_ADS) = '1' then
+                     r_CPU_RDY <= '1';
+                     r_state <= cpu_log_a;
+                  end if;
+               when others =>
+                  r_state <= reset;
             end case;
          end if;
       end if;
@@ -611,7 +712,7 @@ begin
          CPU_nABORT_o <= '1';
          r_debug_abort_n_ack <= '1';
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(0) = '1' and CPU_RDY_io = '1' and r_state /= cpu_skip then
+         if i_ring_next(0) = '1' and r_CPU_RDY = '1' and r_state /= cpu_skip then
 
             if debug_btn_n_i = '1' then
                r_debug_abort_n_ack <= '1';
@@ -641,25 +742,6 @@ begin
    CPU_PHI2_o <= r_cpu_phi;
    CPU_nNMI_o <= r_nmi;
 
-   p_mem_D:process(fb_syscon_i.clk)
-   begin
-      if fb_syscon_i.rst = '1' then
-         MEM_D_io <= (others => '1');
-      else
-         if rising_edge(fb_syscon_i.clk) then
-            if r_cpu_n_reset(0) = '0' then
-               MEM_D_io <= (others => '1');
-            elsif r_state = read_fb and r_cpu_phi_DHR = '1' then
-               MEM_D_io <= r_fb_D_rd;
-            else
-               MEM_D_io <= (others => 'Z');
-            end if;
-         end if;
-      end if;
-   end process;
-
-
-
 --=======================================================================================
 -- 65816 "boot" mode, in boot mode all accesses are to bank FF
 --=======================================================================================
@@ -673,7 +755,7 @@ begin
       if fb_syscon_i.rst = '1' then
          r_boot_65816_dly <= (others => '1');
       elsif rising_edge(fb_syscon_i.clk) then
-         if i_ring_next(0) = '1' and r_VPA = '1' and r_VDA = '1' and CPU_RDY_io = '1' then
+         if i_ring_next(0) = '1' and r_VPA = '1' and r_VDA = '1' and r_CPU_RDY = '1' then
             r_boot_65816_dly <= r_boot_65816_dly(r_boot_65816_dly'high-1 downto 0) & boot_65816_i(1);
          end if;
       end if;
@@ -688,7 +770,6 @@ begin
 
 
 
-   CPU_BE_o <= '1';
 
    debug_cpu_state_o <= std_logic_vector(to_unsigned(t_state'pos(r_state), 3));
 end rtl;

@@ -25,7 +25,7 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-write60xxxx.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-dma.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 

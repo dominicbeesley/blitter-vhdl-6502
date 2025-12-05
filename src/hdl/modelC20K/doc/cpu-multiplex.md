@@ -59,7 +59,7 @@ that are not used during the CPU Phi1 cycle, namely (A16-A20)
 When a master other then the CPU wants to access the memory then the cpu must
 be halted for one or more cycles while the other bus master uses the memory bus.
 
-# Time multiplexing
+# Time multiplexing @ 4MHz
 
 As much of the internal FPGA logic runs on a 128 MHz clock that has been chosen
 as the time-slice interval for multiplexing. If this multiplexing were to be

@@ -46,15 +46,27 @@
         <File path="../../../shared/address_decode_chipset.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/fb_chipset_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/fb_chipset.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_types.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_int.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/blit_addr.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/aeris.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_sound.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_sound_cha.vhd" type="file.vhdl" enable="1" />
 		<File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />        
         <File path="../../../shared/i2s.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_dma.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../chipset/dmac_int_dma_cha.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_spi.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_many_to_one.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
