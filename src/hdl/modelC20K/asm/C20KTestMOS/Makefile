@@ -1,6 +1,7 @@
 	include ./Makefile.defs
 
-SUBDIRSWIMAKE:=C20KTestMOS-ThrottleOff C20KTestMOS-write60xxxx C20KTestMOS-dma
+SUBDIRSWIMAKE:= C20KTestMOS-ThrottleOff C20KTestMOS-write60xxxx \
+				C20KTestMOS-dma C20KTestMOS-sound
 
 $(TOPTARGETS): $(SUBDIRSWIMAKE)
 

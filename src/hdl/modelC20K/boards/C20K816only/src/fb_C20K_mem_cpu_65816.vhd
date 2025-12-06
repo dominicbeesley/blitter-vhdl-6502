@@ -557,7 +557,13 @@ begin
                      end if;
                   end if;
                when cpu_phys_a =>
-                  if i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
+                  if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
+                     r_phys_A <= fb_mem_c2p_i.A;
+                     r_mem_RnW <= not fb_mem_c2p_i.we;
+                     CPU_BE_o <= '0';
+                     CPU_A_nOE_o <= '1';
+                     r_state <= mem1;
+                  elsif i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
                      mem_sel;
                      cpu_rdy;
                      -- local memory cycle
@@ -581,8 +587,19 @@ begin
                   end if;
 
                when cpu_read_fb =>
-                  if fb_cpu_c2p_o.A_stb = '1' and fb_cpu_p2c_i.stall = '0' then
-                     fb_cpu_c2p_o.A_stb <= '0';
+                  if fb_cpu_c2p_o.A_stb = '1' then
+                     if fb_cpu_p2c_i.stall = '0' then
+                        fb_cpu_c2p_o.A_stb <= '0';
+                     elsif fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
+
+                        fb_cpu_c2p_o.cyc <= '0';
+
+                        r_phys_A <= fb_mem_c2p_i.A;
+                        r_mem_RnW <= not fb_mem_c2p_i.we;
+                        CPU_BE_o <= '0';
+                        CPU_A_nOE_o <= '1';
+                        r_state <= mem1;
+                     end if;
                   end if;
                      
                   if r_cpu_phi_DHR = '1' then
@@ -607,26 +624,37 @@ begin
                   end if;
 
                when cpu_write_fb =>
-                  if fb_cpu_c2p_o.A_stb = '1' and fb_cpu_p2c_i.stall = '0' then
-                     fb_cpu_c2p_o.A_stb <= '0';
-                  else
-                     if fb_cpu_p2c_i.ack = '1' then
-                        r_had_fb_ack <= '1';
+                  if fb_cpu_c2p_o.A_stb = '1' then
+                     if fb_cpu_p2c_i.stall = '0' then
+                        fb_cpu_c2p_o.A_stb <= '0';
+                     elsif fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
+
                         fb_cpu_c2p_o.cyc <= '0';
-                     end if;
 
-                     if i_ring_next(C_CPU_DIV_MDS + 1) = '1' then  -- TODO:BODGED: else model-c-mos font corrupted when LA attached!
-                        fb_cpu_c2p_o.D_wr <= MEM_D_io;
-                        fb_cpu_c2p_o.D_wr_stb <= '1';
+                        r_phys_A <= fb_mem_c2p_i.A;
+                        r_mem_RnW <= not fb_mem_c2p_i.we;
+                        CPU_BE_o <= '0';
+                        CPU_A_nOE_o <= '1';
+                        r_state <= mem1;
                      end if;
+                  end if;
 
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
-                        r_CPU_RDY <= '1';
-                     end if;
+                  if fb_cpu_p2c_i.ack = '1' then
+                     r_had_fb_ack <= '1';
+                     fb_cpu_c2p_o.cyc <= '0';
+                  end if;
 
-                     if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-                        r_state <= wait_asetup;
-                     end if;
+                  if i_ring_next(C_CPU_DIV_MDS + 1) = '1' then  -- TODO:BODGED: else model-c-mos font corrupted when LA attached!
+                     fb_cpu_c2p_o.D_wr <= MEM_D_io;
+                     fb_cpu_c2p_o.D_wr_stb <= '1';
+                  end if;
+
+                  if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
+                     r_CPU_RDY <= '1';
+                  end if;
+
+                  if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     r_state <= wait_asetup;
                   end if;
                when cpu_read_local|cpu_write_local =>
                   MEM_nWE_o <= r_cpu_RnW;
@@ -668,6 +696,7 @@ begin
 
                when mem1 =>
                   -- do nothing - time for BE to take effect
+                  r_CPU_RDY <= '0';
                   r_state <= mem2;
                when mem2 =>
                   mem_sel;
