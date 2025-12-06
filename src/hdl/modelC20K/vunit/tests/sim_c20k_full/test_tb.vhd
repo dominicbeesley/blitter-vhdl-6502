@@ -12,6 +12,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.fb_tester_pack.all;
+use work.glb.GSRO;
 
 library fmf;
 
@@ -118,7 +119,13 @@ begin
       wait;
    end process;
 
-
+   p_gsro:process
+   begin
+      GSRO <= '0';
+      wait for 1 us;
+      GSRO <= '1';
+      wait;
+   end process;
 
    p_main:process
    begin

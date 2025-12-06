@@ -1079,7 +1079,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    clkdiv5 : CLKDIV
    generic map (
       DIV_MODE => "5",            -- Divide by 5
-      GSREN => "false"
+      GSREN => "true"
    )
    port map (
       RESETN => '1',
@@ -1224,7 +1224,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clkdiv5_snd : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
-         GSREN => "false"
+         GSREN => "true"
       )
       port map (
          RESETN => '1',

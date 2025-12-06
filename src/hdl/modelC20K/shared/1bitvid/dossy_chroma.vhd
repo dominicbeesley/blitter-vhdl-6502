@@ -110,7 +110,7 @@ signal r_burst  : std_logic;
 
 signal r_pal_swich : std_logic := '0';
 
-signal i_clk_chroma_x4 : std_logic;
+signal i_clk_chroma_x4 : std_logic := '0';
 
 constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
 

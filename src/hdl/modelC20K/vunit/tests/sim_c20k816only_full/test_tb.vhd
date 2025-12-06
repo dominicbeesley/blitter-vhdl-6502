@@ -12,6 +12,7 @@ library work;
 use work.fishbone.all;
 use work.common.all;
 use work.fb_tester_pack.all;
+use work.glb.GSRO;
 
 library fmf;
 
@@ -25,7 +26,7 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-dma.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-sound.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -130,6 +131,13 @@ begin
       wait;
    end process;
 
+   p_gsro:process
+   begin
+      GSRO <= '0';
+      wait for 1 us;
+      GSRO <= '1';
+      wait;
+   end process;
 
 
    p_main:process
