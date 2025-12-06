@@ -34,6 +34,31 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clock
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_SOUND}] -group [get_clocks {CLOCK_128M}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
 
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -setup 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -setup 2
+
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -hold 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -hold 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
+
+
+
+
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
+
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
+
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
+
+set_multicycle_path -setup -end -from [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
+
 
 #report_timing -setup -max_paths 100 -max_common_paths 1
 
