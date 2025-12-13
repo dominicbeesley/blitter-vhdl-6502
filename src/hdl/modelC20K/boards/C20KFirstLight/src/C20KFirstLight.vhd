@@ -48,11 +48,11 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 use work.fishbone.all;
+use work.board_config_pack.all;
+use work.fb_sys_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_intcon_pack.all;
-use work.board_config_pack.all;
 use work.ws2812_pack.all;
-use work.fb_sys_pack.all;
 
 entity C20KFirstLight is
    generic (
@@ -70,15 +70,16 @@ entity C20KFirstLight is
       clk_ext_pal_i        : in            std_logic;
 
 
-      ddr_addr_o           : out           std_logic_vector(13 downto 0);
+--TODO: clash with OSER10's on video
+--      ddr_addr_o           : out           std_logic_vector(13 downto 0);
       ddr_bank_o           : out           std_logic_vector(2 downto 0);
       ddr_cas_o            : out           std_logic;
       ddr_ck_o             : out           std_logic;
       ddr_cke_o            : out           std_logic;
       ddr_cs_o             : out           std_logic;
-      ddr_dm_io            : in            std_logic_vector(1 downto 0);
-      ddr_dq_io            : in            std_logic_vector(15 downto 0);
-      ddr_dqs_io           : in            std_logic_vector(1 downto 0);
+      ddr_dm_io            : inout         std_logic_vector(1 downto 0);
+      ddr_dq_io            : inout         std_logic_vector(15 downto 0);
+      ddr_dqs_io           : inout         std_logic_vector(1 downto 0);
       ddr_odt_o            : out           std_logic;
       ddr_ras_o            : out           std_logic;
       ddr_reset_n_o        : out           std_logic;
@@ -86,9 +87,8 @@ entity C20KFirstLight is
 
       mem_A_io             : inout         std_logic_vector(20 downto 0); -- note: inout as can be to RAM or from CPU
       mem_D_io             : inout         std_logic_vector(7 downto 0);
-      mem_nCE_o            : out           std_logic_vector(3 downto 1);
-      mem_nCE_BB_o         : out           std_logic;
-      mem_nCE_FL_o         : out           std_logic;
+      mem_RAM_nCE_o        : out           std_logic_vector(3 downto 0);
+      mem_ROM_nCE_o        : out           std_logic;
       mem_nOE_o            : out           std_logic;
       mem_nWE_o            : out           std_logic;
 
@@ -116,7 +116,7 @@ entity C20KFirstLight is
 
       tmds_clk_o_p         : out           std_logic;
       tmds_d_o_p           : out           std_logic_vector(2 downto 0);
-      edid_scl_o           : out           std_logic;
+      edid_scl_io          : inout         std_logic;
       edid_sda_io          : inout         std_logic;
       hdmi_cec_io          : inout         std_logic;
       hdmi_hpd_io          : inout         std_logic;
@@ -126,7 +126,7 @@ entity C20KFirstLight is
       vid_g_o              : out           std_logic;
       vid_r_o              : out           std_logic;
 
-      i2c_scl_o            : out           std_logic;
+      i2c_scl_io           : inout         std_logic;
       i2c_sda_io           : inout         std_logic;
 
       mux_D_nOE_o          : out           std_logic;
@@ -235,9 +235,6 @@ architecture rtl of C20KFirstLight is
    signal i_clk_pll_128M: std_logic;
 
    -- multiplex in to core, out from peripheral (I0 phase)   
-   signal icipo_ser_cts    : std_logic;
-   signal icipo_ser_rx     : std_logic;
-   signal icipo_d_cas      : std_logic;
    signal icipo_kb_nRST    : std_logic;
    signal i_sys_nIRQ        : std_logic;
    signal i_sys_nNMI        : std_logic;
@@ -251,9 +248,6 @@ architecture rtl of C20KFirstLight is
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
 
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_SER_TX     : std_logic;
-   signal icopi_SER_RTS    : std_logic;
 
    -- multiplex out from core, in to peripheral (O0 phase)   
    signal icopi_j_ds_nCS2  : std_logic;
@@ -267,7 +261,9 @@ architecture rtl of C20KFirstLight is
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
    signal i_c20k_latch     : std_logic_vector(7 downto 0);
-
+   signal i_psg_audio      : signed(13 downto 0);
+   signal r_dac_sample     : signed(10 downto 0);
+   signal i_paula_sample   : signed(9 downto 0);
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -294,7 +290,8 @@ begin
    port map (
       fb_syscon_o                   => i_fb_syscon,
 
-      EXT_nRESET_i                  => sup_nRST_i,
+      EXT_nRESET_i                  => '1',                 -- disable keyboard reset, in case not built
+      EXT_nRESET_power_i            => sup_nRST_i,
 
       clk_fish_i                    => i_clk_pll_128M,
       clk_lock_i                    => '1',
@@ -369,7 +366,7 @@ begin
 
    e_fb_mem_ram: entity work.fb_P20K_mem
    generic map (
-      G_ADDR_W => 12 -- 4K      
+      G_ADDR_W => 15 -- 32K      
       )
    port map (
       -- fishbone signals
@@ -391,9 +388,8 @@ begin
 
       mem_A_o                       => mem_A_io,
       mem_D_io                      => mem_D_io,
-      mem_nCE_o                     => mem_nCE_o,
-      mem_nCE_BB_o                  => mem_nCE_BB_o,
-      mem_nCE_FL_o                  => mem_nCE_FL_o,
+      mem_RAM_nCE_o                 => mem_RAM_nCE_o,
+      mem_ROM_nCE_o                 => mem_ROM_nCE_o,
       mem_nOE_o                     => mem_nOE_o,
       mem_nWE_o                     => mem_nWE_o
 
@@ -438,7 +434,7 @@ begin
    port map (
 
       -- direct CPU control signals from system
-      nmi_n_i                       => icipo_btn1,
+      nmi_n_i                       => '1',
       irq_n_i                       => i_sys_nIRQ,
       cpu_halt_i                    => '0',
 
@@ -495,6 +491,9 @@ begin
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
       mux_mhz2E_clk_o               => p_2MHZ_E_o,
 
+      mhz8_fdc_clk_o                => p_8MHZ_FDC_o,
+
+
       -- mux control outputs
       mux_nALE_o                    => mux_nALE_o,
       mux_D_nOE_o                   => mux_D_nOE_o,
@@ -520,9 +519,6 @@ begin
       sys_nNMI_o                    => i_sys_nNMI,
 
       -- random other multiplexed pins out to FPGA (I0 phase)
-      p_ser_cts_o                   => icipo_ser_cts,
-      p_ser_rx_o                    => icipo_ser_rx,
-      p_d_cas_o                     => icipo_d_cas,
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
@@ -534,9 +530,6 @@ begin
       p_btn2_o                      => icipo_btn2,
       p_btn3_o                      => icipo_btn3,
 
-      -- random other multiplexed pins in from FPGA (O0 phase)
-      p_SER_TX_i                    => icopi_SER_TX,
-      p_SER_RTS_i                   => icopi_SER_RTS,
 
       -- random other multiplexed pins in from FPGA (O1 phase)
       p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
@@ -552,9 +545,10 @@ begin
 
       -- emulated / synthesized beeb signals
       beeb_ic32_o                   => i_beeb_ic32,
-      c20k_latch_o                  => i_c20k_latch
+      c20k_latch_o                  => i_c20k_latch,
+      psg_audio_o                   => i_psg_audio,
 
-
+      p_d_cas_o                     => cassette_o
    );
 
    -------------------------------------
@@ -581,7 +575,7 @@ begin
    );
 
 
-      ddr_addr_o           <= (others => '0');
+--      ddr_addr_o           <= (others => '0');
       ddr_bank_o           <= (others => '0');
       ddr_cas_o            <= '0';
       ddr_ck_o             <= '0';
@@ -611,7 +605,7 @@ begin
 
       tmds_clk_o_p         <= '1';
       tmds_d_o_p           <= (others => '1');
-      edid_scl_o           <= '1';
+      edid_scl_io          <= '1';
       edid_sda_io          <= 'Z';
       hdmi_cec_io          <= 'Z';
       hdmi_hpd_io          <= 'Z';
@@ -621,10 +615,8 @@ begin
       vid_g_o              <= '0';
       vid_r_o              <= '0';
 
-      i2c_scl_o            <= '1';
+      i2c_scl_io           <= '1';
       i2c_sda_io           <= 'Z';
-
-      p_8MHZ_FDC_o         <= '0';
 
       cassette_o           <= '0';
 
