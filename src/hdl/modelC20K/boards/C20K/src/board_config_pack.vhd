@@ -106,7 +106,7 @@ package board_config_pack is
 	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
 	constant PERIPHERAL_NO_HDMI	: natural := 5;	
 	constant PERIPHERAL_NO_LED_ARR	: natural      := 6;
-	constant PERIPHERAL_NO_UART 		: natural		:= 7;
+	constant PERIPHERAL_NO_UART 		: natural		:= 6;
 
 	constant CONTROLLER_COUNT 			: natural 		:= 2;
 	constant MAS_NO_CPU					: natural		:= 1;

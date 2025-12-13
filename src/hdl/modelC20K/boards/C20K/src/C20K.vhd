@@ -229,6 +229,10 @@ architecture rtl of C20K is
    signal i_c2p_sys               : fb_con_o_per_i_t;
    signal i_p2c_sys               : fb_con_i_per_o_t;
 
+   signal i_c2p_sys2              : fb_con_o_per_i_t;
+   signal i_p2c_sys2              : fb_con_i_per_o_t;
+
+
 	-- blitter board RAM/ROM memory wrapper
 	signal i_c2p_mem				: fb_con_o_per_i_t;
 	signal i_p2c_mem				: fb_con_i_per_o_t;
@@ -387,11 +391,11 @@ architecture rtl of C20K is
 
 
    -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_j_ds_nCS2  : std_logic;
-   signal icopi_j_ds_nCS1  : std_logic;
-   signal icopi_j_spi_clk  : std_logic;
-   signal icopi_j_spi_mosi : std_logic;
-   signal icopi_j_adc_nCS  : std_logic;
+   signal icopi_j_ds_nCS2  : std_logic := '1';
+   signal icopi_j_ds_nCS1  : std_logic := '1';
+   signal icopi_j_spi_clk  : std_logic := '1';
+   signal icopi_j_spi_mosi : std_logic := '1';
+   signal icopi_j_adc_nCS  : std_logic := '1';
 
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
@@ -745,8 +749,8 @@ END GENERATE;
       -- fishbone signals
 
       fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_sys,
-      fb_p2c_o                      => i_p2c_sys,
+      fb_c2p_i                      => i_c2p_sys2,
+      fb_p2c_o                      => i_p2c_sys2,
 
       -- mux clock outputs
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
@@ -1359,6 +1363,82 @@ G_DONT_1BIT_DAC_VIDEO:if not G_1BIT_DAC_VIDEO generate
    end process;
 
 end generate;
+
+b_ds2_test:block
+   signal   i_intcon_sys2_sel_addr  : std_logic_vector(23 downto 0);
+   signal   i_intcon_sys2_sel_we    : std_logic;
+   signal   i_intcon_sys2_sel       : unsigned(0 downto 0);
+   signal   i_intcon_sys2_sel_oh    : std_logic_vector(1 downto 0);
+
+   -- debug ds2 wrapper
+   signal i_c2p_ds2       : fb_con_o_per_i_t;
+   signal i_p2c_ds2       : fb_con_i_per_o_t;
+   
+begin
+
+   i_intcon_sys2_sel <= "1" when i_intcon_sys2_sel_addr(15 downto 4) = x"FCB" else
+                        "0";
+
+   i_intcon_sys2_sel_oh <= "10" when i_intcon_sys2_sel_addr(15 downto 4) = x"FCB" else
+                           "01";
+
+   --------------------------------------------------------
+   -- SPI for dualshock controller test
+   --------------------------------------------------------
+
+
+   e_fb_intcon: fb_intcon_one_to_many
+   generic map (
+      SIM                           => SIM,
+      G_PERIPHERAL_COUNT            => 2,
+      G_ADDRESS_WIDTH               => 24
+      )
+   port map (
+      fb_syscon_i                   => i_fb_syscon,
+
+      -- peripheral ports connect to controllers
+      fb_con_c2p_i                  => i_c2p_sys,
+      fb_con_p2c_o                  => i_p2c_sys,
+
+      -- controller ports connect to peripherals
+      fb_per_c2p_o(0)               => i_c2p_sys2,
+      fb_per_c2p_o(1)               => i_c2p_ds2,
+      fb_per_p2c_i                  => (
+                                          0 => i_p2c_sys2,
+                                          1 => i_p2c_ds2
+                                       ),
+
+      peripheral_sel_addr_o         => i_intcon_sys2_sel_addr,
+      peripheral_sel_we_o           => i_intcon_sys2_sel_we,
+      peripheral_sel_i              => i_intcon_sys2_sel,
+      peripheral_sel_oh_i           => i_intcon_sys2_sel_oh
+   );
+
+
+   e_fb_ds2:entity work.fb_spi
+   generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED,
+      PRESCALE                      => 4
+   )
+   port map (
+
+      -- eeprom signals
+      SPI_CS_o(0)                   => icopi_j_ds_nCS1,
+      SPI_CLK_o                     => icopi_j_spi_clk,
+      SPI_MOSI_o                    => icopi_j_spi_mosi,
+      SPI_MISO_i                    => icipo_j_spi_miso,
+      SPI_DET_i                     => '1',
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_ds2,
+      fb_p2c_o                      => i_p2c_ds2
+   );
+
+end block;
+
 
 end architecture rtl;
       

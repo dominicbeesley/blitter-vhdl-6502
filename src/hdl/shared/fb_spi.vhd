@@ -50,7 +50,8 @@
 --				|					|	               contents should not be read whilst this flag is set but
 --          |              |                 you may start one more write operation which will be 
 --          |              |                 latched and carried out after the current one.
---	CTL=0		|  Write			|	 5..7 : 			reserved write as 0's
+--	CTL=0		|  Write			|	 7 	: LSB    0 = MSB first, 1 = LSB first
+--          |              |   5..6 : 			Unused-set to 0's
 --				|					|	 2..4 : CS     The chip select index (this chip select will be activated)
 --				|					|	    1 : CPOL   The SPI clock polarity
 --				|					|	    0 : CPHA   The SPI clock / data phase
@@ -120,7 +121,7 @@ end fb_spi;
 architecture rtl of fb_spi is
 
 	type 	 	state_cyc_t 		is (idle, wait_wr);
-	type 		state_spi_t 		is (idle, shift, latch, fin);
+	type 		state_spi_t 		is (idle, delay, shift, latch, fin);
 
 	-- clock generation
 	signal	r_2ph_ctr			: unsigned(7 downto 0) := (others => '0');
@@ -134,18 +135,18 @@ architecture rtl of fb_spi is
 	signal   r_spi_clk			:  std_logic;
 	signal   r_act_cshold		:  std_logic;
 	signal	r_shift_occup		:	std_logic_vector(14 downto 0);		
-
+	signal   r_delay_ctr			:  unsigned(1 downto 0);
 
 	-- data
 	signal	r_dat_wr				: 	std_logic_vector(7 downto 0);		-- write data latch
 	signal	r_shift				:	std_logic_vector(7 downto 0);		
 
 	-- control
-
+	signal   r_ctl_lsb			: std_logic;
 	signal	r_ctl_cpol			: std_logic;				-- spi clock polarity
 	signal	r_ctl_cpha			: std_logic;				-- spi phase
 	signal   r_ctl_csix			: unsigned(2 downto 0);	-- current CS index	
-
+	signal   r_ctl_delay			: unsigned(1 downto 0); -- delay value
 	signal   r_ctl_div			: std_logic_vector(7 downto 0) := (others => '0');
 
 
@@ -236,16 +237,22 @@ begin
 					when idle => 
 						r_spi_clk <= '0';
 						if r_req_req /= r_req_ack then
-							r_state_spi <= shift;
 							r_shift_occup <= (others => '1');
 							r_req_ack <= r_req_req;
 							r_shift <= r_dat_wr;
 							r_spi_CS(to_integer(r_ctl_csix)) <= '0';
 							r_act_cshold <= r_req_cshold;
-							if r_ctl_cpha = '1' then
+							r_delay_ctr <= r_ctl_delay;
+							if r_spi_CS(to_integer(r_ctl_csix)) /= '0' and r_ctl_delay /= "00" then
+								r_state_spi <= delay;
+							elsif r_ctl_cpha = '1' then
 								r_state_spi <= shift;
 							else
-								r_spi_mosi <= r_dat_wr(r_dat_wr'high);
+								if r_ctl_lsb = '1' then
+									r_spi_mosi <= r_dat_wr(0);
+								else
+									r_spi_mosi <= r_dat_wr(r_dat_wr'high);
+								end if;
 								r_state_spi <= latch;
 							end if;
 						end if;
@@ -254,16 +261,44 @@ begin
 						if r_shift_occup(0) = '0' then
 							r_state_spi <= fin;
 						else
-							r_spi_mosi <= r_shift(r_shift'high);						
+							if r_ctl_lsb = '1' then
+								r_spi_mosi <= r_shift(0);						
+							else
+								r_spi_mosi <= r_shift(r_shift'high);						
+							end if;
 						end if;
 						r_spi_clk <= not r_spi_clk;
 					when latch =>
-						r_shift <= r_shift(6 downto 0) & SPI_MISO_i;
+						if r_ctl_lsb = '1' then
+							r_shift <= SPI_MISO_i & r_shift(7 downto 1);
+						else
+							r_shift <= r_shift(6 downto 0) & SPI_MISO_i;
+						end if;
 						r_state_spi <= shift;
 						if r_shift_occup(0) = '0' then
 							r_state_spi <= fin;
 						end if;
 						r_spi_clk <= not r_spi_clk;
+					when delay =>
+						if r_shift_occup(0) = '0' then
+							if r_delay_ctr = "01" then								
+								r_shift_occup <= (others => '1');
+								r_shift <= r_dat_wr;
+								if r_ctl_cpha = '1' then
+									r_state_spi <= shift;
+								else
+									if r_ctl_lsb = '1' then
+										r_spi_mosi <= r_dat_wr(0);
+									else
+										r_spi_mosi <= r_dat_wr(r_dat_wr'high);
+									end if;
+									r_state_spi <= latch;
+								end if;
+							else
+								r_delay_ctr <= r_delay_ctr - 1;
+								r_shift_occup <= (others => '1');
+							end if;
+						end if;
 					when fin =>
 						r_state_spi <= idle;
 						if r_act_cshold = '0' then
@@ -298,6 +333,8 @@ begin
 			r_ctl_cpol <= '0';
 			r_ctl_cpha <= '0';
 			r_ctl_div <= (others => '0');
+			r_ctl_delay <= (others => '0');
+			r_ctl_lsb <= '0';
 		else
 			if rising_edge(fb_syscon_i.clk) then
 				v_dowrite := false;
@@ -345,6 +382,8 @@ begin
 					if fb_c2p_i.A(1 downto 0) = "00" then
 						-- control register write
 						r_req_reset <= '1';				-- reset spi state machine and nCS
+						r_ctl_lsb   <= fb_c2p_i.D_wr(7);
+						r_ctl_delay <= unsigned(fb_c2p_i.D_wr(6 downto 5));
 						r_ctl_csix <= unsigned(fb_c2p_i.D_wr(4 downto 2));
 						r_ctl_cpol <= fb_c2p_i.D_wr(1);
 						r_ctl_cpha <= fb_c2p_i.D_wr(0);
