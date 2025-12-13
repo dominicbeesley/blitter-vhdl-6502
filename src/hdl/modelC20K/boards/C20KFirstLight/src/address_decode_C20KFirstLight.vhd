@@ -80,7 +80,7 @@ begin
 			elsif addr_i(15 downto 12) = x"F" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
-			elsif addr_i(15 downto 12) = x"0" then
+			elsif addr_i(15) = '0' then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_RAM, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_RAM) <= '1';
 			else
