@@ -164,14 +164,14 @@ PC10:   	BIT     UART_STAT		   		;CHECK TX STATUS
 TSTG:   	.byte	7				;2: PROCESSOR TYPE = 65(C)02
         	.byte	COMBUF_SIZE			;3: SIZE OF COMMUNICATIONS BUFFER
         	.byte	$80				;4: has CALL
-        	.word	$8000,$BFFF			;5-8: LOW AND HIGH LIMIT OF MAPPED MEM (NONE)
+        	.word	$0,$0				;5-8: LOW AND HIGH LIMIT OF MAPPED MEM (NONE)
         	.byte	B1-B0				;9 BREAKPOINT INSTR LENGTH
 ;
 ; Define either the BRK or JSR BRKE instruction for use as breakpoint
 ; Arnold assembles BRK as two bytes: 00 EA.  We want a ONE byte breakpoint
 ; so we do it by hand.
 B0:     	.byte	0					;10+ BREKAPOINT INSTRUCTION
-B1:     	.byte	"6502 monitor V0.1 P20K BARE",0    ;DESCRIPTION, ZERO
+B1:     	.byte	"6502 monitor V0.2 C20K FirstLight",0    ;DESCRIPTION, ZERO
         	.byte   0                       	;page of CALL breakpoint
         	.word   B0                      	;address of CALL breakpoint in native order
 B2:
