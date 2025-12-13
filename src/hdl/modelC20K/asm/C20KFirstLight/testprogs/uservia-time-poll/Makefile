@@ -18,9 +18,10 @@ $(BUILD)/%.hex: $(BUILD)/%.bin
 		bin2hex 0x300 $< $@
 
 $(BUILD)/uservia-time-poll.bin : $(OBJS_O) uservia-time-poll.cfg
-		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_O)
+		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map --dbgfile $(basename $@).dbg -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_O)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
 		da65 -S 0x0300 --comments 4 $(basename $@).bin >$(basename $@).da.s
+		$(SCRIPTS)/perl/ca65lstupdate.pl $(basename $@).dbg $(BUILD)
 
 
 $(BUILD)/%.o: 	%.asm $(DEPS)
