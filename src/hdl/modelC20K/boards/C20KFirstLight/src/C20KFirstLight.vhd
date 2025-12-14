@@ -467,7 +467,7 @@ begin
       fb_c2p_i                      => i_c2p_led_arr,
       fb_p2c_o                      => i_p2c_led_arr,
 
-      led_serial_o                  => open --ui_leds_o
+      led_serial_o                  => ui_leds_o
    );
 
 
@@ -570,7 +570,7 @@ begin
       rst_i                   => i_fb_syscon.rst,
       clk_i                   => i_fb_syscon.clk,
       rgb_arr_i               => i_debug_leds,
-      led_serial_o            => ui_leds_o
+      led_serial_o            => open
 
    );
 
