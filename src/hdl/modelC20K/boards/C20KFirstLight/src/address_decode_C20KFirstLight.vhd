@@ -52,13 +52,12 @@ use work.board_config_pack.all;
 
 entity address_decode_p20k is
 	generic (
-		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_PERIPHERAL_COUNT		: natural
+		SIM							: boolean := false							-- skip some stuff, i.e. slow sdram start up
 	);
 	port(
 		addr_i						: in		std_logic_vector(23 downto 0);
-		peripheral_sel_o			: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
-		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
+		peripheral_sel_o			: out		unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);
+		peripheral_sel_oh_o		: out		std_logic_vector(PERIPHERAL_COUNT-1 downto 0)
 	);
 end address_decode_p20k;
 
@@ -71,7 +70,20 @@ begin
 		peripheral_sel_oh_o <= (others => '0');
 
 		if addr_i(23 downto 16) = x"FF" then
-			if addr_i(15 downto 4) = x"FC1" then
+
+			if addr_i(15 downto 4) = x"FE0" and addr_i(3) = '0' and G_INCL_HDMI then 
+				-- crtc
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+			elsif addr_i(15 downto 4) = x"FE2" and addr_i(3) = '0' and G_INCL_HDMI then 
+				-- (n)ula
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+			elsif addr_i(15) = '0' and G_INCL_HDMI then
+				-- memory from HDMI
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
+				peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+			elsif addr_i(15 downto 4) = x"FC1" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
 			elsif addr_i(15 downto 8) = x"FC" or addr_i(15 downto 8) = x"FD" or addr_i(15 downto 8) = x"FE" then
