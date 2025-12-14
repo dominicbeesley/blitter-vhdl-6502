@@ -16,7 +16,12 @@ Download from https://www.noicedebugger.com/download.html
 
 ## Build NoIce monitor ROM
 
-Requirements: cc65, perl, ???
+Requirements: gcc, make, cc65, perl, bin2hex
+
+bin2hex is one of mine - https://github.com/dominicbeesley/hexutils give me a
+shout when / if the autotools stuff turns out to be broken...I've never got 
+it to check into git then build nicely...
+
 
 ```
 $ cd src/hdl/modelC20K/asm
@@ -68,6 +73,36 @@ Select serial
 Select com port, parity none, stop 1, rts off, dtr off
 
 It should hopefully connect...if not then we will need to do some debugging
+
+## Run a program
+
+In the /src/hdl/modelC20K/asm/C20KFirstLight/testprogs folder there are a
+number of test programs that can be used when debugging the build.
+
+These programs can be loaded using NoIce to the memory then run.
+
+Reset board with SW4
+File->Load, pick a hex file
+It should upload after a second or two
+Run->Go From : 0300
+
+### test-serialout
+
+This is a good first test of Noice as it will run with the SOM only.
+It should output test messages to the console (Output tab at bottom of 
+screen in Noice).
+
+### ledschase
+
+This will light up the debug LEDS D9-D16 with patterns.
+
+NOTE: the LEDs are horribly bright, I would recommend covering them with
+black insulation tape or, I made a little hat out of black opaque packaging
+with small 0.5mm holes plucked through for each LED and some double-sided
+sticky-tape paper double-sided sticky-tape sandwich which give a less 
+eye-watering experience!
+
+
 
 
 
