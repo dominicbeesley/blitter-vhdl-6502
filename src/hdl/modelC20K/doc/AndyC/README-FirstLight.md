@@ -103,6 +103,21 @@ sticky-tape paper double-sided sticky-tape sandwich which give a less
 eye-watering experience!
 
 
+### videotest
+
+This will display a mode 7 for 15 seconds then mode 2 test card then exit 
+back to monitor.
+
+This should always display over HDMI port given a suitable monitor that
+supports 50Hz screen modes.
+
+If IC's U28, U19 and C43 are fitted then all the analogue ports should work
+too.
+
+On the current firmware there may be some patterning at the far right of the
+screen and the mode 7 display is narrow and left-justified on some HDMI 
+monitors.
+
 
 
 
