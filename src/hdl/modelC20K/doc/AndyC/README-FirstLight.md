@@ -76,7 +76,7 @@ Select com port, parity none, stop 1, rts off, dtr off
 
 It should hopefully connect...if not then we will need to do some debugging
 
-## Run a program
+## Run a program in NoICE
 
 In the /src/hdl/modelC20K/asm/C20KFirstLight/testprogs folder there are a
 number of test programs that can be used when debugging the build.
@@ -84,9 +84,30 @@ number of test programs that can be used when debugging the build.
 These programs can be loaded using NoIce to the memory then run.
 
 Reset board with SW4
-File->Load, pick a hex file
+File->Load, pick a .mot file
 It should upload after a second or two
-Run->Go From : 0300
+Run->Go From : 0400
+
+## Run a program in MONITOR firmware
+
+The C20KFirstLightMon firmware, boots to a simple monitor console that 
+can be used to load and run code, load data to memory, program the 
+FlashEEPROM (U25) and access the FPGA configuration SPI Flash.
+
+For details of the monitor [see](../../asm/C20KFirstLight/C20KBareMON/readme.md) 
+
+The monitor can be used to load motorola SREC records to memory, when
+loading SREC it can be sent direct to the ":" prompt. However, because
+the rv-debugger UART has no flow-control and is polled by the monitor 
+there needs to be a 50ms delay after each line is sent to allow processing
+this should be set in the terminal software.
+
+Once the file is loaded it should be possible to view it using the 'D'ump
+command or execute it using the 'G'o command i.e. 
+
+```
+:G 400
+```
 
 ### test-serialout
 
