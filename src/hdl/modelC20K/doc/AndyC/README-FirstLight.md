@@ -16,11 +16,13 @@ Download from https://www.noicedebugger.com/download.html
 
 ## Build NoIce monitor ROM
 
-Requirements: gcc, make, cc65, perl, bin2hex
+Requirements: gcc, make, cc65, perl, srec_cat
 
-bin2hex is one of mine - https://github.com/dominicbeesley/hexutils give me a
+~~bin2hex is one of mine - https://github.com/dominicbeesley/hexutils give me a
 shout when / if the autotools stuff turns out to be broken...I've never got 
-it to check into git then build nicely...
+it to check into git then build nicely...~~
+I've removed the need for bin2hex and it all now uses Motorola format hex and
+uses the more common tool srec_cat to produce it.
 
 
 ```
