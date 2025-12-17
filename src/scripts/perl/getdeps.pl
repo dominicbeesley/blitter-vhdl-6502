@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # read a QSF file and output a list of dependencies of the type specified as arguments
 
