@@ -31,8 +31,10 @@ clean:
 		-rm -f $(patsubst %.rom, %.sy2, $(TARGETS_O))
 		-rm -f $(patsubst %.rom, %.da.s, $(TARGETS_O))
 		-rm -f $(patsubst %.rom, %.sym.noi, $(TARGETS_O))
+		-rm -f $(patsubst %.rom, %.dbg, $(TARGETS_O))
 		-rm -f $(patsubst %.rom, %.vec, $(TARGETS_O))
 		-rm -f $(patsubst %.o, %.lst, $(OBJS_O))
+		-rm -f $(patsubst %.o, %.lst.rel, $(OBJS_O))
 
 
 

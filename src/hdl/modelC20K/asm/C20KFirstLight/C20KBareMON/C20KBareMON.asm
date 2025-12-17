@@ -148,6 +148,25 @@ ErrBadChecksum:	M_PRINT str_BadCheckSum
 
 
 ;==============================================================================
+; G O 
+;==============================================================================
+doGO:		ldx	#<textbuf
+		stx	zp_mos_txtptr
+		ldy	#>textbuf
+		sty	zp_mos_txtptr+1
+		ldy	#1
+		jsr	ParseHex
+		bcc	@ok_start
+		jmp	ErrBadHex
+@ok_start:	lda	#>(mainloop-1)
+		pha
+		lda	#<(mainloop-1)
+		pha
+		jmp	(zp_trans_acc)
+
+
+
+;==============================================================================
 ; S R E C    R E A D
 ;==============================================================================
 doSREC:		ldx	#<textbuf
@@ -174,13 +193,13 @@ doSREC:		ldx	#<textbuf
 		beq	@hexerr
 		lda	#$FF
 		bit	srec_type_flag
-		bcs	@b16_1				; 16 bit Srec skip top byte, set to FF
+		bmi	@b16_1				; 16 bit Srec skip top byte, set to FF
 		jsr	ParseHexByte
 		bcs	@hexerr
-		sta	zp_addr + 2
 		dec	zp_len
 		beq	@hexerr
-@b16_1:		jsr	ParseHexByte
+@b16_1:		sta	zp_addr + 2
+		jsr	ParseHexByte
 		bcs	@hexerr
 		sta	zp_addr + 1
 		dec	zp_len
@@ -1052,7 +1071,54 @@ addAAcc:
 @1:		pla
 		rts
 
+;=============================================
+; S P I
+;=============================================
+
+spi_reset:
+		lda	#$1C		; select nCS[7]
+		sta	$FC20
+		sta	$FC22		; start and reset
+		lda	#$00		; select nCS[0]
+		sta	$FC20
+		jmp	spi_wait_rd
+
+spi_write_last:	sta	$FC22
+		jmp	spi_wait_rd
+spi_write_cont:	sta	$FC23
+spi_wait_rd:	bit	$FC20
+		bmi	spi_wait_rd
+		lda	$FC22
+		rts
+
+
+
+
+
 show_help:	M_PRINT	str_menu
+
+		lda	#$10
+		sta	$FC21		; fast spi
+		jsr	spi_reset
+
+		lda	#$9F
+		jsr	spi_write_cont
+		jsr	spi_write_cont		
+		jsr	PrintHex
+		jsr	spi_write_cont		
+		jsr	PrintHex
+		jsr	spi_write_last
+		jsr	PrintHex
+		jsr	OSNEWL
+		
+
+		jmp	mainloop
+
+@wt:		ldy	#10
+@wt2:		dex
+		bne	@wt2
+		dey
+		bne	@wt2
 		rts
 
 show_regs:	M_PRINTI	"A="
@@ -1135,6 +1201,7 @@ command_table:	CMD	'?', show_help
 		CMD	'D', doDUMP
 		CMD	'E', doERASE
 		CMD	'S', doSREC
+		CMD	'G', doGO
 		CMD	0,   mainloop
 
 		.code

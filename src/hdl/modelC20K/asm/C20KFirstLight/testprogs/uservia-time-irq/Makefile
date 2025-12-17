@@ -37,4 +37,6 @@ clean:
 		-rm -f $(patsubst %.mot, %.da.s, $(TARGETS_O))
 		-rm -f $(patsubst %.mot, %.sym.noi, $(TARGETS_O))
 		-rm -f $(patsubst %.mot, %.bin, $(TARGETS_O))
+		-rm -f $(patsubst %.mot, %.dbg, $(TARGETS_O))
+		-rm -f $(patsubst %.o, %.lst.rel, $(OBJS_O))	
 		-rm -f $(patsubst %.o, %.lst, $(OBJS_O))
