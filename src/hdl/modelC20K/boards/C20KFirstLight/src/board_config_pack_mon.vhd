@@ -49,6 +49,8 @@ use ieee.numeric_std.all;
 library work;
 
 package board_config_pack is
+
+	constant G_OSROM						: string  := "/src/hdl/modelC20K/asm/C20KFirstLight/build/C20KBareMON.vec";
 		
    constant G_1BIT_DAC_VIDEO  		: boolean := true;
 	constant G_INCL_HDMI					: boolean := true;

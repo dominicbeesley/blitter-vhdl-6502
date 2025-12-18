@@ -426,7 +426,7 @@ begin
    generic map (
       G_ADDR_W => 12,   -- 4K
       G_READONLY => true,
-      INIT_FILE => PROJECT_ROOT_PATH & "/src/hdl/modelC20K/asm/C20KFirstLight/build/C20K-boot-rom.vec"
+      INIT_FILE => PROJECT_ROOT_PATH & G_OSROM
       )
    port map (
       -- fishbone signals
