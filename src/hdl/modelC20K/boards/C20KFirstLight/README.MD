@@ -1,23 +1,31 @@
 # C20KFirstLight builds
 
-## C20KFirstLight
+These firmwares can be run on a Primer 20K Core lite board or a bare-bones 
+C-20K.
 
-This can be run on a Primer 20K Core lite board or a bare-bones C-20K.
-
-This build does not require on-board RAM or ROM but can be used to load
+These firmwares do not require on-board RAM or ROM but can be used to load
 RAM and or ROM with the utilities in the ../../asm/C20KFirstLight/testprogs
 folder.
-
-Connect via the debug port UART using NoICE @ 19200 baud no flow control.
 
 Typically used to load flash data on a new or bricked board
 
 NOTE: the debug button and NMI are disconnected from the CPU to allow
 the system to be brought up without most of the chips fitted.
 
+
+## C20KFirstNoICE
+
+Connect via the debug port UART using NoICE @ 19200 baud, no flow control.
+
 NOTE: until the peripheral multiplexer chip U4 is fitted it is inadvisable to 
 enable interrupts as the interrupt line will be effectively floating.
 
+## C20KFirstMON
+
+This build runs the [C20KBareMON](../../asm/C20KFirstLight/C20KBareMON/readme.md) monitor which
+can be connected via the debug port UART @ 19200 baud, no flow control.
+
+TODO: 816 builds
 
 # MEMORY MAP
 
