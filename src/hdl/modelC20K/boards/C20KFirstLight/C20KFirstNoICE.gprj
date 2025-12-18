@@ -31,7 +31,7 @@
 
         <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
 
-        <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="src/board_config_pack_noice.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_C20K_MEM_SRAM.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />

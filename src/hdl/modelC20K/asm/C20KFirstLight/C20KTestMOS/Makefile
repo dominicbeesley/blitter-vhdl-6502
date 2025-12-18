@@ -4,19 +4,20 @@ AS=ca65 -I $(TOP)/includes
 LD=ld65
 
 OBJS=C20K-test-rom noice
-TARGETS=C20K-test-rom.rom
+TARGETS=C20K-test-rom.vec
 
 OBJS_O=$(addprefix $(BUILD)/, $(addsuffix .o, $(OBJS)))
 TARGETS_O=$(addprefix $(BUILD)/, $(TARGETS))
 
 all:	$(TARGETS_O)
 
+$(BUILD)/%.vec: $(BUILD)/%.rom
+		$(SCRIPTS)/perl/bin2bitvector.pl $< >$@
 
 $(BUILD)/C20K-test-rom.rom : $(OBJS_O) C20K-test-rom.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map --dbgfile $(basename $@).dbg -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_O)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
 		da65 -S 0xE000 --comments 4 $(basename $@).rom >$(basename $@).da.s
-		$(SCRIPTS)/perl/bin2bitvector.pl $@ >$(basename $@).vec
 		$(SCRIPTS)/perl/ca65lstupdate.pl $(basename $@).dbg $(BUILD)
 
 
@@ -27,12 +28,12 @@ $(BUILD)/%.o:	%.asm
 clean:		
 		-rm -f $(OBJS_O)
 		-rm -f $(TARGETS_O)
-		-rm -f $(patsubst %.rom, %.map, $(TARGETS_O))
-		-rm -f $(patsubst %.rom, %.sy2, $(TARGETS_O))
-		-rm -f $(patsubst %.rom, %.da.s, $(TARGETS_O))
-		-rm -f $(patsubst %.rom, %.sym.noi, $(TARGETS_O))
-		-rm -f $(patsubst %.rom, %.dbg, $(TARGETS_O))
-		-rm -f $(patsubst %.rom, %.vec, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.map, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.sy2, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.da.s, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.sym.noi, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.dbg, $(TARGETS_O))
+		-rm -f $(patsubst %.vec, %.rom, $(TARGETS_O))
 		-rm -f $(patsubst %.o, %.lst, $(OBJS_O))
 		-rm -f $(patsubst %.o, %.lst.rel, $(OBJS_O))
 

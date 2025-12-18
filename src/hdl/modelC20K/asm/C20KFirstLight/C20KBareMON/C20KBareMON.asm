@@ -1095,7 +1095,12 @@ spi_wait_rd:	bit	$FC20
 
 
 
-show_help:	M_PRINT	str_menu
+show_help:	jsr	show_help_int
+
+		jmp	mainloop
+
+show_help_int:
+		M_PRINT	str_menu
 
 		lda	#$10
 		sta	$FC21		; fast spi
@@ -1109,17 +1114,7 @@ show_help:	M_PRINT	str_menu
 		jsr	PrintHex
 		jsr	spi_write_last
 		jsr	PrintHex
-		jsr	OSNEWL
-		
-
-		jmp	mainloop
-
-@wt:		ldy	#10
-@wt2:		dex
-		bne	@wt2
-		dey
-		bne	@wt2
-		rts
+		jmp	OSNEWL
 
 show_regs:	M_PRINTI	"A="
 		lda	REGS_A
@@ -1162,10 +1157,11 @@ uart_rx:	bit	UART_STAT
 
 		.rodata
 str_menu:	.byte   "C20KBareMON",13,10
-		.byte   "R(EAD) <addr> <len>", 13,10
-		.byte   "P(ROG) <addr> <len>", 13, 10
-		.byte   "E(RASE) <addr> <len>", 13, 10
-		.byte   "G(O) <addr>", 13, 10
+		.byte   "R(EAD) <p-addr> <len>", 13,10
+		.byte   "D(UMP) <p-addr> <len>", 13,10
+		.byte   "P(ROG) <p-addr> <len>", 13, 10
+		.byte   "E(RASE) <p-addr> <len>", 13, 10
+		.byte   "G(O) <l-addr>", 13, 10
 		.byte   "S<moto srec>", 13, 10
 		.byte   "?", 13, 10
 		.byte 	0
@@ -1227,7 +1223,7 @@ mos_handle_res:
 		dex
 		bpl	@vl
 
-		jsr	show_help	
+		jsr	show_help_int
 
 		lda	#REASON_RESET
 		jmp	enter_main

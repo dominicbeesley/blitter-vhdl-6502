@@ -20,7 +20,7 @@ $(BUILD)/%.mot: $(BUILD)/%.bin
 $(BUILD)/ledchase.bin : $(OBJS_O) ledchase.cfg
 		$(LD) -vm -Ln $(basename $@).sy2 -m $(basename $@).map --dbgfile $(basename $@).dbg -o $@ -C $(notdir $(basename $@)).cfg $(OBJS_O)
 		$(SCRIPTS)/perl/getsymbols.pl <$(basename $@).sy2 >$(basename $@).sym.noi
-		da65 -S 0x0300 --comments 4 $(basename $@).bin >$(basename $@).da.s
+		da65 -S 0x0400 --comments 4 $(basename $@).bin >$(basename $@).da.s
 		$(SCRIPTS)/perl/ca65lstupdate.pl $(basename $@).dbg $(BUILD)
 
 
