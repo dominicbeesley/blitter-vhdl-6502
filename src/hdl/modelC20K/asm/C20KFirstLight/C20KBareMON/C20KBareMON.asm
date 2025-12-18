@@ -51,6 +51,13 @@ REASON_IRQ	=	2
 REASON_BRK	=	3
 REASON_NMI	=	4
 
+fred_SPI_CTL		=	$FC20
+fred_SPI_STAT		=	$FC20
+fred_SPI_DIV		=	$FC21
+fred_SPI_READ_DATA  	=	$FC22
+fred_SPI_WRITE_END 	=	$FC22
+fred_SPI_WRITE_CONT  	=	$FC23
+
 
 		.ZEROPAGE
 zp_tmpptr:	.res	2
@@ -120,7 +127,7 @@ mainloop:
 		sta	zp_tmp
 		ldx	#0
 @cmd_lp:	lda	command_table,X
-		bmi	@cmd_err
+		bmi	cmd_err
 		cmp	zp_tmp
 		beq	@cmd_fnd
 		inx
@@ -128,13 +135,21 @@ mainloop:
 		inx
 		jmp	@cmd_lp
 
-@cmd_fnd:	lda	command_table+2,X
+@cmd_fnd:	
+		lda	command_table+2,X
 		pha
 		lda	command_table+1,X
 		pha
+
+		ldx	#<textbuf
+		stx	zp_mos_txtptr
+		ldy	#>textbuf
+		sty	zp_mos_txtptr+1
+		ldy	#1
+
 		rts
 
-@cmd_err:	jsr	OSNEWL
+cmd_err:	jsr	OSNEWL
 		lda	#'?'
 		jsr	OSASCI
 		; drop through unrecognized
@@ -150,11 +165,7 @@ ErrBadChecksum:	M_PRINT str_BadCheckSum
 ;==============================================================================
 ; G O 
 ;==============================================================================
-doGO:		ldx	#<textbuf
-		stx	zp_mos_txtptr
-		ldy	#>textbuf
-		sty	zp_mos_txtptr+1
-		ldy	#1
+doGO:		
 		jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
@@ -169,11 +180,7 @@ doGO:		ldx	#<textbuf
 ;==============================================================================
 ; S R E C    R E A D
 ;==============================================================================
-doSREC:		ldx	#<textbuf
-		stx	zp_mos_txtptr
-		ldy	#>textbuf
-		sty	zp_mos_txtptr+1
-		ldy	#1
+doSREC:		
 		
 		jsr	ParseHexNyb
 		bcc	@ok1
@@ -239,11 +246,7 @@ doSREC:		ldx	#<textbuf
 
 doERASE:	M_PRINT	str_Erase
 		
-		ldx	#<textbuf
-		stx	zp_mos_txtptr
-		ldy	#>textbuf
-		sty	zp_mos_txtptr+1
-		ldy	#1
+		
 		jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
@@ -318,11 +321,7 @@ doERASE:	M_PRINT	str_Erase
 
 doPROG:		M_PRINT	str_Prog
 		
-		ldx	#<textbuf
-		stx	zp_mos_txtptr
-		ldy	#>textbuf
-		sty	zp_mos_txtptr+1
-		ldy	#1
+		
 		jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
@@ -436,6 +435,25 @@ flash_prog_byte:pha
 		; todo: check toggle bit?
 		jmp	mainloop
 
+;==============================================================================
+; F L A S H
+;==============================================================================
+
+doFLASH:
+		lda	(zp_mos_txtptr), Y
+		iny
+		jsr	ToUpper
+		cmp	#'R'
+		beq	doFLASH_READ
+		cmp	#'D'
+		beq	doFLASH_DUMP
+		jsr	OSASCI
+		jmp	cmd_err
+
+doFLASH_READ:	lda	#$40
+		bne	doDUMPREAD
+doFLASH_DUMP:	lda	#$C0
+		bne	doDUMPREAD
 
 ;==============================================================================
 ; R E A D   M E M O R Y
@@ -444,11 +462,6 @@ doREAD:		lda	#0
 		beq	doDUMPREAD
 doDUMP:		lda	#$80
 doDUMPREAD:	sta	read_dump_flag
-		ldx	#<textbuf
-		stx	zp_mos_txtptr
-		ldy	#>textbuf
-		sty	zp_mos_txtptr+1
-		ldy	#1
 		jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
@@ -499,9 +512,9 @@ doDUMPREAD:	sta	read_dump_flag
 		lda	read_dump_flag
 		bpl	@nodump1
 		M_PRINTI " : "		
-@nodump1:	jsr	jimaddr
+@nodump1:	jsr	@read_start_block
 		ldy	zp_addr+0
-@rd_lp2:	lda	JIM,Y
+@rd_lp2:	jsr	@read_byte
 		iny
 		jsr	PrintHex
 		lda	read_dump_flag
@@ -513,10 +526,11 @@ doDUMPREAD:	sta	read_dump_flag
 		lda	read_dump_flag
 		bpl	@nodump2
 		M_PRINTI " : "		
+		jsr	@read_start_block
 		ldx	zp_curlen
 		ldy	zp_addr+0
-@clp:		lda	JIM,Y
-		bmi	@skctl2
+@clp:		jsr	@read_byte
+@op:		bmi	@skctl2
 		cmp	#' '
 		bcs	@skctl
 @skctl2:	lda	#'.'
@@ -539,6 +553,40 @@ doDUMPREAD:	sta	read_dump_flag
 @end:		jsr	OSNEWL
 		jmp	mainloop
 
+@read_start_block:
+		bit	read_dump_flag
+		bvs	@spi_start
+		jsr	jimaddr
+		jmp	@goy
+@spi_start:	jsr	spi_reset
+		lda	#$0B		; fast read
+		jsr	spi_write_cont
+		lda	zp_addr+2
+		jsr	spi_write_cont
+		lda	zp_addr+1
+		jsr	spi_write_cont
+		lda	zp_addr+0
+		jsr	spi_write_cont
+		lda	#$FF		; dummy
+		jsr	spi_write_cont
+@goy:		rts
+
+@read_byte:	bit	read_dump_flag
+		bvs	@rspi
+		lda	JIM,Y
+		rts
+@rspi:		jsr	spi_write_cont
+		rts
+
+@read_end_block:
+		bit	read_dump_flag
+		bvc	@rts
+		jsr	spi_reset
+@rts:		rts
+
+;==============================================================================
+; R E A D   L I N E   F R O M   U A R T
+;==============================================================================
 
 
 ReadLine:	ldx	#0		
@@ -798,58 +846,16 @@ ToUpper:	cmp	#'a'
 		and	#$DF
 @1:		rts
 
-parseONOFF:	jsr	SkipSpacesPTR
-		lda	(zp_mos_txtptr),Y
-		jsr	ToUpper
-		cmp	#'O'
-		bne	ParseHexErr
-		iny
-		lda	(zp_mos_txtptr),Y
-		jsr	ToUpper
-		cmp	#'N'
-		beq	parseONOFF_ON
-		cmp	#'F'
-		bne	ParseHexErr
-		iny
-		lda	(zp_mos_txtptr),Y
-		jsr	ToUpper
-		cmp	#'F'
-		bne	ParseHexErr
-		lda	#0
-parseONOFF_ck:						; check for space or &D
-		pha
-		iny
-		lda	(zp_mos_txtptr),Y
-		cmp	#' '+1
-		bcs	ParseHexErr		
-		clc
-		pla
-		rts
-parseONOFF_ON:	lda	#$FF
-		bne	parseONOFF_ck
-
-
 ParseHex:
 		ldx	#$FF				; indicates first char
 		jsr	zeroAcc
 		jsr	SkipSpacesPTR
 		cmp	#$D
 		beq	ParseHexErr
-ParseHexLp:	lda	(zp_mos_txtptr),Y
-		iny
-		jsr	ToUpper
-		inx	
-		beq	@1
-		cmp	#'+'
-		beq	ParseHexDone	
-@1:		cmp	#' '+1
+ParseHexLp:	jsr	ParseHexNyb
+		bcc	ParseHexShAd
+		cmp	#' ' + 1
 		bcc	ParseHexDone
-		cmp	#'0'
-		bcc	ParseHexErr
-		cmp	#'9'+1
-		bcs	ParseHexAlpha
-		sec
-		sbc	#'0'
 ParseHexShAd:	jsr	asl4Acc				; multiply existing number by 16
 		jsr	addAAcc				; add current digit
 		jmp	ParseHexLp
@@ -885,8 +891,8 @@ ParseHexByte:	jsr	ParseHexNyb
 
 
 ParseHexNyb:	lda	(zp_mos_txtptr),Y
-		jsr	ToUpper
 		iny
+		jsr	ToUpper
 		cmp	#'0'
 		bcc	@err
 		cmp	#'9'+1
@@ -1076,19 +1082,22 @@ addAAcc:
 ;=============================================
 
 spi_reset:
-		lda	#$1C		; select nCS[7]
-		sta	$FC20
-		sta	$FC22		; start and reset
-		lda	#$00		; select nCS[0]
-		sta	$FC20
+		lda	#$10
+		sta	fred_SPI_DIV		; fast spi
+		lda	#$1C			; select nCS[7]
+		sta	fred_SPI_CTL
+		sta	fred_SPI_WRITE_END	; start and reset
+		jsr	spi_wait_rd
+		lda	#$00			; select nCS[0]
+		sta	fred_SPI_CTL
 		jmp	spi_wait_rd
 
-spi_write_last:	sta	$FC22
+spi_write_last:	sta	fred_SPI_WRITE_END
 		jmp	spi_wait_rd
-spi_write_cont:	sta	$FC23
-spi_wait_rd:	bit	$FC20
+spi_write_cont:	sta	fred_SPI_WRITE_CONT
+spi_wait_rd:	bit	fred_SPI_STAT
 		bmi	spi_wait_rd
-		lda	$FC22
+		lda	fred_SPI_READ_DATA
 		rts
 
 
@@ -1102,8 +1111,6 @@ show_help:	jsr	show_help_int
 show_help_int:
 		M_PRINT	str_menu
 
-		lda	#$10
-		sta	$FC21		; fast spi
 		jsr	spi_reset
 
 		lda	#$9F
@@ -1157,11 +1164,13 @@ uart_rx:	bit	UART_STAT
 
 		.rodata
 str_menu:	.byte   "C20KBareMON",13,10
-		.byte   "R(EAD) <p-addr> <len>", 13,10
-		.byte   "D(UMP) <p-addr> <len>", 13,10
-		.byte   "P(ROG) <p-addr> <len>", 13, 10
-		.byte   "E(RASE) <p-addr> <len>", 13, 10
-		.byte   "G(O) <l-addr>", 13, 10
+		.byte   "R(ead) <p-addr> <len>", 13,10
+		.byte   "D(ump) <p-addr> <len>", 13,10
+		.byte   "P(rog) <p-addr> <len>", 13, 10
+		.byte   "E(rase) <p-addr> <len>", 13, 10
+		.byte   "G(o) <l-addr>", 13, 10
+		.byte   "FR(ead flash) <f-addr> <len>", 13, 10
+		.byte   "FD(ump flash) <f-addr> <len>", 13, 10
 		.byte   "S<moto srec>", 13, 10
 		.byte   "?", 13, 10
 		.byte 	0
@@ -1198,9 +1207,10 @@ command_table:	CMD	'?', show_help
 		CMD	'E', doERASE
 		CMD	'S', doSREC
 		CMD	'G', doGO
+		CMD	'F', doFLASH
 		CMD	0,   mainloop
 
-		.code
+		.SEGMENT "CODE2"
 default_userv:	jmp	enter_main
 default_irqv:	jmp	enter_main
 default_nmi:	jmp	enter_main
@@ -1266,7 +1276,7 @@ mos_handle_brk:	pla
 		pla
 		jmp	(BRKV)
 
-.SEGMENT "VECTORS"
+		.SEGMENT "VECTORS"
 hanmi:  .addr   mos_handle_nmi                  
 hares:  .addr   mos_handle_res                  
 hairq:  .addr   mos_handle_irq                  
