@@ -108,8 +108,55 @@ as it is sent (see notes on minicom for a Linux example).
 
 ## Example 1: load vidtest and execute
 
+Reset the board (with SW4) and obtain a ":" prompt (press return repeatedly)
 
+Send the asm/C20KFirstLight/build/testprogs/vidtest.mot file as ascii to the
+monitor (you should have set line delays of at least 50ms)
 
+```ctrl-a, S, ascii, select file```
+
+```
+:S12308604C4D4E4F205051525320545556572058595A5B205C5D5E5F2060616263206465B7
+:S123088066672068696A6B206C6D6E6F207071727320747576772078797A7B207C7D7EFF73
+... 
+:S113092000000000000000000000000000000000C3
+:S503002AD2
+```                            
+
+The S1 and S2 lines of hex should show with no ?'s or error messages, other
+lines may show errors.
+
+You should now inspect memory to see that the file has loaded:
+```
+:d ff0400 200
+
+FF0400 : AD 17 05 8D 20 FE A0 0B A2 0B BD 24 05 8C 00 FE  : .... ......$....
+FF0410 : 8D 01 FE CA 88 10 F3 A0 0C 8C 00 FE A9 20 8D 01  : ............. ..
+FF0420 : FE A0 0D 8C 00 FE A9 00 8D 01 FE A9 7C 85 01 A9  : ............|...
+FF0430 : 00 85 00 A9 05 85 03 A9 30 85 02 A0 00 B1 02 91  : ........0.......
+...  
+FF0590 : 47 49 4E 45 45 52 49 4E 47 20 92 9C 8C 9E 73 95  : GINEERING ....s.
+FF05A0 : 8E 91 8F 94 8F 87 30 32 97 9E 8F 73 93 9A 96 9E  : ......02...s....
+FF05B0 : 9F 98 84 8D 9D 83 45 4E 47 49 4E 45 45 52 49 4E  : ......ENGINEERIN
+FF05C0 : 47 20 92 9C 8C 9E 73 95 8E 91 8F 94 8F 87 30 33  : G ....s.......03
+FF05D0 : 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF  : ~.~.~.~.~.~.~.~.
+FF05E0 : 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF 7E FF  : ~.~.~.~.~.~.~.~.
+FF05F0 : 7E FF 7E FF 7E FF 30 34 94 9A 9E 73 91 99 95 80  : ~.~.~.04...s....
+```
+
+You should now be able to run the program:
+
+```
+:G 400
+```
+
+If you have a HDMI TV or 50Hz capable monitor an engineering test page should
+be shown, if you have fitted U19 then you can also see video on the analogue
+video ports.
+
+The other .mot programs may be loaded in the same way see the 
+[testprogs readme](../testprogs/readme.md)
+for details of the other programs.
 
 # Connection notes:
 
