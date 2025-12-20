@@ -114,6 +114,78 @@ i.e. to read back the MOS slot:
 You can then decode the results using the srec_cat utility and compare with the
 original files.
 
+
+# METHOD 2: Flash using monitor
+
+With this method you can run the more recent monitor program - this has more
+functionality but is similar in most respects to Method 1
+
+You can run this method by either loading the FPGA with the C20KFirstMON 
+firmware - in which case the monitor is the program that the CPU boots to 
+- you should then skip to step 3.
+
+For more information on the monitor read [Monitor readme](../../asm/C20KFirstLight/C20KBareMON/readme.md)
+
+1. Reset the NoICE monitor - if running under NoICE
+
+3. Start the C20KBareMON-test.mot program - if running under NoICE
+```
+    File->Load
+    Choose binary testprogrs/flashprog.mot
+    Run->Go From: 0400
+```
+
+4. Erase the ROM slot
+```
+    E <addr> 4000
+```
+
+Replace \<addr> with the address from the ROM Address Table below.
+
+If you are loading multiple ROMS it is often wise to clear the entirety of
+the flash chip.
+
+To Erase the whole of map 0:
+```
+    E 9E0000 20000
+```
+
+To Erase the whole of map 0:
+```
+    E 9C0000 20000
+```
+
+5. Load the ROM image to logical address 4000
+
+You need to convert each ROM's binary file to a Motorola hex file with a base 
+address of either 4000 (16-bit) or FF4000 (24-bit)
+
+i.e. for the MOS ROM
+```
+    srec_cat MOS120.M -binary -offset 0x4000 -o MOS120.srec -motorola -address-length=2
+```
+
+You may then send the file as SREC hex using you terminal's file upload 
+facility. Note: you must have a 50ms or more delay after each line is sent
+to give the monitor time to process the line.
+
+See 
+
+5. Program the ROM slot
+```
+    P <addr> 4000
+```
+
+You can check that the data have been loaded correctly to the Flash by reading
+back out using the 'R' command
+i.e. to read back the MOS slot:
+```
+    R 9F0000 4000
+```
+You can then decode the results using the srec_cat utility and compare with the
+original files.
+
+
 # ROM SLOT ADDRESS TABLE
 
 For further details see the [API](../../../../../doc/API.md) document and the 
