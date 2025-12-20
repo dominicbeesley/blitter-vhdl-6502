@@ -41,7 +41,7 @@ facilities of the BLTUTIL rom
 |:--------------|------:|-------:|:--------------------------------------|
 | M.MOS120      |     9 | 9F0000 | The Acorn 1.20 MOS for the BBC Micro  |
 | BASIC2        |     B | 9F4000 | The Acorn BASIC from for the BBC      |
-| MMFS          |     D | 9F8000 | The MMFS filing system                |
+| BBLMMFS       |     D | 9F8000 | The MMFS filing system E00            |
 | BLTUTIL       |     F | 9FC000 | The C20K/Blitter Utility ROM          |
 
 This should allow you to boot the system. 
