@@ -244,10 +244,7 @@ doSREC:
 ; E R A S E
 ;==============================================================================
 
-doERASE:	M_PRINT	str_Erase
-		
-		
-		jsr	ParseHex
+doERASE:	jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
 @ok_start:	jsr	acc2Addr
@@ -255,6 +252,10 @@ doERASE:	M_PRINT	str_Erase
 		bcc	@ok_len
 		jmp	ErrBadHex
 @ok_len:	jsr	acc2Len
+
+		M_PRINT	str_Erase
+		
+
 		lda	zp_addr+1
 		and	#$0F
 		ora	zp_addr			; check sector boundary
@@ -319,10 +320,7 @@ doERASE:	M_PRINT	str_Erase
 ; P R O G R A M   F R O M   R A M   A T   LOCALBUF
 ;==============================================================================
 
-doPROG:		M_PRINT	str_Prog
-		
-		
-		jsr	ParseHex
+doPROG:		jsr	ParseHex
 		bcc	@ok_start
 		jmp	ErrBadHex
 @ok_start:	jsr	acc2Addr
@@ -330,6 +328,8 @@ doPROG:		M_PRINT	str_Prog
 		bcc	@ok_len
 		jmp	ErrBadHex
 @ok_len:	jsr	acc2Len
+		
+		M_PRINT	str_Prog
 		lda	#<LOCALBUF			; point at buffer starting at local 0x1000
 		sta	zp_src_ptr
 		lda	#>LOCALBUF
