@@ -241,6 +241,12 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | E | BB RAM    | 7F C000 - 7F FFFF  |                                       
   | F | EEPROM    | 9F C000 - 9F FFFF  | NB: also used as the NoIce debug bank
 
+
+NOTE: In map 0 Blitter boards ROM slots 4-7 are taken direct from the BBC 
+motherboard whereas on the C20K all ROMS come from the Flash EEPROM or BB RAM
+
+NOTE: On the C20K the MOS ROM is loaded to slot 8 or 9
+
 ##### BBC MAP 1
 
   | # | Type      | Physical address   | Notes                                 
