@@ -43,7 +43,7 @@
 		sta	zp_addr+0
 .endmacro
 
-LOCALBUF	=	$4000		; load SRECs to here to bounce up to chipram
+LOCALBUF	=	$4000		; load ROMSs to here to bounce up to chipram / Flash
 FLASHBASE 	=	$800000		; base of Flash
 REASON_RESET	=	0
 REASON_USER	=	1
@@ -1166,8 +1166,8 @@ uart_rx:	bit	UART_STAT
 str_menu:	.byte   "C20KBareMON",13,10
 		.byte   "R(ead) <p-addr> <len>", 13,10
 		.byte   "D(ump) <p-addr> <len>", 13,10
-		.byte   "P(rog) <p-addr> <len>", 13, 10
 		.byte   "E(rase) <p-addr> <len>", 13, 10
+		.byte   "P(rog) <p-addr> <len>", 13, 10
 		.byte   "G(o) <l-addr>", 13, 10
 		.byte   "FR(ead flash) <f-addr> <len>", 13, 10
 		.byte   "FD(ump flash) <f-addr> <len>", 13, 10
