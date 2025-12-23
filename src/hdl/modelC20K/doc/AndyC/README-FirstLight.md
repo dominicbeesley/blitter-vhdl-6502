@@ -109,13 +109,13 @@ command or execute it using the 'G'o command i.e.
 :G 400
 ```
 
-### test-serialout
+### test-serialout.mot
 
 This is a good first test of Noice as it will run with the SOM only.
 It should output test messages to the console (Output tab at bottom of 
 screen in Noice).
 
-### ledschase
+### ledschase.mot
 
 This will light up the debug LEDS D9-D16 with patterns.
 
@@ -125,8 +125,7 @@ with small 0.5mm holes plucked through for each LED and some double-sided
 sticky-tape paper double-sided sticky-tape sandwich which give a less 
 eye-watering experience!
 
-
-### videotest
+### videotest.mot
 
 This will display a mode 7 for 15 seconds then mode 2 test card then exit 
 back to monitor.
@@ -134,13 +133,174 @@ back to monitor.
 This should always display over HDMI port given a suitable monitor that
 supports 50Hz screen modes.
 
-If IC's U28, U19 and C43 are fitted then all the analogue ports should work
-too.
+If IC's U28, U19 and C43 are fitted then all the analogue video ports should
+work too.
 
 On the current firmware there may be some patterning at the far right of the
 screen and the mode 7 display is narrow and left-justified on some HDMI 
 monitors.
 
+### sysvia-time-irq.mot
+
+This program will check that emulated System VIA is working. It should count 
+up in seconds. 
+
+# Memory
+
+Fit IC U25 (Flash), U21 (CMOS 45ns SRAM), U22 (10ns fast SRAM)
+
+You should now start up with either the NoICE or Monitor firmware and run the 
+following programs
+
+### flashinfo.mot 
+
+This should print the manufacturer and ID of the Flash ROM
+
+If not double check soldering around the flash and other memory chips.
+
+### memtest.mot
+
+This program will test main memory from 0-200000
+
+If not double check soldering around the flash and other memory chips.
+
+# Multiplexer and keyboard tests
+
+Fit U2-4, U6-9, U11, U19-20
+
+You should now start up with either the NoICE or Monitor firmware and run the 
+following programs
+
+## Prime the Flash EEPROM
+
+You should now follow the [PrimeFlashNoICE](PrimeFlashNoICE.md) guide to 
+prepare the Flash EEPROM with ROM images.
+
+### sysvia-time-irq.mot
+
+This program will check that the IRQ signals are working and not jammed. It 
+should count up in second. If not or if there is no display check that the
+IRQ line board fixes are correct.
+
+### kbtest-scan.mot
+
+With a keyboard connected to P1 this program should show the key codes of 
+pressed keys. If not or if the behaviour is erratic check soldering of the 
+multiplexer pins.
+
+# User VIA
+
+Fit the User VIA U5. [This is not strictly necessary but quite a few games
+that rely on the User VIA's timers will not run without this fitted.]
+
+### uservia-poll.mot
+
+This program will test the user via timer/counters. It should show a count
+that increments every second
+
+### uservia-irq.mot
+
+This program will test the user via timer/counters. It should show a count
+that increments every second. This program uses interrupts on the motherboard
+if it is erratic or doesn't count up check that the IRQ line mods have been
+made correctly.
+
+# Boot the system
+
+The system should now be ready for its first proper boot. You can program the
+boards/C20K firmware to the fpga and the system should boot. If the system 
+fails to boot you could try flashing the Tricky OS test ROM to 9F0000 and 
+see if that will start.
+
+When the Break key is held down then at first one or two LEDs should be lit.
+The first one may be red or unlit and the second green. After Break has been
+held down for a couple of seconds the second LED should go out and the 3rd
+led should light green.
+
+If you get no activity try disconnecting from HDMI or removing FB4 which will
+stop the HDMI system from being back-powered from the monitor.
+
+# Fit extra buttons and connectors
+
+You may now fit the extra connectors and associtated buffer ICs for the 1MHz
+bus, User port, Floppy disc, Econet headers and serial port though these are 
+all optional.
+
+You may fit the components for the analogue port though this is not yet 
+supported in the firmware.
+
+It is recommended that the U39,40 and a 65816 socket are fitted at this point.
+
+IT IS recommended however that you at a minimum fit switches SW0-SW4 as these
+are useful for debugging and switching between different ROM sets.
+
+# Sound circuitry
+
+This guide will assume that you are fitting the optional PT8211 DAC and that 
+the firmware you are loading will have that enabled. If you don't wish to fit
+a PT8211 you may skip the first step and change the board_config_pack file of
+the firmware to not include i2s sound.
+
+## Fit PT8211
+
+The optional PT8211 chip improves the sound quality available from the C20K
+and is now the default option in the firmware.
+
+JP5 and JP6 near U29 should have their traces between the middle pad and 
+pad 1 (arrowed) should be cut with a scalpel. Then the opposite pads should
+be bridged to the middle pad.
+
+Fit resistors R133-R135
+
+You may also remove R92 and R93 though it is recommended to leave these in
+place as they do not affect the operation of the DAC and enable you to 
+experiment with the 1-bit sound DACs in future should you wish simply by 
+moving the solder bridges on JP5, JP6
+
+## Fit U32, U33, J23, C56, C58
+
+These op-amps are essential for all sound output. J23 provides line-level
+sound output suitable for driving and external amplifier
+
+C56 and C58 should be fitted, otherwise the filters will not operate 
+correctly.
+
+Once these are fitted you are recommended to connect an amplifier or low
+power headphones to the line out jack and check that there is a boo-bip when
+the C20K firmware starts / or CTRL-G is pressed
+
+## Optionally fit U34, C61, C62, J11, J25, J26, RV1
+
+U34 is a power and headphone amplifier chip.
+
+Note: both speakers must be fitted for either of them to work 5W, 4-16 ohm 
+speakers are recommended.
+
+## Optionally fit RV2
+
+RV2 should be fitted if you intend to add 1MHz bus devices that send sound
+back to the machine. It is recommended not to fit this unless you intend
+to use 1MHz bus sound devices as it will likely induce noise from the 1MHz
+bus.
 
 
+# Config EEPROM
 
+The BLTUTIL utility ROM has the ability to record and store configuration
+information in small 64kbit CMOS flash eeprom much like on the BBC Master.
+It is recommended that you fit this ROM otherwise the system will always 
+start in Mode 0.
+
+You should now fit U41
+
+# RTC
+
+There is a facility for a Real-Time-Clock chip, you may fit this now though
+it is recommended not to as:
+a) The battery backup circuitry is faulty and only lasts a few hours
+b) The support ROM is not finished
+
+# Next steps
+
+Once the system is booting then please follow the [C20K-getting-started](C20K-getting-started.md)
+guide.
