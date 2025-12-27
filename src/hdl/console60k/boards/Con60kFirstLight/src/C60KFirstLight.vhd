@@ -206,14 +206,6 @@ architecture rtl of C60KFirstLight is
    signal i_c2p_mem_rom           : fb_con_o_per_i_t;
    signal i_p2c_mem_rom           : fb_con_i_per_o_t;
 
-   -- block RAM wrapper
-   signal i_c2p_mem_ram           : fb_con_o_per_i_t;
-   signal i_p2c_mem_ram           : fb_con_i_per_o_t;
-
-   -- SRAM wrapper
-   signal i_c2p_mem_ram_brd       : fb_con_o_per_i_t;
-   signal i_p2c_mem_ram_brd       : fb_con_i_per_o_t;
-
    -- uart wrapper
    signal i_c2p_uart          : fb_con_o_per_i_t;
    signal i_p2c_uart          : fb_con_i_per_o_t;
@@ -222,14 +214,9 @@ architecture rtl of C60KFirstLight is
    signal i_c2p_xflash          : fb_con_o_per_i_t;
    signal i_p2c_xflash          : fb_con_i_per_o_t;
 
-
-   -- sys bus wrapper
-   signal i_c2p_sys               : fb_con_o_per_i_t;
-   signal i_p2c_sys               : fb_con_i_per_o_t;
-
-   -- LED array wrapper
-   signal i_c2p_led_arr          : fb_con_o_per_i_t;
-   signal i_p2c_led_arr          : fb_con_i_per_o_t;
+   -- null devices
+   signal i_c2p_null          : fb_con_o_per_i_t;
+   signal i_p2c_null          : fb_con_i_per_o_t;
 
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
@@ -307,15 +294,15 @@ architecture rtl of C60KFirstLight is
 
 begin
 
-   e_pll_27_48: entity work.pll_27_48
+   e_pll_50_48: entity work.pll_50_48
    port map (
-      clkout => i_clk_pll_48M,
-      clkin => brd_clk_27M_i
+      clkout0 => i_clk_pll_48M,
+      clkin => sys_clk_50_i
    );
 
    e_pll_48_128: entity work.pll_48_128
    port map (
-      clkout => i_clk_pll_128M,
+      clkout0 => i_clk_pll_128M,
       clkin => i_clk_pll_48M
    );
 
@@ -371,19 +358,15 @@ begin
 
    i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
-   i_per_p2c_intcon(PERIPHERAL_NO_MEM_BRD)<= i_p2c_mem_ram_brd;
-   i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
-   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
    i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+   i_per_p2c_intcon(PERIPHERAL_NO_NULL) <= i_p2c_null;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
-   i_c2p_mem_ram_brd    <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_BRD);
-   i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
-   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
    i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+   i_c2p_null           <= i_per_c2p_intcon(PERIPHERAL_NO_NULL);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
    generic map (
@@ -397,44 +380,6 @@ begin
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_i                      => i_c2p_mem_rom,
       fb_p2c_o                      => i_p2c_mem_rom
-
-   );
-
-G_LOCALRAM:if not G_INCL_HDMI GENERATE
-   e_fb_mem_ram: entity work.fb_P20K_mem
-   generic map (
-      G_ADDR_W => 15 -- 32K      
-      )
-   port map (
-      -- fishbone signals
-
-      fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_mem_ram,
-      fb_p2c_o                      => i_p2c_mem_ram
-
-   );
-
-   i_per_p2c_intcon(PERIPHERAL_NO_MEM_RAM)<= i_p2c_mem_ram;
-   i_c2p_mem_ram        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_RAM);
-
-END GENERATE;
-
-   e_fb_mem_sdram:entity work.fb_C20K_mem_sram
-   port map (
-
-      -- fishbone signals
-
-      fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_mem_ram_brd,
-      fb_p2c_o                      => i_p2c_mem_ram_brd,
-
-      mem_A_o                       => mem_A_io,
-      mem_D_io                      => mem_D_io,
-      mem_RAM_nCE_o                 => mem_RAM_nCE_o,
-      mem_ROM_nCE_o                 => mem_ROM_nCE_o,
-      mem_nOE_o                     => mem_nOE_o,
-      mem_nWE_o                     => mem_nWE_o
-
 
    );
 
@@ -477,7 +422,7 @@ END GENERATE;
 
       -- direct CPU control signals from system
       nmi_n_i                       => '1',
-      irq_n_i                       => i_sys_nIRQ,
+      irq_n_i                       => '1',
       cpu_halt_i                    => '0',
 
       -- fishbone signals
