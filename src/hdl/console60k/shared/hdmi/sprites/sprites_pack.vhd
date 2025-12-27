@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2023 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -19,54 +19,40 @@
 -- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
--- ----------------------------------------------------------------------
-
+-- -----------------------------------------------------------------------------
 
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
--- Create Date:    		25/4/2023
+-- Create Date:    	02/10/2023
 -- Design Name: 
--- Module Name:    		work.board_config_pack
+-- Module Name:    	sprites_pack
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		board build configuration 
+-- Description: 		Sprites pack
 -- Dependencies: 
 --
 -- Revision: 
--- Revision 0.01 - File Created
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
 
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+
+package sprites_pack is
+
+	type t_spr_addr_array is array (natural range <>) of std_logic_vector(23 downto 0);
+
+	type t_spr_pre_array is array (natural range <>) of std_logic_vector(1 downto 0);
+
+end package;
+
 library ieee;
-use IEEE.math_real.all;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
-use ieee.numeric_std.all;
+use ieee.math_real.all;
 
-library work;
+package body sprites_pack is
 
-package board_config_pack is
-		
-	constant G_OSROM						: string  := "/src/hdl/modelC20K/asm/C20KFirstLight/build/C20K-boot-rom.vec";
-
-	constant G_INCL_HDMI					: boolean := true;
-	constant C_CPU_BYTELANES			: positive := 1;		
-
-	constant CONTROLLER_COUNT 			: natural 		:= 1;
-	constant MAS_NO_CPU					: natural		:= 0;
-	constant PERIPHERAL_COUNT 			: natural 		:= 5;
-	constant PERIPHERAL_NO_HDMI		: natural 		:= 0;	-- not HDMI / MEM_RAM are mutually exclusive
-	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
-	constant PERIPHERAL_NO_UART 		: natural		:= 2;
-	constant PERIPHERAL_NO_XFLASH		: natural		:= 3; -- SPI interface to SOM Configuration Flash
-	constant PERIPHERAL_NO_NULL		: natural		:= 4; -- SPI interface to SOM Configuration Flash
-
-end board_config_pack;
-
-
-package body board_config_pack is
-
-end board_config_pack;
+end package body;
