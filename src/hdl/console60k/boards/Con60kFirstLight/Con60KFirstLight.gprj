@@ -14,19 +14,26 @@
         <File path="src/gowin_pll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
 
+        <File path="../../shared/fb_SYS_console60k.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/c60k_peripherals_timings.vhd" type="file.vhdl" enable="1" />
+
+
+		
+        <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
+        
         <File path="src/board_config_pack_noice.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fb_Mega60K_MEM.vhd" type="file.vhdl" enable="1"/>
 
         <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1"/>
         <File path="src/address_decode_C60KFirstLight.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fb_CPU_log2phys_C60KFirstLight.vhd" type="file.vhdl" enable="1"/>
-		
 		<File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_spi.vhd" type="file.vhdl" enable="1" />
         <File path="../../../chipset/dac_1bit.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />

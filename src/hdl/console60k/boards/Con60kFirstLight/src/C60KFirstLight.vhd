@@ -50,6 +50,7 @@ use work.common.all;
 use work.fishbone.all;
 use work.board_config_pack.all;
 use work.HDMI_pack.all;
+use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_intcon_pack.all;
 
@@ -182,6 +183,11 @@ architecture rtl of C60KFirstLight is
    signal i_c2p_xflash          : fb_con_o_per_i_t;
    signal i_p2c_xflash          : fb_con_i_per_o_t;
 
+
+   -- sys bus wrapper
+   signal i_c2p_sys               : fb_con_o_per_i_t;
+   signal i_p2c_sys               : fb_con_i_per_o_t;
+
    -- null devices
    signal i_c2p_null          : fb_con_o_per_i_t;
    signal i_p2c_null          : fb_con_i_per_o_t;
@@ -244,21 +250,16 @@ architecture rtl of C60KFirstLight is
    signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
    attribute syn_keep of i_clk_div_72M : signal is 1; -- keep for SDC
 
+   -- SYS emulated interrupts   
+   signal i_sys_nIRQ        : std_logic;
+   signal i_sys_nNMI        : std_logic;
+
+   -- emulated / synthesized beeb signals
+   signal i_beeb_ic32      : std_logic_vector(7 downto 0);
+   signal i_psg_audio      : signed(13 downto 0);
    signal r_dac_sample     : signed(10 downto 0);
    signal i_paula_sample   : signed(9 downto 0) := (others => '0');
 
-   -----------------------------------------------------------------------------
-   -- 1 bit video clocks and chroma
-   -----------------------------------------------------------------------------
-   signal i_clk_chroma_x4_jitter : std_logic; -- Base PALx4 clock
-   attribute syn_keep of i_clk_chroma_x4_jitter : signal is 1; -- keep for SDC
-   signal i_chroma_s             : signed(4 downto 0);
-   signal r2_vid_chroma          : unsigned(4 downto 0);
-
-   signal i_vid_r_0  : std_logic;
-   signal i_vid_g_0  : std_logic;
-   signal i_vid_b_0  : std_logic;
-   signal i_vid_chroma_0  : std_logic;
 
 begin
 
@@ -326,12 +327,14 @@ begin
 
    i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
    i_per_p2c_intcon(PERIPHERAL_NO_MEM_ROM)<= i_p2c_mem_rom;
+   i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
    i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
    i_per_p2c_intcon(PERIPHERAL_NO_NULL) <= i_p2c_null;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
+   i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
    i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
    i_c2p_null           <= i_per_c2p_intcon(PERIPHERAL_NO_NULL);
@@ -389,8 +392,8 @@ begin
    port map (
 
       -- direct CPU control signals from system
-      nmi_n_i                       => '1',
-      irq_n_i                       => '1',
+      nmi_n_i                       => i_sys_nNMI,
+      irq_n_i                       => i_sys_nIRQ,
       cpu_halt_i                    => '0',
 
       -- fishbone signals
@@ -402,6 +405,41 @@ begin
       JIM_page_i                    => i_JIM_page,
       JIM_en_i                      => i_JIM_en      
 
+   );
+
+   e_fb_sys:entity work.fb_SYS_console60k
+   generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED,
+      G_JIM_DEVNO                   => x"D2"
+   )
+   port map (
+
+      cfg_sys_type_i                => sys_BBC,
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_sys,
+      fb_p2c_o                      => i_p2c_sys,
+
+      -- memory registers managed in here
+      sys_ROMPG_o                   => open,
+      jim_en_o                      => i_JIM_en,
+      jim_page_o                    => i_JIM_page,
+
+      -- combined signals
+      sys_nIRQ_o                    => i_sys_nIRQ,
+      sys_nNMI_o                    => i_sys_nNMI,
+      
+      -- in to VIAs
+      VID_VS_i                      => r_vid_128_vs,
+
+      -- emulated / synthesized beeb signals
+      beeb_ic32_o                   => i_beeb_ic32,
+      psg_audio_o                   => i_psg_audio,
+
+      p_d_cas_o                     => open
    );
 
 

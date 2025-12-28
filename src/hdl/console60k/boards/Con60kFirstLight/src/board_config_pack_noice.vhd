@@ -57,12 +57,13 @@ package board_config_pack is
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
-	constant PERIPHERAL_COUNT 			: natural 		:= 5;
+	constant PERIPHERAL_COUNT 			: natural 		:= 6;
 	constant PERIPHERAL_NO_HDMI		: natural 		:= 0;	-- not HDMI / MEM_RAM are mutually exclusive
 	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
-	constant PERIPHERAL_NO_UART 		: natural		:= 2;
-	constant PERIPHERAL_NO_XFLASH		: natural		:= 3; -- SPI interface to SOM Configuration Flash
-	constant PERIPHERAL_NO_NULL		: natural		:= 4; -- SPI interface to SOM Configuration Flash
+	constant PERIPHERAL_NO_SYS			: natural      := 2;
+	constant PERIPHERAL_NO_UART 		: natural		:= 3;
+	constant PERIPHERAL_NO_XFLASH		: natural		:= 4; -- SPI interface to SOM Configuration Flash
+	constant PERIPHERAL_NO_NULL		: natural		:= 5; -- SPI interface to SOM Configuration Flash
 
 end board_config_pack;
 
