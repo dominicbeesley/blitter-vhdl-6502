@@ -1,18 +1,18 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.10 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW5AT-LV60PG484AC1/I0
 --Device: GW5AT-60
 --Device Version: B
---Created Time: Sat Dec 27 02:08:10 2025
+--Created Time: Sat Dec 27 20:02:59 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
 entity linebuffer is
     port (
-        dout: out std_logic_vector(0 downto 0);
+        dout: out std_logic_vector(11 downto 0);
         clka: in std_logic;
         cea: in std_logic;
         clkb: in std_logic;
@@ -20,14 +20,15 @@ entity linebuffer is
         oce: in std_logic;
         reset: in std_logic;
         ada: in std_logic_vector(10 downto 0);
-        din: in std_logic_vector(0 downto 0);
+        din: in std_logic_vector(11 downto 0);
         adb: in std_logic_vector(10 downto 0)
     );
 end linebuffer;
 
 architecture Behavioral of linebuffer is
 
-    signal sdpb_inst_0_dout_w: std_logic_vector(30 downto 0);
+    signal sdpb_inst_0_dout_w: std_logic_vector(23 downto 0);
+    signal sdpb_inst_1_dout_w: std_logic_vector(27 downto 0);
     signal gw_gnd: std_logic;
     signal sdpb_inst_0_BLKSELA_i: std_logic_vector(2 downto 0);
     signal sdpb_inst_0_BLKSELB_i: std_logic_vector(2 downto 0);
@@ -35,6 +36,12 @@ architecture Behavioral of linebuffer is
     signal sdpb_inst_0_DI_i: std_logic_vector(31 downto 0);
     signal sdpb_inst_0_ADB_i: std_logic_vector(13 downto 0);
     signal sdpb_inst_0_DO_o: std_logic_vector(31 downto 0);
+    signal sdpb_inst_1_BLKSELA_i: std_logic_vector(2 downto 0);
+    signal sdpb_inst_1_BLKSELB_i: std_logic_vector(2 downto 0);
+    signal sdpb_inst_1_ADA_i: std_logic_vector(13 downto 0);
+    signal sdpb_inst_1_DI_i: std_logic_vector(31 downto 0);
+    signal sdpb_inst_1_ADB_i: std_logic_vector(13 downto 0);
+    signal sdpb_inst_1_DO_o: std_logic_vector(31 downto 0);
 
     --component declaration
     component SDPB
@@ -131,17 +138,24 @@ begin
 
     sdpb_inst_0_BLKSELA_i <= gw_gnd & gw_gnd & gw_gnd;
     sdpb_inst_0_BLKSELB_i <= gw_gnd & gw_gnd & gw_gnd;
-    sdpb_inst_0_ADA_i <= gw_gnd & gw_gnd & gw_gnd & ada(10 downto 0);
-    sdpb_inst_0_DI_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & din(0);
-    sdpb_inst_0_ADB_i <= gw_gnd & gw_gnd & gw_gnd & adb(10 downto 0);
-    dout(0) <= sdpb_inst_0_DO_o(0);
-    sdpb_inst_0_dout_w(30 downto 0) <= sdpb_inst_0_DO_o(31 downto 1) ;
+    sdpb_inst_0_ADA_i <= ada(10 downto 0) & gw_gnd & gw_gnd & gw_gnd;
+    sdpb_inst_0_DI_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & din(7 downto 0);
+    sdpb_inst_0_ADB_i <= adb(10 downto 0) & gw_gnd & gw_gnd & gw_gnd;
+    dout(7 downto 0) <= sdpb_inst_0_DO_o(7 downto 0) ;
+    sdpb_inst_0_dout_w(23 downto 0) <= sdpb_inst_0_DO_o(31 downto 8) ;
+    sdpb_inst_1_BLKSELA_i <= gw_gnd & gw_gnd & gw_gnd;
+    sdpb_inst_1_BLKSELB_i <= gw_gnd & gw_gnd & gw_gnd;
+    sdpb_inst_1_ADA_i <= gw_gnd & ada(10 downto 0) & gw_gnd & gw_gnd;
+    sdpb_inst_1_DI_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & din(11 downto 8);
+    sdpb_inst_1_ADB_i <= gw_gnd & adb(10 downto 0) & gw_gnd & gw_gnd;
+    dout(11 downto 8) <= sdpb_inst_1_DO_o(3 downto 0) ;
+    sdpb_inst_1_dout_w(27 downto 0) <= sdpb_inst_1_DO_o(31 downto 4) ;
 
     sdpb_inst_0: SDPB
         generic map (
             READ_MODE => '0',
-            BIT_WIDTH_0 => 1,
-            BIT_WIDTH_1 => 1,
+            BIT_WIDTH_0 => 8,
+            BIT_WIDTH_1 => 8,
             RESET_MODE => "ASYNC",
             BLK_SEL_0 => "000",
             BLK_SEL_1 => "000"
@@ -159,6 +173,30 @@ begin
             ADA => sdpb_inst_0_ADA_i,
             DI => sdpb_inst_0_DI_i,
             ADB => sdpb_inst_0_ADB_i
+        );
+
+    sdpb_inst_1: SDPB
+        generic map (
+            READ_MODE => '0',
+            BIT_WIDTH_0 => 4,
+            BIT_WIDTH_1 => 4,
+            RESET_MODE => "ASYNC",
+            BLK_SEL_0 => "000",
+            BLK_SEL_1 => "000"
+        )
+        port map (
+            DO => sdpb_inst_1_DO_o,
+            CLKA => clka,
+            CEA => cea,
+            CLKB => clkb,
+            CEB => ceb,
+            OCE => oce,
+            RESET => reset,
+            BLKSELA => sdpb_inst_1_BLKSELA_i,
+            BLKSELB => sdpb_inst_1_BLKSELB_i,
+            ADA => sdpb_inst_1_ADA_i,
+            DI => sdpb_inst_1_DI_i,
+            ADB => sdpb_inst_1_ADB_i
         );
 
 end Behavioral; --linebuffer

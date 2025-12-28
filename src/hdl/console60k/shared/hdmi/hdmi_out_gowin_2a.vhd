@@ -50,10 +50,6 @@ end entity;
 architecture Behavioral of hdmi_out_gowin_2a is
 
     component OSER10
-        generic (
-            GSREN : string := "false";
-            LSREN : string := "true"
-        );
         port (
             Q : out std_logic;
             D0 : in std_logic;
@@ -85,10 +81,6 @@ architecture Behavioral of hdmi_out_gowin_2a is
 begin
 
         ser_b : OSER10
-            generic map (
-                GSREN => "false",
-                LSREN => "true"
-            )
             port map(
                 PCLK  => clock_pixel_i,
                 FCLK  => clock_tdms_i,
@@ -107,10 +99,6 @@ begin
             );
 
         ser_g : OSER10
-            generic map (
-                GSREN => "false",
-                LSREN => "true"
-            )
             port map (
                 PCLK  => clock_pixel_i,
                 FCLK  => clock_tdms_i,
@@ -129,10 +117,6 @@ begin
             );
 
         ser_r : OSER10
-            generic map (
-                GSREN => "false",
-                LSREN => "true"
-            )
             port map (
                 PCLK  => clock_pixel_i,
                 FCLK  => clock_tdms_i,
@@ -151,10 +135,6 @@ begin
                 );
 
         ser_c : OSER10
-            generic map (
-                GSREN => "false",
-                LSREN => "true"
-            )
             port map (
                 PCLK  => clock_pixel_i,
                 FCLK  => clock_tdms_i,

@@ -131,8 +131,7 @@ architecture rtl of vid15tohdmi is
 
     component CLKDIV
         generic (
-            DIV_MODE : string := "2";
-            GSREN: in string := "false"
+            DIV_MODE : string := "2"
         );
         port (
             CLKOUT: out std_logic;
@@ -210,8 +209,7 @@ begin
 
     clkdiv5 : CLKDIV
         generic map (
-            DIV_MODE => "5",            -- Divide by 5
-            GSREN => "false"
+            DIV_MODE => "5"            -- Divide by 5
         )
         port map (
             RESETN => '1',

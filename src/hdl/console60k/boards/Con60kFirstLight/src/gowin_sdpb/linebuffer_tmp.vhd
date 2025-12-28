@@ -1,18 +1,18 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: Template file for instantiation
---Tool Version: V1.9.10 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW5AT-LV60PG484AC1/I0
 --Device: GW5AT-60
 --Device Version: B
---Created Time: Sat Dec 27 02:08:10 2025
+--Created Time: Sat Dec 27 20:02:59 2025
 
 --Change the instance name and port connections to the signal names
 ----------Copy here to design--------
 
 component linebuffer
     port (
-        dout: out std_logic_vector(0 downto 0);
+        dout: out std_logic_vector(11 downto 0);
         clka: in std_logic;
         cea: in std_logic;
         clkb: in std_logic;
@@ -20,7 +20,7 @@ component linebuffer
         oce: in std_logic;
         reset: in std_logic;
         ada: in std_logic_vector(10 downto 0);
-        din: in std_logic_vector(0 downto 0);
+        din: in std_logic_vector(11 downto 0);
         adb: in std_logic_vector(10 downto 0)
     );
 end component;
