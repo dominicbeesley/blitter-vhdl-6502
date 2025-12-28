@@ -90,8 +90,8 @@ entity C60KFirstLight is
       led_o                : out           std_logic_vector(7 downto 0);
 
       ds_clk_o             : out           std_logic;
-      ds_miso_o            : in            std_logic;
-      ds_mosi_i            : out           std_logic;
+      ds_miso_i            : in            std_logic;
+      ds_mosi_o            : out           std_logic;
       ds_cs_o              : out           std_logic;
       ds_clk2_o            : out           std_logic;
       ds_miso2_i           : in            std_logic;
@@ -116,46 +116,14 @@ entity C60KFirstLight is
       hdmi_cec_io          : inout         std_logic;
       hdmi_hpd_io          : inout         std_logic;
 
-      vid_b_o              : out           std_logic;
-      vid_chroma_o         : out           std_logic;
-      vid_g_o              : out           std_logic;
-      vid_r_o              : out           std_logic;
-
       i2c_scl_io           : inout         std_logic;
       i2c_sda_io           : inout         std_logic;
-
-      mux_D_nOE_o          : out           std_logic;
-      mux_i0_nOE_o         : out           std_logic;
-      mux_i1_nOE_o         : out           std_logic;
-      mux_io               : inout         std_logic_vector(7 downto 0);
-      mux_nALE_o           : out           std_logic;
-      mux_o0_nOE_o         : out           std_logic;
-      mux_o1_nOE_o         : out           std_logic;
-
-      p_1MHZ_E_o           : out           std_logic;
-      p_2MHZ_E_o           : out           std_logic;
-      p_8MHZ_FDC_o         : out           std_logic;
-      pj_LPSTB_i           : in            std_logic;
-      cassette_o           : out           std_logic;
 
       sd0_cs_o             : out           std_logic;
       sd0_miso_i           : in            std_logic;
       sd0_mosi_o           : out           std_logic;
       sd0_sclk_o           : out           std_logic;
       
-      sd1_cs_o             : out           std_logic;
-      sd1_miso_i           : in            std_logic;
-      sd1_mosi_o           : out           std_logic;
-      sd1_sclk_o           : out           std_logic;
-      
-      spare_T3             : in            std_logic;
-      spare_T4             : in            std_logic;
-      spare_rst_n_t10_i    : in            std_logic;
-
-      ui_leds_o            : out           std_logic;
-      
-      uart2_dtr_i          : in            std_logic;
-      uart2_rts_o          : out           std_logic;
       uart2_rx_i           : in            std_logic;
       uart2_tx_o           : out           std_logic
 
@@ -473,6 +441,20 @@ begin
    end if;
 end process;
 
+--====================================================
+-- N U L L   D E V I C E
+--====================================================
+
+   e_fb_null:entity work.fb_null
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_null,
+      fb_p2c_o                      => i_p2c_null
+   );
+
+
 
 --====================================================
 -- H D M I
@@ -538,11 +520,7 @@ END GENERATE;
       sd0_cs_o             <= '0';
       sd0_mosi_o           <= '0';
       sd0_sclk_o           <= '0';
-      
-      sd1_cs_o             <= '0';
-      sd1_mosi_o           <= '0';
-      sd1_sclk_o           <= '0';
-                     
+                           
 end architecture rtl;
       
       
