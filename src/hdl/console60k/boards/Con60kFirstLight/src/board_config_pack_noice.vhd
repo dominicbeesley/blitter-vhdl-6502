@@ -63,7 +63,7 @@ package board_config_pack is
 	constant PERIPHERAL_NO_SYS			: natural      := 2;
 	constant PERIPHERAL_NO_UART 		: natural		:= 3;
 	constant PERIPHERAL_NO_XFLASH		: natural		:= 4; -- SPI interface to SOM Configuration Flash
-	constant PERIPHERAL_NO_NULL		: natural		:= 5; -- SPI interface to SOM Configuration Flash
+	constant PERIPHERAL_NO_SDRAM		: natural		:= 5; -- SPI interface to SOM Configuration Flash
 
 end board_config_pack;
 

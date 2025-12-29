@@ -13,6 +13,7 @@
 component pll_48_128
     port (
         clkout0: out std_logic;
+        clkout1: out std_logic;
         clkin: in std_logic
     );
 end component;
@@ -20,6 +21,7 @@ end component;
 your_instance_name: pll_48_128
     port map (
         clkout0 => clkout0,
+        clkout1 => clkout1,
         clkin => clkin
     );
 

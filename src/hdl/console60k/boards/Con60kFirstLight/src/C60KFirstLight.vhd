@@ -60,10 +60,17 @@ entity C60KFirstLight is
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT_PATH             : string  := "../../../../..";
-      SDRAM_DATA_WIDTH              : natural := 16;     -- 2 bytes per word
-      SDRAM_ROW_WIDTH               : natural := 13;     -- 8K rows
-      SDRAM_COL_WIDTH               : natural := 9;      -- 512 cols
-      SDRAM_BANK_WIDTH              : natural := 2       -- 4 banks
+      LANEBITS                      : natural := 1;     -- 2 bytes per word
+      ROWBITS                       : natural := 13;     -- 8K rows
+      COLBITS                       : natural := 9;      -- 512 cols
+      BANKBITS                      : natural := 2;      -- 4 banks
+
+      trp                           : time    := 15 ns;    -- precharge
+      trcd                          : time    := 15 ns;    -- active to read/write
+      trc                           : time    := 60 ns;    -- active to active time
+      trfsh                         : time    := 1.8 us;   -- the refresh control signal will be blocked if it occurs more frequently than this
+      trfc                          : time    := 63 ns     -- refresh cycle time
+
    );
    port (
 
@@ -74,15 +81,15 @@ entity C60KFirstLight is
       clk_ext_pal_i        : in            std_logic;
 
       sdram_clk_o          : out           std_logic;
-      sdram_cke_o          : out           std_logic;
+--      sdram_cke_o          : out           std_logic;
       sdram_cs_n_o         : out           std_logic;
       sdram_cas_n_o        : out           std_logic;
       sdram_ras_n_o        : out           std_logic;
       sdram_wen_n_o        : out           std_logic;
-      sdram_dq_io          : inout         std_logic_vector(SDRAM_DATA_WIDTH-1 downto 0);
-      sdram_addr_o         : out           std_logic_vector(SDRAM_ROW_WIDTH-1 downto 0);
-      sdram_ba_o           : out           std_logic_vector(SDRAM_BANK_WIDTH-1 downto 0);
-      sdram_dqm_o          : out           std_logic_vector(SDRAM_DATA_WIDTH / 8 - 1 downto 0);
+      sdram_dq_io          : inout         std_logic_vector((2**LANEBITS) * 8 - 1 downto 0);
+      sdram_addr_o         : out           std_logic_vector(ROWBITS-1 downto 0);
+      sdram_ba_o           : out           std_logic_vector(BANKBITS-1 downto 0);
+      sdram_dqm_o          : out           std_logic_vector(2**LANEBITS - 1 downto 0);
 
       aud_i2s_bck_pwm_L_o  : out           std_logic;
       aud_i2s_dat_o        : out           std_logic;
@@ -188,9 +195,9 @@ architecture rtl of C60KFirstLight is
    signal i_c2p_sys               : fb_con_o_per_i_t;
    signal i_p2c_sys               : fb_con_i_per_o_t;
 
-   -- null devices
-   signal i_c2p_null          : fb_con_o_per_i_t;
-   signal i_p2c_null          : fb_con_i_per_o_t;
+   -- sdram
+   signal i_c2p_sdram          : fb_con_o_per_i_t;
+   signal i_p2c_sdram          : fb_con_i_per_o_t;
 
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
@@ -272,6 +279,7 @@ begin
    e_pll_48_128: entity work.pll_48_128
    port map (
       clkout0 => i_clk_pll_128M,
+      clkout1 => sdram_clk_o,          -- phase shifted direct clock
       clkin => i_clk_pll_48M
    );
 
@@ -330,14 +338,14 @@ begin
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
    i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
-   i_per_p2c_intcon(PERIPHERAL_NO_NULL) <= i_p2c_null;
+   i_per_p2c_intcon(PERIPHERAL_NO_SDRAM)  <= i_p2c_sdram;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
    i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
-   i_c2p_null           <= i_per_c2p_intcon(PERIPHERAL_NO_NULL);
+   i_c2p_sdram          <= i_per_c2p_intcon(PERIPHERAL_NO_SDRAM);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
    generic map (
@@ -480,16 +488,40 @@ begin
 end process;
 
 --====================================================
--- N U L L   D E V I C E
+-- S D R A M
 --====================================================
 
-   e_fb_null:entity work.fb_null
+   e_fb_sdram:entity work.fb_SDRAM
+   generic map (
+         CLOCKSPEED => CLOCKSPEED,
+         LANEBITS => LANEBITS,
+         ROWBITS => ROWBITS,
+         COLBITS => COLBITS,
+         BANKBITS => BANKBITS,
+
+         trp         => trp,
+         trcd        => trcd,
+         trc         => trc,
+         trfsh       => trfsh,
+         trfc        => trfc     
+      )
    port map (
+      -- sdram signals
+      sdram_DQ_io                   => sdram_DQ_io,
+      sdram_A_o                     => sdram_addr_o,
+      sdram_BS_o                    => sdram_ba_o,
+      sdram_CKE_o                   => open,
+      sdram_nCS_o                   => sdram_CS_n_o,
+      sdram_nRAS_o                  => sdram_RAS_n_o,
+      sdram_nCAS_o                  => sdram_CAS_n_o,
+      sdram_nWE_o                   => sdram_WEN_n_o,
+      sdram_DQM_o                   => sdram_DQM_o,
+
       -- fishbone signals
 
       fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_null,
-      fb_p2c_o                      => i_p2c_null
+      fb_c2p_i                      => i_c2p_sdram,
+      fb_p2c_o                      => i_p2c_sdram
    );
 
 

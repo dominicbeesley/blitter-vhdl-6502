@@ -13,6 +13,7 @@ use IEEE.std_logic_1164.all;
 entity pll_48_128 is
     port (
         clkout0: out std_logic;
+        clkout1: out std_logic;
         clkin: in std_logic
     );
 end pll_48_128;
@@ -20,7 +21,6 @@ end pll_48_128;
 architecture Behavioral of pll_48_128 is
 
     signal lock: std_logic;
-    signal clkout1: std_logic;
     signal clkout2: std_logic;
     signal clkout3: std_logic;
     signal clkout4: std_logic;
@@ -162,7 +162,7 @@ begin
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
             ODIV0_SEL => 9,
-            ODIV1_SEL => 8,
+            ODIV1_SEL => 9,
             ODIV2_SEL => 8,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
@@ -172,7 +172,7 @@ begin
             MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
-            CLKOUT1_EN => "FALSE",
+            CLKOUT1_EN => "TRUE",
             CLKOUT2_EN => "FALSE",
             CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
@@ -204,7 +204,7 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 0,
+            CLKOUT1_PE_COARSE => 5,
             CLKOUT1_PE_FINE => 0,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,

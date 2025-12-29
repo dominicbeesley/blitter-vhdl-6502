@@ -96,12 +96,12 @@ begin
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEM_ROM, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_MEM_ROM) <= '1';
 			else
-				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_NULL, peripheral_sel_o'length);
-				peripheral_sel_oh_o(PERIPHERAL_NO_NULL) <= '1';
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SDRAM, peripheral_sel_o'length);
+				peripheral_sel_oh_o(PERIPHERAL_NO_SDRAM) <= '1';
 			end if;
 		else
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_NULL, peripheral_sel_o'length);
-			peripheral_sel_oh_o(PERIPHERAL_NO_NULL) <= '1';			
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SDRAM, peripheral_sel_o'length);
+			peripheral_sel_oh_o(PERIPHERAL_NO_SDRAM) <= '1';			
 		end if;
 	end process;
 

@@ -17,6 +17,8 @@
         <File path="../../shared/fb_SYS_console60k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c60k_peripherals_timings.vhd" type="file.vhdl" enable="1" />
 
+        <File path="../../../library/sdramctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/fb_SDRAM.vhd" type="file.vhdl" enable="1" />
 
 		
         <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
