@@ -167,3 +167,85 @@ IO_LOC "sdram_cas_n_o" E17;
 IO_PORT "sdram_cas_n_o" IO_TYPE=LVCMOS33;
 IO_LOC "sdram_cs_n_o" F21;      // was F19 on mega60k
 IO_PORT "sdram_cs_n_o" IO_TYPE=LVCMOS33;
+
+
+// debug port
+
+
+//				
+//			R19		D0	[1 ] (2 )	D1		P19		
+//			U21		D2	(3 ) (4 )	D3		T21		
+//	D4		R17		D4	(5 ) (6 )	D5		P16		D5
+//	D6		T18		D6	(7 ) (8 )	D7		R18		D7
+//	RnW		W17		D15	(9 ) (10)	D14		V17		CLKEN
+//					+5  (11) (12)   GND
+//	A0		W22		D13	(13) (14)	D12		W21		A1
+//	A2		P17		D11	(15) (16)	D10		N17		A3
+//	A4		N14		D9	(17) (18)	D8		N13		A5
+//	A6		V20		A12	(19) (20)	CLK		U20		A7
+//	A8		Y22		A9	(21) (22)	A11		Y21		A9
+//	A10		AB22	A7	(23) (24)	A8		AB21	A11
+//	A12		AA21	A5	(25) (26)	A6		AA20	A13
+//	A14		AB20	WE	(27) (28)	A4		AA19	A15
+//			AA18	EX0	(29) (30)	EX1		AB18
+//			Y19		CAS (31) (32)	RAS		Y18
+//			T20		CS	(33) (34)	BA0		N15
+//			U18		BA1	(35) (36)	A10		U17
+//	D0		R16		A0	(37) (38)	A1		P15		D1
+//	D2		R14		A2	(39) (40)	A3		P14		D3
+
+
+IO_LOC	"dbg_d[0]" R16;
+IO_PORT	"dbg_d[0]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[2]" R14;
+IO_PORT	"dbg_d[2]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[4]" R17;
+IO_PORT	"dbg_d[4]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[6]" T18;
+IO_PORT	"dbg_d[6]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_rnw" W17;
+IO_PORT	"dbg_rnw" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[0]" W22;
+IO_PORT	"dbg_a[0]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[2]" P17;
+IO_PORT	"dbg_a[2]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[4]" N14;
+IO_PORT	"dbg_a[4]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[6]" V20;
+IO_PORT	"dbg_a[6]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[8]" Y22;
+IO_PORT	"dbg_a[8]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[10]" AB22;
+IO_PORT	"dbg_a[10]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[12]" AA21;
+IO_PORT	"dbg_a[12]" IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[14]" AB20;
+IO_PORT	"dbg_a[14]" IO_TYPE=LVCMOS33;
+
+
+IO_LOC	"dbg_d[1]" P15;
+IO_PORT	"dbg_d[1]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[3]" P14;
+IO_PORT	"dbg_d[3]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[5]" P16;
+IO_PORT	"dbg_d[5]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_d[7]" R18;
+IO_PORT	"dbg_d[7]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_clken" V17;
+IO_PORT	"dbg_clken"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[1]" W21;
+IO_PORT	"dbg_a[1]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[3]" N17;
+IO_PORT	"dbg_a[3]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[5]" N13;
+IO_PORT	"dbg_a[5]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[7]" U20;
+IO_PORT	"dbg_a[7]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[9]" Y21;
+IO_PORT	"dbg_a[9]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[11]" AB21;
+IO_PORT	"dbg_a[11]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[13]" AA20;
+IO_PORT	"dbg_a[13]"	IO_TYPE=LVCMOS33;
+IO_LOC	"dbg_a[15]" AA19;
+IO_PORT	"dbg_a[15]"	IO_TYPE=LVCMOS33;

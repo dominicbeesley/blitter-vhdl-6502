@@ -205,7 +205,7 @@ begin
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
             CLKOUT1_PE_COARSE => 5,
-            CLKOUT1_PE_FINE => 0,
+            CLKOUT1_PE_FINE => 3,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,

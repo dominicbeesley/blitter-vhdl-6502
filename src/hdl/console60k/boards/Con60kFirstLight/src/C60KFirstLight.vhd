@@ -133,7 +133,12 @@ entity C60KFirstLight is
       sd0_sclk_o           : out           std_logic;
       
       uart2_rx_i           : in            std_logic;
-      uart2_tx_o           : out           std_logic
+      uart2_tx_o           : out           std_logic;
+
+      dbg_d                : out           std_logic_vector(7 downto 0);
+      dbg_a                : out           std_logic_vector(15 downto 0);
+      dbg_rnw              : out           std_logic;
+      dbg_clken            : out           std_logic
 
 );
 end entity;
@@ -591,6 +596,12 @@ END GENERATE;
       sd0_mosi_o           <= '0';
       sd0_sclk_o           <= '0';
                            
+
+dbg_d(7 downto 0) <= <<signal e_fb_cpu_t65only.e_t65.i_t65_D_in : std_logic_vector(7 downto 0) >>;
+dbg_a(15 downto 0) <= <<signal e_fb_cpu_t65only.e_t65.i_t65_A : std_logic_vector(15 downto 0) >>;
+dbg_rnw <= <<signal e_fb_cpu_t65only.e_t65.i_t65_RnW : std_logic >>;
+dbg_clken <= <<signal e_fb_cpu_t65only.e_t65.r_t65_clken_h : std_logic >>;
+
 end architecture rtl;
       
       
