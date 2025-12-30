@@ -26,7 +26,7 @@ end test_tb;
 architecture rtl of test_tb is
 
    --constant G_MOSROMFILE : string := "C:/Users/Dominic/Documents/Programming/HostFS/roms65/MOS120.M";
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KFirstLight/build/C20KTestMOS-sound.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-sound.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -140,10 +140,11 @@ begin
       test_runner_cleanup(runner); -- Simulation ends here
    end process;
 
-   e_dut:entity work.C20K
+   e_dut:entity work.C20KFirstLight
    generic map (
       SIM                           => true,
-      CLOCKSPEED                    => 128
+      CLOCKSPEED                    => 128,
+      PROJECT_ROOT_PATH             => "../../../../../../../.."
    )
    port map (
 

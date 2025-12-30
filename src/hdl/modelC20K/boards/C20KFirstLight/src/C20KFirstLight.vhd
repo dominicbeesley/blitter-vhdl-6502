@@ -662,6 +662,9 @@ END GENERATE;
    -------------------------------------
 
 
+   b_spi:block
+   signal i_SPI_CS: std_logic_vector(7 downto 0);
+   begin
    e_fb_xflash:entity work.fb_spi
    generic map (
       SIM                           => SIM,
@@ -671,7 +674,7 @@ END GENERATE;
    port map (
 
       -- eeprom signals
-      SPI_CS_o(0)                   => flash_cs_o,
+      SPI_CS_o                      => i_SPI_CS,
       SPI_CLK_o                     => flash_ck_o,
       SPI_MOSI_o                    => flash_mosi_o,
       SPI_MISO_i                    => flash_miso_i,
@@ -683,6 +686,8 @@ END GENERATE;
       fb_c2p_i                      => i_c2p_xflash,
       fb_p2c_o                      => i_p2c_xflash
    );
+   flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+   end block;
 
 
 p_reg_128:process(i_fb_syscon)
