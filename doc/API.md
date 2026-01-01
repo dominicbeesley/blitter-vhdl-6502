@@ -238,7 +238,7 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | B | EEPROM    | 9F 4000 - 9F 7FFF  |                                       
   | C | BB RAM    | 7F 8000 - 7F BFFF  |                                       
   | D | EEPROM    | 9F 8000 - 9F BFFF  |                                       
-  | E | BB RAM    | 7F C000 - 7F FFFF  |                                       
+  | E | BB RAM    | 1F 0000 - 1F 3FFF  | Fast chipRAM
   | F | EEPROM    | 9F C000 - 9F FFFF  | NB: also used as the NoIce debug bank
 
 
@@ -265,7 +265,7 @@ NOTE: On the C20K the MOS ROM is loaded to slot 8 or 9
   | B | EEPROM    | 9D 4000 - 9D 7FFF  |
   | C | BB RAM    | 7D 8000 - 7D BFFF  |
   | D | EEPROM    | 9D 8000 - 9D BFFF  |
-  | E | BB RAM    | 7D C000 - 7D FFFF  |
+  | E | BB RAM    | 1F 4000 - 1F 7FFF  | Fast chipRAM
   | F | EEPROM    | 9D C000 - 9D FFFF  | NB: also used as the NoIce debug bank
 
 

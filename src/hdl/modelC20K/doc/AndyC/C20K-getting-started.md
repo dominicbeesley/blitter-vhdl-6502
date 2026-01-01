@@ -15,13 +15,20 @@ The second alternative image "with-aeris" may be unstable under certain circumst
 on your FPGA module with 2249C manufacturing code - these chips seem to be slow and also
 have pin E14 disconnected. 
 
-- [C20K_aeris_e1f8703](assets/C20K_aeris_e1f8703.fs)
 - [C20K_good_timing_2c7d90eM](assets/C20K_good_timing_2c7d90eM.fs)
+- [C20K_aeris_106c278M_55ns](assets/C20K_aeris_106c278M_55ns.fs)
+
+[Andy: I'd recommend using the aeris version unless there are problems. This 
+also has a bodge to slow the battery backed RAM timings down a little as I had 
+problems with the FPGA marked 2294C like yours - when everything is working
+we could try yours at the higher speed - I suspect mine might be a bit duff as
+there is a bulge in the casing!]
 
 This guide is intended to guide you through some first steps in using the 
 C20k. It is not intended to be a complete reference.
 
-The accompanying disc images are available [here](assets/getting-started/discs.zip)
+The accompanying disc images are available [here](assets/getting-started/discs.zip) an 
+MMB file is also included - it is recommended that that image be used for this guide.
 
 # Preparing the base machine
 
@@ -41,7 +48,7 @@ interface in such a way that is not compatible with the Blitter. An updated
 In this guide a and MMFS solution is used where the micro SD card should be 
 inserted into the slot on the SOM. Other options
 that have been widely tested are:
- * ADFS (Disc and Winchester) \[Pi 1MHz not tested!\]
+ * ADFS (Disc and Winchester) \[Pi 1MHz not tested\]
  * 1770 DFS
  * 8271 DFS
  * HOSTFS
@@ -51,7 +58,7 @@ that have been widely tested are:
 There are several MMFS versions present on the ROMS65/MMB image:
 
  * BBLMMFS - MMFS 1 with SD card in SOM module and Hazel E00
- * UBLMMFS - MMFS 1 with SD card in User oport and Hazel E00
+ * UBLMMFS - MMFS 1 with SD card in User port and Hazel E00
  * SWMMFS - MMFS 1 to be loaded to a RAM (even numbered slot) E00
 
 You should normally use BBLMMFS
@@ -75,15 +82,11 @@ You should power-up with the R key held down which should reset the
 configuration. Note: this will only work if your BLTUTIL ROM is newer than 
 Nov 2024.
 
-<img src="assets/getting-started/mk2-cmos-reset-1st.jpg" width="600" />
+<img src="assets/getting-started/c20k-cmos-reset-1st.jpg" width="600" />
 
 You can now press CTRL-BREAK to get to the normal boot screen.
 
-<img src="assets/getting-started/mk2-first-boot.jpg" width="600" />
-
-If the machine doesn't boot then switch off and work through the 
-[Troubleshooting](#troubleshooting) section.
-
+<img src="assets/getting-started/c20k-first-boot.jpg" width="600" />
 
 You should then be able type type
 
@@ -106,7 +109,7 @@ which case you may want to skip all or part of the following sections.
 
 # Configuration
 
-The Blitter allows you to save some configuration to an on board EEPROM and
+The C20K allows you to save some configuration to an on board EEPROM and
 gives its own versions of \*CONFIGURE and \*STATUS as found on the Master 
 series. There are a number of configuration options which may be set and you
 can see what is available by typing
@@ -123,6 +126,7 @@ commands:
 
     *CON. NOBLSLOW
     *CON. BLSLOWROMS -R0-R15
+    *STATUS
 
 <img src="assets/getting-started/con-slow-off.jpg" width="600" />
 
@@ -142,8 +146,15 @@ will show the ROMs are now no longer all marked with 'T'
 
 # Loading other ROMs
 
+WARNING: The BLTUTIL ROM needs to be updated to properly accommodate the 
+C20K. For this reason:
+ * Loading ROM images to slots 4-7 isn't currently supported and will fail
+ * Loading ROM images to slot 9 is not supported, instead it will overwrite
+   the MOS - you will need to follow [Prime Flash](PrimeFlashNoICE.md) to 
+   recover.
+
 This section will guide you through loading some ROMs to the slots provided
-by the Blitter card.
+by the C20K.
 
 When following these examples the syntax of the BLTUTIL ROM utilities can
 be found on the [GitHub Wiki](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/BLTUTIL-Star-Commands)
@@ -154,8 +165,8 @@ It is desirable to have the utility ROM be in the highest slot:
  * the NoIce debugger only works in slot F
  * holding down "£" at boot can be used to "catch" corrupted ROMs (see 
    [Troubleshooting](#troubleshooting))
- * The Hazel feature for Model B, Electron machines only works on ROM slots 
-   with a number below that of the BLTUTIL ROM
+ * The Hazel feature only works on ROM slots with a number below that of the
+   BLTUTIL ROM
 
     *ROMS
 
@@ -175,6 +186,9 @@ show all the ROMS, even those ignored by the MOS
 
 <img src="assets/getting-started/roms-a.jpg" width="600" />
 
+The image above shows a second copy of BLTUTIL ROM has been loaded to slot 1
+but has been ignored by the operating system.
+
 There are also options 
 
   * "V" to show more verbose ROM titles (including version)
@@ -184,7 +198,7 @@ There are also options
 
 It can be useful to keep a note of ROM CRCs when they are first loaded,
 especially to sideways RAM to check for corruption. Here you can see that
-the ROMS at #7 and #F have the same CRC.
+the ROMS at #1 and #F have the same CRC.
 
 ## ROM Notes
 
@@ -216,34 +230,49 @@ software.
 You may now check to see the speed of the system, insert the tools65 image
 and run:
 
+    *BLTURBO T
     *DIN 501
     CHAIN"CLOCKDP"
 
 <img src="assets/getting-started/clocksp-base.jpg" width="600" />
 
-As can be seen this is running at roughly 8.7MHz. Even though the T65 core is 
-capable of running at up to 12MHz per cycle on this firmware it is being
-held back to by the fact that the BASIC ROM is running from a slower sideways ROM
-MOS and RAM are all being accessed from the display RAM which has a maximum speed 
-of ???? I'm unsure.
+As can be seen this is running at 2.0MHz - this is because we turned on 
+throttling of the CPU with the ```BLTURBO T``` command which enables the 
+global 2MHz CPU. This mode is usually set as the default using ```*CON. 
+BLSLOW``` to ensure backwards compatibility with games and demos.
 
-We could make BASIC a little faster by loading the BASIC ROM in to a Blitter
-sideways RAM socket:
+If we now turn off throttling and rerun the benchmark:
 
-    *DIN 0 ROMS65
+    *BLTURBO -T
+    RUN
+
+<img src="assets/getting-started/clocksp-base2.jpg" width="600" />
+
+
+We get roughly 8.8MHz. Even though the T65 core is capable of running at up to 
+12MHz(!?check?!) per cycle on this firmware it is being held back to by the 
+fact that the BASIC ROM is running from a slower sideways ROM. 
+
+We could make BASIC a little faster by loading the BASIC ROM in to a sideways 
+RAM socket E - slot E is special in that it comes from the faster 10ns ChipRAM
+but is not backed up by battery:
+
+    *DIN 500
     *SRLOAD BASIC2 E
 
 And press CTRL-Break
 
-    *DIN 0 TOOLS65
+    *BLTURBO -T
+    *DIN 501
     CHAIN"CLOCKSP"
 
 <img src="assets/getting-started/clocksp-f2.jpg" width="600"" />
 
-This has more or less doubled the speed of BASIC but we can do more:
+This has got us up to 12.4 MHz but we should be able to do more:
 
     MODE 7
     *BLTURBO L7F
+    HIMEM=&6000
     RUN
 
 <img src="assets/getting-started/clocksp-f3.jpg" width="600" />
@@ -258,7 +287,10 @@ on the motherboard.
 
 The reason we had to switch to MODE 7 is that the MOS is currently unaware of
 this remapping and will write any screen bound information to ChipRAM where there
-is a remapping.
+is a remapping. 
+
+The change to HIMEM is to make BASIC place its stack in one of the speeded up 
+pages.
 
 i.e. switch to MODE 0 and make the top most bank of memory be remapped    
 
