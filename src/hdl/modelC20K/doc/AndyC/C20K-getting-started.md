@@ -278,6 +278,16 @@ This has got us up to 12.4 MHz but we should be able to do more:
 <img src="assets/getting-started/clocksp-f3.jpg" width="600" />
 
 
+----------------------------------------------------------------------------
+CUT OFF
+----------------------------------------------------------------------------
+
+The stuff below this point is for the Blitter board so much of it won't
+work on the C20K or be confusingly different - I'll try and update this
+over the next week or so - the demos should work hopefully...
+
+
+
 The [BLTURBO Lxx](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command with the "L" switch will copy low memory in the range 0..7FFF to 
 fast Blitter ChipRAM and then redirect CPU accesses to use this RAM. Each bit
