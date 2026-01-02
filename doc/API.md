@@ -912,11 +912,12 @@ the configuration settings as set by the user.
  |              | and the rest of the information in this page is not  |
  |              | valid. Current Value = 1                             | 
  |--------------|------------------------------------------------------|
- | FC 0081      | Board Type                                 |
+ | FC 0081      | Board Type                                           |
  |              | - 0 - 1MHz Paula                                     |
  |              | - 1 - Mk.1 Blitter                                   |
  |              | - 2 - Mk.2 Blitter                                   |
  |              | - 3 - Mk.3 Blitter                                   |
+ |              | - 4 - C20K / ModelC                                  |
  |--------------|------------------------------------------------------|
  | FC 0082      | API Sub level                                        |
  |--------------|------------------------------------------------------|
