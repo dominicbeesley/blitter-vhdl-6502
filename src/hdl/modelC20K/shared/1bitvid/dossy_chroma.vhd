@@ -287,11 +287,14 @@ begin
    end process;
 
    p_sum:process(i_clk_chroma_x4)
-   variable v_chroma : signed(G_CALC_BITS-1 downto 0);
+   variable v_ry_s : signed(G_OUTBITS-1 downto 0);
+   variable v_by_s : signed(G_OUTBITS-1 downto 0);
    begin
       if rising_edge(i_clk_chroma_x4) then
-         v_chroma := r_mod_by + r_mod_ry;
-         chroma_o <= ROUND_TO_ZERO(v_chroma, G_OUTBITS);
+         -- note: we round _before_ adding otherwise there is cross-talk
+         v_ry_s := ROUND_TO_ZERO(r_mod_ry, G_OUTBITS);
+         v_by_s := ROUND_TO_ZERO(r_mod_by, G_OUTBITS);
+         chroma_o <= v_ry_s + v_by_s;
       end if;
    end process;
 
