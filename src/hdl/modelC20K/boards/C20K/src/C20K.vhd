@@ -1219,10 +1219,9 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 ---   );
 
    e_chroma_gen:entity work.dossy_chroma
-   generic map (
+---   generic map (
 ---      G_USE_EXT_x4_CLK  => true,
-      G_GAIN => 1.0
-   )
+---   )
    port map (
       clk_i             => i_clk_pll_48M,
 ---      clk_chroma_x4_i   => i_clk_chroma_x4,

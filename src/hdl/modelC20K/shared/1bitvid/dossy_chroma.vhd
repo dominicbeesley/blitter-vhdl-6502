@@ -94,17 +94,16 @@ end dossy_chroma;
 
 architecture rtl of dossy_chroma is
 
-
+constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
 
 signal r_car_by : std_logic;
 signal r_car_ry : std_logic;
 
-signal r_base_by : signed(G_OUTBITS-1 downto 0);
-signal r_base_ry : signed(G_OUTBITS-1 downto 0);
+signal r_base_by : signed(G_CALC_BITS-1 downto 0);
+signal r_base_ry : signed(G_CALC_BITS-1 downto 0);
 
-signal r_mod_by : signed(G_OUTBITS-1 downto 0);
-signal r_mod_ry : signed(G_OUTBITS-1 downto 0);
-
+signal r_mod_by : signed(G_CALC_BITS-1 downto 0);
+signal r_mod_ry : signed(G_CALC_BITS-1 downto 0);
 
 signal r_burst  : std_logic;
 
@@ -112,14 +111,15 @@ signal r_pal_swich : std_logic := '0';
 
 signal i_clk_chroma_x4 : std_logic;
 
-constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
+constant PAL_BURST : natural := integer((2.0**G_INBITS) * 40.0 * G_GAIN);
+constant NTSC_BURST : natural := integer((2.0**G_INBITS) * 60.0 * G_GAIN);
 
 begin
 
    car_ry_o <= r_car_ry;
    pal_sw_o <= r_pal_swich;
-   base_by_o <= r_base_by;
-   base_ry_o <= r_base_ry;
+   base_by_o <= r_base_by(G_CALC_BITS-1 downto G_CALC_BITS - G_OUTBITS);
+   base_ry_o <= r_base_ry(G_CALC_BITS-1 downto G_CALC_BITS - G_OUTBITS);
    clk_chroma_x4_o <= i_clk_chroma_x4;
 
    p_ident:process(clk_i)
@@ -179,7 +179,7 @@ begin
 
       if rising_edge(clk_i) then
 
-         if v_ctr > G_BREEZE and v_ctr <= G_BREEZE + G_BURST then
+         if v_ctr > G_BREEZE and v_ctr <= G_BREEZE + G_BURST and vs_i = '0' then
             r_burst <= '1';
          else
             r_burst <= '0';
@@ -201,17 +201,17 @@ begin
       if rising_edge(clk_i) then
          if r_burst = '1' then
             if G_PAL then
-               r_base_by <= to_signed(-3, r_base_by'length);
+               r_base_by <= to_signed(-PAL_BURST, r_base_by'length);
             else
-               r_base_by <= to_signed(-6, r_base_by'length);
+               r_base_by <= to_signed(-NTSC_BURST, r_base_by'length);
             end if;
          else
             r_base_by <= 
                to_signed(
-                  to_integer(r_i) * integer((-37.0) * G_GAIN)
-               +  to_integer(g_i) * integer((-73.0) * G_GAIN)
-               +  to_integer(b_i) * integer((111.0) * G_GAIN)
-               , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
+                  to_integer(r_i) * integer(-37.0 * G_GAIN)
+               +  to_integer(g_i) * integer(-73.0 * G_GAIN)
+               +  to_integer(b_i) * integer(111.0 * G_GAIN)
+               , r_base_by'length);
          end if;
       end if;
    end process;
@@ -221,17 +221,17 @@ begin
       if rising_edge(clk_i) then
          if r_burst = '1' then
             if G_PAL then
-               r_base_ry <= to_signed(3, r_base_ry'length);
+               r_base_ry <= to_signed(PAL_BURST, r_base_ry'length);
             else
                r_base_ry <= to_signed(0, r_base_ry'length);
             end if;
          else
             r_base_ry <= 
                to_signed(
-                  to_integer(r_i) * integer(( 157.0) * G_GAIN)
-               +  to_integer(g_i) * integer((-132.0) * G_GAIN)
-               +  to_integer(b_i) * integer(( -25.0) * G_GAIN)
-               , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
+                  to_integer(r_i) * integer( 157.0 * G_GAIN)
+               +  to_integer(g_i) * integer(-132.0 * G_GAIN)
+               +  to_integer(b_i) * integer( -25.0 * G_GAIN)
+               , r_base_by'length);
          end if;
       end if;
    end process;
@@ -259,9 +259,11 @@ begin
    end process;
 
    p_sum:process(i_clk_chroma_x4)
+   variable v_chroma : signed(G_CALC_BITS-1 downto 0);
    begin
       if rising_edge(i_clk_chroma_x4) then
-         chroma_o <= r_mod_by + r_mod_ry;
+         v_chroma := r_mod_by + r_mod_ry;
+         chroma_o <= v_chroma(G_CALC_BITS - 1 downto G_CALC_BITS - G_OUTBITS);
       end if;
    end process;
 
