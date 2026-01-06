@@ -210,7 +210,7 @@ begin
                to_signed(
                   to_integer(r_i) * integer(-37.0 * G_GAIN)
                +  to_integer(g_i) * integer(-73.0 * G_GAIN)
-               +  to_integer(b_i) * integer(111.0 * G_GAIN)
+               +  to_integer(b_i) * integer(110.0 * G_GAIN)
                , r_base_by'length);
          end if;
       end if;
