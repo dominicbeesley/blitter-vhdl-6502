@@ -291,13 +291,6 @@ architecture rtl of C20K is
 	signal i_noice_debug_opfetch		: std_logic;							-- this cycle is an opcode fetch
 	signal r_noice_debug_btn			: std_logic;
 
-	signal i_flasher						: std_logic_vector(3 downto 0);	-- a simple set of slow clocks for generating flashing 
-																							-- LED sfishals
-	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
-																							-- use fb_syscon.clk
-	signal i_clk_lock						: std_logic;							-- indicates whether the main pll is locked
-	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
-
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
 
    -----------------------------------------------------------------------------
@@ -360,15 +353,18 @@ architecture rtl of C20K is
    signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV-1) downto 0); -- note 1 bigger to catch carry out
 
 
-   signal i_clk_pll_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
-   attribute syn_keep of i_clk_pll_48M : signal is 1; -- keep for SDC
-   signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
-   attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
-
    signal i_clk_pll_360M: std_logic;         -- used for video DACs
    attribute syn_keep of i_clk_pll_360M : signal is 1; -- keep for SDC
    signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
    attribute syn_keep of i_clk_div_72M : signal is 1; -- keep for SDC
+   signal i_clk_pll_384M:  std_logic;         -- used for 3x128
+   attribute syn_keep of i_clk_pll_384M : signal is 1; -- keep for SDC
+   signal i_clk_div_96M:  std_logic;         -- used for 3x128
+   attribute syn_keep of i_clk_div_96M : signal is 1; -- keep for SDC
+   signal i_clk_div_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
+   attribute syn_keep of i_clk_div_48M : signal is 1; -- keep for SDC
+   signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
+   attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
@@ -422,16 +418,41 @@ architecture rtl of C20K is
 
 begin
 
-   e_pll_27_48: entity work.pll_27_48
+   e_pll_27_360: entity work.pll_27_360
    port map (
-      clkout => i_clk_pll_48M,
-      clkin => brd_clk_27M_i
+      clkin => brd_clk_27M_i,
+      clkout => i_clk_pll_360M
    );
 
-   e_pll_48_128: entity work.pll_48_128
+   e_pll_360_384_128: entity work.pll_360_384_128
    port map (
-      clkout => i_clk_pll_128M,
-      clkin => i_clk_pll_48M
+      clkin => i_clk_pll_360M,
+      clkout => i_clk_pll_384M,
+      clkoutd3 => i_clk_pll_128M
+   );
+
+   e_div2_384_96: CLKDIV
+   generic map (
+      DIV_MODE => "4",            -- Divide by 4
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_pll_384M,
+      CLKOUT => i_clk_div_96M,
+      CALIB  => '1'
+   );
+
+   e_div2_96_48: CLKDIV
+   generic map (
+      DIV_MODE => "2",            -- Divide by 4
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_div_96M,
+      CLKOUT => i_clk_div_48M,
+      CALIB  => '1'
    );
 
    e_fb_syscon: entity work.fb_syscon
@@ -1067,7 +1088,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
-		CLK_48M_i			=> i_clk_pll_48M,
+		CLK_48M_i			=> i_clk_div_48M,
 
 		fb_syscon_i			=> i_fb_syscon,
 		fb_c2p_i				=> i_c2p_hdmi_per,
@@ -1149,12 +1170,6 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 
    -- TODO: this is frigged together - we need another pll to (re)generate chroma clocks
 
-   e_pll2: entity work.pll_rgb_dac
-   port map (
-      clkout      => i_clk_pll_360M,
-      clkin       => i_clk_pll_48M
-   );
-
    clkdiv5 : CLKDIV
    generic map (
       DIV_MODE => "5",            -- Divide by 5
@@ -1169,12 +1184,12 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 
    
 ---   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
----   p_car_gen:process(i_clk_pll_48M)
+---   p_car_gen:process(i_clk_div_48M)
 ---      constant div : natural := 709379;
 ---      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
 ---      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
 ---   begin
----      if rising_edge(i_clk_pll_48M) then
+---      if rising_edge(i_clk_div_48M) then
 ---         r_acc := r_acc + div;
 ---         if r_acc >= num then
 ---            r_acc := r_acc - num;
@@ -1223,7 +1238,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 ---      G_USE_EXT_x4_CLK  => true,
 ---   )
    port map (
-      clk_i             => i_clk_pll_48M,
+      clk_i             => i_clk_div_48M,
 ---      clk_chroma_x4_i   => i_clk_chroma_x4,
       r_i               => unsigned(i_Vid_48_r),
       g_i               => unsigned(i_Vid_48_g),
@@ -1238,9 +1253,9 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
 
-   p_chrom_s2u:process(i_clk_pll_48M)
+   p_chrom_s2u:process(i_clk_div_48M)
    begin
-      if rising_edge(i_clk_pll_48M) then
+      if rising_edge(i_clk_div_48M) then
          r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
       end if;
    end process;
@@ -1259,7 +1274,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_chr:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => r2_vid_chroma(4 downto 1),
@@ -1271,7 +1286,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_r:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_r)),
@@ -1281,7 +1296,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_g:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_g)),
@@ -1291,7 +1306,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_b:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_b)),
