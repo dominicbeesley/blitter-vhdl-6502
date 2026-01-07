@@ -3,17 +3,21 @@ set_operating_conditions -grade c -model slow -speed 8 -setup
 set_operating_conditions -grade c -model fast -speed 8 -hold
 
 # board clock @ 27M
-create_clock -name CLK_27M -period 37.037 -waveform {0 18.518} [get_ports {brd_clk_27M_i}]
+create_clock -name CLOCK_27M -period 37.037 -waveform {0 18.518} [get_ports {brd_clk_27M_i}]
 
-create_generated_clock -name CLOCK_48M -source [get_ports {brd_clk_27M_i}] -master_clock CLK_27M -divide_by 9 -multiply_by 16 [get_nets {i_clk_pll_48M}]
-create_generated_clock -name CLOCK_128M -source [get_nets {i_clk_pll_48M}] -master_clock CLOCK_48M -divide_by 3 -multiply_by 8 [get_nets {i_clk_pll_128M}]
+create_generated_clock -name CLOCK_360M -source [get_ports {brd_clk_27M_i}] -master_clock CLOCK_27M -divide_by 3 -multiply_by 40 [get_nets {i_clk_pll_360M}]
 
-create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_pll_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 90 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
+create_generated_clock -name CLOCK_384M -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 15 -multiply_by 16 [get_nets {i_clk_pll_384M}]
+create_generated_clock -name CLOCK_128M -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 45 -multiply_by 16 [get_nets {i_clk_pll_128M}]
+
+create_generated_clock -name CLOCK_96M -source [get_nets {i_clk_pll_384M}] -master_clock CLOCK_384M -divide_by 4 -multiply_by 1 [get_nets {i_clk_div_96M}]
+create_generated_clock -name CLOCK_48M -source [get_nets {i_clk_div_96M}] -master_clock CLOCK_96M -divide_by 2 -multiply_by 1 [get_nets {i_clk_div_48M}]
+
+
+create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 90 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
 create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}] -master_clock CLOCK_TMDS_HDMI -divide_by 5 -multiply_by 1 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_pixel}]
 
-create_generated_clock -name CLOCK_360M  -source [get_nets {i_clk_pll_128M}] -master_clock CLOCK_128M -divide_by 16 -multiply_by 45 [get_nets {i_clk_pll_360M}]
-
-create_generated_clock -name CLOCK_72M  -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 5 -multiply_by 1 [get_nets {i_clk_div_72M}]
+#create_generated_clock -name CLOCK_72M  -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 5 -multiply_by 1 [get_nets {i_clk_div_72M}]
 
 ## actually generated but div/mul too large
 ##TODO: reenable for real chroma

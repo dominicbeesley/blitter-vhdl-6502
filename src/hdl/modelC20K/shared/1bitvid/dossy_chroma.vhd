@@ -94,6 +94,34 @@ end dossy_chroma;
 
 architecture rtl of dossy_chroma is
 
+function REP(b:std_logic; n:natural) return std_logic_vector is
+variable ret : std_logic_vector(n-1 downto 0);
+begin
+   ret := (others => b);
+   return ret;
+end function;
+
+function ROUND_TO_ZERO(v:signed; bits:natural) return signed is
+variable v_r:signed(v'range);
+variable ret:signed(bits-1 downto 0);
+begin
+   if bits > v'length then
+      ret := signed(std_logic_vector(v) & REP(v(0), bits - v'length));
+   elsif bits = v'length then
+      ret := v;
+   elsif bits = v'length -1 then
+      v_r := v + signed(REP('0', bits) & v(v'high));
+      ret := v_r(v_r'high downto v_r'high-bits+1);
+   else
+      v_r := v + signed(REP('0', bits) & v(v'high) & REP(not(v(v'high)), v'length-bits-1));
+      ret := v_r(v_r'high downto v_r'high-bits+1);
+   end if;
+
+   return ret;
+
+end function;
+
+
 constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
 
 signal r_car_by : std_logic;
@@ -210,7 +238,7 @@ begin
                to_signed(
                   to_integer(r_i) * integer(-37.0 * G_GAIN)
                +  to_integer(g_i) * integer(-73.0 * G_GAIN)
-               +  to_integer(b_i) * integer(111.0 * G_GAIN)
+               +  to_integer(b_i) * integer(110.0 * G_GAIN)
                , r_base_by'length);
          end if;
       end if;
@@ -259,11 +287,14 @@ begin
    end process;
 
    p_sum:process(i_clk_chroma_x4)
-   variable v_chroma : signed(G_CALC_BITS-1 downto 0);
+   variable v_ry_s : signed(G_OUTBITS-1 downto 0);
+   variable v_by_s : signed(G_OUTBITS-1 downto 0);
    begin
       if rising_edge(i_clk_chroma_x4) then
-         v_chroma := r_mod_by + r_mod_ry;
-         chroma_o <= v_chroma(G_CALC_BITS - 1 downto G_CALC_BITS - G_OUTBITS);
+         -- note: we round _before_ adding otherwise there is cross-talk
+         v_ry_s := ROUND_TO_ZERO(r_mod_ry, G_OUTBITS);
+         v_by_s := ROUND_TO_ZERO(r_mod_by, G_OUTBITS);
+         chroma_o <= v_ry_s + v_by_s;
       end if;
    end process;
 
