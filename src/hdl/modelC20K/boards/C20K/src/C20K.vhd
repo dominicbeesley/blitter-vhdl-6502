@@ -1147,10 +1147,10 @@ END GENERATE;
 
       cpu_A_nOE_o          <= '1';
       cpu_BE_o             <= '0';
-      cpu_PHI2_o           <= '1';
-      cpu_RDY_o            <= '0';
+      cpu_PHI2_o           <= '0';
+      cpu_RDY_o            <= '1';
       cpu_nIRQ_o           <= '1';
-      cpu_nNMI_o           <= i_sys_nNMI;
+      cpu_nNMI_o           <= '1';
       cpu_nRES_o           <= '1';
 
       flash_ck_o           <= '1';

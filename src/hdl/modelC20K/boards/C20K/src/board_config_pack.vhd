@@ -73,7 +73,7 @@ package board_config_pack is
 	constant G_INCL_CS_BLIT		: boolean := true;
 	constant G_INCL_CS_SND		: boolean := true;
 	constant G_SND_CHANNELS		: natural := 4;
-	constant G_INCL_CS_AERIS	: boolean := false;
+	constant G_INCL_CS_AERIS	: boolean := true;
 	constant G_INCL_CS_EEPROM	: boolean := true;
 	constant G_INCL_CS_SDCARD  : boolean := true;
 	constant G_INCL_LED_ARR		: boolean := false;
