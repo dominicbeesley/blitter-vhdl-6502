@@ -25,7 +25,7 @@
 
         <File path="src/gowin_rpll/pll_pal_sc.vhd" type="file.vhdl" enable="1"/>
 
-        <File path="../../shared/1bitvid/dac1_oser.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dac1_oserx1.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dac1_oserx2.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dossy_chroma.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/ws2812_pack.vhd" type="file.vhdl" enable="1" />

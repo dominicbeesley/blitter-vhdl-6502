@@ -403,13 +403,15 @@ architecture rtl of C20K is
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
    -----------------------------------------------------------------------------
+   
+   constant C_CHROMA_BITS : natural := 5;
    signal i_clk_chroma_x4_jitter : std_logic; -- Base PALx4 clock
    signal i_clk_chroma_x4        : std_logic;
    signal i_clk_chroma_x60_dac   : std_logic;
    signal i_clk_chroma_x12_px    : std_logic;
    signal i_clk_chroma_x20_dac   : std_logic;
-   signal i_chroma_s             : signed(4 downto 0);
-   signal r2_vid_chroma          : unsigned(4 downto 0);
+   signal i_chroma_s             : signed(C_CHROMA_BITS - 1 downto 0);
+   signal r2_vid_chroma          : unsigned(C_CHROMA_BITS - 1 downto 0);
 
    signal i_vid_r_0  : std_logic;
    signal i_vid_g_0  : std_logic;
@@ -1232,7 +1234,8 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
 
    e_chroma_gen:entity work.dossy_chroma
    generic map (
-      G_USE_EXT_x4_CLK  => true
+      G_USE_EXT_x4_CLK  => true,
+      G_OUTBITS         => C_CHROMA_BITS
    )
    port map (
       clk_i             => i_clk_div_48M,
@@ -1250,21 +1253,21 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
 
-   p_chrom_s2u:process(i_clk_div_48M)
+   p_chrom_s2u:process(i_clk_chroma_x4)
    begin
-      if rising_edge(i_clk_div_48M) then
-         r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
+      if rising_edge(i_clk_chroma_x4) then
+         r2_vid_chroma <= to_unsigned( (2**(C_CHROMA_BITS-1)) + to_integer(i_chroma_s), C_CHROMA_BITS);
       end if;
    end process;
 
    -- regular 30 bits per sample 
-   e_chroma_dac:entity work.dac1_oser
+   e_chroma_dac:entity work.dac1_oserx1
    port map (
       rst_i             => i_fb_syscon.rst,
       clk_sample_i      => i_clk_chroma_x4,
       clk_dac_px_i      => i_clk_chroma_x12_px,
       clk_dac_i         => i_clk_chroma_x60_dac,
-      sample_i          => r2_vid_chroma(4 downto 1),
+      sample_i          => r2_vid_chroma,
       bitstream_o       => i_vid_chroma_0
    );
     
