@@ -15,14 +15,17 @@ The second alternative image "with-aeris" may be unstable under certain circumst
 on your FPGA module with 2249C manufacturing code - these chips seem to be slow and also
 have pin E14 disconnected. 
 
-- [C20K_good_timing_2c7d90eM](assets/C20K_good_timing_2c7d90eM.fs)
-- [C20K_aeris_106c278M_55ns](assets/C20K_aeris_106c278M_55ns.fs)
+- [C20K_good_timing_afa918bM](assets/C20K_good_timing_afa918bM.fs)
+- [C20K_aeris_afa918bM_55ns](assets/C20K_aeris_afa918bM_55ns.fs)
 
 [Andy: I'd recommend using the aeris version unless there are problems. This 
 also has a bodge to slow the battery backed RAM timings down a little as I had 
 problems with the FPGA marked 2294C like yours - when everything is working
 we could try yours at the higher speed - I suspect mine might be a bit duff as
 there is a bulge in the casing!]
+
+[Andy: These have the PAL / Chroma improvements applied - the old firmwares are
+still in the assets folder on github for reference/comparison]
 
 This guide is intended to guide you through some first steps in using the 
 C20k. It is not intended to be a complete reference.
