@@ -287,6 +287,12 @@ in the number after "L" indicates a block of &1000 that will be redirected so
 in our test above the memory 0-6FFF is taken from ChipRAM and 7000-7FFF is
 on the motherboard.
 
+[AndyC: For the C20K at the moment the video memory is not much slower than
+ChipRAM so this is all a bit academic. However, it is planned to add some
+higher-resolution modes which will make the video RAM effectively run slower as
+it will be in contention with the video system. On the Blitter boards the 
+video RAM is at a maximum of 2MHz when accessed by the CPU.]
+
 The reason we had to switch to MODE 7 is that the MOS is currently unaware of
 this remapping and will write any screen bound information to ChipRAM where there
 is a remapping. 
