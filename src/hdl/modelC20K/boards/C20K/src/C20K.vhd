@@ -1034,13 +1034,13 @@ begin
    if rising_edge(i_fb_syscon.clk) then
       if i_fb_syscon.rst = '1' then
          r_cfg_mosram <= not icipo_btn0;
+         r_cfg_swromx <= not icipo_btn1;
       end if;
    end if;
 end process;
 
                      
 r_cfg_cpu_use_t65 <= '1';
-r_cfg_swromx <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
