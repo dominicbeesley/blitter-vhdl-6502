@@ -65,7 +65,9 @@ entity log2phys is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_MK3									: boolean := false;
 		G_C20K								: boolean := false;
-		G_SYSVIA_BLOCK_LEN				: natural := 20								-- number of 2MHz cycles to throttle for
+		G_SYSVIA_BLOCK_LEN				: natural := 20;								-- number of 2MHz cycles to throttle for
+		G_PRE_BOOT_BANK					: std_logic_vector(23 downto 14) := x"FC" & "11";
+		G_PRE_BOOT2_BANK					: std_logic_vector(23 downto 14) := x"FC" & "11"
 	);
 	port(
 
@@ -103,6 +105,10 @@ entity log2phys is
 
 		-- noice debugger signals to cpu
 		noice_debug_shadow_i				: in std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
+
+		-- pre-boot							
+		preboot_i							: in 	std_logic := '0';		-- the pre-boot 6502 MOS is active
+		preboot2_i							: in 	std_logic := '0';		-- the pre-boot2 6502 MOS is active (RAM loaded from Flash)
 
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
@@ -198,7 +204,11 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_mosrom_A <= x"FF" & "11";								-- SYS																FF C000 - FF FFFF
 			if cfg_swram_enable_i = '1' or G_C20K then
-				if noice_debug_shadow_i = '1' then
+				if preboot_i = '1' then
+					r_mosrom_A <= G_PRE_BOOT_BANK;
+				elsif preboot2_i = '1' then
+					r_mosrom_A <= G_PRE_BOOT2_BANK;
+				elsif noice_debug_shadow_i = '1' then
 					if map0n1 then		
 						r_mosrom_A <= x"9F" & "11";							-- NOICE shadow MOS from slot #F map 0 					9F C000 - 9F FFFF
 					else

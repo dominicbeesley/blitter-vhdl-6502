@@ -51,12 +51,12 @@ REASON_IRQ	=	2
 REASON_BRK	=	3
 REASON_NMI	=	4
 
-fred_SPI_CTL		=	$FC20
-fred_SPI_STAT		=	$FC20
-fred_SPI_DIV		=	$FC21
-fred_SPI_READ_DATA  	=	$FC22
-fred_SPI_WRITE_END 	=	$FC22
-fred_SPI_WRITE_CONT  	=	$FC23
+fred_SPI_CTL		=	$FC50
+fred_SPI_STAT		=	$FC50
+fred_SPI_DIV		=	$FC51
+fred_SPI_READ_DATA  	=	$FC52
+fred_SPI_WRITE_END 	=	$FC52
+fred_SPI_WRITE_CONT  	=	$FC53
 
 
 		.ZEROPAGE

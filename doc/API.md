@@ -34,7 +34,7 @@ below. The following sections describe these in more detail.
  | $C0 0000 - $F9 FFFF      | Undefined do not use  | !!!! Used by 65816 for access to SYS without log mapping
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
  | $FB FE00 - $FB FFFF      | HDMI registers        | 
- | $FC 0000 - $FC FFFF      | Debug/Version info    | 
+ | $FC 0000 - $FC FFFF      | Debug/Version info    | !!!! Also boot rom for pre-boot?
  | $FE FC00 - $FE FCFF      | Chipset registers BE  | 
  | $FE FE00 - $FE FEFF      | Chipset registers LE  | 
  | $FF 0000 - $FF FFFF      | Motherboard           |

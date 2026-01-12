@@ -98,7 +98,10 @@ entity fb_cpu_log2phys is
 
 		-- 65816/model-C extras
 		window_65816_i							: in	std_logic_vector(12 downto 0) := x"FF" & "11100";
-		window_65816_wr_en_i					: in	std_logic := '0'
+		window_65816_wr_en_i					: in	std_logic := '0';
+
+		-- preboot
+		preboot_i								: in  std_logic := '0'
 
 
 	);
@@ -279,8 +282,10 @@ begin
 		A_o									=> i_phys_A,
 
 		-- 65816/model C extras
-		window_65816_i							=> window_65816_i,
-		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		window_65816_i						=> window_65816_i,
+		window_65816_wr_en_i				=> window_65816_wr_en_i,
+
+		preboot_i							=> preboot_i
 		
 	);
 

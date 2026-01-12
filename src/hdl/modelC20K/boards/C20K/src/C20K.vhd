@@ -205,6 +205,7 @@ architecture rtl of C20K is
    signal r_cfg_sys_type      : sys_type;
 	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
+   signal r_cfg_preboot       : std_logic;
 
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
@@ -835,6 +836,84 @@ END GENERATE;
       p_d_cas_o                     => cassette_o
    );
    
+   -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+   g_spi_flash:if G_INCL_XFLASH generate
+      b_spi:block
+         signal i_SPI_CS: std_logic_vector(7 downto 0);
+         -- FPGA config flash
+         signal i_c2p_xflash          : fb_con_o_per_i_t;
+         signal i_p2c_xflash          : fb_con_i_per_o_t;         
+      begin
+         e_fb_xflash:entity work.fb_spi
+         generic map (
+            SIM                           => SIM,
+            CLOCKSPEED                    => CLOCKSPEED,
+            PRESCALE                      => 1
+         )
+         port map (
+
+            -- eeprom signals
+            SPI_CS_o                      => i_SPI_CS,
+            SPI_CLK_o                     => flash_ck_o,
+            SPI_MOSI_o                    => flash_mosi_o,
+            SPI_MISO_i                    => flash_miso_i,
+            SPI_DET_i                     => '1',
+
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_xflash,
+            fb_p2c_o                      => i_p2c_xflash
+         );
+      
+         flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+         i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+      end block;
+   end generate;
+
+   g_not_spi_flash:if not G_INCL_XFLASH generate
+
+      flash_ck_o           <= '1';
+      flash_cs_o           <= '1';
+      flash_mosi_o         <= '1';
+
+   end generate;
+
+   -------------------------------------
+   -- PRE-BOOT ROM
+   -------------------------------------
+
+   g_pre_rom:if G_INCL_PREBOOT generate
+      b_spi:block
+         signal i_c2p_preboot          : fb_con_o_per_i_t;
+         signal i_p2c_preboot          : fb_con_i_per_o_t;         
+      begin
+
+         e_fb_mem_rom: entity work.fb_P20K_mem
+         generic map (
+            G_ADDR_W => 8,   -- 256 bytes
+            G_READONLY => true,
+            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1-c20k/preboot1-c20k.vec"
+            )
+         port map (
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_preboot,
+            fb_p2c_o                      => i_p2c_preboot
+
+         );      
+
+         i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
+         i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
+      end block;
+   end generate;
+
+
 
 p_reg_128:process(i_fb_syscon)
 begin
@@ -934,7 +1013,10 @@ end generate;
       fb_p2c_i                      => i_p2c_cpu,
 
       -- debug
-      debug_cpu_instr_A             => i_debug_cpu_instr_a
+      debug_cpu_instr_A             => i_debug_cpu_instr_a,
+
+      -- preboot
+      preboot_i                     => r_cfg_preboot
 
 
    );
@@ -1035,6 +1117,11 @@ begin
       if i_fb_syscon.rst = '1' then
          r_cfg_mosram <= not icipo_btn0;
          r_cfg_swromx <= not icipo_btn1;
+         if G_INCL_PREBOOT then
+            r_cfg_preboot <= not icipo_btn2;
+         else
+            r_cfg_preboot <= '0';
+         end if;
       end if;
    end if;
 end process;
@@ -1152,11 +1239,6 @@ END GENERATE;
       cpu_nIRQ_o           <= '1';
       cpu_nNMI_o           <= '1';
       cpu_nRES_o           <= '1';
-
-      flash_ck_o           <= '1';
-      flash_cs_o           <= '1';
-      flash_mosi_o         <= '1';
-
       
       sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';

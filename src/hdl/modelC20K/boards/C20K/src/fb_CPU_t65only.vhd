@@ -107,7 +107,10 @@ entity fb_cpu_t65only is
 		cpu_halt_i								: in  std_logic;
 
 		-- debug
-		debug_cpu_instr_A						: out std_logic_vector(23 downto 0)
+		debug_cpu_instr_A						: out std_logic_vector(23 downto 0);
+
+		-- preboot
+		preboot_i								: in	std_logic
 
 	);
 end fb_cpu_t65only;
@@ -274,7 +277,10 @@ begin
 		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
-		noice_debug_shadow_i					=> noice_debug_shadow_i
+		noice_debug_shadow_i					=> noice_debug_shadow_i,
+
+		-- preboot
+		preboot_i								=> preboot_i
 	);
 
 	

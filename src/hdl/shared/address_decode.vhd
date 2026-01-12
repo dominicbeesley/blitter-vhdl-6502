@@ -70,6 +70,12 @@ end address_decode;
 architecture rtl of address_decode is
 begin
 
+	--	Match			Spec		Device
+	--	11xx xxxx
+	-- 11xx 101x	FA-FB		HDMI
+	--	11xx xxx1	FF			SYS and other emulated devices (TODO: move memctl to SYS?)
+	
+
 
 	p_map:process(addr_i)
 	begin
@@ -99,6 +105,10 @@ begin
 						-- memory
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
+					elsif addr_i(15 downto 4) = x"FC5" and G_INCL_XFLASH then
+						--TODO: move inside chipset, extras or SYS
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_XFLASH, peripheral_sel_o'length);
+						peripheral_sel_oh_o(PERIPHERAL_NO_XFLASH) <= '1';
 					else
 						-- SYS
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(G_PERIPHERAL_COUNT));
@@ -109,9 +119,14 @@ begin
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET, numbits(G_PERIPHERAL_COUNT));
 				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET) <= '1';
 			else
-				-- version
-				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(G_PERIPHERAL_COUNT));
-				peripheral_sel_oh_o(PERIPHERAL_NO_VERSION) <= '1';
+				if addr_i(15) = '1' and G_INCL_PREBOOT then
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_PREBOOT, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_oh_o(PERIPHERAL_NO_PREBOOT) <= '1';
+				else
+					-- version
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_oh_o(PERIPHERAL_NO_VERSION) <= '1';
+				end if;
 			end if;
 		else
 			-- memory
