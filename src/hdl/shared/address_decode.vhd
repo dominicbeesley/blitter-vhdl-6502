@@ -109,6 +109,10 @@ begin
 						--TODO: move inside chipset, extras or SYS
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_XFLASH, peripheral_sel_o'length);
 						peripheral_sel_oh_o(PERIPHERAL_NO_XFLASH) <= '1';
+					elsif addr_i(15 downto 4) = x"FC1" and G_INCL_DBG_UART then
+						--TODO: move inside chipset, extras or SYS
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
+						peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
 					else
 						-- SYS
 						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(G_PERIPHERAL_COUNT));

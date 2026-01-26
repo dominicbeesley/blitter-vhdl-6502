@@ -79,7 +79,7 @@ package board_config_pack is
 	constant G_INCL_CS_EEPROM	: boolean := true;
 	constant G_INCL_CS_SDCARD  : boolean := true;
 	constant G_INCL_LED_ARR		: boolean := false;
-	constant G_INCL_DBG_UART	: boolean := false;
+	constant G_INCL_DBG_UART	: boolean := true;
 	
 	constant C_CPU_BYTELANES	: positive := 1;		
 	constant G_INCL_CPU_T65		: boolean := true;
@@ -100,7 +100,7 @@ package board_config_pack is
 	constant G_MEM_FAST_IS_10	: boolean := true;
 	constant G_MEM_SLOW_IS_45	: boolean := false;
 
-	constant PERIPHERAL_COUNT			: natural := 8;
+	constant PERIPHERAL_COUNT			: natural := 9;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS			: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
@@ -109,8 +109,8 @@ package board_config_pack is
 	constant PERIPHERAL_NO_HDMI		: natural := 5;	
 	constant PERIPHERAL_NO_XFLASH  	: natural := 6;
 	constant PERIPHERAL_NO_PREBOOT	: natural := 7;	
+	constant PERIPHERAL_NO_UART 		: natural := 8;
 	constant PERIPHERAL_NO_LED_ARR	: natural := 7;
-	constant PERIPHERAL_NO_UART 		: natural := 7;
 
 	constant CONTROLLER_COUNT 			: natural 		:= 2;
 	constant MAS_NO_CPU					: natural		:= 1;
