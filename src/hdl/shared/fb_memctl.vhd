@@ -88,7 +88,8 @@ entity fb_memctl is
 		noice_debug_button_i				: in	std_logic;
 
 		-- cput throttle
-		throttle_cpu_2MHz_o				: out std_logic;
+		throttle_all_o						: out std_logic;
+		throttle_mos_o						: out std_logic;
 		rom_throttle_map_o				: out std_logic_vector(15 downto 0);
 		rom_autohazel_map_o				: out std_logic_vector(15 downto 0);
 
@@ -146,14 +147,16 @@ architecture rtl of fb_memctl is
 	signal	r_window_65816					:	std_logic_vector(12 downto 0);
 	signal	r_window_65816_wr_en			:	std_logic;
 
-	signal	r_throttle_cpu_2MHz			: 	std_logic;
+	signal	r_throttle_all					: 	std_logic;
+	signal	r_throttle_mos					: 	std_logic;
 	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
 
 	signal   r_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 begin
 
-	throttle_cpu_2MHz_o <= r_throttle_cpu_2MHz;
+	throttle_all_o <= r_throttle_all;
+	throttle_mos_o <= r_throttle_mos;
 	rom_throttle_map_o <= r_rom_throttle_map;
 	rom_autohazel_map_o <= r_rom_autohazel_map;
 
@@ -181,7 +184,7 @@ begin
 								r_turbo_lo 
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 7 else
 								-- FE36 - 2Mhz throttle
-								r_throttle_cpu_2MHz & "0000000" 
+								r_throttle_all & r_throttle_mos & "000000" 
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 6 else
 								r_rom_throttle_map(15 downto 8)
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 5 else
@@ -228,7 +231,8 @@ begin
 				r_65816_boot <= "10";	
 				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_throttle_cpu_2MHz <= '1';
+					r_throttle_all <= '1';
+					r_throttle_mos <= '1';
 					r_rom_throttle_map <= (others => '0');
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
@@ -278,7 +282,8 @@ begin
 						when 7 =>
 							r_turbo_lo <= fb_c2p_i.D_wr;
 						when 6 =>
-							r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
+							r_throttle_all <= fb_c2p_i.D_wr(7);
+							r_throttle_mos <= fb_c2p_i.D_wr(6);
 						when 5 => 
 							r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
 						when 3 => 

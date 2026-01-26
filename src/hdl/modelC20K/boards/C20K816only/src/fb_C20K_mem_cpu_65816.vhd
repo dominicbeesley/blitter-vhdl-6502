@@ -92,7 +92,8 @@ entity fb_C20K_mem_cpu_65816 is
       rom_throttle_map_i            : in  std_logic_vector(15 downto 0);
 
       rom_autohazel_map_i           : in  std_logic_vector(15 downto 0);
-      throttle_cpu_2MHz_i           : in  std_logic;
+      throttle_all_i                : in  std_logic;
+      throttle_mos_i                : in  std_logic;
       cpu_2MHz_phi2_clken_i         : in  std_logic;
 
       boot_65816_i                  : in  std_logic_vector(1 downto 0);
@@ -142,7 +143,12 @@ entity fb_C20K_mem_cpu_65816 is
       CPU_MX_i                         : in     std_logic;
       CPU_E_i                          : in     std_logic;
 
-      debug_cpu_state_o                : out    std_logic_vector(2 downto 0)
+      debug_cpu_state_o                : out    std_logic_vector(2 downto 0);
+      debug_throttle_act_o             : out    std_logic;
+
+      -- preboot
+      preboot_i                        : in     std_logic
+
 
    );
 end fb_C20K_mem_cpu_65816;
@@ -227,6 +233,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal i_throttle_act  : std_logic;   
 
 begin
+
+   debug_throttle_act_o <= i_throttle_act;
 
    assert CLOCKSPEED > CPU_SPEED report "CLOCKSPEED must be greater than CPU_SPEED" severity error;
    assert CLOCKSPEED mod CPU_SPEED = 0 report "CLOCKSPEED must be an integer multiple of CPU_SPEED" severity error;
@@ -348,8 +356,8 @@ begin
       sys_ROMPG_i                   => sys_ROMPG_i,
       JIM_page_i                    => JIM_page_i,
       turbo_lo_mask_i               => turbo_lo_mask_i,
-      mos_throttle_i                => not swmos_shadow_i,           --TODO: configure somewhere in memctl
-      throttle_all_i                => throttle_cpu_2MHz_i,
+      throttle_mos_i                => throttle_mos_i,
+      throttle_all_i                => throttle_all_i,
       rom_throttle_map_i            => rom_throttle_map_i,
       throttle_act_o                => i_throttle_act,
       rom_autohazel_map_i           => rom_autohazel_map_i,
@@ -361,7 +369,8 @@ begin
       A_i                           => r_A,
       A_stb_i                       => r_A_stb,
       instruction_fetch_i           => r_VPA and r_VDA,
-      A_o                           => i_phys_A
+      A_o                           => i_phys_A,
+      preboot_i                     => preboot_i
 
    );
 

@@ -199,8 +199,6 @@ architecture rtl of C20K is
 	-- config signals
 	-----------------------------------------------------------------------------
 
-	signal i_cfg_debug_button  : std_logic;
-
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
 	signal r_cfg_swromx			: std_logic;
@@ -319,12 +317,14 @@ architecture rtl of C20K is
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
 	signal i_65816_bool_act				: std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_all     			: std_logic;
+   signal i_throttle_mos            : std_logic;
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
 	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
 	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
+   signal i_debug_throttle_act      : std_logic;
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
 	-----------------------------------------------------------------------------
@@ -716,7 +716,8 @@ END GENERATE;
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_o 				=> i_throttle_cpu_2MHz,
+		throttle_all_o  				  => i_throttle_all,
+      throttle_mos_o               => i_throttle_mos,
 
 		-- fishbone signals
 
@@ -977,7 +978,8 @@ end generate;
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
@@ -1014,9 +1016,11 @@ end generate;
 
       -- debug
       debug_cpu_instr_A             => i_debug_cpu_instr_a,
+      debug_throttle_act_o          => i_debug_throttle_act,
 
       -- preboot
       preboot_i                     => r_cfg_preboot
+
 
 
    );
@@ -1081,11 +1085,17 @@ end generate;
             end loop;
             vr_btn := (others => '0');
          elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
+--            for i in 0 to 7 loop
+--               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
+--               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
+--               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
+--            end loop;
             for i in 0 to 7 loop
-               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
-               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
-               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
+            i_debug_leds(I).red <= (others => '0');
+            i_debug_leds(I).green <= (others => '0');
+            i_debug_leds(I).blue <= (others => '0');
             end loop;
+            i_debug_leds(0).red(0) <= i_debug_throttle_act;
          end if;
 
          if icipo_btn2 = '0' then

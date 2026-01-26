@@ -90,7 +90,8 @@ entity fb_cpu is
 
 
 		-- cpu throttle
-		throttle_cpu_2MHz_i					: in std_logic;
+		throttle_all_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
@@ -762,8 +763,8 @@ begin
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		mos_throttle_i							=> not swmos_shadow_i,			-- TODO: get from a chipset register
-		throttle_all_i							=> throttle_cpu_2MHz_i,
+		throttle_mos_i							=> throttle_mos_i,
+		throttle_all_i							=> throttle_all_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
 		throttle_act_o							=> i_throttle_act,
 

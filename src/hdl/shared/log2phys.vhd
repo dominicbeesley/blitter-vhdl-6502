@@ -87,7 +87,7 @@ entity log2phys is
 		JIM_page_i							: in  std_logic_vector(15 downto 0);
 		turbo_lo_mask_i					: in	std_logic_vector(7 downto 0);
 
-		mos_throttle_i						: in  std_logic;
+		throttle_mos_i						: in  std_logic;
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
 		throttle_all_i						: in  std_logic;
 		throttle_act_o						: out std_logic;
@@ -226,7 +226,7 @@ begin
 					r_mosrom_A <= x"9F" & "00";								-- SWMOS from slot #9 map 0 on C20K							9F 0000 - 9F 3FFF
 				end if;
 			end if;
-			r_mos_throttle_reg <= mos_throttle_i;
+			r_mos_throttle_reg <= throttle_mos_i;
 			r_all_throttle_reg <= throttle_all_i;
 		end if;
 	end process;

@@ -87,7 +87,7 @@ entity fb_cpu_log2phys is
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
 
-		mos_throttle_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		throttle_all_i							: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		throttle_act_o							: out std_logic;
@@ -270,7 +270,7 @@ begin
 
 		rom_autohazel_map_i				=> rom_autohazel_map_i,
 
-		mos_throttle_i						=> mos_throttle_i,
+		throttle_mos_i						=> throttle_mos_i,
 		throttle_all_i						=> throttle_all_i,
 		rom_throttle_map_i				=> rom_throttle_map_i,
 		throttle_act_o						=> i_throttle_act,

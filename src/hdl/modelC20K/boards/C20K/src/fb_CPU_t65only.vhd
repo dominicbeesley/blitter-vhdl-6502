@@ -68,7 +68,8 @@ entity fb_cpu_t65only is
 		cfg_swromx_i							: in std_logic;
 
 		-- cpu throttle
-		throttle_cpu_2MHz_i					: in std_logic;
+		throttle_all_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);	
@@ -108,6 +109,7 @@ entity fb_cpu_t65only is
 
 		-- debug
 		debug_cpu_instr_A						: out std_logic_vector(23 downto 0);
+		debug_throttle_act_o					: out std_logic;
 
 		-- preboot
 		preboot_i								: in	std_logic
@@ -155,6 +157,8 @@ architecture rtl of fb_cpu_t65only is
 
 begin
 
+
+	debug_throttle_act_o <= i_throttle_act;
 
 	-- ================================================================================================ --
 	-- NMI registration 
@@ -271,8 +275,8 @@ begin
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		mos_throttle_i							=> not swmos_shadow_i,
-		throttle_all_i							=> throttle_cpu_2MHz_i,
+		throttle_mos_i							=> throttle_mos_i,
+		throttle_all_i							=> throttle_all_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
 		throttle_act_o							=> i_throttle_act,
 
@@ -317,7 +321,7 @@ begin
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_all_i or i_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;
