@@ -80,7 +80,7 @@ package board_config_pack is
 	constant G_INCL_CS_EEPROM	: boolean := true;
 	constant G_INCL_CS_SDCARD  : boolean := true;
 	constant G_INCL_LED_ARR		: boolean := false;
-	constant G_INCL_DBG_UART	: boolean := false;
+	constant G_INCL_DBG_UART	: boolean := true;
 	
 	constant C_CPU_BYTELANES	: positive := 1;		
 	constant G_INCL_CPU_T65		: boolean := false;

@@ -65,7 +65,7 @@ entity fb_cpu_t65only is
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 		-- cpu throttle
 		throttle_all_i							: in std_logic;
@@ -257,13 +257,12 @@ begin
 
 		-- per cpu config
 		cfg_sys_via_block_i					=> '1',					-- TODO: RiscV etc
-		cfg_t65_i								=> '1',					-- TODO: RiscV etc
 
 		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
+		cfg_map0n1_i							=> cfg_map0n1_i,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_swromx_i							=> cfg_swromx_i,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,

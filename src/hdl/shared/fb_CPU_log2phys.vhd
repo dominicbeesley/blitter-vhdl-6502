@@ -67,14 +67,13 @@ entity fb_cpu_log2phys is
 		fb_per_p2c_i							: in	fb_con_i_per_o_t;
 
 		-- per cpu config
-		cfg_t65_i								: in std_logic;
 		cfg_sys_via_block_i					: in std_logic;
 
 		-- system type
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 		-- extra memory map control signals
 		sys_ROMPG_i								: in std_logic_vector(7 downto 0);
@@ -257,9 +256,8 @@ begin
 		JIM_page_i							=> JIM_page_i,
 		sys_ROMPG_i							=> sys_ROMPG_i,
 		cfg_swram_enable_i				=> cfg_swram_enable_i,
-		cfg_swromx_i						=> cfg_swromx_i,
+		cfg_map0n1_i						=> cfg_map0n1_i,
 		cfg_mosram_i						=> cfg_mosram_i,
-		cfg_t65_i							=> cfg_t65_i,
 		cfg_sys_via_block_i				=> cfg_sys_via_block_i,
       cfg_sys_type_i                => cfg_sys_type_i,
 

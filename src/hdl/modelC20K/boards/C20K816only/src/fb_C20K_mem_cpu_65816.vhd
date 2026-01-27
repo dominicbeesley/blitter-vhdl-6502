@@ -80,7 +80,7 @@ entity fb_C20K_mem_cpu_65816 is
 
       -- config signals
       cfg_swram_enable_i            : in std_logic;
-      cfg_swromx_i                  : in std_logic;
+      cfg_map0n1_i                  : in std_logic;
       cfg_mosram_i                  : in std_logic;
       cfg_sys_type_i                : in sys_type;
 
@@ -348,9 +348,8 @@ begin
    port map (
       fb_syscon_i                   => fb_syscon_i,
       cfg_swram_enable_i            => cfg_swram_enable_i,
-      cfg_swromx_i                  => cfg_swromx_i,
+      cfg_map0n1_i                  => cfg_map0n1_i,
       cfg_mosram_i                  => cfg_mosram_i,
-      cfg_t65_i                     => '0',
       cfg_sys_via_block_i           => '1',
       cfg_sys_type_i                => cfg_sys_type_i,
       sys_ROMPG_i                   => sys_ROMPG_i,

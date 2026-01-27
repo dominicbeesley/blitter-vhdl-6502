@@ -201,9 +201,7 @@ architecture rtl of C20K is
 
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
-	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
-   signal r_cfg_preboot       : std_logic;
 
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
@@ -214,6 +212,8 @@ architecture rtl of C20K is
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
 
+   signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
+   
    -----------------------------------------------------------------------------
    -- fishbone signals
    -----------------------------------------------------------------------------
@@ -291,6 +291,7 @@ architecture rtl of C20K is
 	signal r_noice_debug_btn			: std_logic;
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
+   signal i_preboot                 : std_logic;
 
    -----------------------------------------------------------------------------
    -- intcon to peripheral sel
@@ -700,6 +701,9 @@ END GENERATE;
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
+      map0n1_swromx_i               => not icipo_btn1,
+      map0n1_default_i              => r_cfg_cpu_use_t65,
+      map0n1_o                      => i_map0n1,
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				=> i_noice_debug_nmi_n,
@@ -714,10 +718,15 @@ END GENERATE;
 		-- noice debugger button		
 		noice_debug_button_i				=> r_noice_debug_btn,
 
+      -- pre-boot
+      preboot_o                     => i_preboot,
+
 		-- cpu throttle
 
 		throttle_all_o  				  => i_throttle_all,
       throttle_mos_o               => i_throttle_mos,
+      rom_throttle_map_o            => i_rom_throttle_map,
+      rom_autohazel_map_o           => i_rom_autohazel_map,
 
 		-- fishbone signals
 
@@ -727,10 +736,8 @@ END GENERATE;
 
 		-- cpu specific
 
-		boot_65816_o						=> i_boot_65816,
+		boot_65816_o						=> i_boot_65816
 
-		rom_throttle_map_o				=> i_rom_throttle_map,
-		rom_autohazel_map_o				=> i_rom_autohazel_map
 	);
 
 
@@ -973,8 +980,8 @@ end generate;
 --		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
 
 		-- cpu throttle
 
@@ -1019,7 +1026,7 @@ end generate;
       debug_throttle_act_o          => i_debug_throttle_act,
 
       -- preboot
-      preboot_i                     => r_cfg_preboot
+      preboot_i                     => i_preboot    
 
 
 
@@ -1085,17 +1092,11 @@ end generate;
             end loop;
             vr_btn := (others => '0');
          elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
---            for i in 0 to 7 loop
---               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
---               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
---               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
---            end loop;
             for i in 0 to 7 loop
-            i_debug_leds(I).red <= (others => '0');
-            i_debug_leds(I).green <= (others => '0');
-            i_debug_leds(I).blue <= (others => '0');
+               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
+               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
+               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
             end loop;
-            i_debug_leds(0).red(0) <= i_debug_throttle_act;
          end if;
 
          if icipo_btn2 = '0' then
@@ -1126,12 +1127,6 @@ begin
    if rising_edge(i_fb_syscon.clk) then
       if i_fb_syscon.rst = '1' then
          r_cfg_mosram <= not icipo_btn0;
-         r_cfg_swromx <= not icipo_btn1;
-         if G_INCL_PREBOOT then
-            r_cfg_preboot <= not icipo_btn2;
-         else
-            r_cfg_preboot <= '0';
-         end if;
       end if;
    end if;
 end process;
@@ -1153,9 +1148,10 @@ begin
          r_cfg_ver_boot <= (others => '1');
          r_cfg_ver_boot(15 downto 9) <= "1100101"; -- CPU=65816
          r_cfg_ver_boot(3) <= not r_cfg_cpu_use_t65;
-         r_cfg_ver_boot(4) <= not r_cfg_swromx;
          r_cfg_ver_boot(5) <= not r_cfg_mosram;
          r_cfg_ver_boot(6) <= r_cfg_swram_enable;
+      else
+         r_cfg_ver_boot(4) <= r_cfg_ver_boot(3) xor i_map0n1;         
       end if;
    end if;
 end process;
@@ -1167,7 +1163,7 @@ i_memctl_configbits <=
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
-	r_cfg_swromx &
+	(i_map0n1 xor r_cfg_cpu_use_t65) & 
 	r_cfg_mk2_cpubits &
 	not r_cfg_cpu_use_t65;
 

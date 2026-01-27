@@ -769,6 +769,15 @@ Bit 7, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and synchronized
 with the motherboard phi2 clock. This can be useful to ensure that games
 and demos run correctly. 
 
+Bit 6, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and 
+synchronized with the motherboard phi2 clock when accessing the MOS area at 
+FF C000-FF FFFF (except for hardware registers)
+
+Bit 5, writing bit 5 will cancel the preboot mapping - see PREBOOT
+
+Bit 4, this bit selects between rom maps 0 and 1, it is normally set at boot time 
+bit may be used to swap out the MOS rom programmatically
+
 See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command.
 
@@ -1020,6 +1029,25 @@ in the current build
  |             | 7     | 0                              | 1 | 1 |
  | FC 008B..8F | *     | - reserved - all bits read 0   |
 
+
+# PREBOOT
+
+In 2026 a new pre-boot feature is being rolled out to all the boards, starting
+with the C20K.  The Pre-boot is a menu system that allows the user to 
+re-configure their machine:
+  - load romsets
+  - switch between maps
+  - switch between hard/soft cpus
+  - other TBC
+
+The main driver is that on the C20K if the MOS or BLTUTIL images are erased or
+corrupted in FlashEEPROM it is difficult to reinstate them.
+
+The pre-boot is a tiny <256 MOS rom that is mapped in for each reset, this rom
+is part of the main FPGA bitstream. If a certain key combination is held down 
+(COPY-ESC-BREAK) the pre-boot MOS will bootstrap a more complicated BIOS-like 
+menu system. This will be loaded from the FPGA's SPI Flash configuration memory
+(user flash on Mk.3/MAX10).
 
 # The NoIce debugger
 
