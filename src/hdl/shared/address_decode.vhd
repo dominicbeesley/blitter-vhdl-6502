@@ -77,7 +77,7 @@ begin
 	
 
 
-	p_map:process(addr_i)
+	p_map:process(addr_i, we_i)
 	begin
 		peripheral_sel_oh_o <= (others => '0');
 		if (addr_i(23 downto 22) = "11") then								-- "11xx xxxx"
@@ -126,6 +126,9 @@ begin
 				if addr_i(15) = '1' and G_INCL_PREBOOT then
 					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_PREBOOT, numbits(G_PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_PREBOOT) <= '1';
+				elsif addr_i(14) = '1' then
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CONFIG, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_oh_o(PERIPHERAL_NO_CONFIG) <= '1';
 				else
 					-- version
 					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(G_PERIPHERAL_COUNT));

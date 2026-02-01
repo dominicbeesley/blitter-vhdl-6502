@@ -59,6 +59,7 @@ library work;
 use work.fishbone.all;
 use work.fb_sys_pack.all;
 use work.common.all;
+use work.board_config_pack.all;
 
 entity log2phys is
 	generic (
@@ -201,7 +202,7 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_mosrom_A <= x"FF" & "11";								-- SYS																FF C000 - FF FFFF
 			if cfg_swram_enable_i = '1' or G_C20K then
-				if preboot_i = '1' then
+				if preboot_i = '1' and G_INCL_PREBOOT then
 					r_mosrom_A <= G_PRE_BOOT_BANK;
 				elsif noice_debug_shadow_i = '1' then
 					if cfg_map0n1_i = '1' then		

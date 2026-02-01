@@ -214,6 +214,7 @@ architecture rtl of C20K is
 
    signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
    
+   signal i_cfg_eco_station_id: std_logic_vector(7 downto 0);
    -----------------------------------------------------------------------------
    -- fishbone signals
    -----------------------------------------------------------------------------
@@ -239,6 +240,11 @@ architecture rtl of C20K is
 	-- version info wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
+
+   -- config wrapper
+   signal i_c2p_config        : fb_con_o_per_i_t;
+   signal i_p2c_config        : fb_con_i_per_o_t;
+
 
    -- led array wrapper
    signal i_c2p_led_arr       : fb_con_o_per_i_t;
@@ -420,6 +426,11 @@ architecture rtl of C20K is
    signal i_vid_b_0  : std_logic;
    signal i_vid_chroma_0  : std_logic;
 
+   -----------------------------------------------------------------------------
+   -- debug
+   -----------------------------------------------------------------------------
+
+
 begin
 
    e_pll_27_360: entity work.pll_27_360
@@ -550,20 +561,19 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 
 END GENERATE;   
 
-	i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
-	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
-	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
-   i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
+	i_con_c2p_intcon(MAS_NO_CPU)              <= i_c2p_cpu;
+	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	   <=	i_p2c_memctl;
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)   <=	i_p2c_mem;
+   i_per_p2c_intcon(PERIPHERAL_NO_SYS)       <= i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
+   i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
-
-
-
+   i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
@@ -688,6 +698,18 @@ END GENERATE;
 		cfg_bits_i							=> r_cfg_ver_boot
 
 	);
+
+   e_fb_config:entity work.fb_config
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_config,
+      fb_p2c_o                      => i_p2c_config,
+
+      cfg_eco_station_id_o          => i_cfg_eco_station_id
+
+   );
 
 
 	e_memctl:entity work.fb_memctl 
@@ -841,7 +863,10 @@ END GENERATE;
       c20k_latch_o                  => i_c20k_latch,
       psg_audio_o                   => i_psg_audio,
 
-      p_d_cas_o                     => cassette_o
+      p_d_cas_o                     => cassette_o,
+
+      -- config in
+      cfg_eco_station_id_i          => i_cfg_eco_station_id
    );
    
    -------------------------------------
@@ -1096,7 +1121,10 @@ end generate;
                i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
                i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
                i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
-            end loop;
+               --i_debug_leds(I).red <= (others => '0');
+               --i_debug_leds(I).green <= (others => '0');
+               --i_debug_leds(I).blue <= (others => '0');
+            end loop;            
          end if;
 
          if icipo_btn2 = '0' then

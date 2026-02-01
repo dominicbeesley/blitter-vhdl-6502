@@ -66,7 +66,7 @@ end fb_version;
 
 architecture rtl of fb_version is
 
-	type 	 	state_mem_t is (idle, act, wrel);
+	type 	 	state_mem_t is (idle, act);
 
 	signal	state			: state_mem_t;
 
@@ -173,7 +173,7 @@ begin
 						state <= idle;
 				end case;
 
-				if fb_c2p_i.cyc = '0' or fb_c2p_i.A_stb = '0' then
+				if fb_c2p_i.cyc = '0' then
 					state <= idle;
 				end if;
 
