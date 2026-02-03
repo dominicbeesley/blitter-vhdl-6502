@@ -1179,7 +1179,7 @@ begin
          r_cfg_ver_boot(5) <= not r_cfg_mosram;
          r_cfg_ver_boot(6) <= r_cfg_swram_enable;
       else
-         r_cfg_ver_boot(4) <= not (i_map0n1 xor not r_cfg_cpu_use_t65);         
+         r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;         
       end if;
    end if;
 end process;
