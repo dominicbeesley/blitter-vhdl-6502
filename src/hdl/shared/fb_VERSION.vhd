@@ -66,7 +66,7 @@ end fb_version;
 
 architecture rtl of fb_version is
 
-	type 	 	state_mem_t is (idle, act);
+	type 	 	state_mem_t is (idle, act, wrel);
 
 	signal	state			: state_mem_t;
 
@@ -169,7 +169,10 @@ begin
 							r_Q <= i_Q;
 						end if;
 						r_ack <= '1';
+						state <= wrel;
+					when wrel => null; -- wait for release of cyc
 					when others =>
+						r_ack <= '1';
 						state <= idle;
 				end case;
 

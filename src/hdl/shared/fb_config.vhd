@@ -67,7 +67,7 @@ end fb_config;
 
 architecture rtl of fb_config is
 
-	type 	 	state_mem_t is (idle, rd, wr, wr_wait);
+	type 	 	state_mem_t is (idle, rd, wr, wr_wait, wrel);
 
 	signal	state			: state_mem_t;
 
@@ -142,9 +142,11 @@ begin
 								r_Q <= x"FF";
 						end case;
 						r_ack <= '1';
+					when wrel => null; -- wait for release of cyc
 					when others =>
 						r_ack <= '1';
-				end case;
+						state <= idle;
+					end case;
 
 				if fb_c2p_i.cyc = '0' then
 					state <= idle;
