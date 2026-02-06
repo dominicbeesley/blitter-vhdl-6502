@@ -29,7 +29,8 @@ below. The following sections describe these in more detail.
 
  | Physical address         | hardware item         |
  |--------------------------|-----------------------|
- | $00 0000 - $7F FFFF      | ChipRAM               | 
+ | $00 0000 - $5F FFFF      | ChipRAM               | 
+ | $60 0000 - $7F FFFF      | BB RAM                | 
  | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
  | $C0 0000 - $F9 FFFF      | Undefined do not use  | !!!! Used by 65816 for access to SYS without log mapping
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
@@ -51,6 +52,11 @@ and arrangement of RAM will depend on which revision and level of board.
 When accessing ChipRAM on a MOS compatible system it is advised that the memory
 layout be divined using the OSWORD 99 calls available through the Utility ROM
 wherever possible.
+
+### BB RAM
+
+Battery backed RAM present on Mk.2, Mk.3 and C20K boards, typically there is 
+one megabyte of RAM that repeats here.
 
 #### Paula
 
@@ -773,7 +779,9 @@ Bit 6, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and
 synchronized with the motherboard phi2 clock when accessing the MOS area at 
 FF C000-FF FFFF (except for hardware registers)
 
-Bit 5, writing bit 5 will cancel the preboot mapping - see PREBOOT
+Bit 5, writing bit 5 will cancel the preboot mapping - see PREBOOT. This is 
+typically set at reset and the pre-boot mini-rom will unset it and "reboot" by
+returning the SYSVIA state to how it was before the preboot-1 rom was entered.
 
 Bit 4, this bit selects between rom maps 0 and 1, it is normally set at boot time 
 bit may be used to swap out the MOS rom programmatically
@@ -1047,7 +1055,7 @@ The pre-boot is a tiny <256 MOS rom that is mapped in for each reset, this rom
 is part of the main FPGA bitstream. If a certain key combination is held down 
 (COPY-ESC-BREAK) the pre-boot MOS will bootstrap a more complicated BIOS-like 
 menu system. This will be loaded from the FPGA's SPI Flash configuration memory
-(user flash on Mk.3/MAX10).
+(user flash on Mk.3/MAX10). See [preboot readme](../src/roms/preboot/readme.md)
 
 # The NoIce debugger
 
