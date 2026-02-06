@@ -134,6 +134,7 @@ begin
 							when others => null;
 						end case;						
 						r_ack <= '1';
+						state <= wrel;
 					when rd =>
 						case to_integer(unsigned(r_A(7 downto 0))) is
 							when IX_STAT_ID =>
@@ -142,6 +143,7 @@ begin
 								r_Q <= x"FF";
 						end case;
 						r_ack <= '1';
+						state <= wrel;
 					when wrel => null; -- wait for release of cyc
 					when others =>
 						r_ack <= '1';
