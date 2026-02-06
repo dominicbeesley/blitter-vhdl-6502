@@ -1192,7 +1192,7 @@ begin
          r_cfg_ver_boot(5) <= not r_cfg_mosram;
          r_cfg_ver_boot(6) <= r_cfg_swram_enable;
       else
-         r_cfg_ver_boot(4) <= r_cfg_ver_boot(3) xor i_map0n1;         
+         r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;         
       end if;
    end if;
 end process;
@@ -1204,7 +1204,7 @@ i_memctl_configbits <=
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
-	(i_map0n1 xor r_cfg_cpu_use_t65) & 
+	(i_map0n1 xor not r_cfg_cpu_use_t65) & --swromx
 	r_cfg_mk2_cpubits &
 	not r_cfg_cpu_use_t65;
 
