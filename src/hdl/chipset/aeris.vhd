@@ -21,8 +21,10 @@
 -- THE SOFTWARE.
 -- -----------------------------------------------------------------------------
 
---TODO: uses ack, could maybe use rdy_ctdb?
+--TODO: combine pointers and counters in single array and work out state machine
+--      to only update one row per cycle
 
+--TODO: separate internal logic from bus controller process/module
 
 ----------------------------------------------------------------------------------
 -- Company: 			Dossytronics
@@ -295,8 +297,6 @@ begin
 				r_arg_1 <= (others => '0');
 				r_arg_2 <= (others => '0');
 				r_op_skip <= '0';
-				r_pointers <= (others => (others => '0'));
-				r_counters <= (others => (others => '0'));
 				r_play_ctr <= (others => '0');
 				r_play_ptrreg <= (others => '0');
 				r_play_started <= '0';
@@ -305,14 +305,18 @@ begin
 				r_cpu_halt<= '0';		
 
 				r_ctr_wr_ack <= '0';
-				r_ctr_wr_req <= '0';
+				r_ctr_wr_req <= '1';
 				r_ctr_wr_ix <= (others => '0');
 				r_ctr_wr_val <= (others => '0');
 
 				r_ptr_wr_ack <= '0';
-				r_ptr_wr_req <= '0';
+				r_ptr_wr_req <= '1';
 				r_ptr_wr_ix <= (others => '0');
 				r_ptr_wr_val <= (others => '0');
+
+--				r_pointers <= (others => (others => '0')); -- allow these to initialise on release cycle
+--				r_counters <= (others => (others => '0')); -- allow these to initialise on release cycle
+
 
 			elsif rising_edge(fb_syscon_i.clk) then 
 				r_con_cyc_ack <= '0';
