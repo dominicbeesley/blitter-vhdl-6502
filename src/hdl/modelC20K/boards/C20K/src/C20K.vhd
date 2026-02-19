@@ -930,7 +930,7 @@ END GENERATE;
          generic map (
             G_ADDR_W => 8,   -- 256 bytes
             G_READONLY => true,
-            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1-c20k/preboot1-c20k.vec"
+            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1-c20k/preboot1-c20k.vec" -- TODO: make this deploy from code project into here
             )
          port map (
             -- fishbone signals

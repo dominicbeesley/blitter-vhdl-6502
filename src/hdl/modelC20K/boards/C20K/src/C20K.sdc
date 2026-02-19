@@ -51,15 +51,15 @@ set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen
 set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
 set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
 
-#set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
-#set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
 
-#set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
-#set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
 
-#set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
-#set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
+set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
 
-#set_multicycle_path -setup -end -from [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
-#set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
+set_multicycle_path -setup -end -from [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
+set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
 
