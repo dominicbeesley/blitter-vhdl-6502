@@ -26,6 +26,8 @@
 
 --TODO: separate internal logic from bus controller process/module
 
+--TODO: simplify more like the Amiga with just WAIT, MOVE, SKIP?
+
 ----------------------------------------------------------------------------------
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
