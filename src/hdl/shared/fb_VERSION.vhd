@@ -169,11 +169,14 @@ begin
 							r_Q <= i_Q;
 						end if;
 						r_ack <= '1';
+						state <= wrel;
+					when wrel => null; -- wait for release of cyc
 					when others =>
+						r_ack <= '1';
 						state <= idle;
 				end case;
 
-				if fb_c2p_i.cyc = '0' or fb_c2p_i.A_stb = '0' then
+				if fb_c2p_i.cyc = '0' then
 					state <= idle;
 				end if;
 

@@ -59,13 +59,15 @@ library work;
 use work.fishbone.all;
 use work.fb_sys_pack.all;
 use work.common.all;
+use work.board_config_pack.all;
 
 entity log2phys is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_MK3									: boolean := false;
 		G_C20K								: boolean := false;
-		G_SYSVIA_BLOCK_LEN				: natural := 20								-- number of 2MHz cycles to throttle for
+		G_SYSVIA_BLOCK_LEN				: natural := 20;								-- number of 2MHz cycles to throttle for
+		G_PRE_BOOT_BANK					: std_logic_vector(23 downto 14) := x"FC" & "11"
 	);
 	port(
 
@@ -74,9 +76,8 @@ entity log2phys is
 
 		-- config signals
 		cfg_swram_enable_i				: in std_logic;
-		cfg_swromx_i						: in std_logic;
+		cfg_map0n1_i						: in std_logic;
 		cfg_mosram_i						: in std_logic;
-		cfg_t65_i							: in std_logic;
 		cfg_sys_via_block_i				: in std_logic;
 		cfg_sys_type_i						: in sys_type;
 
@@ -85,7 +86,7 @@ entity log2phys is
 		JIM_page_i							: in  std_logic_vector(15 downto 0);
 		turbo_lo_mask_i					: in	std_logic_vector(7 downto 0);
 
-		mos_throttle_i						: in  std_logic;
+		throttle_mos_i						: in  std_logic;
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
 		throttle_all_i						: in  std_logic;
 		throttle_act_o						: out std_logic;
@@ -104,6 +105,9 @@ entity log2phys is
 		-- noice debugger signals to cpu
 		noice_debug_shadow_i				: in std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
 
+		-- pre-boot							
+		preboot_i							: in 	std_logic := '0';		-- the pre-boot 6502 MOS is active
+
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
 		instruction_fetch_i				: in  std_logic;		-- qualify current cycle as an instruction fetch
@@ -119,7 +123,6 @@ architecture rtl of log2phys is
 	constant SYS_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
 	constant USR_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
 
-	signal map0n1 : boolean;
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
 
@@ -134,6 +137,7 @@ architecture rtl of log2phys is
 	signal r_rom_autohazel_cur 	: std_logic;   -- set to '1' when the currently selected ROM is marked for auto-hazel
 	signal r_instr_autohazel_cur 	: std_logic;	-- set to '1' when the current instruction is from a ROM that is marked for auto-hazel
 	signal i_autohazel 				: std_logic;	-- set to '1' when the current cycle is from a ROM that is marked for auto-hazel
+	signal r_window_en				: std_logic;
 	signal r_window_65815_l			: std_logic_vector(12 downto 0);
 	signal r_window_65815_h			: std_logic_vector(12 downto 0);
 
@@ -143,17 +147,17 @@ architecture rtl of log2phys is
 
 begin
 
-	map0n1 <= cfg_t65_i = '1' xor cfg_swromx_i = '1';
-
 	p_window:process(fb_syscon_i, r_mosrom_A)
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			if fb_syscon_i.rst = '1' then
 				r_window_65815_l <= r_mosrom_A & "100";
 				r_window_65815_h <= r_mosrom_A & "101";
+				r_window_en <= '0';
 			elsif window_65816_wr_en_i = '1' then
 				r_window_65815_l <= window_65816_i;
 				r_window_65815_h <= std_logic_vector(unsigned(window_65816_i) + 1);
+				r_window_en <= '1';
 			end if;
 		end if;
 	end process;
@@ -163,7 +167,7 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_pagrom_A <= x"FF" & "10";
 			if (cfg_swram_enable_i = '1' or G_C20K) and fb_syscon_i.rst = '0' then
-				if map0n1 then
+				if cfg_map0n1_i = '1' then
 					if sys_ROMPG_i(3 downto 0) = x"E" and (G_MK3 or G_C20K) then -- special turbo ROM
 						r_pagrom_A <= x"1F" & "00";
 					elsif G_C20K or (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
@@ -198,25 +202,27 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 			r_mosrom_A <= x"FF" & "11";								-- SYS																FF C000 - FF FFFF
 			if cfg_swram_enable_i = '1' or G_C20K then
-				if noice_debug_shadow_i = '1' then
-					if map0n1 then		
+				if preboot_i = '1' and G_INCL_PREBOOT then
+					r_mosrom_A <= G_PRE_BOOT_BANK;
+				elsif noice_debug_shadow_i = '1' then
+					if cfg_map0n1_i = '1' then		
 						r_mosrom_A <= x"9F" & "11";							-- NOICE shadow MOS from slot #F map 0 					9F C000 - 9F FFFF
 					else
-						r_mosrom_A <= x"9D" & "11";							-- NOICE shadow MOS from slot #F map 0						9D C000 - 9D FFFF
+						r_mosrom_A <= x"9D" & "11";							-- NOICE shadow MOS from slot #F map 1						9D C000 - 9D FFFF
 					end if;			
 				elsif swmos_shadow_i = '1' or cfg_mosram_i = '1' then
-					if map0n1 then
+					if cfg_map0n1_i = '1' then
 						r_mosrom_A <= x"7F" & "00";							-- SWMOS from slot #8 map 0 RAM at							7F 0000 - 7F 3FFF
 					else
 						r_mosrom_A <= x"7D" & "00";							-- SWMOS from slot #8 map 1 RAM at							7D 0000 - 7D 3FFF
 					end if;
-				elsif not map0n1 then
+				elsif not cfg_map0n1_i = '1' then
 					r_mosrom_A <= x"9D" & "00";								-- SWMOS from slot #9 map 1									9D 0000 - 9D 3FFF
-				elsif map0n1 and G_C20K then
+				elsif cfg_map0n1_i = '1' and G_C20K then
 					r_mosrom_A <= x"9F" & "00";								-- SWMOS from slot #9 map 0 on C20K							9F 0000 - 9F 3FFF
 				end if;
 			end if;
-			r_mos_throttle_reg <= mos_throttle_i;
+			r_mos_throttle_reg <= throttle_mos_i;
 			r_all_throttle_reg <= throttle_all_i;
 		end if;
 	end process;
@@ -247,9 +253,9 @@ begin
 						-- Hazel from 00 C000-DFFF
 						A_o <= x"00" & "110" & A_i(12 downto 0);
 					else
-						if A_i(13 downto 11) = "100" then
+						if r_window_en = '1' and A_i(13 downto 11) = "100" then
 							A_o <= r_window_65815_l & A_i(10 downto 0);
-						elsif A_i(13 downto 11) = "101" then
+						elsif r_window_en = '1' and A_i(13 downto 11) = "101" then
 							A_o <= r_window_65815_h & A_i(10 downto 0);
 						else
 							A_o <= r_mosrom_A & A_i(13 downto 0);		
