@@ -22,6 +22,7 @@
 
         <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
 
         <File path="src/gowin_rpll/pll_pal_sc.vhd" type="file.vhdl" enable="1"/>
 
@@ -63,6 +64,7 @@
         <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_VERSION.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_config.vhd" type="file.vhdl" enable="1" />
 
 
         <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />

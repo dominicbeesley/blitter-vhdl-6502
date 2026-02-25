@@ -224,11 +224,6 @@ architecture rtl of C20KFirstLight is
    signal i_c2p_uart          : fb_con_o_per_i_t;
    signal i_p2c_uart          : fb_con_i_per_o_t;
 
-   -- FPGA config flash
-   signal i_c2p_xflash          : fb_con_o_per_i_t;
-   signal i_p2c_xflash          : fb_con_i_per_o_t;
-
-
    -- sys bus wrapper
    signal i_c2p_sys               : fb_con_o_per_i_t;
    signal i_p2c_sys               : fb_con_i_per_o_t;
@@ -444,7 +439,6 @@ begin
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
    i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
    i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
-   i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem_rom        <= i_per_c2p_intcon(PERIPHERAL_NO_MEM_ROM);
@@ -452,7 +446,6 @@ begin
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
    i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
-   i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
 
    e_fb_mem_rom: entity work.fb_P20K_mem
    generic map (
@@ -695,30 +688,36 @@ END GENERATE;
 
 
    b_spi:block
-   signal i_SPI_CS: std_logic_vector(7 downto 0);
+      signal i_SPI_CS: std_logic_vector(7 downto 0);
+      -- FPGA config flash
+      signal i_c2p_xflash          : fb_con_o_per_i_t;
+      signal i_p2c_xflash          : fb_con_i_per_o_t;
    begin
-   e_fb_xflash:entity work.fb_spi
-   generic map (
-      SIM                           => SIM,
-      CLOCKSPEED                    => CLOCKSPEED,
-      PRESCALE                      => 1
-   )
-   port map (
+      e_fb_xflash:entity work.fb_spi
+      generic map (
+         SIM                           => SIM,
+         CLOCKSPEED                    => CLOCKSPEED,
+         PRESCALE                      => 1
+      )
+      port map (
 
-      -- eeprom signals
-      SPI_CS_o                      => i_SPI_CS,
-      SPI_CLK_o                     => flash_ck_o,
-      SPI_MOSI_o                    => flash_mosi_o,
-      SPI_MISO_i                    => flash_miso_i,
-      SPI_DET_i                     => '1',
+         -- eeprom signals
+         SPI_CS_o                      => i_SPI_CS,
+         SPI_CLK_o                     => flash_ck_o,
+         SPI_MOSI_o                    => flash_mosi_o,
+         SPI_MISO_i                    => flash_miso_i,
+         SPI_DET_i                     => '1',
 
-      -- fishbone signals
+         -- fishbone signals
 
-      fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_xflash,
-      fb_p2c_o                      => i_p2c_xflash
-   );
-   flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         fb_syscon_i                   => i_fb_syscon,
+         fb_c2p_i                      => i_c2p_xflash,
+         fb_p2c_o                      => i_p2c_xflash
+      );
+      
+      flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+      i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+      i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
    end block;
 
 

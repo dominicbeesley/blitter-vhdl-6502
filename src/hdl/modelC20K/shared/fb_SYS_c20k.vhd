@@ -133,7 +133,10 @@ entity fb_SYS_c20k is
       c20k_latch_o                     : out    std_logic_vector(7 downto 0);
       psg_audio_o                      : out    signed(13 downto 0);
 
-      p_d_cas_o                        : out    std_logic
+      p_d_cas_o                        : out    std_logic;
+
+      -- configure signals in
+      cfg_eco_station_id_i             : in     std_logic_vector(7 downto 0)
 
    );
 end fb_SYS_c20k;
@@ -701,7 +704,7 @@ begin
             if r_sysvia_nCS2 = '0' then
                r_local_d_o <= i_sysvia_d_o;
             elsif r_intoff_nCS = '0' then
-               r_local_d_o <= x"23";
+               r_local_d_o <= cfg_eco_station_id_i;
             else
                r_local_d_o <= i_acia_d_o;
             end if;

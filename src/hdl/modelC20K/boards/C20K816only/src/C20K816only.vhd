@@ -199,9 +199,9 @@ architecture rtl of C20K816only is
 	-- config signals
 	-----------------------------------------------------------------------------
 
+
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
-	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
 
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
@@ -213,6 +213,9 @@ architecture rtl of C20K816only is
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
 
+   signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
+
+   signal i_cfg_eco_station_id: std_logic_vector(7 downto 0);
    -----------------------------------------------------------------------------
    -- fishbone signals
    -----------------------------------------------------------------------------
@@ -238,6 +241,19 @@ architecture rtl of C20K816only is
 	-- version info wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
+
+   -- config wrapper
+   signal i_c2p_config        : fb_con_o_per_i_t;
+   signal i_p2c_config        : fb_con_i_per_o_t;
+
+
+   -- led array wrapper
+   signal i_c2p_led_arr       : fb_con_o_per_i_t;
+   signal i_p2c_led_arr       : fb_con_i_per_o_t;
+
+   -- debug uart wrapper
+   signal i_c2p_uart       : fb_con_o_per_i_t;
+   signal i_p2c_uart       : fb_con_i_per_o_t;
 
 	--chipset peripheral
 	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
@@ -271,14 +287,9 @@ architecture rtl of C20K816only is
 
 	signal i_swmos_shadow				: std_logic;							-- shadow mos from SWRAM slot #8	
 
-	signal i_flasher						: std_logic_vector(3 downto 0);	-- a simple set of slow clocks for generating flashing 
-																							-- LED sfishals
-	signal i_clk_fish_128M				: std_logic;							-- the main system clock from the pll - don't use this
-																							-- use fb_syscon.clk
-	signal i_clk_lock						: std_logic;							-- indicates whether the main pll is locked
-	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
+   signal i_preboot                 : std_logic;
 
    -----------------------------------------------------------------------------
    -- intcon to peripheral sel
@@ -298,6 +309,7 @@ architecture rtl of C20K816only is
 	-----------------------------------------------------------------------------
 	-- cpu control signals
 	-----------------------------------------------------------------------------
+	signal i_cpu_IRQ_n					: std_logic;
 	signal i_chipset_cpu_halt			: std_logic; -- TODO: ignored
 	signal i_chipset_cpu_int			: std_logic; -- TODO: ignored
 
@@ -305,12 +317,14 @@ architecture rtl of C20K816only is
    signal i_window_65816            : std_logic_vector(12 downto 0);
    signal i_window_65816_wr_en      : std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_all     			: std_logic;
+   signal i_throttle_mos            : std_logic;
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
 	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
 	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
+   signal i_debug_throttle_act      : std_logic;
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
 	-----------------------------------------------------------------------------
@@ -404,6 +418,10 @@ architecture rtl of C20K816only is
    signal i_vid_g_0  : std_logic;
    signal i_vid_b_0  : std_logic;
    signal i_vid_chroma_0  : std_logic;
+
+   -----------------------------------------------------------------------------
+   -- debug
+   -----------------------------------------------------------------------------
 
 begin
 
@@ -540,15 +558,14 @@ END GENERATE;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
+   i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
-
-
-
+   i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 --TODO:NO MASTERS	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
@@ -679,6 +696,18 @@ END GENERATE;
 
 	);
 
+   e_fb_config:entity work.fb_config
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_config,
+      fb_p2c_o                      => i_p2c_config,
+
+      cfg_eco_station_id_o          => i_cfg_eco_station_id
+
+   );
+
 
 	e_memctl:entity work.fb_memctl 
 	generic map (
@@ -691,6 +720,9 @@ END GENERATE;
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
+      map0n1_swromx_i               => not icipo_btn1,
+      map0n1_default_i              => r_cfg_cpu_use_t65,
+      map0n1_o                      => i_map0n1,
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				=> open,
@@ -704,10 +736,15 @@ END GENERATE;
 
 		-- noice debugger button		
 		noice_debug_button_i				=> '0',
+      -- pre-boot
+      preboot_o                     => i_preboot,
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_o 				=> i_throttle_cpu_2MHz,
+		throttle_all_o  				  => i_throttle_all,
+      throttle_mos_o               => i_throttle_mos,
+      rom_throttle_map_o            => i_rom_throttle_map,
+      rom_autohazel_map_o           => i_rom_autohazel_map,
 
 		-- fishbone signals
 
@@ -719,10 +756,8 @@ END GENERATE;
 
 		boot_65816_o						=> i_boot_65816,
       window_65816_o                => i_window_65816,
-      window_65816_wr_en_o          => i_window_65816_wr_en,
+      window_65816_wr_en_o          => i_window_65816_wr_en
 
-		rom_throttle_map_o				=> i_rom_throttle_map,
-		rom_autohazel_map_o				=> i_rom_autohazel_map
 	);
 
 
@@ -826,9 +861,90 @@ END GENERATE;
       c20k_latch_o                  => i_c20k_latch,
       psg_audio_o                   => i_psg_audio,
 
-      p_d_cas_o                     => cassette_o
+      p_d_cas_o                     => cassette_o,
+
+      -- config in
+      cfg_eco_station_id_i          => i_cfg_eco_station_id
    );
    
+   -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+   g_spi_flash:if G_INCL_XFLASH generate
+      b_spi:block
+         signal i_SPI_CS: std_logic_vector(7 downto 0);
+         -- FPGA config flash
+         signal i_c2p_xflash          : fb_con_o_per_i_t;
+         signal i_p2c_xflash          : fb_con_i_per_o_t;         
+      begin
+         e_fb_xflash:entity work.fb_spi
+         generic map (
+            SIM                           => SIM,
+            CLOCKSPEED                    => CLOCKSPEED,
+            PRESCALE                      => 1
+         )
+         port map (
+
+            -- eeprom signals
+            SPI_CS_o                      => i_SPI_CS,
+            SPI_CLK_o                     => flash_ck_o,
+            SPI_MOSI_o                    => flash_mosi_o,
+            SPI_MISO_i                    => flash_miso_i,
+            SPI_DET_i                     => '1',
+
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_xflash,
+            fb_p2c_o                      => i_p2c_xflash
+         );
+      
+         flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+         i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+      end block;
+   end generate;
+
+   g_not_spi_flash:if not G_INCL_XFLASH generate
+
+      flash_ck_o           <= '1';
+      flash_cs_o           <= '1';
+      flash_mosi_o         <= '1';
+
+   end generate;
+
+   -------------------------------------
+   -- PRE-BOOT ROM
+   -------------------------------------
+
+   g_pre_rom:if G_INCL_PREBOOT generate
+      b_spi:block
+         signal i_c2p_preboot          : fb_con_o_per_i_t;
+         signal i_p2c_preboot          : fb_con_i_per_o_t;         
+      begin
+
+         e_fb_mem_rom: entity work.fb_P20K_mem
+         generic map (
+            G_ADDR_W => 8,   -- 256 bytes
+            G_READONLY => true,
+            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1-c20k/preboot1-c20k.vec"
+            )
+         port map (
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_preboot,
+            fb_p2c_o                      => i_p2c_preboot
+
+         );      
+
+         i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
+         i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
+      end block;
+   end generate;
+
+
 
 p_reg_128:process(i_fb_syscon)
 begin
@@ -838,6 +954,39 @@ begin
    end if;
 end process;
 
+G_DBG_UART:if G_INCL_DBG_UART generate
+   i_per_p2c_intcon(PERIPHERAL_NO_UART)   <= i_p2c_uart;
+   i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
+
+   p_uart_clk:process(i_fb_syscon)
+   begin
+      if rising_edge(i_fb_syscon.clk) then
+         r_clken_baud16 <= '0';
+         if i_fb_syscon.rst = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+         elsif r_clk_baud_div(r_clk_baud_div'high) = '1' then
+            r_clk_baud_div <= to_unsigned(C_BAUD_CKK16_DIV-1, r_clk_baud_div'length);
+            r_clken_baud16 <= '1';
+         else
+            r_clk_baud_div <= r_clk_baud_div - 1;
+         end if;
+      end if;
+   end process;
+
+   e_fb_uart: entity work.fb_uart
+   port map (
+      baud16_clken_i => r_clken_baud16,
+      ser_rx_i       => uart2_rx_i,
+      ser_tx_o       => uart2_tx_o,
+
+      -- fishbone signals
+
+      fb_syscon_i    => i_fb_syscon,
+      fb_c2p_i    => i_c2p_uart,
+      fb_p2c_o    => i_p2c_uart
+
+   );
+end generate;
 
    e_mem_cpu_65816: entity work.fb_C20K_mem_cpu_65816
    generic map (
@@ -854,12 +1003,13 @@ end process;
 --		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
@@ -892,6 +1042,10 @@ end process;
 
       -- debug
       debug_cpu_instr_A             => i_debug_cpu_instr_a,
+      debug_throttle_act_o          => i_debug_throttle_act,
+
+      -- preboot
+      preboot_i                     => i_preboot,
 
       -- memory motherboard signals
       MEM_A_io                      => MEM_A_io,
@@ -916,8 +1070,32 @@ end process;
 
 
    );
+   
+	i_cpu_IRQ_n <= not i_chipset_cpu_int and i_sys_nIRQ;
+
+g_led_arr:if G_INCL_LED_ARR generate
+   i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
+   i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
 
 
+
+--   TODO: move to chipset?
+   e_fb_led_arr:entity work.fb_ws2812
+   generic map (
+      G_CLOCKSPEED => CLOCKSPEED * 1000000,
+      G_N_CHAIN => 8
+      )
+   port map (
+
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_led_arr,
+      fb_p2c_o                      => i_p2c_led_arr,
+
+      led_serial_o                  => open --ui_leds_o
+   );
+end generate;
 
    -------------------------------------
    -- DEBUG LEDS
@@ -954,8 +1132,13 @@ end process;
                i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
                i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
                i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
+               --i_debug_leds(I).red <= (others => '0');
+               --i_debug_leds(I).green <= (others => '0');
+               --i_debug_leds(I).blue <= (others => '0');
             end loop;
-         end if;
+
+            
+         end if;         
 
          if icipo_btn2 = '0' then
             vr_btn := (others => '0');
@@ -991,7 +1174,6 @@ end process;
 
                      
 r_cfg_cpu_use_t65 <= '0';
-r_cfg_swromx <= '0';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
@@ -1007,9 +1189,10 @@ begin
          r_cfg_ver_boot <= (others => '1');
          r_cfg_ver_boot(15 downto 9) <= "1100101"; -- CPU=65816
          r_cfg_ver_boot(3) <= not r_cfg_cpu_use_t65;
-         r_cfg_ver_boot(4) <= not r_cfg_swromx;
          r_cfg_ver_boot(5) <= not r_cfg_mosram;
          r_cfg_ver_boot(6) <= r_cfg_swram_enable;
+      else
+         r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;         
       end if;
    end if;
 end process;
@@ -1021,7 +1204,7 @@ i_memctl_configbits <=
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
-	r_cfg_swromx &
+	(i_map0n1 xor not r_cfg_cpu_use_t65) & --swromx
 	r_cfg_mk2_cpubits &
 	not r_cfg_cpu_use_t65;
 
@@ -1069,9 +1252,9 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA27_R_o				=> open,
 		VGA27_G_o				=> open,
 		VGA27_B_o				=> open,
-		VGA27_HS_o				=> sd1_cs_o,
-		VGA27_VS_o				=> sd1_sclk_o,
-		VGA27_BLANK_o			=> sd1_mosi_o,
+		VGA27_HS_o				=> open,
+		VGA27_VS_o				=> open,
+		VGA27_BLANK_o			=> open,
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
@@ -1095,16 +1278,9 @@ END GENERATE;
       ddr_dqs_io           <= (others => 'Z');
       ddr_dm_io            <= (others => 'Z');
 
-
-      flash_ck_o           <= '1';
-      flash_cs_o           <= '1';
-      flash_mosi_o         <= '1';
-
-
-      
--- hdmi debug --      sd1_cs_o             <= '0';
--- hdmi debug --      sd1_mosi_o           <= '0';
--- hdmi debug --      sd1_sclk_o           <= '0';
+	sd1_cs_o             <= '0';
+      sd1_mosi_o           <= '0';
+      sd1_sclk_o           <= '0';
 
 
 
