@@ -171,6 +171,7 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_phigen.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_SYS_clock_dll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_VERSION.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/fb_config.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_exp_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_t65.vhd

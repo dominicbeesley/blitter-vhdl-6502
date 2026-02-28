@@ -1039,12 +1039,14 @@ end generate;
       -- direct CPU control signals from system
       nmi_n_i                       => i_sys_nNMI,
       irq_n_i                       => i_cpu_IRQ_n,
-      cpu_halt_i                    => i_chipset_cpu_halt,
 
       -- fishbone signals
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_o                      => i_c2p_cpu,
       fb_p2c_i                      => i_p2c_cpu,
+
+      -- chipset control signals
+      cpu_halt_i                    => i_chipset_cpu_halt,
 
       -- debug
       debug_cpu_instr_A             => i_debug_cpu_instr_a,

@@ -86,7 +86,7 @@ entity fb_cpu is
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 
 		-- cpu throttle
@@ -744,14 +744,13 @@ begin
 		fb_per_p2c_i							=> fb_p2c_i,
 
 		-- per cpu config
-		cfg_t65_i								=> r_cpu_en_t65,
 		cfg_sys_via_block_i					=> r_do_sys_via_block,
 		
 		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_swromx_i							=> cfg_swromx_i,
+		cfg_map0n1_i							=> cfg_map0n1_i,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
