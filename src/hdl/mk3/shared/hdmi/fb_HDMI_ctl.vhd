@@ -38,7 +38,9 @@ entity fb_HDMI_ctl is
 		avi_o									: out		std_logic_vector(111 downto 0);
 
 		pixel_double_o						: out		std_logic;
-		audio_enable_o						: out		std_logic
+		audio_enable_o						: out		std_logic;
+
+		ilace_i								: in		std_logic
 
 	);
 end fb_HDMI_ctl;
@@ -52,6 +54,8 @@ architecture rtl of fb_HDMI_ctl is
 
 	signal r_avi_lat						: std_logic_vector(111 downto 0) := C_DEFAULT_AVI;
 
+	signal r_avi_default					: std_logic;
+
 
 	signal r_pixel_double				: std_logic;
 	signal r_audio_enable				: std_logic;
@@ -63,10 +67,20 @@ architecture rtl of fb_HDMI_ctl is
 	signal r_d_wr							: std_logic_vector(7 downto 0);
 	signal r_d_wr_stb						: std_logic;
 	signal r_ack							: std_logic;
+	signal i_D_rd							: std_logic_vector(7 downto 0);
 
 begin
 
+	p_avi_override:process(fb_syscon_i)
+	begin
+		if rising_edge(fb_syscon_i.clk) then
 	avi_o <= r_avi_lat;
+			if r_avi_default = '1' then
+				avi_o(33) <= not ilace_i;
+			end if;
+		end if;
+	end process;
+
 	pixel_double_o <= r_pixel_double;
 	audio_enable_o <= r_audio_enable;
 
@@ -77,6 +91,7 @@ begin
 			r_audio_enable <= '1';
 			r_avi <= C_DEFAULT_AVI;
 			r_avi_lat <= C_DEFAULT_AVI;
+			r_avi_default <= '1';
 		else
 			if rising_edge(fb_syscon_i.clk) then
 
@@ -115,6 +130,7 @@ begin
 							r_audio_enable <= r_d_wr(1);
 						when 15 =>
 							r_avi_lat <= r_avi;
+							r_avi_default <= '0';
 						when others => null;
 						end case;
 				end if;	
@@ -122,7 +138,7 @@ begin
 		end if;
 	end process;
 
-	fb_p2c_o.D_rd <=
+	i_D_rd <=
 		r_avi(7 downto 0) when r_A = x"0" else
 		r_avi(15 downto 8) when r_A = x"1" else
 		r_avi(23 downto 16) when r_A = x"2" else
@@ -180,6 +196,7 @@ begin
 				when rd =>
 					r_ack <= '1';
 					r_per_state <= idle;	
+					fb_p2c_o.D_rd <= i_D_rd;
 				when others =>
 					r_per_state <= idle;
 					r_ack <= '1';

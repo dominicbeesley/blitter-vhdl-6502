@@ -130,9 +130,6 @@ architecture rtl of fb_hdmi is
 	signal i_sprites_fb_p2c				: fb_con_i_per_o_t;
 
 
-	-- DVI PLL
-	signal i_clk_hdmi_pixel				: std_logic;
-	signal i_clk_hdmi_tmds				: std_logic;
 
 	--========== LOCAL VIDEO =========--
 	signal i_VIDRAM_A						: std_logic_vector(16 downto 0);
@@ -141,8 +138,9 @@ architecture rtl of fb_hdmi is
 	signal i_RAMD_PLANE0					: std_logic_vector(7 downto 0);
 	signal i_RAMD_PLANE1					: std_logic_vector(7 downto 0);
 
-	signal i_clken_crtc					: std_logic;
-	signal i_clken_spr					: std_logic;
+	signal i_clken48_crtc				: std_logic;
+	signal i_clken48_spr					: std_logic;
+	signal i_reset48						: std_logic;
 
 	-- RGB signals out of ULA
 	signal i_ULA_R							: std_logic_vector(3 downto 0);
@@ -152,47 +150,44 @@ architecture rtl of fb_hdmi is
 	-- SYNC signals out of CRTC
 	signal i_vsync_CRTC					: std_logic;
 	signal i_hsync_CRTC					: std_logic;
-	signal i_disen_CRTC					: std_logic;
+	signal i_disen_CRTC					: std_logic;			-- disen is  gated by RA (mode 3/6)
+	signal i_disen_CRTC_U				: std_logic;			-- disen not gated by RA (mode 3/6)
+	signal i_disen_VIDPROC				: std_logic;			-- disen not gated by RA (mode 3/6), with vidproc delay
 	signal i_cursor_CRTC					: std_logic;
 
 	signal i_crtc_MA						: std_logic_vector(13 downto 0);
 	signal i_crtc_RA						: std_logic_vector(4 downto 0);
 
-	signal i_vsync_DVI					: std_logic;
-	signal i_hsync_DVI					: std_logic;
-	signal i_blank_DVI					: std_logic;
-
-
-	signal i_R_DVI							: std_logic_vector(7 downto 0);
-	signal i_G_DVI							: std_logic_vector(7 downto 0);
-	signal i_B_DVI							: std_logic_vector(7 downto 0);
-
-	signal i_R_encoded					: std_logic_vector(9 downto 0);
-	signal i_G_encoded					: std_logic_vector(9 downto 0);
-	signal i_B_encoded					: std_logic_vector(9 downto 0);
-
-
-	signal i_audio							: std_logic_vector(15 downto 0);
 
 	signal i_avi							: std_logic_vector(111 downto 0);
+	signal i_ILACE							: std_logic;
 
 	signal i_R_TTX							: std_logic;
 	signal i_G_TTX							: std_logic;
 	signal i_B_TTX							: std_logic;
 	signal i_TTX							: std_logic;
+	signal i_TTX80							: std_logic;		-- 80 column teletext
 
 	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
+	signal i_ttx_pixel_clken			: std_logic;
+	signal i_ttx_pixde					: std_logic;	-- display enable after pass through saa5050
 
 	signal i_pixel_double				: std_logic;
+	signal r_pixel_double_48			: std_logic;	-- reclock in 48M clock
 	signal i_audio_enable				: std_logic;
-	signal r_pix_audio_enable			: std_logic;
 
+	signal i_txt_data						: std_logic_vector(6 downto 0);
+	signal i_txt_lose						: std_logic;
 	signal i_ttxt_di_clken				: std_logic;
 
 	-- extras for ANSI mode
 
 	signal i_seq_alphamode				: std_logic;
 	signal i_seq_alphaaddrfontA		: std_logic_vector(7 downto 0);
+	signal r_seq_alphamode48			: std_logic;
+	signal r_seq_alphaaddrfontA48		: std_logic_vector(7 downto 0);
+
+	signal r_scroll_latch_c_48			: std_logic_vector(1 downto 0);
 
 
 	-- sprites
@@ -209,98 +204,18 @@ architecture rtl of fb_hdmi is
 	signal i_SEQ_SPR_D					: std_logic_vector(7 downto 0);
 	signal i_SEQ_SPR_A_pre				: t_spr_pre_array(G_N_SPRITES-1 downto 0);
 
-	component hdmi_out_altera_max10 is
-	   port (
-      clock_pixel_i     : in std_logic;   -- x1
-      clock_tdms_i      : in std_logic;   -- x5
-      red_i             : in  std_logic_vector(9 downto 0);
-      green_i           : in  std_logic_vector(9 downto 0);
-      blue_i            : in  std_logic_vector(9 downto 0);      
-      red_s             : out std_logic;
-      green_s           : out std_logic;
-      blue_s            : out std_logic;
-      clock_s           : out std_logic
-   );
-	end component;
-
-	component hdmi is 
-	   generic (
-      FREQ: integer := 27000000;              -- pixel clock frequency
-      FS: integer := 48000;                   -- audio sample rate - should be 32000, 44100 or 48000
-      CTS: integer := 27000;                  -- CTS = Freq(pixclk) * N / (128 * Fs)
-      N: integer := 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
-                          -- Check HDMI spec 7.2 for details
-   );
-   port (
-      -- clocks
-      I_CLK_PIXEL    : in std_logic;
-      -- components
-      I_R            : in std_logic_vector(7 downto 0);
-      I_G            : in std_logic_vector(7 downto 0);
-      I_B            : in std_logic_vector(7 downto 0);
-      I_BLANK        : in std_logic;
-      I_HSYNC        : in std_logic;
-      I_VSYNC        : in std_logic;
---      I_ASPECT_169   : in std_logic;
-      I_AVI_DATA     : in std_logic_vector(111 downto 0);
-      -- PCM audio
-      I_AUDIO_ENABLE : in std_logic;
-      I_AUDIO_PCM_L  : in std_logic_vector(15 downto 0);
-      I_AUDIO_PCM_R  : in std_logic_vector(15 downto 0);
-      -- TMDS parallel pixel synchronous outputs (serialize LSB first)
-      O_RED       : out std_logic_vector(9 downto 0); -- Red
-      O_GREEN        : out std_logic_vector(9 downto 0); -- Green
-      O_BLUE         : out std_logic_vector(9 downto 0)  -- Blue
-	);
-	end component;
 
 begin
 
-	VGA27_R_o 		<= i_R_DVI(7 downto 4);
-	VGA27_G_o 		<= i_G_DVI(7 downto 4);
-	VGA27_B_o 		<= i_B_DVI(7 downto 4);
-	VGA27_VS_o 		<= i_vsync_DVI;
-	VGA27_HS_o 		<= i_hsync_DVI;
-	VGA27_BLANK_o 	<= i_blank_DVI;
 
 	VGA_R_o 			<= i_ULA_R;
 	VGA_G_o 			<= i_ULA_G;
 	VGA_B_o 			<= i_ULA_B;
 	VGA_VS_o 		<= i_vsync_CRTC;
 	VGA_HS_o 		<= i_hsync_CRTC;
-	VGA_BLANK_o 	<= not i_disen_CRTC;
+	VGA_BLANK_o 	<= not i_disen_VIDPROC;
 
-	g_sim_pll:if SIM generate
-
-		g_hdmi_pixel:if not SIM_NODVI generate
-			p_pll_hdmi_pixel: process
-			begin
-				i_clk_hdmi_pixel <= '1';
-				wait for 18.5 ns;
-				i_clk_hdmi_pixel <= '0';
-				wait for 18.5 ns;
-			end process;
-		end generate;
-
-		p_pll_hdmi_tmds: process
-		begin
-			i_clk_hdmi_tmds <= '1';
-			wait for 3.7 ns;
-			i_clk_hdmi_tmds <= '0';
-			wait for 3.7 ns;
-		end process;
-
-	end generate;
-
-	g_not_sim_pll:if not SIM generate
-
-		e_pll_hdmi: entity work.pll_hdmi
-		port map(
-			inclk0 => CLK_48M_i,
-			c1 => i_clk_hdmi_pixel,
-			c0 => i_clk_hdmi_tmds
-		);
-	end generate;
+   debug_spr_mem_clken_o <= i_clken48_spr;
 
 
 	e_vidproc:entity work.fb_HDMI_vidproc
@@ -312,24 +227,33 @@ begin
 		fb_c2p_i				=> i_vidproc_fb_m2s,
 		fb_p2c_o				=> i_vidproc_fb_s2m,
 
+		-- fishbone to 48m timing signals
+		reset48_o			=> i_reset48,
+
 		CLK_48M_i			=> CLK_48M_i,
 
-		CLKEN_CRTC_o		=> i_clken_crtc,
-		CLKEN_SPR_o			=> i_clken_spr,
+		CLKEN_CRTC_o		=> i_clken48_crtc,
+		CLKEN_SPR_o			=> i_clken48_spr,
 		nINVERT_i			=> '1',
 		DISEN_i				=> i_disen_CRTC,
+		DISEN_U_i			=> i_disen_CRTC_U,
 		CURSOR_i				=> i_cursor_CRTC,
 		R_TTX_i				=> i_R_TTX,
 		G_TTX_i				=> i_G_TTX,
 		B_TTX_i				=> i_B_TTX,
+		PIXDE_TTX_i			=> i_ttx_pixde,
+		PIXCLKEN_TTX_i		=> i_ttx_pixel_clken,
 		R_o					=> i_ULA_R,
 		G_o					=> i_ULA_G,
 		B_o					=> i_ULA_B,
+		PIXCLKEN_o			=> open, -- TODO: pass on?
+		PIXDE_o				=> i_disen_VIDPROC,
 
 		TTX_o					=> i_TTX,
+		TTX80_i				=> i_TTX80,
 
 		-- model B/C extras
-	   MODE_ATTR_i 		=> i_seq_alphamode,
+	   MODE_ATTR_i 		=> r_seq_alphamode48,
 		RAM_D0_i				=> i_RAMD_PLANE0,
 		RAM_D1_i				=> i_RAMD_PLANE1,
 		
@@ -350,20 +274,29 @@ begin
 		fb_syscon_i			=> fb_syscon_i,
 		fb_c2p_i				=> i_crtc_fb_m2s,
 		fb_p2c_o				=> i_crtc_fb_s2m,
-		CLKEN_CRTC_i		=> i_clken_crtc,
+
+		clock_48_i			=> CLK_48M_i,
+		
+		-- fishbone to 48m timing signals
+		reset48_i			=> i_reset48,
 		
 		-- Display interface
+		CLKEN_CRTC_i		=> i_clken48_crtc,
 		VSYNC_o				=> i_vsync_CRTC,
 		HSYNC_o				=> i_hsync_CRTC,
-		DE_o					=> i_disen_CRTC,
+		DE_o					=> i_disen_CRTC_U,
 		CURSOR_o				=> i_cursor_CRTC,
 		LPSTB_i				=> '0',
 		
 		-- Memory interface
 		MA_o					=> i_crtc_MA,
-		RA_o					=> i_crtc_RA
+		RA_o					=> i_crtc_RA,
+
+		ILACE_O				=> i_ILACE
 
 	);
+
+	i_disen_CRTC <= i_disen_CRTC_U and (not i_crtc_RA(3) or r_seq_alphamode48);
 
 	p_ttx_px_clk:process(CLK_48M_i)
 	begin
@@ -372,11 +305,24 @@ begin
 		end if;
 	end process;
 
+	p_ttx80:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			if i_crtc_MA(12) = '1' and scroll_latch_c_i(0) = '0' then
+				i_ttx80 <= '1';
+			else
+				i_ttx80 <= '0';
+			end if;
+		end if;
+	end process;
+
+	i_ttx_pixel_clken <= r_ttx_pixel_clken(0) or (r_ttx_pixel_clken(2) and i_ttx80);
+
 	e_ttx:entity work.saa5050
 	port map (
     CLOCK       => CLK_48M_i,
     -- 6 MHz dot clock enable
-    CLKEN       => r_ttx_pixel_clken(0),
+   	CLKEN       => i_ttx_pixel_clken,
     -- Async reset
     nRESET      => not fb_syscon_i.rst,
 
@@ -384,9 +330,9 @@ begin
     VGA         => '0',
 
     -- Character data input (in the bus clock domain)
-    DI_CLOCK    => fb_syscon_i.clk,
+   	DI_CLOCK    => CLK_48M_i,
     DI_CLKEN    => i_ttxt_di_clken,
-    DI          => i_RAMD_PLANE0(6 downto 0),
+   	DI          => i_txt_data,
 
     -- Timing inputs
     -- General line reset (not used)
@@ -397,29 +343,31 @@ begin
     -- Character rounding select - high during even field
     CRS         => not i_crtc_RA(0),
     -- Load output shift register enable - high during active video
-    LOSE        => i_disen_CRTC,
+   	LOSE        => i_txt_lose,
 
     -- Video out
     R           => i_R_TTX,
     G           => i_G_TTX,
     B           => i_B_TTX,
-    Y           => open
+   	Y           => open,
+   	PIXDE			=> i_ttx_pixde
 
     );
 
-
-	p_ttx_di:process(fb_syscon_i)
-	variable vr_delay : std_logic_vector(30 downto 0);
+	 -- IC15 (LS273 latch in front of SAA5050)
+    process(CLK_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
-			vr_delay := (others => '0');
+        if rising_edge(CLK_48M_i) then
+
 			i_ttxt_di_clken <= '0';
-		elsif rising_edge(fb_syscon_i.clk) then
-			i_ttxt_di_clken <= vr_delay(vr_delay'high);
-			vr_delay(vr_delay'high downto 1) := vr_delay(vr_delay'high-1 downto 0);
-			vr_delay(0) := i_clken_crtc;
+           	if i_clken48_crtc = '1' then
+                i_txt_data <= i_RAMD_PLANE0(6 downto 0);
+                i_txt_lose <= i_disen_CRTC_U;
+                i_ttxt_di_clken <= '1';
+            end if;
 		end if;
 	end process;
+
 
 
 	e_hdmi_ram:entity work.fb_HDMI_ram
@@ -434,7 +382,7 @@ begin
 	
 		-- vga signals
 	
-		hdmi_ram_clk_i		=> fb_syscon_i.clk,
+		hdmi_ram_clk_i		=> CLK_48M_i,
 		hdmi_ram_addr_i	=> i_VIDRAM_A,
 		hdmi_ram_Q_o		=> i_VIDRAM_Q
 	
@@ -452,7 +400,9 @@ begin
 	
 		avi_o				=> i_avi,
 		audio_enable_o => i_audio_enable,
-		pixel_double_o	=> i_pixel_double
+		pixel_double_o	=> i_pixel_double,
+
+		ilace_i			=> i_ILACE
 	
 	);
 
@@ -469,6 +419,15 @@ begin
 		addr_alpha_fontA	=> i_seq_alphaaddrfontA
 	);
 
+	p_seq_ctl_48:process(clk_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then		
+
+			r_seq_alphamode48 <= i_seq_alphamode;
+			r_seq_alphaaddrfontA48 <= i_seq_alphaaddrfontA;
+		
+		end if;
+	end process;
 
 
 	e_fb_i2c:entity work.fb_i2c
@@ -493,107 +452,6 @@ begin
 
 
 	
---====================================================================
--- DVI 
---====================================================================
-
-	G_DVI:IF NOT SIM_NODVI generate
-		e_synch:entity work.dvi_synchro
-		port map (
-
-			fb_syscon_i		=> fb_syscon_i,
-			CLK_48M_i		=> CLK_48M_i,
-			pixel_double_i => i_pixel_double,
-
-			-- input signals in the local clock domain
-			VSYNC_CRTC_i	=> i_vsync_CRTC,
-			HSYNC_CRTC_i	=> i_hsync_CRTC,
-			DISEN_CRTC_i	=> i_disen_CRTC,
-
-			R_ULA_i			=> i_ULA_R,
-			G_ULA_i			=> i_ULA_G,
-			B_ULA_i			=> i_ULA_B,
-
-			TTX_i				=> i_TTX,
-
-			-- synchronised / generated / conditioned signals in DVI pixel clock domain
-
-			clk_pixel_dvi => i_clk_hdmi_pixel,
-
-			VSYNC_DVI_o		=> i_vsync_dvi,
-			HSYNC_DVI_o		=> i_hsync_dvi,
-			BLANK_DVI_o		=> i_blank_dvi,
-
-			R_DVI_o			=> i_R_DVI,
-			G_DVI_o			=> i_G_DVI,
-			B_DVI_o			=> i_B_DVI,
-
-			debug_hsync_det_o 	=> debug_hsync_det_o,
-			debug_vsync_det_o 	=> debug_vsync_det_o,
-			debug_hsync_crtc_o	=> debug_hsync_crtc_o,
-			debug_odd_o 		=> debug_odd_o
-
-		);
-	end generate;
-
-	debug_spr_mem_clken_o <= i_clken_spr;
-
-G_NOTSIM_SERIAL:IF NOT SIM GENERATE
-
-	-- re-register in other clock domain - TODO: remove?
-	p_r:process(i_clk_hdmi_pixel)
-	begin
-		if rising_edge(i_clk_hdmi_pixel) then
-			r_pix_audio_enable <= i_audio_enable;
-		end if;
-
-	end process;
-
-	e_spirkov:hdmi
-	port map (
-		I_CLK_PIXEL => i_clk_hdmi_pixel,
-		I_R => i_R_DVI,
-		I_G => i_G_DVI,
-		I_B => i_B_DVI,
-		I_BLANK => i_blank_DVI,
-		I_HSYNC => i_hsync_DVI,
-		I_VSYNC => i_vsync_DVI,
---		I_ASPECT_169 => r_fbhdmi_169,
-		I_AVI_DATA => i_avi,
-
-		I_AUDIO_ENABLE => r_pix_audio_enable,
-		I_AUDIO_PCM_L => i_audio,
-		I_AUDIO_PCM_R => i_audio,
-
-		O_RED => i_R_encoded,
-		O_GREEN => i_G_encoded,
-		O_BLUE => i_B_encoded
-	);
-
-
-
-	e_hdmi_serial:hdmi_out_altera_max10
-	port map (
-		clock_pixel_i => i_clk_hdmi_pixel,
-		clock_tdms_i => i_clk_hdmi_tmds,
-		red_i => i_R_encoded,
-		green_i => i_G_encoded,
-		blue_i => i_B_encoded,
-		red_s => HDMI_R_o,
-		green_s => HDMI_G_o,
-		blue_s => HDMI_B_o,
-		clock_s => HDMI_CK_o
-	);
-
-	p_snd:process(i_clk_hdmi_pixel)
-	begin
-		if rising_edge(i_clk_hdmi_pixel) then
-			i_audio <= std_logic_vector(PCM_L_i) & "000000";
-		end if;
-	end process;
-
-
-END GENERATE;
 
 	e_vidmem_seq:entity work.vidmem_sequencer
 	generic map (
@@ -601,18 +459,19 @@ END GENERATE;
 		G_N_SPRITES => G_N_SPRITES
 		)
 	port map (
-		rst_i						=> fb_syscon_i.rst,
-		clk_i						=> fb_syscon_i.clk,
+		rst_i						=> i_reset48,
+		clk_i						=> CLK_48M_i,
 
-		scroll_latch_c_i		=> scroll_latch_c_i,
+		scroll_latch_c_i		=> r_scroll_latch_c_48,
 		ttxmode_i				=> i_TTX,
+		ttx80mode_i				=> i_TTX80,
 
-		crtc_mem_clken_i		=> i_clken_spr,
+		crtc_mem_clken_i		=> i_clken48_spr,
 		crtc_MA_i				=> i_crtc_MA,
 		crtc_RA_i				=> i_crtc_RA,
 
-		SEQ_alphamode_i		=> i_seq_alphamode,
-		SEQ_font_addr_A   	=> i_seq_alphaaddrfontA,
+		SEQ_alphamode_i		=> r_seq_alphamode48,
+		SEQ_font_addr_A   	=> r_seq_alphaaddrfontA48,
 
 		SEQ_SPR_DATA_req_i	=> i_SEQ_SPR_DATA_req,
 		SEQ_SPR_DATAPTR_A_i	=> i_SEQ_SPR_DATAPTR_A,
@@ -630,6 +489,13 @@ END GENERATE;
 		RAMD_PLANE1_o			=> i_RAMD_PLANE1
 
 	);
+
+p_reg_48:process(clk_48M_i)
+begin
+	if rising_edge(CLK_48M_i) then
+		r_scroll_latch_c_48 <= scroll_latch_c_i;
+	end if;
+end process;
 
 
 --====================================================================
@@ -649,6 +515,10 @@ END GENERATE;
 		fb_c2p_i								=> i_sprites_fb_c2p,
 		fb_p2c_o								=> i_sprites_fb_p2c,
 
+		-- clock in for all non regs, should be a multiple of pixel rate and < 2*fb clock (i.e. 48 vs 128 is enough)
+		clk_48M_i							=> CLK_48M_i,
+		reset48_i							=> i_reset48,
+
 		-- data interface, from sequencer
 		SEQ_D_i								=> i_SEQ_SPR_D,
 		SEQ_wren_i							=> i_SEQ_SPR_wren,
@@ -663,10 +533,9 @@ END GENERATE;
 
 		-- vidproc / crtc signals in
 
-		pixel_clk_i							=> CLK_48M_i,
 		vsync_i								=> i_vsync_CRTC,
 		hsync_i								=> i_hsync_CRTC,
-		disen_i								=> i_disen_CRTC,
+		disen_i								=> i_disen_CRTC_U,
 		pixel_clken_i						=> i_sprite_pixel_cken,
 		
 		-- pixels out
@@ -703,7 +572,8 @@ END GENERATE;
 	generic map (
 		SIM 									=> SIM,
 		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24
+		G_ADDRESS_WIDTH 					=> 24,
+		G_REGISTER_CON_READS				=> true
 		)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,
@@ -759,6 +629,70 @@ END GENERATE;
 			i_intcon_peripheral_sel_oh(PERIPHERAL_N_MEM) <= '1';
 		end if;
 	end process;
+
+
+--====================================================================
+-- HDMI/DVI output
+--====================================================================
+
+	r_pd:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then 
+			r_pixel_double_48 <= i_pixel_double;
+		end if;
+	end process;
+
+	e_vid15tohdmi:entity work.vid15tohdmi
+   generic map (
+      SIM                           => SIM,
+      SIM_NODVI                     => SIM_NODVI,
+      G_EXT_TMDS_CLOCKS             => G_EXT_TMDS_CLOCKS
+   )
+	port map (
+
+      HDMI_CK_o                     => HDMI_CK_o,
+      HDMI_R_o                      => HDMI_R_o,
+      HDMI_G_o                      => HDMI_G_o,
+      HDMI_B_o                      => HDMI_B_o,
+
+      -- video domain clock (pixels are a division of this)
+      CLK_48M_i                     => CLK_48M_i,
+      RESET_i                       => i_reset48,
+
+      -- video in 15KHz line rate on 48MHz clock
+      VID_R_i                       => i_ULA_R,
+      VID_G_i                       => i_ULA_G,
+      VID_B_i                       => i_ULA_B,
+      VID_HS_i                      => i_hsync_CRTC,
+      VID_VS_i                      => i_vsync_CRTC,
+      VID_DISEN_i                   => i_disen_VIDPROC,
+      TTX_i                         => i_TTX,
+      TTX80_i								=> i_TTX80,
+   
+      -- sound data in (48KHz)
+      PCM_L_i                       => PCM_L_i,
+      PCM_R_i                       => PCM_R_i,
+
+      -- hdmi extras in
+      AVI_i                         => i_avi,
+      AUDIO_EN_i                    => i_audio_enable,
+
+      -- dvi retimer extras in
+      PIXEL_DOUBLE_i                => r_pixel_double_48,
+
+      -- retimed analogue video
+      VGA27_R_o                     => VGA27_R_o,
+      VGA27_G_o                     => VGA27_G_o,
+      VGA27_B_o                     => VGA27_B_o,
+      VGA27_HS_o                    => VGA27_HS_o,
+      VGA27_VS_o                    => VGA27_VS_o,
+      VGA27_BLANK_o                 => VGA27_BLANK_o,
+
+      -- external clocks (optional)
+      clk_ext_hdmi_pixel_i          => clk_ext_hdmi_pixel_i,
+      clk_ext_hdmi_tmds_i           => clk_ext_hdmi_tmds_i
+
+);
 
 end rtl;
 

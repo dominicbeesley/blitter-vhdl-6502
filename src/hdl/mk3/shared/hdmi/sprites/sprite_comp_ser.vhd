@@ -83,18 +83,18 @@ end sprite_comp_ser;
 architecture rtl of sprite_comp_ser is
 
 	-- registers
-	r_armed					:	std_logic;											-- indicates that the sprite is armed (either by a direct cpu load or DMA)
-	r_spr_data				:	std_logic_vector(31 downto 0);				-- this sprite line's bit map ready for transfer to serializer
-	r_spr_serial			:	std_logic_vector(31 downto 0);
-	r_horz_start			:	unsigned(8 downto 0);
-	r_vert_start			:	unsigned(8 downto 0);
-	r_vert_stop				:	unsigned(8 downto 0);
-	r_attach					:	std_logic;
+	signal	r_armed					:	std_logic;											-- indicates that the sprite is armed (either by a direct cpu load or DMA)
+	signal	r_spr_data				:	std_logic_vector(31 downto 0);				-- this sprite line's bit map ready for transfer to serializer
+	signal	r_spr_serial			:	std_logic_vector(31 downto 0);
+	signal	r_horz_start			:	unsigned(8 downto 0);
+	signal	r_vert_start			:	unsigned(8 downto 0);
+	signal	r_vert_stop				:	unsigned(8 downto 0);
+	signal	r_attach					:	std_logic;
 
 
 	-- combinatorials
-	i_horz_eq				:  std_logic;											-- '1' when horz_ctr == r_horz_start
-	i_serial_load			:	std_logic;											-- load the serializer at this pixel clock
+	signal	i_horz_eq				:  std_logic;											-- '1' when horz_ctr == r_horz_start
+	signal	i_serial_load			:	std_logic;											-- load the serializer at this pixel clock
 
 begin
 
@@ -136,16 +136,16 @@ begin
 		elsif rising_edge(clk_i) and clken_i = '1' then
 			
 			if wren_i = '1' then
-				case A_i
+				case to_integer(A_i) is
 					-- data - note pixel data is left aligned, low byte first, planar (not like Amiga?)
 					when 0	=> r_spr_data(31 downto 24) <= D_i;
 					when 1	=> r_spr_data(23 downto 16) <= D_i;
 					when 2	=> r_spr_data(15 downto 8)  <= D_i;
 					when 3	=> r_spr_data( 7 downto 0)  <= D_i;
 					-- control / pos different to Amiga!
-					when 4	=> r_horz_start(7 downto 0) <= D_i;
-					when 5	=> r_vert_start(7 downto 0) <= D_i;
-					when 6	=> r_vert_stop(7 downto 0) <= D_i;
+					when 4	=> r_horz_start(7 downto 0) <= unsigned(D_i);
+					when 5	=> r_vert_start(7 downto 0) <= unsigned(D_i);
+					when 6	=> r_vert_stop(7 downto 0) <= unsigned(D_i);
 					when others =>
 						r_horz_start(8) <= D_i(0);
 						r_vert_start(8) <= D_i(1);
@@ -165,7 +165,7 @@ begin
 			
 			if r_armed = '1' and i_horz_eq = '1' then
 				-- hit horizontal pos and we're armed
-				r_spr_serial <= r_spr_data
+				r_spr_serial <= r_spr_data;
 			else
 				r_spr_serial <= r_spr_serial(r_spr_serial'high-2 downto 2) & "00";
 			end if;

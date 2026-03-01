@@ -26,14 +26,17 @@ use work.common.all;
 
 
 entity dvi_synchro is
+	generic (
+		G_SHOWMARGIN : boolean := false
+		);
 	port (
 
-		fb_syscon_i					: in	fb_syscon_t;
 
 		pixel_double_i				: in 	std_logic;
 
 		-- input signals in the local clock domain
 		CLK_48M_i					: in 	std_logic;
+		RESET_48M_i					: in  std_logic;
 		VSYNC_CRTC_i				: in	std_logic;
 		HSYNC_CRTC_i				: in	std_logic;
 		DISEN_CRTC_i				: in	std_logic;
@@ -43,6 +46,7 @@ entity dvi_synchro is
 		B_ULA_i						: in	std_logic_vector(3 downto 0);
 
 		TTX_i							: in  std_logic;
+		TTX80_i						: in  std_logic;
 
 		-- synchronised / generated / conditioned signals in DVI pixel clock domain
 
@@ -192,9 +196,9 @@ begin
 								 '0';
 			
 
-	p_reg_pix_ula:process(CLK_48M_i, fb_syscon_i)
+	p_reg_pix_ula:process(CLK_48M_i, RESET_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_linebuf_ctr_ula <= (others => '0');
 			r_linebuf_ctr_ula_max <= (others => '0');
 		elsif rising_edge(CLK_48M_i) then
@@ -214,6 +218,9 @@ begin
 				r_ula_read_wait <= '0';
 				r_ula_pixel_ring <= (others => '1');
 			elsif i_line_buffer_wren = '1' then
+				--if TTX_i = '1' and TTX80_i = '1' then
+				--	r_ula_pixel_ring <= "0010";
+				--els
 				if TTX_i = '1' then
 					r_ula_pixel_ring <= "1000";
 				else
@@ -228,9 +235,9 @@ begin
 
 	end process;
 
-	p_reg_syncs_crtc:process(fb_syscon_i, CLK_48M_i)
+	p_reg_syncs_crtc:process(RESET_48M_i, CLK_48M_i)
 	begin
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_hsync_prev_crtc <= '0';
 			r_hsync_lead_crtc <= (others => '0');
 			r_vsync_prev_crtc <= '0';
@@ -257,10 +264,10 @@ begin
 	end process;
 
 
-	p_reg_syncs_dvi:process(fb_syscon_i, clk_pixel_dvi)
+	p_reg_syncs_dvi:process(RESET_48M_i, clk_pixel_dvi)
 	begin
 
-		if fb_syscon_i.rst = '1' then
+		if RESET_48M_i = '1' then
 			r_hsync_lead_ack <= '0';
 			r_hsync_lead_pulse <= '0';
 			r_vsync_lead_ack <= '0';
@@ -289,9 +296,15 @@ begin
 						r_linebuf_ctr_dvi <= to_unsigned(C_BUFMAX, r_linebuf_ctr_dvi'LENGTH);
 					end if;
 
+					if G_SHOWMARGIN then
 					R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 					G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 					B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
+				else
+						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+					end if;
 				else
 					if r_linebuf_ctr_dvi < r_linebuf_ctr_dvi_max then
 						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(TO_INTEGER(UNSIGNED(i_line_buffer_Q(11 downto 8)))),8));						
@@ -300,9 +313,15 @@ begin
 
 						r_linebuf_ctr_dvi <= r_linebuf_ctr_dvi + 1;
 					else
+						if G_SHOWMARGIN then
 						R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(10),8));
 						G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(5),8));
 						B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(7),8));				
+						else
+							R_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+							G_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+							B_DVI_o <= std_logic_vector(to_unsigned(RGBNULA_TO_DVI(0),8));
+						end if;
 					end if;
 				end if;
 			end if;
