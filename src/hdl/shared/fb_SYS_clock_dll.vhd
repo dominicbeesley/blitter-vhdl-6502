@@ -116,7 +116,7 @@ architecture rtl of fb_sys_clock_dll is
    signal   r_new_cycle_clken : std_logic;
 
    signal   r_CLK_E_toggle             : std_logic := '0'; -- toggles on clk E fall in (after META delay)
-   signal   i_v_n2mcycles_stretch      : unsigned(1 downto 0);
+   signal   r_v_n2mcycles_stretch      : unsigned(1 downto 0);
 
    signal   i_start_clken_nostretch    : std_logic;
    signal   i_2M_clken                 : std_logic;   -- 2MHz clocken as phi0 goes low
@@ -294,10 +294,18 @@ begin
    end process;
 
 
-   i_v_n2mcycles_stretch 
-      <= to_unsigned(0, i_v_n2mcycles_stretch'length) when sys_slow_cyc_i = '0' else
-         to_unsigned(2, i_v_n2mcycles_stretch'length) when r_long_1M_cyc = '1' else
-         to_unsigned(1, i_v_n2mcycles_stretch'length);
+   p_n2mcycles:process(fb_syscon_i)
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+			if sys_slow_cyc_i = '0' then				
+				r_v_n2mcycles_stretch <= to_unsigned(0, r_v_n2mcycles_stretch'length);
+			elsif r_long_1M_cyc = '1' then
+				r_v_n2mcycles_stretch <= to_unsigned(2, r_v_n2mcycles_stretch'length);
+			else
+				r_v_n2mcycles_stretch <= to_unsigned(1, r_v_n2mcycles_stretch'length);
+			end if;
+      end if;
+   end process;
 
    p_fin:process(fb_syscon_i.clk)
    variable v_prev_phi0_toggle   : std_logic := '0';
@@ -348,17 +356,17 @@ begin
 
    sys_rdyctdn_o <=
          r_ctdn when cfg_sys_type_i = SYS_ELK else
-         RDY_CTDN_MAX when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
+         RDY_CTDN_MAX when unsigned(r_2Mcycle) /= r_v_n2mcycles_stretch else
          r_ctdn;
 
    sys_rdyctdn_rd_o <=
          r_ctdn_rd when cfg_sys_type_i = SYS_ELK else
-         RDY_CTDN_MAX when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
+         RDY_CTDN_MAX when unsigned(r_2Mcycle) /= r_v_n2mcycles_stretch else
          r_ctdn_rd;
 
          
    i_notslo <=
-         '0' when unsigned(r_2Mcycle) /= i_v_n2mcycles_stretch else
+         '0' when unsigned(r_2Mcycle) /= r_v_n2mcycles_stretch else
          '1';
 
 
