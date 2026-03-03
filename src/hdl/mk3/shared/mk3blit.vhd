@@ -377,6 +377,9 @@ architecture rtl of mk3blit is
 
 	signal  i_debug_80188_state			: std_logic_vector(2 downto 0);
 
+	signal   i_DEBUG_BLANK					: std_logic;
+	signal   i_DEBUG_HDMI_STATE			: std_logic_vector(2 downto 0);
+
 begin
 
 	e_fb_clocks: entity work.clocks_pll
@@ -1059,17 +1062,16 @@ i_hsync <= SYS_AUX_io(5);
 i_vsync <= SYS_AUX_io(4);
 
 
-LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
-				i_flasher(3) when i_fb_syscon.rst_state = powerup else
-				i_flasher(2) when i_fb_syscon.rst_state = resetfull else
-				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
-				'1'			 when i_fb_syscon.rst_state = run else
-				i_flasher(1);
-LED_o(1) <= '1';
-LED_o(2) <= not i_JIM_en;
-LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
+LED_o(2 downto 0) <= 
+		not std_logic_vector(
+			to_unsigned(
+				fb_rst_state_t'pos(i_fb_syscon.rst_state), 3
+			)
+		);
+LED_o(3) <= not i_JIM_en;
 
-SYS_AUX_o			<= "0" & i_debug_80188_state;
+SYS_AUX_o(0)  <= i_DEBUG_BLANK;
+SYS_AUX_o(3 downto 1) <= i_DEBUG_HDMI_STATE;
 SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);
 SYS_AUX_io(1) <= i_vga_debug_r(i_vga_debug_r'high);
 SYS_AUX_io(2) <= i_debug_odd;
@@ -1127,6 +1129,9 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		debug_vsync_det_o => i_debug_vsync_det,
 		debug_hsync_crtc_o=> i_debug_hsync_crtc,
 		debug_odd_o 		=> i_debug_odd,
+
+		debug_dvi_blank_o	=> i_DEBUG_BLANK,
+		debug_hdmi_state_o=> i_DEBUG_HDMI_STATE,
 
 		scroll_latch_c_i	=> (others => '1')
 

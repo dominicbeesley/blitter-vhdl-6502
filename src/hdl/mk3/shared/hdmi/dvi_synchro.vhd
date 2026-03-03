@@ -117,7 +117,7 @@ architecture rtl of dvi_synchro is
 	constant	C_VSYNC_LINES		 	: natural := 3;
 
 
-	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 27
+	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 54MHz
 	constant C_LINE_BLANK_FRONT 	: natural := 48;	
 	constant C_HSYNC_PIXELS			: natural := 252;
 	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	

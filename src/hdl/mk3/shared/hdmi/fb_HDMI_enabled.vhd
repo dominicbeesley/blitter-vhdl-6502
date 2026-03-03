@@ -83,6 +83,9 @@ entity fb_HDMI is
 		debug_odd_o							: out std_logic;
 		debug_spr_mem_clken_o			: out std_logic;
 
+		debug_dvi_blank_o					: out std_logic;
+		debug_hdmi_state_o				: out std_logic_vector(2 downto 0);
+
 		-- external clocks (optional)
 		clk_ext_hdmi_pixel_i				: in std_logic := '1';
 		clk_ext_hdmi_tmds_i				: in std_logic := '1'
@@ -690,7 +693,10 @@ end process;
 
       -- external clocks (optional)
       clk_ext_hdmi_pixel_i          => clk_ext_hdmi_pixel_i,
-      clk_ext_hdmi_tmds_i           => clk_ext_hdmi_tmds_i
+      clk_ext_hdmi_tmds_i           => clk_ext_hdmi_tmds_i,
+
+      debug_dvi_blank_o					=> debug_dvi_blank_o,
+      debug_hdmi_state_o				=> debug_hdmi_state_o
 
 );
 
