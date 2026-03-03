@@ -162,6 +162,8 @@ architecture rtl of fb_memctl is
 	signal   r_preboot						: std_logic;
 	signal   r_map0n1							: std_logic;
 
+	signal   r_resetfull 					: std_logic := '1'; -- bodge to get map0n1 from switches late on mk.3
+
 begin
 
 	preboot_o <= r_preboot;
@@ -247,15 +249,20 @@ begin
 				r_preboot <= '1';
 				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+					r_resetfull <= '1';
 					r_throttle_all <= '1';
 					r_throttle_mos <= '1';
 					r_rom_throttle_map <= (others => '0');
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
+				end if;
+
+				if r_resetfull = '1' then
 					r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
 				end if;		
 				r_window_65816_wr_en <= '0';
 			else
+				r_resetfull <= '0';
 				v_dowrite := false;
 				r_con_ack <= '0';
 				r_window_65816_wr_en <= '0';
