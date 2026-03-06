@@ -1123,6 +1123,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		VGA_VS_o				=> i_vga_debug_vs,
 		VGA_BLANK_o			=> i_vga_debug_blank,
 
+		scroll_latch_c_i	=> (others => '1')
+
 		PCM_L_i				=> i_dac_sample & "000000",
 		PCM_R_i				=> i_dac_sample & "000000",
 
@@ -1134,7 +1136,6 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		debug_dvi_blank_o	=> i_DEBUG_BLANK,
 		debug_hdmi_state_o=> i_DEBUG_HDMI_STATE,
 
-		scroll_latch_c_i	=> (others => '1')
 
 	);
 END GENERATE;
