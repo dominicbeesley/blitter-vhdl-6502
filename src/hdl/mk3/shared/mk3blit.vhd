@@ -441,7 +441,8 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true
+		G_REGISTER_CONTROLLER_P2C => true,
+		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
@@ -1070,7 +1071,7 @@ LED_o(2 downto 0) <=
 		);
 LED_o(3) <= not i_JIM_en;
 
-SYS_AUX_o(0)  <= i_DEBUG_BLANK;
+SYS_AUX_o(0)  <= i_debug_wrap_cpu_cyc;
 SYS_AUX_o(3 downto 1) <= i_DEBUG_HDMI_STATE;
 SYS_AUX_io(0) <= not (i_vga_debug_hs xor i_vga_debug_vs);
 SYS_AUX_io(1) <= i_vga_debug_r(i_vga_debug_r'high);
