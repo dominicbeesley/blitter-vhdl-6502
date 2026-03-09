@@ -121,6 +121,7 @@ architecture rtl of fb_cpu_65816 is
 
 	-- address latch state:
 	constant SUBSTATE_A_8	: t_substate := SUBSTATEMAX_8 - to_unsigned(6, t_substate'length);
+	constant SUBSTATE_A_8_PRE : t_substate := SUBSTATE_A_8 + to_unsigned(1, t_substate'length);
 
 	constant SUBSTATE_A_META: t_substate := SUBSTATEMAX_8 - to_unsigned(3, t_substate'length);
 
@@ -287,6 +288,18 @@ begin
 						r_A_meta <= i_CPUSKT_D_c2b(7 downto 0) & i_CPUSKT_A_c2b;
 					end if;
 
+					if r_substate = SUBSTATE_A_8_PRE then
+
+						if fb_syscon_i.rst = '1' or cpu_en_i = '0' then
+							r_cpu_hlt <= '0';
+							r_cpu_res <= '1';
+						else
+							r_cpu_hlt <= wrap_i.cpu_halt;
+							r_cpu_res <= '0';					
+						end if;
+
+					end if;
+
 					if r_substate = SUBSTATE_A_8 then
 
 						if r_cpu_hlt = '0' then
@@ -331,13 +344,6 @@ begin
 							r_inihib <= '1';
 						end if;
 
-						if fb_syscon_i.rst = '1' or cpu_en_i = '0' then
-							r_cpu_hlt <= '0';
-							r_cpu_res <= '1';
-						else
-							r_cpu_hlt <= wrap_i.cpu_halt;
-							r_cpu_res <= '0';					
-						end if;
 					end if;
 
 					if r_substate = 0 then
@@ -368,7 +374,7 @@ begin
 							r_wdm <= '0';
 							if i_CPUSKT_VPA_c2b = '1' and i_CPUSKT_VDA_c2b = '1' then
 								r_throttle_sync <= wrap_i.throttle_cpu_2MHz;
-								if i_CPUSKT_D_c2b = x"42" then
+								if wrap_i.D_rd(7 downto 0) = x"42" then
 									r_wdm <= '1';
 								end if;
 							end if;

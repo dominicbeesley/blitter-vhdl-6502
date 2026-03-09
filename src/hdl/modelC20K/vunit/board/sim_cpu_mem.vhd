@@ -130,6 +130,9 @@ begin
 
 
    e_U38:entity lib816.real_65816_tb
+   generic map (
+      dly_dsetup => 7 ns -- TODO: this is fake, what should it be?
+      )
    port map (
       A(7 downto 0)  => MEM_A_io(7 downto 0),
       A(15 downto 8) => i_CPU_A,

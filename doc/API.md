@@ -29,12 +29,13 @@ below. The following sections describe these in more detail.
 
  | Physical address         | hardware item         |
  |--------------------------|-----------------------|
- | $00 0000 - $7F FFFF      | ChipRAM               | 
+ | $00 0000 - $5F FFFF      | ChipRAM               | 
+ | $60 0000 - $7F FFFF      | BB RAM                | 
  | $80 0000 - $BF FFFF      | Flash EEPROM repeats  | 
  | $C0 0000 - $F9 FFFF      | Undefined do not use  | !!!! Used by 65816 for access to SYS without log mapping
  | $FA 0000 - $FB FDFF      | HDMI memory           | 
  | $FB FE00 - $FB FFFF      | HDMI registers        | 
- | $FC 0000 - $FC FFFF      | Debug/Version info    | 
+ | $FC 0000 - $FC FFFF      | Debug/Version info    | !!!! Also boot rom for pre-boot?
  | $FE FC00 - $FE FCFF      | Chipset registers BE  | 
  | $FE FE00 - $FE FEFF      | Chipset registers LE  | 
  | $FF 0000 - $FF FFFF      | Motherboard           |
@@ -51,6 +52,11 @@ and arrangement of RAM will depend on which revision and level of board.
 When accessing ChipRAM on a MOS compatible system it is advised that the memory
 layout be divined using the OSWORD 99 calls available through the Utility ROM
 wherever possible.
+
+### BB RAM
+
+Battery backed RAM present on Mk.2, Mk.3 and C20K boards, typically there is 
+one megabyte of RAM that repeats here.
 
 #### Paula
 
@@ -238,8 +244,14 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | B | EEPROM    | 9F 4000 - 9F 7FFF  |                                       
   | C | BB RAM    | 7F 8000 - 7F BFFF  |                                       
   | D | EEPROM    | 9F 8000 - 9F BFFF  |                                       
-  | E | BB RAM    | 7F C000 - 7F FFFF  |                                       
+  | E | BB RAM    | 1F 0000 - 1F 3FFF  | Fast chipRAM
   | F | EEPROM    | 9F C000 - 9F FFFF  | NB: also used as the NoIce debug bank
+
+
+NOTE: In map 0 Blitter boards ROM slots 4-7 are taken direct from the BBC 
+motherboard whereas on the C20K all ROMS come from the Flash EEPROM or BB RAM
+
+NOTE: On the C20K the MOS ROM is loaded to slot 8 or 9
 
 ##### BBC MAP 1
 
@@ -259,7 +271,7 @@ register](#ff-fe33-ff-fe35-throttle-per-rom) see [*BLTURBO](https://github.com/d
   | B | EEPROM    | 9D 4000 - 9D 7FFF  |
   | C | BB RAM    | 7D 8000 - 7D BFFF  |
   | D | EEPROM    | 9D 8000 - 9D BFFF  |
-  | E | BB RAM    | 7D C000 - 7D FFFF  |
+  | E | BB RAM    | 1F 4000 - 1F 7FFF  | Fast chipRAM
   | F | EEPROM    | 9D C000 - 9D FFFF  | NB: also used as the NoIce debug bank
 
 
@@ -763,6 +775,17 @@ Bit 7, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and synchronized
 with the motherboard phi2 clock. This can be useful to ensure that games
 and demos run correctly. 
 
+Bit 6, when set any 65xx/T65/6x09 CPU will be throttled to 2MHz and 
+synchronized with the motherboard phi2 clock when accessing the MOS area at 
+FF C000-FF FFFF (except for hardware registers)
+
+Bit 5, writing bit 5 will cancel the preboot mapping - see PREBOOT. This is 
+typically set at reset and the pre-boot mini-rom will unset it and "reboot" by
+returning the SYSVIA state to how it was before the preboot-1 rom was entered.
+
+Bit 4, this bit selects between rom maps 0 and 1, it is normally set at boot time 
+bit may be used to swap out the MOS rom programmatically
+
 See [\*BLTURBO](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/Command:BLTURBO) 
 command.
 
@@ -906,11 +929,12 @@ the configuration settings as set by the user.
  |              | and the rest of the information in this page is not  |
  |              | valid. Current Value = 1                             | 
  |--------------|------------------------------------------------------|
- | FC 0081      | Board Type                                 |
+ | FC 0081      | Board Type                                           |
  |              | - 0 - 1MHz Paula                                     |
  |              | - 1 - Mk.1 Blitter                                   |
  |              | - 2 - Mk.2 Blitter                                   |
  |              | - 3 - Mk.3 Blitter                                   |
+ |              | - 4 - C20K / ModelC                                  |
  |--------------|------------------------------------------------------|
  | FC 0082      | API Sub level                                        |
  |--------------|------------------------------------------------------|
@@ -1013,6 +1037,25 @@ in the current build
  |             | 7     | 0                              | 1 | 1 |
  | FC 008B..8F | *     | - reserved - all bits read 0   |
 
+
+# PREBOOT
+
+In 2026 a new pre-boot feature is being rolled out to all the boards, starting
+with the C20K.  The Pre-boot is a menu system that allows the user to 
+re-configure their machine:
+  - load romsets
+  - switch between maps
+  - switch between hard/soft cpus
+  - other TBC
+
+The main driver is that on the C20K if the MOS or BLTUTIL images are erased or
+corrupted in FlashEEPROM it is difficult to reinstate them.
+
+The pre-boot is a tiny <256 MOS rom that is mapped in for each reset, this rom
+is part of the main FPGA bitstream. If a certain key combination is held down 
+(COPY-ESC-BREAK) the pre-boot MOS will bootstrap a more complicated BIOS-like 
+menu system. This will be loaded from the FPGA's SPI Flash configuration memory
+(user flash on Mk.3/MAX10). See [preboot readme](../src/roms/preboot/readme.md)
 
 # The NoIce debugger
 

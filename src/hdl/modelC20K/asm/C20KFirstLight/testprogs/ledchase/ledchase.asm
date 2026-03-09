@@ -85,8 +85,9 @@ lmain:
 		dec	zp_ctr+1
 		bne	@l3
 
-		
-		ldy	#11*3
+		lda	#10
+		sta	zp_ctr
+@l5:		ldy	#11*3
 @l4:		lda	spec_cols,Y
 		sta	JIM+0
 		lda	spec_cols+1,Y
@@ -100,9 +101,8 @@ lmain:
 		dey
 		dey
 		bpl	@l4
-
-here:		jmp	here
-
+		dec	zp_ctr
+		bne	@l5
 
 		jmp	lmain
 

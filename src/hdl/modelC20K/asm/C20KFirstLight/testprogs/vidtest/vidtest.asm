@@ -1,0 +1,270 @@
+; MIT License
+; 
+; Copyright (c) 2025 Dossytronics
+; https://github.com/dominicbeesley/blitter-65xx-code
+; 
+; Permission is hereby granted, free of charge, to any person obtaining a copy
+; of this software and associated documentation files (the "Software"), to deal
+; in the Software without restriction, including without limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+; 
+; The above copyright notice and this permission notice shall be included in all
+; copies or substantial portions of the Software.
+; 
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
+
+
+; (c) Dossytronics 2017, 2025
+;
+; Demonstrates hdmi and video access - for analogue video the correct firmware
+; should be programmed and IC's U28, U19 must be fitted
+
+		.include	"p20k.inc"
+
+		.ZEROPAGE
+
+zp_ptr:		.res 2
+zp_ptr2:	.res 2
+
+
+		.CODE
+		
+		; quick test program - change HDMI to mode 2, non-interlaced and copy current screen contents to base
+		; of hdmi memory
+
+VIDPROC_CTL	:=	$FE20
+VIDPROC_PAL	:=	$FE21
+CRTC_IX		:=	$FE00
+CRTC_DAT	:=	$FE01
+
+
+
+		.CODE
+
+START:
+
+	; set up HDMI for mode 2
+
+		lda	_ULA_SETTINGS+7
+		sta	VIDPROC_CTL
+
+		ldy	#$0b				; Y=11
+		ldx	#$0b
+_BCBB0:		lda	_CRTC_REG_TAB7,X		; get end of 6845 registers 0-11 table
+		sty	CRTC_IX
+		sta	CRTC_DAT
+		dex					; reduce pointers
+		dey					; 
+		bpl	_BCBB0				; and if still >0 do it again
+
+
+		ldy	#12
+		sty	CRTC_IX
+		lda	#$20
+		sta	CRTC_DAT
+		ldy	#13
+		sty	CRTC_IX
+		lda	#0
+		sta	CRTC_DAT
+
+
+		lda	#$7C
+		sta	zp_ptr + 1
+		lda	#$00
+		sta	zp_ptr
+
+		lda	#>M7SCR
+		sta	zp_ptr2 + 1
+		lda	#<M7SCR
+		sta	zp_ptr2
+
+		ldy	#0
+@clp:		lda	(zp_ptr2), Y
+		sta	(zp_ptr),Y
+		iny
+		bne	@clp
+		inc	zp_ptr2 + 1
+		inc	zp_ptr + 1
+		bpl	@clp
+
+
+		lda	#0
+		sta	zp_ptr
+		lda	#3
+		sta	zp_ptr + 1
+		tax
+		tay
+@wlp:		dey
+		bne 	@wlp
+		dex
+		bne	@wlp
+		dec	zp_ptr
+		bne	@wlp
+		dec	zp_ptr + 1
+		bne	@wlp
+
+
+		ldy	#$0b			; Y=11
+		ldx	#$0b
+_BCBB0_2:	lda	_CRTC_REG_TAB,X		; get end of 6845 registers 0-11 table
+		sty	CRTC_IX
+		sta	CRTC_DAT
+		dex				; reduce pointers
+		dey				; 
+		bpl	_BCBB0_2		; and if still >0 do it again
+
+
+		lda	_ULA_SETTINGS+2
+		sta	VIDPROC_CTL
+
+		; palette
+		lda	#$0F
+		ldx	#15
+		clc
+pplp:		sta	VIDPROC_PAL
+		adc	#$0F
+		dex
+		bne	pplp
+
+
+		lda	#$30
+		sta	zp_ptr + 1
+		lda	#$00
+		sta	zp_ptr
+		ldy	#0
+		lda	#$FF
+		sta	zp_ptr2
+		ldx	#0
+@flp:		dex	
+		bpl	@s1
+		inc	zp_ptr2
+		lda	zp_ptr2
+		and	#7
+		sta	zp_ptr2 + 1
+		lda	zp_ptr + 1
+		cmp	#$58
+		lda	#0
+		rol	A
+		rol	A
+		rol	A
+		rol	A
+		ora	zp_ptr2 + 1
+		tax
+		lda	m2coltab,X
+		ldx	#79
+@s1:		sta	(zp_ptr),Y
+		iny
+		bne	@flp
+		inc	zp_ptr + 1
+		bpl	@flp
+
+		ldy	#12
+		sty	CRTC_IX
+		lda	#$06
+		sta	CRTC_DAT
+		ldy	#13
+		sty	CRTC_IX
+		lda	#0
+		sta	CRTC_DAT
+
+		ldx	#0
+@nula:		lda	NULAPALETTE, X
+		sta	$FE23
+		inx
+		cpx	#$20
+		bne	@nula
+
+		brk
+		brk
+
+
+		rts
+
+
+m2coltab:	.byte	$3F		;WHITE
+		.byte	$0F		;YELLOW
+		.byte	$3C		;CYAN
+		.byte	$0C		;GREEN
+		.byte	$33		;MAGENTA
+		.byte	$03		;RED
+		.byte	$30		;BLUE
+		.byte	$00		;GRAY
+		; smpte 75%
+		.byte	$FF		;WHITE
+		.byte	$CF		;YELLOW
+		.byte	$FC		;CYAN
+		.byte	$CC		;GREEN
+		.byte	$F3		;MAGENTA
+		.byte	$C3		;RED
+		.byte	$F0		;BLUE
+		.byte	$C0		;BLACK
+
+NULAPALETTE:	.byte	$06, $66	; 0 = GREY
+		.byte	$1F, $00	; 1 = RED
+		.byte	$20, $F0	; 2 = GREEN
+		.byte	$3F, $F0	; 3 = YELLOW
+		.byte	$40, $0F	; 4 = BLUE
+		.byte	$5F, $0F	; 5 = MAGENTA
+		.byte	$60, $FF	; 6 = CYAN
+		.byte	$7F, $FF	; 7 = WHITE
+		.byte	$80, $00	; 8 = 75% BLACK
+		.byte	$9C, $00	; 9 = 75% RED
+		.byte	$A0, $C0	; 10 = 75% GREEN
+		.byte	$BC, $C0	; 11 = 75% YELLOW
+		.byte	$C0, $0C	; 12 = 75% BLUE
+		.byte	$DC, $0C	; 13 = 75% MAGENTA
+		.byte	$E0, $CC	; 14 = 75% CYAN
+		.byte	$FC, $CC	; 15 = LT GY
+
+
+_ULA_SETTINGS:		.byte	$9c				; 10011100
+			.byte	$d8				; 11011000
+			.byte	$f4				; 11110100
+			.byte	$9c				; 10011100
+			.byte	$88				; 10001000
+			.byte	$c4				; 11000100
+			.byte	$88				; 10001000
+			.byte	$4b				; 01001011
+
+;************* 6845 REGISTERS 0-11 FOR SCREEN TYPE 0 - MODES 0-2 *********
+
+_CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
+			.byte	$50				; 1 Horizontal Displayed =80
+			.byte	$62				; 2 Horizontal Sync	 =&62
+			.byte	$28				; 3 HSync Width+VSync	 =&28  VSync=2, HSync Width=8
+			.byte	$26				; 4 Vertical Total	 =38
+			.byte	$00				; 5 Vertial Adjust	 =0
+			.byte	$20				; 6 Vertical Displayed	 =32
+			.byte	$22				; 7 VSync Position	 =&22
+			.byte	$01				; 8 Interlace+Cursor	 =&01  Cursor=0, Display=0, Interlace=On
+			.byte	$07				; 9 Scan Lines/Character =8
+			.byte	$67				; 10 Cursor Start Line	  =&67	Blink=On, Speed=1/32, Line=7
+			.byte	$08				; 11 Cursor End Line	  =8
+
+
+
+
+;********* 6845 REGISTERS 0-11 FOR SCREEN TYPE 4 - MODE 7 ****************
+
+_CRTC_REG_TAB7:		.byte	$3f				; 0 Horizontal Total	 =64
+			.byte	$28				; 1 Horizontal Displayed =40
+			.byte	$33				; 2 Horizontal Sync	 =&33  Note: &31 is a better value
+			.byte	$24				; 3 HSync Width+VSync	 =&24  VSync=2, HSync=4
+			.byte	$1e				; 4 Vertical Total	 =30
+			.byte	$02				; 5 Vertical Adjust	 =2
+			.byte	$19				; 6 Vertical Displayed	 =25
+			.byte	$1b				; 7 VSync Position	 =&1B
+			.byte	$93				; 8 Interlace+Cursor	 =&93  Cursor=2, Display=1, Interlace=Sync+Video
+			.byte	$12				; 9 Scan Lines/Character =19
+			.byte	$72				; 10 Cursor Start Line	  =&72	Blink=On, Speed=1/32, Line=18
+			.byte	$13				; 11 Cursor End Line	  =19
+
+M7SCR:	.incbin "TEST25"

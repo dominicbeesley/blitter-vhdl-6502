@@ -88,7 +88,8 @@ entity fb_memctl is
 		noice_debug_button_i				: in	std_logic;
 
 		-- cput throttle
-		throttle_cpu_2MHz_o				: out std_logic;
+		throttle_all_o						: out std_logic;
+		throttle_mos_o						: out std_logic;
 		rom_throttle_map_o				: out std_logic_vector(15 downto 0);
 		rom_autohazel_map_o				: out std_logic_vector(15 downto 0);
 
@@ -96,9 +97,15 @@ entity fb_memctl is
 
 		fb_syscon_i							: in		fb_syscon_t;
 		fb_c2p_i								: in		fb_con_o_per_i_t;
-		fb_p2c_o								: out		fb_con_i_per_o_t
+		fb_p2c_o								: out		fb_con_i_per_o_t;
 
+		-- preboot
+		preboot_o							: out std_logic;
 
+		-- rom map select
+		map0n1_swromx_i					: in  std_logic;
+		map0n1_default_i					: in  std_logic;
+		map0n1_o								: out std_logic
 
 	);
 end fb_memctl;
@@ -146,16 +153,25 @@ architecture rtl of fb_memctl is
 	signal	r_window_65816					:	std_logic_vector(12 downto 0);
 	signal	r_window_65816_wr_en			:	std_logic;
 
-	signal	r_throttle_cpu_2MHz			: 	std_logic;
+	signal	r_throttle_all					: 	std_logic;
+	signal	r_throttle_mos					: 	std_logic;
 	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
 
 	signal   r_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
+	signal   r_preboot						: std_logic;
+	signal   r_map0n1							: std_logic;
+
+	signal   r_resetfull 					: std_logic := '1'; -- bodge to get map0n1 from switches late on mk.3
+
 begin
 
-	throttle_cpu_2MHz_o <= r_throttle_cpu_2MHz;
+	preboot_o <= r_preboot;
+	throttle_all_o <= r_throttle_all;
+	throttle_mos_o <= r_throttle_mos;
 	rom_throttle_map_o <= r_rom_throttle_map;
 	rom_autohazel_map_o <= r_rom_autohazel_map;
+	map0n1_o <= r_map0n1;
 
 	boot_65816_o <= r_65816_boot;
 
@@ -181,7 +197,11 @@ begin
 								r_turbo_lo 
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 7 else
 								-- FE36 - 2Mhz throttle
-								r_throttle_cpu_2MHz & "0000000" 
+								r_throttle_all 
+							&  r_throttle_mos 
+							&  r_preboot
+							&  r_map0n1
+							&  "0000" 
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 6 else
 								r_rom_throttle_map(15 downto 8)
 								when unsigned(fb_c2p_i.A(3 downto 0)) = 5 else
@@ -226,14 +246,23 @@ begin
 				r_swmos_save_written_en <= '0';
 				r_swmos_debug_written_en <= '0';
 				r_65816_boot <= "10";	
+				r_preboot <= '1';
 				r_rom_autohazel_map <= (others => '0');
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_throttle_cpu_2MHz <= '1';
+					r_resetfull <= '1';
+					r_throttle_all <= '1';
+					r_throttle_mos <= '1';
 					r_rom_throttle_map <= (others => '0');
 					r_noice_debug_en <= '0';
 					r_swmos_shadow <= '0';
+				end if;
+
+				if r_resetfull = '1' then
+					r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
 				end if;		
+				r_window_65816_wr_en <= '0';
 			else
+				r_resetfull <= '0';
 				v_dowrite := false;
 				r_con_ack <= '0';
 				r_window_65816_wr_en <= '0';
@@ -278,7 +307,10 @@ begin
 						when 7 =>
 							r_turbo_lo <= fb_c2p_i.D_wr;
 						when 6 =>
-							r_throttle_cpu_2MHz <= fb_c2p_i.D_wr(7);
+							r_throttle_all <= fb_c2p_i.D_wr(7);
+							r_throttle_mos <= fb_c2p_i.D_wr(6);
+							r_preboot		<= fb_c2p_i.D_wr(5);
+							r_map0n1			<= fb_c2p_i.D_wr(4);
 						when 5 => 
 							r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
 						when 3 => 

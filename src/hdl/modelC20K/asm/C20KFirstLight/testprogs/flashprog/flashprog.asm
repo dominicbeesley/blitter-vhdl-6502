@@ -1,7 +1,7 @@
 ; MIT License
 ; 
 ; Copyright (c) 2025 Dossytronics
-; https://github.com/dominicbeesley/blitter-65xx-code
+; https://github.com/dominicbeesley/blitter-vhdl-6502
 ; 
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@
 		sta	zp_addr+0
 .endmacro
 
+LOCALBUF	=	$4000		; load ROMSs to here to bounce up to chipram / Flash
 FLASHBASE =	$800000
 
 		.ZEROPAGE
@@ -175,7 +176,7 @@ doERASE:		M_PRINT	str_Erase
 @mm:		jmp	main_menu
 
 ;==============================================================================
-; P R O G R A M   F R O M   R A M   A T   1 0 0 0
+; P R O G R A M   F R O M   R A M   A T   LOCALBUF
 ;==============================================================================
 
 doPROG:		M_PRINT	str_Prog
@@ -193,9 +194,9 @@ doPROG:		M_PRINT	str_Prog
 		bcc	@ok_len
 		jmp	ErrBadHex
 @ok_len:	jsr	acc2Len
-		lda	#$00			; point at buffer starting at local 0x1000
+		lda	#<LOCALBUF			; point at buffer starting at local 0x1000
 		sta	zp_src_ptr
-		lda	#$10
+		lda	#>LOCALBUF
 		sta	zp_src_ptr+1
 @prog_loop:	jsr	PrintAddr
 		jsr	OSNEWL

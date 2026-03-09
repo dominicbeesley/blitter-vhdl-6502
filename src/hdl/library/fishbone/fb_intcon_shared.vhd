@@ -52,6 +52,7 @@ entity fb_intcon_shared is
 		G_PERIPHERAL_COUNT		: POSITIVE;
 		G_ARB_ROUND_ROBIN : boolean := false;
 		G_REGISTER_CONTROLLER_P2C: boolean := false;
+		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX: boolean := false;		-- TODO: this fails on mk.2 but seems ok on C20K and mk.3
 		G_REGISTER_PERIPHERAL_C2P : boolean := false
 	);
 	port (
@@ -203,33 +204,87 @@ end generate;
 	
 
 	-- signals back from selected peripheral to controllers
-	i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
+--	i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel));
+--
+--	G_REGISTER_CONTROLLER_P2C_ON:IF G_REGISTER_CONTROLLER_P2C GENERATE
+--		p_reg_con_s2m:process(fb_syscon_i.clk)
+--		begin
+--			if rising_edge(fb_syscon_i.clk) then
+--				ir_p2c_D_rd	<= i_p2c.D_rd;
+--
+--				for I in G_CONTROLLER_COUNT-1 downto 0 loop
+--					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+--					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
+--				end loop;
+--			end if;
+--		end process;
+--	END GENERATE;
+--
+--	G_REGISTER_CONTROLLER_P2C_OFF:IF NOT G_REGISTER_CONTROLLER_P2C GENERATE
+--		g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+--					-- TODO: check if moving data to own shared register saves space
+--				ir_p2c_D_rd	<= i_p2c.D_rd;
+--				gra:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+--					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+--					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
+--				end generate;
+--		end generate;
+--	END GENERATE;
+
+-- DB: change to register before muxing - see if better closure
 
 	G_REGISTER_CONTROLLER_P2C_ON:IF G_REGISTER_CONTROLLER_P2C GENERATE
-		p_reg_con_s2m:process(fb_syscon_i.clk)
+
+		G_B4MUX:if G_REGISTER_CONTROLLER_P2C_BEFORE_MUX GENERATE
+		B_REGS:BLOCK
+		signal	r_fb_per_p2c_i: fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 		begin
-			if rising_edge(fb_syscon_i.clk) then
-				ir_p2c_D_rd	<= i_p2c.D_rd;
 
-				for I in G_CONTROLLER_COUNT-1 downto 0 loop
-					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
-					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
-				end loop;
-			end if;
-		end process;
+			--register
+			p_reg_con_p2c:process(fb_syscon_i)
+			begin
+				if rising_edge(fb_syscon_i.clk) then
+					r_fb_per_p2c_i <= fb_per_p2c_i; 
+				end if;
+			end process;	
+			
+			-- mux
+			i_p2c <= r_fb_per_p2c_i(to_integer(r_peripheral_sel)); 
+			ir_p2c_D_rd	<= i_p2c.D_rd;
+			gra:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+				ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+				ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
+			end generate;
+		END BLOCK;
+		END GENERATE;
+
+		G_AFTERMUX: if not G_REGISTER_CONTROLLER_P2C_BEFORE_MUX GENERATE
+			i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel)); -- mux
+
+			p_reg_con_p2c:process(fb_syscon_i)
+			begin
+				if rising_edge(fb_syscon_i.clk) then
+					-- register
+					ir_p2c_D_rd	<= i_p2c.D_rd;
+					gra:for I in G_CONTROLLER_COUNT-1 downto 0 loop
+						ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+						ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
+					end loop;
+				end if;
+			end process;	
+		END GENERATE;
 	END GENERATE;
-
 
 	G_REGISTER_CONTROLLER_P2C_OFF:IF NOT G_REGISTER_CONTROLLER_P2C GENERATE
-		g_p2c_shared_bus:for I in G_CONTROLLER_COUNT-1 downto 0 generate
-					-- TODO: check if moving data to own shared register saves space
-				ir_p2c_D_rd	<= i_p2c.D_rd;
-				gra:for I in G_CONTROLLER_COUNT-1 downto 0 generate
-					ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
-					ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
-				end generate;
+		i_p2c <= fb_per_p2c_i(to_integer(r_peripheral_sel)); -- mux
+		ir_p2c_D_rd	<= i_p2c.D_rd;
+		gra:for I in G_CONTROLLER_COUNT-1 downto 0 generate
+			ir_p2c_rdy(I)	<= i_p2c.rdy and r_cyc_act_oh(I);
+			ir_p2c_ack(I)	<= i_p2c.ack and r_cyc_act_oh(I);				
 		end generate;
 	END GENERATE;
+
+
 
 	-- stall is always async
 	p_stall:process(all)

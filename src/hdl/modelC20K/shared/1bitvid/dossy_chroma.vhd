@@ -94,17 +94,44 @@ end dossy_chroma;
 
 architecture rtl of dossy_chroma is
 
+function REP(b:std_logic; n:natural) return std_logic_vector is
+variable ret : std_logic_vector(n-1 downto 0);
+begin
+   ret := (others => b);
+   return ret;
+end function;
 
+function ROUND_TO_ZERO(v:signed; bits:natural) return signed is
+variable v_r:signed(v'range);
+variable ret:signed(bits-1 downto 0);
+begin
+   if bits > v'length then
+      ret := signed(std_logic_vector(v) & REP(v(0), bits - v'length));
+   elsif bits = v'length then
+      ret := v;
+   elsif bits = v'length -1 then
+      v_r := v + signed(REP('0', bits) & v(v'high));
+      ret := v_r(v_r'high downto v_r'high-bits+1);
+   else
+      v_r := v + signed(REP('0', bits) & v(v'high) & REP(not(v(v'high)), v'length-bits-1));
+      ret := v_r(v_r'high downto v_r'high-bits+1);
+   end if;
+
+   return ret;
+
+end function;
+
+
+constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
 
 signal r_car_by : std_logic;
 signal r_car_ry : std_logic;
 
-signal r_base_by : signed(G_OUTBITS-1 downto 0);
-signal r_base_ry : signed(G_OUTBITS-1 downto 0);
+signal r_base_by : signed(G_CALC_BITS-1 downto 0);
+signal r_base_ry : signed(G_CALC_BITS-1 downto 0);
 
-signal r_mod_by : signed(G_OUTBITS-1 downto 0);
-signal r_mod_ry : signed(G_OUTBITS-1 downto 0);
-
+signal r_mod_by : signed(G_CALC_BITS-1 downto 0);
+signal r_mod_ry : signed(G_CALC_BITS-1 downto 0);
 
 signal r_burst  : std_logic;
 
@@ -112,14 +139,15 @@ signal r_pal_swich : std_logic := '0';
 
 signal i_clk_chroma_x4 : std_logic;
 
-constant G_CALC_BITS : natural := G_INBITS + 9; -- enough room to multiply up by constants below
+constant PAL_BURST : natural := integer((2.0**G_INBITS) * 40.0 * G_GAIN);
+constant NTSC_BURST : natural := integer((2.0**G_INBITS) * 60.0 * G_GAIN);
 
 begin
 
    car_ry_o <= r_car_ry;
    pal_sw_o <= r_pal_swich;
-   base_by_o <= r_base_by;
-   base_ry_o <= r_base_ry;
+   base_by_o <= r_base_by(G_CALC_BITS-1 downto G_CALC_BITS - G_OUTBITS);
+   base_ry_o <= r_base_ry(G_CALC_BITS-1 downto G_CALC_BITS - G_OUTBITS);
    clk_chroma_x4_o <= i_clk_chroma_x4;
 
    p_ident:process(clk_i)
@@ -179,7 +207,7 @@ begin
 
       if rising_edge(clk_i) then
 
-         if v_ctr > G_BREEZE and v_ctr <= G_BREEZE + G_BURST then
+         if v_ctr > G_BREEZE and v_ctr <= G_BREEZE + G_BURST and vs_i = '0' then
             r_burst <= '1';
          else
             r_burst <= '0';
@@ -201,17 +229,17 @@ begin
       if rising_edge(clk_i) then
          if r_burst = '1' then
             if G_PAL then
-               r_base_by <= to_signed(-3, r_base_by'length);
+               r_base_by <= to_signed(-PAL_BURST, r_base_by'length);
             else
-               r_base_by <= to_signed(-6, r_base_by'length);
+               r_base_by <= to_signed(-NTSC_BURST, r_base_by'length);
             end if;
          else
             r_base_by <= 
                to_signed(
-                  to_integer(r_i) * integer((-37.0) * G_GAIN)
-               +  to_integer(g_i) * integer((-73.0) * G_GAIN)
-               +  to_integer(b_i) * integer((111.0) * G_GAIN)
-               , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
+                  to_integer(r_i) * integer(-37.0 * G_GAIN)
+               +  to_integer(g_i) * integer(-73.0 * G_GAIN)
+               +  to_integer(b_i) * integer(110.0 * G_GAIN)
+               , r_base_by'length);
          end if;
       end if;
    end process;
@@ -221,17 +249,17 @@ begin
       if rising_edge(clk_i) then
          if r_burst = '1' then
             if G_PAL then
-               r_base_ry <= to_signed(3, r_base_ry'length);
+               r_base_ry <= to_signed(PAL_BURST, r_base_ry'length);
             else
                r_base_ry <= to_signed(0, r_base_ry'length);
             end if;
          else
             r_base_ry <= 
                to_signed(
-                  to_integer(r_i) * integer(( 157.0) * G_GAIN)
-               +  to_integer(g_i) * integer((-132.0) * G_GAIN)
-               +  to_integer(b_i) * integer(( -25.0) * G_GAIN)
-               , G_CALC_BITS)(G_CALC_BITS-1 downto G_CALC_BITS-G_OUTBITS);
+                  to_integer(r_i) * integer( 157.0 * G_GAIN)
+               +  to_integer(g_i) * integer(-132.0 * G_GAIN)
+               +  to_integer(b_i) * integer( -25.0 * G_GAIN)
+               , r_base_by'length);
          end if;
       end if;
    end process;
@@ -259,9 +287,14 @@ begin
    end process;
 
    p_sum:process(i_clk_chroma_x4)
+   variable v_ry_s : signed(G_OUTBITS-1 downto 0);
+   variable v_by_s : signed(G_OUTBITS-1 downto 0);
    begin
       if rising_edge(i_clk_chroma_x4) then
-         chroma_o <= r_mod_by + r_mod_ry;
+         -- note: we round _before_ adding otherwise there is cross-talk
+         v_ry_s := ROUND_TO_ZERO(r_mod_ry, G_OUTBITS);
+         v_by_s := ROUND_TO_ZERO(r_mod_by, G_OUTBITS);
+         chroma_o <= v_ry_s + v_by_s;
       end if;
    end process;
 

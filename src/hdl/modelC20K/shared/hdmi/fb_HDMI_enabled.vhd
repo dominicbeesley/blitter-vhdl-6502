@@ -571,8 +571,9 @@ end process;
 	e_fb_intcon: entity work.fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
-		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24
+		G_PERIPHERAL_COUNT 				=> PERIPHERAL_COUNT,
+		G_ADDRESS_WIDTH 					=> 24,
+		G_REGISTER_CON_READS				=> true
 		)
 	port map (
 		fb_syscon_i 						=> fb_syscon_i,

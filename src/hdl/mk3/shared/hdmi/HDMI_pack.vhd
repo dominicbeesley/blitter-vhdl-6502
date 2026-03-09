@@ -97,13 +97,17 @@ package HDMI_pack is
 
 		scroll_latch_c_i					: in		std_logic_vector(1 downto 0);
 
-		PCM_L_i								: in		signed(9 downto 0);
+		PCM_L_i								: in		signed(15 downto 0);
+		PCM_R_i								: in		signed(15 downto 0);
 
 		debug_vsync_det_o			: out std_logic;
 		debug_hsync_det_o			: out std_logic;
 		debug_hsync_crtc_o			: out std_logic;
 		debug_odd_o					: out std_logic;
-		debug_spr_mem_clken_o		: out std_logic
+		debug_spr_mem_clken_o		: out std_logic;
+
+		debug_dvi_blank_o					: out std_logic;
+		debug_hdmi_state_o				: out std_logic_vector(2 downto 0)
 
 
 	);
