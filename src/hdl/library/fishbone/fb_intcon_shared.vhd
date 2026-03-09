@@ -52,7 +52,7 @@ entity fb_intcon_shared is
 		G_PERIPHERAL_COUNT		: POSITIVE;
 		G_ARB_ROUND_ROBIN : boolean := false;
 		G_REGISTER_CONTROLLER_P2C: boolean := false;
-		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX: boolean := false;		
+		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX: boolean := false;		-- TODO: this fails on mk.2 but seems ok on C20K and mk.3
 		G_REGISTER_PERIPHERAL_C2P : boolean := false
 	);
 	port (
