@@ -110,6 +110,7 @@ entity C20K is
       aud_i2s_ws_pwm_R_o   : out           std_logic;
 
 
+	-- configuration memory SPI/Flash		
       flash_ck_o           : out           std_logic;
       flash_cs_o           : out           std_logic;
       flash_miso_i         : in            std_logic;
@@ -926,11 +927,11 @@ END GENERATE;
          signal i_p2c_preboot          : fb_con_i_per_o_t;         
       begin
 
-         e_fb_mem_rom: entity work.fb_P20K_mem
+         e_fb_mem_rom: entity work.fb_inferred_mem
          generic map (
             G_ADDR_W => 8,   -- 256 bytes
             G_READONLY => true,
-            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1-c20k/preboot1-c20k.vec" -- TODO: make this deploy from code project into here
+            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1/c20k/preboot1.vec" -- TODO: make this deploy from code project into here
             )
          port map (
             -- fishbone signals
@@ -1053,7 +1054,7 @@ end generate;
       debug_throttle_act_o          => i_debug_throttle_act,
 
       -- preboot
-      preboot_i                     => i_preboot    
+      preboot_i                     => i_preboot 
 
 
 

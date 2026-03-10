@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2026 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,13 @@
 -- Company: 			Dossytronics
 -- Engineer: 			Dominic Beesley
 -- 
--- Create Date:    	16/04/2019
+-- Create Date:    	10/3/2026
 -- Design Name: 
--- Module Name:    	fb_P20K_mem
+-- Module Name:    	fb_inferred_mem
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for P20K block RAM
+-- Description: 		A fishbone wrapper for inferred RAM
 -- Dependencies: 
 --
 -- Revision: 
@@ -49,7 +49,7 @@ use std.textio.all;
 library work;
 use work.fishbone.all;
 
-entity fb_P20K_mem is
+entity fb_inferred_mem is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		G_ADDR_W								: positive;	-- number of address lines in memory
@@ -66,23 +66,23 @@ entity fb_P20K_mem is
 		fb_p2c_o								: out		fb_con_i_per_o_t
 
 	);
-end fb_P20K_mem;
+end fb_inferred_mem;
 
-architecture rtl of fb_P20K_mem is
+architecture rtl of fb_inferred_mem is
 
-	type		arr_mem_t is array(2**G_ADDR_W-1 downto 0) of std_logic_vector(7 downto 0);
+	type		arr_mem_t is array((2**G_ADDR_W)-1 downto 0) of std_logic_vector(7 downto 0);
 
 	impure function MEM_INIT_FILE(file_name:STRING) return arr_mem_t is
 	FILE infile : text is in file_name;
 	variable arr : arr_mem_t := (others => (others => '0'));
+	variable b : bit_vector(7 downto 0);
 	variable inl : line;
 	variable count : integer;
 	begin
-		count := 0;
-		while not(endfile(infile)) and count < 2**G_ADDR_W loop
+		for count in 0 to (2**G_ADDR_W)-1 loop
 			readline(infile, inl);
-			read(inl, arr(count));
-			count := count + 1;
+			read(inl, b);
+			arr(count) := to_stdlogicvector(b);
 		end loop;
 
 		return arr;

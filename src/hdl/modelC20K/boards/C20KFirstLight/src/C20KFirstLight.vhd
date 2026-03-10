@@ -447,7 +447,7 @@ begin
    i_c2p_led_arr        <= i_per_c2p_intcon(PERIPHERAL_NO_LED_ARR);
    i_c2p_uart           <= i_per_c2p_intcon(PERIPHERAL_NO_UART);
 
-   e_fb_mem_rom: entity work.fb_P20K_mem
+   e_fb_mem_rom: entity work.fb_inferred_mem
    generic map (
       G_ADDR_W => 12,   -- 4K
       G_READONLY => true,
@@ -463,7 +463,7 @@ begin
    );
 
 G_LOCALRAM:if not G_INCL_HDMI GENERATE
-   e_fb_mem_ram: entity work.fb_P20K_mem
+   e_fb_mem_ram: entity work.fb_inferred_mem
    generic map (
       G_ADDR_W => 15 -- 32K      
       )

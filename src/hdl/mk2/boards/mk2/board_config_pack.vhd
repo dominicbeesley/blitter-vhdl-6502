@@ -52,12 +52,12 @@ use work.firmware_info_pack.all;
 package board_config_pack is
 
 	constant FW_BOARD_LEVEL				: firmware_board_level := MK2;
-	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
-	constant G_IORB_BLOCK		: boolean := true;
+	constant G_JIM_DEVNO					: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
+	constant G_IORB_BLOCK				: boolean := true;
 
 	constant G_INCL_HDMI					: boolean := false;
-	constant G_INCL_PREBOOT						: boolean := false;
-	constant G_INCL_XFLASH     					: boolean := false;
+	constant G_INCL_PREBOOT				: boolean := true;
+	constant G_INCL_XFLASH     		: boolean := true;
 	constant G_INCL_CHIPSET				: boolean := true;
 	constant G_INCL_CS_DMA				: boolean := true;
 	constant G_DMA_CHANNELS				: natural := 2;
@@ -87,17 +87,17 @@ package board_config_pack is
 	constant G_MEM_SLOW_IS_45			: boolean := false;
 	constant G_MEM_FLASH_IS_45			: boolean := false;
 
-	constant PERIPHERAL_COUNT			: natural := 6;
+	constant PERIPHERAL_COUNT			: natural := 8;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
 	constant PERIPHERAL_NO_SYS	 		: natural := 1;
 	constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
 	constant PERIPHERAL_NO_MEMCTL		: natural := 3;
 	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
-	constant PERIPHERAL_NO_HDMI		: natural := 0;		-- not on mk2 board!
-	constant PERIPHERAL_NO_XFLASH  	: natural := 0; -- not used
-	constant PERIPHERAL_NO_PREBOOT	: natural := 0; -- not used	
+	constant PERIPHERAL_NO_HDMI		: natural := 0;	-- not on mk2 board!
+	constant PERIPHERAL_NO_XFLASH  	: natural := 5; 
+	constant PERIPHERAL_NO_PREBOOT	: natural := 6; -- not used	
 	constant PERIPHERAL_NO_UART 		: natural := 0; -- not used
-	constant PERIPHERAL_NO_CONFIG 		: natural := 5; 
+	constant PERIPHERAL_NO_CONFIG 		: natural := 7; 
 	constant PERIPHERAL_NO_LED_ARR	: natural := 0; -- not used;
 
 	constant CONTROLLER_COUNT			: natural := 2;

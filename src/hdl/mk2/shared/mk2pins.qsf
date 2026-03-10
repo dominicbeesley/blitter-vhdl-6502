@@ -178,4 +178,16 @@ set_location_assignment PIN_C11 -to LED_o[1]
 set_location_assignment PIN_B10 -to LED_o[2]
 set_location_assignment PIN_B7 -to LED_o[3]
 
+
+set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULAR IO"
+
+set_location_assignment PIN_C1 -to flash_mosi_o		
+set_location_assignment PIN_D2 -to flash_cs_o	
+set_location_assignment PIN_H1 -to flash_ck_o		
+set_location_assignment PIN_H2 -to flash_miso_i		
+
+
 set_location_assignment PIN_N8 -to SUP_nRESET_i

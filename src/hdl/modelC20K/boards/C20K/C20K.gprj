@@ -22,7 +22,6 @@
 
         <File path="../../shared/fb_SYS_c20k.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/c20k_peripheral_mux_ctl.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/fb_P20K_MEM.vhd" type="file.vhdl" enable="1" />
 
         <File path="src/gowin_rpll/pll_pal_sc.vhd" type="file.vhdl" enable="1"/>
 
@@ -70,6 +69,7 @@
         <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/common.vhd" type="file.vhdl" enable="1" />

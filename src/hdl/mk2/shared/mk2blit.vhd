@@ -139,15 +139,21 @@ entity mk2blit is
 		CPUSKT_9nFIRQLnDTACK_o					: out		std_logic;
 
 		-- LEDs 
-		LED_o										: out		std_logic_vector(3 downto 0);
+		LED_o											: out		std_logic_vector(3 downto 0);
 
 		-- CONFIG / TEST connector
 
-		CFG_io									: inout	std_logic_vector(15 downto 0);
+		CFG_io										: inout	std_logic_vector(15 downto 0);
+
+		-- configuration memory SPI/Flash
+		flash_ck_o           					: out		std_logic;
+      flash_cs_o           					: out		std_logic;
+      flash_miso_i         					: in		std_logic;
+      flash_mosi_o         					: out		std_logic;
 
 		-- i2c EEPROM
-		I2C_SCL_io								: inout		std_logic;
-		I2C_SDA_io							: inout	std_logic
+		I2C_SCL_io									: inout	std_logic;
+		I2C_SDA_io									: inout	std_logic
 
 	);
 end mk2blit;
@@ -258,6 +264,7 @@ architecture rtl of mk2blit is
 	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
+   signal i_preboot                 : std_logic;
 
 	-- intcon to peripheral sel
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
@@ -590,7 +597,7 @@ END GENERATE;
 		noice_debug_button_i				=> r_noice_debug_btn,
 
       	-- pre-boot
-     	preboot_o                     		=> open,
+      preboot_o                     => i_preboot,
 
 		-- cpu throttle
 
@@ -691,6 +698,83 @@ END GENERATE;
 
 	);
 
+ -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+   g_spi_flash:if G_INCL_XFLASH generate
+      b_spi:block
+         signal i_SPI_CS: std_logic_vector(7 downto 0);
+         -- FPGA config flash
+         signal i_c2p_xflash          : fb_con_o_per_i_t;
+         signal i_p2c_xflash          : fb_con_i_per_o_t;         
+      begin
+         e_fb_xflash:entity work.fb_spi
+         generic map (
+            SIM                           => SIM,
+            CLOCKSPEED                    => CLOCKSPEED,
+            PRESCALE                      => 1
+         )
+         port map (
+
+            -- eeprom signals
+            SPI_CS_o                      => i_SPI_CS,
+            SPI_CLK_o                     => flash_ck_o,
+            SPI_MOSI_o                    => flash_mosi_o,
+            SPI_MISO_i                    => flash_miso_i,
+            SPI_DET_i                     => '1',
+
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_xflash,
+            fb_p2c_o                      => i_p2c_xflash
+         );
+      
+         flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+         i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+      end block;
+   end generate;
+
+   g_not_spi_flash:if not G_INCL_XFLASH generate
+
+      flash_ck_o           <= '1';
+      flash_cs_o           <= '1';
+      flash_mosi_o         <= '1';
+
+   end generate;
+
+
+   -------------------------------------
+   -- PRE-BOOT ROM
+   -------------------------------------
+
+   g_pre_rom:if G_INCL_PREBOOT generate
+      b_spi:block
+         signal i_c2p_preboot          : fb_con_o_per_i_t;
+         signal i_p2c_preboot          : fb_con_i_per_o_t;         
+      begin
+
+         e_fb_mem_rom: entity work.fb_inferred_mem_altera
+         generic map (
+            G_ADDR_W => 8,   -- 256 bytes
+            G_READONLY => true,
+            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1/mk2/preboot1.mif" -- TODO: make this deploy from code project into here
+            )
+         port map (
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_preboot,
+            fb_p2c_o                      => i_p2c_preboot
+
+         );      
+
+         i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
+         i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
+      end block;
+   end generate;
 
 	e_fb_cpu: entity work.fb_cpu
 	generic map (
@@ -768,6 +852,9 @@ END GENERATE;
 		boot_65816_i						=> i_boot_65816,
 		window_65816_i						=> i_window_65816,
 		window_65816_wr_en_i				=> i_window_65816_wr_en,
+
+		-- preboot
+		preboot_i							=> i_preboot,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
 

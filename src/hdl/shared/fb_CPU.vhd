@@ -153,7 +153,10 @@ entity fb_cpu is
 		debug_65816_addr_meta_o				: out std_logic;
 		debug_65816_boot_act_o				: out std_logic;
 
-		debug_80188_state_o					: out std_logic_vector(2 downto 0)
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+
+		-- preboot
+		preboot_i								: in	std_logic := '0'
 
 	);
 end fb_cpu;
@@ -772,7 +775,10 @@ begin
 
 		-- 65816/model C extras
 		window_65816_i							=> window_65816_i,
-		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		window_65816_wr_en_i					=> window_65816_wr_en_i,		
+
+		-- preboot
+		preboot_i								=> preboot_i
 
 	);
 
