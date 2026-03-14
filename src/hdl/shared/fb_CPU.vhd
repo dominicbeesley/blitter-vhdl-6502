@@ -522,14 +522,16 @@ architecture rtl of fb_cpu is
 	signal r_hard_cpu_en				: 	std_logic;
 
 
-	signal r_nmi				: std_logic;
+	signal r_nmi						: std_logic;
 
-	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
+	signal r_nmi_meta					: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
 
-	signal i_throttle_act		: std_logic;
+	signal i_throttle_act			: std_logic;
 
 	signal r_do_sys_via_block		: std_logic;		-- per cpu enable
+
+	signal i_preboot					: std_logic;
 begin
 
 	-- ================================================================================================ --
@@ -778,10 +780,12 @@ begin
 		window_65816_wr_en_i					=> window_65816_wr_en_i,		
 
 		-- preboot
-		preboot_i								=> preboot_i
+		preboot_i								=> i_preboot
 
 	);
 
+
+	i_preboot <= r_cpu_en_t65 and preboot_i;
 	throttle_act_o <= i_throttle_act;
 
 
