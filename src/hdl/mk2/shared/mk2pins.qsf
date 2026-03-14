@@ -156,7 +156,7 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to CPUSKT_C6nML9BUSYKnBG
 set_location_assignment PIN_J11 -to CPUSKT_KnBRZnBUSREQ_o
 set_location_assignment PIN_K8 -to CPUSKT_RnWZnWR_i
 set_location_assignment PIN_L11 -to CPUSKT_PHI09EKZCLK_o
-set_location_assignment PIN_T4 -to CPUSKT_PHI16ABRT9BSKnDS_i
+set_location_assignment PIN_T4 -to CPUSKT_PHI16ABRT9BSKnDS_io
 set_location_assignment PIN_T8 -to CPUSKT_PHI26VDAKFC0ZnMREQ_i
 set_location_assignment PIN_T9 -to CPUSKT_RDY9KnHALTZnWAIT_o
 set_location_assignment PIN_T3 -to CPUSKT_SYNC6VPA9LICKFC2ZnM1_i
