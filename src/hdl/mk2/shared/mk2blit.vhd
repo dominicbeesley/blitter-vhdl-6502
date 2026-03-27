@@ -60,7 +60,8 @@ entity mk2blit is
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
 		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
-		G_DWRITE_HOLD						: natural := 6									-- hold write data on system bus for this many cycles
+		G_DWRITE_HOLD						: natural := 6;								-- hold write data on system bus for this many cycles
+      PROJECT_ROOT                  : string  := "../"                     -- path to root of project (to find relative files, override in simulations)
 	);
 	port(
 		-- crystal osc 48MHz - not fitted on blit board
@@ -760,7 +761,7 @@ END GENERATE;
          generic map (
             G_ADDR_W => 8,   -- 256 bytes
             G_READONLY => true,
-            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1/mk2/preboot1.mif" -- TODO: make this deploy from code project into here
+            INIT_FILE => PROJECT_ROOT & "../../shared/preboot1.mif" -- TODO: make this deploy from code project into here
             )
          port map (
             -- fishbone signals
