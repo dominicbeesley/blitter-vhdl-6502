@@ -60,7 +60,8 @@ entity C20K is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
-      BAUD                          : natural := 19200
+      BAUD                          : natural := 19200;
+      PROJECT_ROOT                  : string  := ""                        -- path to root of project (to find relative files, override in simulations)
    );
    port (
 
@@ -931,7 +932,7 @@ END GENERATE;
          generic map (
             G_ADDR_W => 8,   -- 256 bytes
             G_READONLY => true,
-            INIT_FILE => "C:/Users/domin/OneDrive/Documents/GitHub/blitter-65xx-code/build/roms/preboot/preboot1/c20k/preboot1.vec" -- TODO: make this deploy from code project into here
+            INIT_FILE => PROJECT_ROOT & "../../shared/preboot1.vec" 
             )
          port map (
             -- fishbone signals
