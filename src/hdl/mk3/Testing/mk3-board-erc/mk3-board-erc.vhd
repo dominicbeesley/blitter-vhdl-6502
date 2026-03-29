@@ -149,6 +149,10 @@ signal ctr		: unsigned(28 downto 0);
 signal bauddiv : integer range 0 to 4999;
 signal bit_clk : std_logic;
 
+signal bauddiv_f : integer range 0 to 499;
+signal bit_clk_f : std_logic;
+
+
 begin
 
 	p:process(CLK_48M_i)
@@ -172,6 +176,21 @@ begin
 		end if;
 
 	end process;
+
+	p_bit_clk_f:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			bit_clk_f <= '0';
+			if bauddiv_f >= 499 then
+				bauddiv_f <= 0;
+				bit_clk_f <= '1';
+			else
+				bauddiv_f <= bauddiv_f + 1;	
+			end if;
+		end if;
+
+	end process;
+
 
 	MEM_nOE_o <= '1';
 
@@ -338,5 +357,13 @@ begin
 	exp_PORTE_nOE <= '0';
 	exp_PORTF_nOE <= '0';
 	exp_PORTG_nOE <= '0';
+
+	e_HDMI_SCL_o:entity work.serialout generic map (message => "SCL ") port map (bit_clk => bit_clk, so => HDMI_SCL_o);
+	e_HDMI_SDA_io:entity work.serialout generic map (message => "SDA ") port map (bit_clk => bit_clk, so => HDMI_SDA_io);
+	e_HDMI_CK_o:entity work.serialout generic map (message => "TMck") port map (bit_clk => bit_clk_f, so => HDMI_CK_o);
+	e_HDMI_D0_o:entity work.serialout generic map (message => "TMd0") port map (bit_clk => bit_clk_f, so => HDMI_D0_o);
+	e_HDMI_D1_o:entity work.serialout generic map (message => "TMd1") port map (bit_clk => bit_clk_f, so => HDMI_D1_o);
+	e_HDMI_D2_o:entity work.serialout generic map (message => "TMd2") port map (bit_clk => bit_clk_f, so => HDMI_D2_o);
+
 
 end rtl;

@@ -156,7 +156,7 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to CPUSKT_C6nML9BUSYKnBG
 set_location_assignment PIN_J11 -to CPUSKT_KnBRZnBUSREQ_o
 set_location_assignment PIN_K8 -to CPUSKT_RnWZnWR_i
 set_location_assignment PIN_L11 -to CPUSKT_PHI09EKZCLK_o
-set_location_assignment PIN_T4 -to CPUSKT_PHI16ABRT9BSKnDS_i
+set_location_assignment PIN_T4 -to CPUSKT_PHI16ABRT9BSKnDS_io
 set_location_assignment PIN_T8 -to CPUSKT_PHI26VDAKFC0ZnMREQ_i
 set_location_assignment PIN_T9 -to CPUSKT_RDY9KnHALTZnWAIT_o
 set_location_assignment PIN_T3 -to CPUSKT_SYNC6VPA9LICKFC2ZnM1_i
@@ -177,5 +177,17 @@ set_location_assignment PIN_D12 -to LED_o[0]
 set_location_assignment PIN_C11 -to LED_o[1]
 set_location_assignment PIN_B10 -to LED_o[2]
 set_location_assignment PIN_B7 -to LED_o[3]
+
+
+set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULAR IO"
+
+set_location_assignment PIN_C1 -to flash_mosi_o		
+set_location_assignment PIN_D2 -to flash_cs_o	
+set_location_assignment PIN_H1 -to flash_ck_o		
+set_location_assignment PIN_H2 -to flash_miso_i		
+
 
 set_location_assignment PIN_N8 -to SUP_nRESET_i
