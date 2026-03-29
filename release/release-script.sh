@@ -63,6 +63,7 @@ mkdir -p "${BUILDDIR}/preboot"
 
 
 
+
 for ssd in ${SSDS}; do
 	echo "SSD: ${ssd}"
 	_SSD=${BUILDDIR}/ssd/${ssd}.ssd
@@ -118,5 +119,10 @@ chmod a+w ${BUILDDIR}/fpga/C20KFirstNoICE.fs
 cp ${PREBOOT}/romset-c20k.bin ${BUILDDIR}/preboot
 cp ${PREBOOT}/preboot2/c20k/preboot2.bin ${BUILDDIR}/preboot/preboot2-c20k.bin
 cp ${PREBOOT}/preboot-mk2.jic ${BUILDDIR}/preboot
+
+mkdir -p ${BUILDDIR}/roms65
+dfs read -i -d "${BUILDDIR}/roms65" "${BUILDDIR}/ssd/roms65.ssd"
+tar -cvzf "${BUILDDIR}/roms65.tgz" ${BUILDDIR}/roms65/*
+rm -R "${BUILDDIR}/roms65/"
 
 tar -cvzf release-$(date +%Y-%m-%d).tgz ${BUILDDIR}/*
