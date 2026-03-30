@@ -198,6 +198,7 @@ architecture rtl of C20KFirstLight is
    signal   i_JIM_page     : std_logic_vector(15 downto 0);
    signal   i_JIM_en       : std_logic;
 
+   signal i_cfg_eco_station_id: std_logic_vector(7 downto 0) := x"A5";
    -----------------------------------------------------------------------------
    -- fishbone signals
    -----------------------------------------------------------------------------
@@ -678,9 +679,11 @@ END GENERATE;
       c20k_latch_o                  => i_c20k_latch,
       psg_audio_o                   => i_psg_audio,
 
-      p_d_cas_o                     => cassette_o
-   );
+      p_d_cas_o                     => cassette_o,
 
+      -- config in
+      cfg_eco_station_id_i          => i_cfg_eco_station_id
+   );
 
    -------------------------------------
    -- FPGA CONFIG FLASH

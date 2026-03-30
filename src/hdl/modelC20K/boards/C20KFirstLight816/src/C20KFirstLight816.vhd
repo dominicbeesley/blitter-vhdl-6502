@@ -209,6 +209,7 @@ component pll_27_48
 end component;
 
 
+   signal i_cfg_eco_station_id: std_logic_vector(7 downto 0) := x"A5";
    -----------------------------------------------------------------------------
    -- fishbone signals
    -----------------------------------------------------------------------------
@@ -691,7 +692,10 @@ end generate;
       c20k_latch_o                  => i_c20k_latch,
       psg_audio_o                   => i_psg_audio,
 
-      p_d_cas_o                     => cassette_o
+      p_d_cas_o                     => cassette_o,
+
+      -- config in
+      cfg_eco_station_id_i          => i_cfg_eco_station_id
    );
 
 
