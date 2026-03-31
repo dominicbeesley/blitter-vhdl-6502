@@ -15,11 +15,77 @@ with the latest preboot facility
 For more information about the preboot process please read the documentation
 at [Preboot readme](https://github.com/dominicbeesley/blitter-65xx-code/blob/main/src/roms/preboot/readme.md)
 
-## Mk.2
+## Mk.2 prep
 
 The mk2-image.jic file contains a file suitable for programming the mk2 Blitter 
 using the Altera programming tool. This will load both the preboot2 program and
 the romsets to the SPI FPGA configuration memory.
+
+## Mk.2 Romsets
+
+The default romsets available for the mk.2 blitter are:
+
+#### Standard Mk.2 6502 Guide
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| B     | BASIC2   | Model B BASIC 2
+| D     | UBLMMFS  | User port MMFS with Hazel extension - PAGE = E00
+| F     | BLTUTIL  | Blitter Utility ROM
+| MOS   | M.OS120  | Model B MOS 1.20
+
+This should correspond to the ROMs loaded in the getting started guide.
+
+#### Big Mk.2 6502 Dom
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| 2     | HFSTFSM  | HOSTFS for Myelin serial with Fast transfers
+| 3     | BASIC2   | Model B BASIC 2
+| B     | NFS360JGH| Econet networking 3.60 JGH special version - PAGE = 1200
+| C     | ADFSH30  | SCSI ADFS for Model B with Hazel extensions PAGE = E00
+| D     | UBLMMFS  | User port MMFS with Hazel extension - PAGE = E00
+| F     | BLTUTIL  | Blitter Utility ROM
+| MOS   | M.OS120  | Model B MOS 1.20
+
+You may wish to erase ROM B to put page back to E00 if Econet is not required.
+
+#### Tricky OS Test
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| MOS   | M.OSTEST | Tricky's OS Test ROM
+
+Good for trouble shooting - note the MOS cannot be ovewritten on Map 0 to
+use Tricky's test ROM load to MAP 1 and fit the SWROMX jumper.
+
+#### 6809 Standard
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| 1     | R.BASIC  | 6809 BBC BASIC 
+| B     | R.HOSTFSM| HOSTFS for Myelin serial for 6809
+| F     | R.UTILS09| BLTUTIL 6809 version
+| MOS   | M.MOS6809| 6809 MOS
+
+#### 6309 Standard
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| 1     | R.BASIC  | 6809 BBC BASIC 6309 enhancements, 6809 assembler
+| B     | R.HOSTFSM| HOSTFS for Myelin serial for 6809
+| F     | R.UTILS09| BLTUTIL 6809 version
+| MOS   | M.MOS6809| 6309 MOS with 6309 enhancements
+
+#### 6309 Native Mode
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| 1     | R.BASIC  | 6809 BBC BASIC 6309 enhancements, 6809 assembler
+| B     | R.HOSTFSM| HOSTFS for Myelin serial for 6809
+| F     | R.UTILS09| BLTUTIL 6809 version
+| MOS   | M.MOS680N| 6309 MOS with 6309 enhancements running in Native mode 25% speed boost.
+
 
 ## C20K Preboot prep
 
@@ -36,8 +102,52 @@ GoWin:
 openFPGAloader:
 ```
 	> openFPGALoader --verbose-level 2 --cable ft2232 --write-flash -o 0x300000 --bitstream [full path...]/preboot2-c20k.bin
-	>openFPGALoader --verbose-level 2 --cable ft2232 --write-flash -o 0x320000 --bitstream [full path...]//romset-c20k.bin
+	> openFPGALoader --verbose-level 2 --cable ft2232 --write-flash -o 0x320000 --bitstream [full path...]//romset-c20k.bin
 ```
+
+NOTE: As of 31/3/2026 both openFPGALoader (running under WSL) and the 
+programmer_cli tool fail to program the Primer 20K. For openFPGA loader
+there is a well-known "Error: ftdi_read_data in mpsse_read" which still
+seems to not be resolved on WSL under Windows. The gowin programmer_cli
+fails with "Error: Flsh format error". For this reason under Windows it
+is recommended to use the Gowin Windows Programmer app in 
+"exFlash C Bin Erase, Program thru GAO-Bridge", being careful to set the
+correct SPI base addresses 0x300000 and 0x320000
+
+### C20K Romsets
+
+#### Standard C20K 6502 Guide
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| B     | BASIC2   | Model B BASIC 2
+| D     | BBLMMFS  | SOM SDCARD MMFS with Hazel extension - PAGE = E00
+| F     | BLTUTIL  | Blitter Utility ROM
+| MOS   | M.OS120  | Model B MOS 1.20
+
+This should correspond to the ROMs loaded in the getting started guide.
+
+#### Big C20K 6502 Dom
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| 2     | HFSTFSM  | HOSTFS for Myelin serial with Fast transfers
+| 3     | BASIC2   | Model B BASIC 2
+| B     | NFS360JGH| Econet networking 3.60 JGH special version - PAGE = 1200
+| C     | ADFSH30  | SCSI ADFS for Model B with Hazel extensions PAGE = E00
+| D     | BBLMMFS  | SOM SDCARD MMFS with Hazel extension - PAGE = E00
+| F     | BLTUTIL  | Blitter Utility ROM
+| MOS   | M.OS120  | Model B MOS 1.20
+
+You may wish to erase ROM B to put page back to E00 if Econet is not required.
+
+#### Tricky OS Test
+
+|slot # | ROM      | Notes
+|-------|----------|---------------------------------------------------------
+| MOS   | M.OSTEST | Tricky's OS Test ROM
+
+Good for trouble shooting - on the C20K this can be loaded to either map.
 
 # CPU: T65, 65C02, 65816
 
