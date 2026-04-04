@@ -17,9 +17,15 @@ at [Preboot readme](https://github.com/dominicbeesley/blitter-65xx-code/blob/mai
 
 ## Mk.2 prep
 
-The mk2-image.jic file contains a file suitable for programming the mk2 Blitter 
-using the Altera programming tool. This will load both the preboot2 program and
-the romsets to the SPI FPGA configuration memory.
+The preboot-mk2.jic file contains a file suitable for programming the preboot
+program code and ROM sets to the mk2 Blitter using the Altera programming tool. 
+This will load both the preboot2 program and the romsets to the SPI FPGA 
+configuration memory.
+
+You can use the gui programmer tool or the command line
+```
+	$ quartus_pgm --no_banner --mode=jtag -o "IP;[...path...]/preboot-mk2.jic"
+```
 
 ## Mk.2 Romsets
 
