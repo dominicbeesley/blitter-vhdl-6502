@@ -132,6 +132,9 @@ architecture rtl of fb_cpu_6800 is
 	signal r_cpu_res			: std_logic;
 	signal r_wrap_ack			: std_logic;
 
+	signal r_gophi1			: std_logic;	-- one fast clock coincident with phi1 start
+	signal r_gophi2			: std_logic;	-- one fast clock coincident with phi2 start
+
 	signal i_CPUSKT_TSC_b2c	: std_logic;
 	signal i_CPUSKT_Phi1_b2c	: std_logic;
 	signal i_CPUSKT_Phi2_b2c	: std_logic;
@@ -250,6 +253,9 @@ begin
 
 			r_wrap_ack <= '0';
 
+			r_gophi1 <= '0';
+			r_gophi2 <= '0';
+
 			case r_state is
 				when Phi1 => 
 					r_DD_ring <= (0 => '1', others => '0');
@@ -258,6 +264,10 @@ begin
 						r_cpu_phi2 <= '1';
 						r_cpu_phi1 <= '0';
 						r_ph_ring <= (others => '0');
+						r_gophi2 <= '1';
+						if fb_syscon_i.rst = '0' then
+							r_cpu_res <= '0';
+						end if;
 					end if;
 				when Phi2 =>
 					if r_PH_ring(T_MAX_Ph) = '1' then
@@ -269,9 +279,7 @@ begin
 							r_DBE_ring <= (others => '0');
 							r_cpu_phi2 <= '0';
 							r_ph_ring <= (others => '0');
-							if fb_syscon_i.rst = '0' then
-								r_cpu_res <= '0';
-							end if;
+							r_gophi1 <= '1';
 						else
 							r_PH_ring <= r_PH_ring; -- keep the phase where it is
 						end if;
@@ -299,7 +307,7 @@ begin
 	
 	i_CPUSKT_nRES_b2c <= (not r_cpu_res) when cpu_en_i = '1' else '0';
 	
-	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
+--	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
 	
 	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
   	
@@ -308,10 +316,50 @@ begin
   	-- NOTE: for 6x09 we don't need to register RDY, instead allow the CPU to latch it and use the AS/BS signals
   	-- to direct cyc etc
 
-  	i_CPUSKT_nHALT_b2c <= 	i_rdy;
+--
+-- #  #   ##   #    #####       #####  ####   ##  #####        ###   ####   ##   #### #####
+-- #  #  #  #  #      #           #    #     #  #   #          #  #  #     #  #  #      #
+-- #  #  #  #  #      #           #    #     #      #          #  #  #     #     #      #
+-- ####  ####  #      #           #    ###    ##    #          ###   ###    ##   ###    #
+-- #  #  #  #  #      #           #    #        #   #          # #   #        #  #      #
+-- #  #  #  #  #      #           #    #     #  #   #          #  #  #     #  #  #      #
+-- #  #  #  #  ####   #           #    ####   ##    #          #  #  ####   ##   ####   #
+--
 
-  	i_rdy <=								'0' when wrap_i.cpu_halt = '1' else
-  											'1';						
+-- pull halt low two cpu machine cycles after reset
+p_halt:process(fb_syscon_i)
+variable v_ctdn : std_logic_vector(8 downto 0);
+begin
+	if rising_edge(fb_syscon_i.clk) and r_gophi1 = '1' then
+		if r_cpu_res = '1' then
+			i_CPUSKT_nHALT_b2c <= '1';		
+			v_ctdn := "111111111";
+		else
+			i_CPUSKT_nHALT_b2c <= v_ctdn(v_ctdn'high);
+
+			v_ctdn := v_ctdn(v_ctdn'high-1 downto 0) & v_ctdn(0);
+
+		end if;
+	end if;
+end process;
+
+-- NMI test
+p_nmi:process(fb_syscon_i)
+variable v_ctdn : std_logic_vector(8 downto 0);
+begin
+	if rising_edge(fb_syscon_i.clk) and r_gophi2 = '1' then
+		if r_cpu_res = '1' then
+			i_CPUSKT_nNMI_b2c <= '1';		
+			v_ctdn := "111111000";
+		else
+			i_CPUSKT_nNMI_b2c <= v_ctdn(v_ctdn'high);
+
+			v_ctdn := v_ctdn(v_ctdn'high-1 downto 0) & v_ctdn(0);
+
+		end if;
+	end if;
+end process;
+
 
 
   	wrap_o.noice_debug_cpu_clken <= r_wrap_ack;
