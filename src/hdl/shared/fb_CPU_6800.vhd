@@ -309,7 +309,7 @@ begin
 	
 --	i_CPUSKT_nNMI_b2c <= wrap_i.noice_debug_nmi_n and wrap_i.nmi_n;
 	
-	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
+--	i_CPUSKT_nIRQ_b2c <=  wrap_i.irq_n;
   	
   	i_CPUSKT_DBE_b2c <= r_DBE_ring(T_MAX_DBE);
 
@@ -328,12 +328,12 @@ begin
 
 -- pull halt low two cpu machine cycles after reset
 p_halt:process(fb_syscon_i)
-variable v_ctdn : std_logic_vector(8 downto 0);
+variable v_ctdn : std_logic_vector(24 downto 0);
 begin
 	if rising_edge(fb_syscon_i.clk) and r_gophi1 = '1' then
 		if r_cpu_res = '1' then
 			i_CPUSKT_nHALT_b2c <= '1';		
-			v_ctdn := "111111111";
+			v_ctdn := "1111111111111111111111111";
 		else
 			i_CPUSKT_nHALT_b2c <= v_ctdn(v_ctdn'high);
 
@@ -345,12 +345,12 @@ end process;
 
 -- NMI test
 p_nmi:process(fb_syscon_i)
-variable v_ctdn : std_logic_vector(8 downto 0);
+variable v_ctdn : std_logic_vector(24 downto 0);
 begin
 	if rising_edge(fb_syscon_i.clk) and r_gophi2 = '1' then
 		if r_cpu_res = '1' then
 			i_CPUSKT_nNMI_b2c <= '1';		
-			v_ctdn := "111111000";
+			v_ctdn := "1111111111111111111111111";
 		else
 			i_CPUSKT_nNMI_b2c <= v_ctdn(v_ctdn'high);
 
@@ -360,6 +360,22 @@ begin
 	end if;
 end process;
 
+-- IRQ test
+p_irq:process(fb_syscon_i)
+variable v_ctdn : std_logic_vector(24 downto 0);
+begin
+	if rising_edge(fb_syscon_i.clk) and r_gophi2 = '1' then
+		if r_cpu_res = '1' then
+			i_CPUSKT_nIRQ_b2c <= '1';		
+			v_ctdn := "1111111111111110111111111";
+		else
+			i_CPUSKT_nIRQ_b2c <= v_ctdn(v_ctdn'high);
+
+			v_ctdn := v_ctdn(v_ctdn'high-1 downto 0) & v_ctdn(0);
+
+		end if;
+	end if;
+end process;
 
 
   	wrap_o.noice_debug_cpu_clken <= r_wrap_ack;
