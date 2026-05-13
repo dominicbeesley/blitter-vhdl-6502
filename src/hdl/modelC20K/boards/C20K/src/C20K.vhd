@@ -407,6 +407,7 @@ architecture rtl of C20K is
    signal r_dac_sample_r   : signed(15 downto 0);
    signal i_paula_sample_l : signed(15 downto 0);
    signal i_paula_sample_r : signed(15 downto 0);
+   signal i_sid_audio      : signed(15 downto 0);
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -636,16 +637,23 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 END GENERATE;
 
 
+   p_reg_snd:process(i_fb_syscon)
+   begin 
+      if rising_edge(i_fb_syscon.clk) then
+         r_dac_sample_l <= 
+            shift_right(i_paula_sample_l, 1) + 
+            shift_right((i_psg_audio & "00"), 1) +
+            shift_right(i_sid_audio, 1);
+         r_dac_sample_r <= 
+            shift_right(i_paula_sample_r, 1) + 
+            shift_right((i_psg_audio & "00"), 1) +
+            shift_right(i_sid_audio, 1);
+      end if;
+   end process;
+
    G_SND_1BIT:if not G_C20K_I2S generate
       --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
       
-      p_reg_snd:process(i_fb_syscon)
-      begin 
-         if rising_edge(i_fb_syscon.clk) then
-            r_dac_sample_l <= shift_right(i_paula_sample_l, 1) + shift_right((i_psg_audio & "00"), 1);
-            r_dac_sample_r <= shift_right(i_paula_sample_r, 1) + shift_right((i_psg_audio & "00"), 1);
-         end if;
-      end process;
 
       e_dac_snd_l: entity work.dac_1bit 
       generic map (
@@ -680,13 +688,6 @@ END GENERATE;
    end generate;
 
    G_SND_i2s:if G_C20K_I2S generate
-      p_reg_snd:process(i_fb_syscon)
-      begin 
-         if rising_edge(i_fb_syscon.clk) then
-            r_dac_sample_l <= shift_right(i_paula_sample_l, 1) + shift_right((i_psg_audio & "00"), 1);
-            r_dac_sample_r <= shift_right(i_paula_sample_r, 1) + shift_right((i_psg_audio & "00"), 1);
-         end if;
-      end process;
 
       e_i2s:entity work.i2s
       port map (
@@ -885,7 +886,9 @@ END GENERATE;
       p_d_cas_o                     => cassette_o,
 
       -- config in
-      cfg_eco_station_id_i          => i_cfg_eco_station_id
+      cfg_eco_station_id_i          => i_cfg_eco_station_id,
+
+      sid_audio_o                   => i_sid_audio
    );
    
    -------------------------------------
