@@ -465,7 +465,7 @@ begin
 
    e_div2_96_48: CLKDIV
    generic map (
-      DIV_MODE => "2",            -- Divide by 4
+      DIV_MODE => "2",            -- Divide by 2
       GSREN => "false"
    )
    port map (
