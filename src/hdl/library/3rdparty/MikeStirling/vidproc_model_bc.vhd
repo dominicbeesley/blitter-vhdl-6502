@@ -763,12 +763,7 @@ begin
                     disenout <= vr_disen_reg;
                 end if;
 
-                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
-                else
-                    vr_disen_reg := disen1;
-                end if;
                 if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
-                    nula_RGB <= (others => invert_final);
                     nula_RGB <= (others => cursor_invert);
                 else
                     nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
@@ -783,6 +778,12 @@ begin
                 -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
                     vr_disen_reg := disen2;
+                    vr_disen_reg_u := disen2_u;
+                else
+                    vr_disen_reg := disen1;
+                    vr_disen_reg_u := disen1_u;
+                end if;
+                vr_cursor_invert := cursor_invert;
 
             end if;
         end if;
