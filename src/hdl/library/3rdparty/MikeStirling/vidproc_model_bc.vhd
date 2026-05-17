@@ -625,6 +625,7 @@ begin
                     disen1 <= disen0 and disen_delay_reg(to_integer(unsigned(nula_left_blanking_size)) - 1);
                 end if;
                 disen1_u <= disen0_u;
+                disen2_u <= disen1_u;
 
                 disen_delay_reg <= disen_delay_reg(disen_delay_reg'high - 1 downto 0) & disen0;
 
@@ -758,15 +759,24 @@ begin
                     (modeIs12MHz = '0' and (r0_crtc_2mhz = '1' or clken_counter(0) = '1')) or
                     (modeIs12MHz = '1' and clken_shift = '1') then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
-                    invert_delay_reg <= invert_delay_reg(6 downto 0) & vr_cursor_invert;
+                    invert_delay_reg <= invert_delay_reg(6 downto 0) & (vr_cursor_invert and vr_disen_reg_u);
                     -- delay disen by one more pixel
                     disenout <= vr_disen_reg;
                 end if;
 
-                if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
-                    nula_RGB <= (others => cursor_invert);
+
+                if r0_teletext = '1' then
+                    if phys_col_final = "0000" then
+                        nula_RGB <= (others => cursor_invert);
+                    else
+                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (cursor_invert & cursor_invert & cursor_invert & cursor_invert))));        
+                    end if;
                 else
-                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
+                    if disenout = '0' then
+                        nula_RGB <= (others => invert_final);
+                    else
+                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
+                    end if;
                 end if;
 
                 if r0_teletext = '0' then
