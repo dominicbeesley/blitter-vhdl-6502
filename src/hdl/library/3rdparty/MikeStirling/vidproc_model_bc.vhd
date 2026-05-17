@@ -216,8 +216,7 @@ architecture rtl of vidproc is
     signal phys_col                   : std_logic_vector(3 downto 0);
 
 -- Delay line for physical colour to support horirontal scroll offset
-    signal phys_col_delay_reg         : std_logic_vector(27 downto 0);
-    signal phys_col_delay_mux         : std_logic_vector(31 downto 0);
+    signal phys_col_delay_reg         : std_logic_vector(31 downto 0);
     signal phys_col_delay_out         : std_logic_vector(3 downto 0);
     signal phys_col_final             : std_logic_vector(3 downto 0);
 
@@ -738,8 +737,7 @@ begin
     end process;
 
     -- Infer a large mux to select the appropriate hor scroll delay tap
-    phys_col_delay_mux <= phys_col_delay_reg & phys_col;
-    phys_col_delay_out <= phys_col_delay_mux(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
+    phys_col_delay_out <= phys_col_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
 
     phys_col_final <= phys_col_delay_out            when r0_teletext = '0' else
                       '0' & B_IN   & G_IN   & R_IN;
@@ -756,7 +754,9 @@ begin
             if clken_pixel = '1' then
 
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
-                if r0_crtc_2mhz = '1' or clken_counter(0) = '1' then
+                if 
+                    (modeIs12MHz = '0' and (r0_crtc_2mhz = '1' or clken_counter(0) = '1')) or
+                    (modeIs12MHz = '1' and clken_shift = '1') then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
                     invert_delay_reg <= invert_delay_reg(6 downto 0) & cursor_invert;
                     -- delay disen by one more pixel
