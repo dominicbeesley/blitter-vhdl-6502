@@ -758,29 +758,31 @@ begin
                     (modeIs12MHz = '0' and (r0_crtc_2mhz = '1' or clken_counter(0) = '1')) or
                     (modeIs12MHz = '1' and clken_shift = '1') then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
-                    invert_delay_reg <= invert_delay_reg(6 downto 0) & cursor_invert;
+                    invert_delay_reg <= invert_delay_reg(6 downto 0) & vr_cursor_invert;
                     -- delay disen by one more pixel
                     disenout <= vr_disen_reg;
                 end if;
 
                 -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
-                if nula_speccy_attr_mode = '1' then
-                    vr_disen_reg := disen2;
                 else
                     vr_disen_reg := disen1;
                 end if;
                 if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
                     nula_RGB <= (others => invert_final);
+                    nula_RGB <= (others => cursor_invert);
                 else
                     nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
                 end if;
 
                 if r0_teletext = '0' then
-                    PIXDE <= disen1_u;
+                    PIXDE <= vr_disen_reg_u;
                 else
                     PIXDE <= PIXDE_IN;
                 end if;
 
+                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
+                if nula_speccy_attr_mode = '1' then
+                    vr_disen_reg := disen2;
 
             end if;
         end if;
