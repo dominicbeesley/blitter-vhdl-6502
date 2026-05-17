@@ -114,8 +114,6 @@ entity vidproc is
         -- Indicates a 12MHz pixel clock (ttxt or Nula Attr mode)
         MHZ12       :   out std_logic;
 
-        -- Indicates special VGA Mode 7 (720x576p)
-        VGA         :   in  std_logic;
         -- Indicates special 80 column teletext with 24MHz pixels
         TTXT80      :   in  std_logic;
 
@@ -400,7 +398,7 @@ begin
     -- the shift register on the next CRTC clock edge
     clken_fetch <= CLKEN and
                   (not clken_counter(0)) and (not clken_counter(1)) and (not clken_counter(2)) and
-                  ((not clken_counter(3)) or r0_crtc_2mhz or (r0_teletext and VGA));
+                  ((not clken_counter(3)) or r0_crtc_2mhz);
 
     CLKEN_CRTC  <= clken_fetch;
     CLKEN_COUNT <= clken_counter;
@@ -455,8 +453,8 @@ begin
             -- For 12MHz pixen_prescale counts: 0, 1, 2, 3
             -- For 16MHz pixen_prescale counts: 0, 1,    3
             -- For 24MHz pixen prescale counts: 0,       3
-            if (r0_teletext = '1' and (VGA = '1' or TTXT80 ='1')) and pixen_prescale = 0 then
-                -- Special case VGA mode, count at twice the rate
+            if (r0_teletext = '1' and TTXT80 ='1') and pixen_prescale = 0 then
+                -- Special case TTX80 mode, count at twice the rate
                 pixen_prescale <= pixen_prescale + 3;
             elsif modeIs12MHz = '0' and pixen_prescale = 1 then
                 pixen_prescale <= pixen_prescale + 2;
@@ -464,11 +462,7 @@ begin
                 pixen_prescale <= pixen_prescale + 1;
             end if;
 
-            if r0_teletext = '1' and VGA = '1' then
-               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-2 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high downto rol_sprite_pixel'high - 1);
-            else
-               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-1 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high);
-            end if;
+            rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-1 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high);
  
             if pixen_prescale = 3 then
 
@@ -748,23 +742,18 @@ begin
     phys_col_delay_out <= phys_col_delay_mux(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
 
     phys_col_final <= phys_col_delay_out            when r0_teletext = '0' else
-                      '0' & B_IN   & G_IN   & R_IN  when VGA         = '0' else
-                      '0' & ttxt_B & ttxt_G & ttxt_R;
+                      '0' & B_IN   & G_IN   & R_IN;
 
     invert_final <= invert_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)));
 
     process (PIXCLK)
     variable vr_disen_reg:std_logic;
+    variable vr_disen_reg_u:std_logic;
+    variable vr_cursor_invert:std_logic;
     begin
         if rising_edge(PIXCLK) then
 
             if clken_pixel = '1' then
-
-                -- One more pixel delay was needed in for VideoNuLA in VGA mode; this was the easist place to do it.
-                ttxt_R <= R_IN;
-                ttxt_G <= G_IN;
-                ttxt_B <= B_IN;
-                ttxt_PIXDE <= PIXDE_IN;
 
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
                 if r0_crtc_2mhz = '1' or clken_counter(0) = '1' then
@@ -789,7 +778,7 @@ begin
                 if r0_teletext = '0' then
                     PIXDE <= disen1_u;
                 else
-                    PIXDE <= ttxt_PIXDE;
+                    PIXDE <= PIXDE_IN;
                 end if;
 
 
