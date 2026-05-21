@@ -86,7 +86,7 @@ begin
 			elsif addr_i(15 downto 4) = x"FC1" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_UART, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
-			elsif addr_i(15 downto 4) = x"FC2" then
+			elsif addr_i(15 downto 4) = x"FC5" then
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_XFLASH, peripheral_sel_o'length);
 				peripheral_sel_oh_o(PERIPHERAL_NO_XFLASH) <= '1';
 			elsif addr_i(15 downto 8) = x"FC" or addr_i(15 downto 8) = x"FD" or addr_i(15 downto 8) = x"FE" then

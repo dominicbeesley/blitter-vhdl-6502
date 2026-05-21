@@ -15,6 +15,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.numeric_std.ALL;
 
 entity hdmi is
    generic (
@@ -43,7 +44,9 @@ entity hdmi is
       -- TMDS parallel pixel synchronous outputs (serialize LSB first)
       O_RED       : out std_logic_vector(9 downto 0); -- Red
       O_GREEN        : out std_logic_vector(9 downto 0); -- Green
-      O_BLUE         : out std_logic_vector(9 downto 0)  -- Blue
+      O_BLUE         : out std_logic_vector(9 downto 0); -- Blue
+
+      debug_hdmi_state_o : out std_logic_vector(2 downto 0)
 );
 end entity;
 
@@ -133,58 +136,12 @@ end component;
 
    signal state: count_state;
 
-   signal clockCounter: integer range 0 to 2047;
+   signal clockCounter: integer range 0 to 4097;
 
-   -- Horizontal Timing constants
-   constant h_pixels_across   : integer := 720 - 1;
-   constant h_sync_on      : integer := 736 - 1;
-   constant h_sync_off     : integer := 798 - 1;
-   constant h_end_count    : integer := 858 - 1;
-   -- Vertical Timing constants
-   constant v_pixels_down  : integer := 480 - 1;
-   constant v_sync_on      : integer := 489 - 1;
-   constant v_sync_off     : integer := 495 - 1;
-   constant v_end_count    : integer := 525 - 2;
-
-   --signal I_BLANK        :  std_logic;
-   --signal I_HSYNC        :  std_logic;
-   --signal I_VSYNC        :  std_logic;
-
-
-   signal shift      : std_logic_vector(7 downto 0);
-   signal hcnt    : std_logic_vector(11 downto 0) := "000000000000";    -- horizontal pixel counter
-   signal vcnt    : std_logic_vector(11 downto 0) := "000000000000";    -- vertical line counter
 
 begin
 
-   process (I_CLK_PIXEL, hcnt)
-   begin
-      if rising_edge(I_CLK_PIXEL) then
-         if hcnt = h_end_count then
-            hcnt <= (others => '0');
-         else
-            hcnt <= hcnt + 1;
-         end if;
-         if hcnt = h_sync_on then
-            if vcnt = v_end_count then
-               vcnt <= (others => '0');
-               shift <= shift + 1;
-            else
-               vcnt <= vcnt + 1;
-            end if;
-         end if;
-      end if;
-   end process;
-
-   --I_HSYNC   <= '1' when (hcnt <= h_sync_on) or (hcnt > h_sync_off) else '0';
-   --I_VSYNC   <= '1' when (vcnt <= v_sync_on) or (vcnt > v_sync_off) else '0';
-   --I_BLANK   <= '1' when (hcnt > h_pixels_across) or (vcnt > v_pixels_down) else '0'; -- 1 when blanking
-
--- I_R   <= "11111111" when hcnt = 0 or hcnt = h_pixels_across or vcnt = 0 or vcnt = v_pixels_down else (hcnt(7 downto 0) + shift) and "11111111";
--- I_G   <= "11111111" when hcnt = 0 or hcnt = h_pixels_across or vcnt = 0 or vcnt = v_pixels_down else (vcnt(7 downto 0) + shift) and "11111111";
--- I_B   <= "11111111" when hcnt = 0 or hcnt = h_pixels_across or vcnt = 0 or vcnt = v_pixels_down else (hcnt(7 downto 0) + vcnt(7 downto 0) - shift) and "11111111";
-
-
+debug_hdmi_state_o <= std_logic_vector(to_unsigned(count_state'pos(state), 3));
 
 -- data should be delayed for 11 clocks to allow preamble and guard band generation
 

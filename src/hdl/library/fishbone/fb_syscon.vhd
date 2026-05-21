@@ -142,7 +142,7 @@ begin
 			case r_rst_state is
 				when powerup =>
 					if r_rst_counter = RST_PUP_MAX then
-						r_rst_state <= reset;
+						r_rst_state <= resetfull;
 						r_rst_counter <= (others => '0');
 					else
 						r_rst_counter <= r_rst_counter + 1;
@@ -171,9 +171,12 @@ begin
 					r_need_full <= r_need_full or not rr_EXT_nRESET_power;
 				when resetfull =>
 					if i_any_reset_n = '1' then
-						r_rst_counter <= (others => '0');
-						r_rst_state <= prerun;
-						r_prerun_shift <= ( 0 => '1', others => '0');
+						if r_rst_counter = to_unsigned(RST_PUP_MAX, RST_CTR_LEN) then
+							r_rst_counter <= (others => '0');
+							r_rst_state <= prerun;
+							r_prerun_shift <= ( 0 => '1', others => '0');
+						end if;
+						r_rst_counter <= r_rst_counter + 1;
 					end if;
 					i_fb_syscon.rst <= '1';
 				when prerun =>

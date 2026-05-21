@@ -86,11 +86,12 @@ entity fb_cpu is
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 
 		-- cpu throttle
-		throttle_cpu_2MHz_i					: in std_logic;
+		throttle_all_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
@@ -152,7 +153,10 @@ entity fb_cpu is
 		debug_65816_addr_meta_o				: out std_logic;
 		debug_65816_boot_act_o				: out std_logic;
 
-		debug_80188_state_o					: out std_logic_vector(2 downto 0)
+		debug_80188_state_o					: out std_logic_vector(2 downto 0);
+
+		-- preboot
+		preboot_i								: in	std_logic := '0'
 
 	);
 end fb_cpu;
@@ -468,7 +472,7 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z180 + B2OZ(G_INCL_CPU_Z180);
 	constant C_IX_CPU_68008						: natural := C_IX_CPU_680X0 + B2OZ(G_INCL_CPU_680X0);
 	constant C_IX_CPU_ARM2						: natural := C_IX_CPU_68008 + B2OZ(G_INCL_CPU_68008);
-	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + 1; -- always add 1 at end though it might not be actually used!
+	constant C_IX_CPU_COUNT						: natural := C_IX_CPU_ARM2 + B2OZ(G_INCL_CPU_ARM2); -- always add 1 at end though it might not be actually used!
 
 	-- NOTE: when we multiplex signals out to the expansion headers even when t65 is active
 	-- we should route in/out any hard cpu signals to allow the wrappers to set sensible
@@ -518,14 +522,16 @@ architecture rtl of fb_cpu is
 	signal r_hard_cpu_en				: 	std_logic;
 
 
-	signal r_nmi				: std_logic;
+	signal r_nmi						: std_logic;
 
-	signal r_nmi_meta			: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
+	signal r_nmi_meta					: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
 
-	signal i_throttle_act		: std_logic;
+	signal i_throttle_act			: std_logic;
 
 	signal r_do_sys_via_block		: std_logic;		-- per cpu enable
+
+	signal i_preboot					: std_logic;
 begin
 
 	-- ================================================================================================ --
@@ -743,14 +749,13 @@ begin
 		fb_per_p2c_i							=> fb_p2c_i,
 
 		-- per cpu config
-		cfg_t65_i								=> r_cpu_en_t65,
 		cfg_sys_via_block_i					=> r_do_sys_via_block,
 		
 		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_swromx_i							=> cfg_swromx_i,
+		cfg_map0n1_i							=> cfg_map0n1_i,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
@@ -762,8 +767,8 @@ begin
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		mos_throttle_i							=> not swmos_shadow_i,			-- TODO: get from a chipset register
-		throttle_all_i							=> throttle_cpu_2MHz_i,
+		throttle_mos_i							=> throttle_mos_i,
+		throttle_all_i							=> throttle_all_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
 		throttle_act_o							=> i_throttle_act,
 
@@ -772,10 +777,15 @@ begin
 
 		-- 65816/model C extras
 		window_65816_i							=> window_65816_i,
-		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		window_65816_wr_en_i					=> window_65816_wr_en_i,		
+
+		-- preboot
+		preboot_i								=> i_preboot
 
 	);
 
+
+	i_preboot <= r_cpu_en_t65 and preboot_i;
 	throttle_act_o <= i_throttle_act;
 
 

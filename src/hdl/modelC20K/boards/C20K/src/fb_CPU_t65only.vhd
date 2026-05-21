@@ -65,14 +65,14 @@ entity fb_cpu_t65only is
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 		-- cpu throttle
-		throttle_cpu_2MHz_i					: in std_logic;
+		throttle_all_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		cpu_2MHz_phi2_clken_i				: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);	
-		throttle_act_o							: out std_logic;
 
 		-- extra memory map control signals
 		sys_ROMPG_i								: in		std_logic_vector(7 downto 0);
@@ -107,7 +107,11 @@ entity fb_cpu_t65only is
 		cpu_halt_i								: in  std_logic;
 
 		-- debug
-		debug_cpu_instr_A						: out std_logic_vector(23 downto 0)
+		debug_cpu_instr_A						: out std_logic_vector(23 downto 0);
+		debug_throttle_act_o					: out std_logic;
+
+		-- preboot
+		preboot_i								: in	std_logic
 
 	);
 end fb_cpu_t65only;
@@ -152,6 +156,8 @@ architecture rtl of fb_cpu_t65only is
 
 begin
 
+
+	debug_throttle_act_o <= i_throttle_act;
 
 	-- ================================================================================================ --
 	-- NMI registration 
@@ -250,13 +256,12 @@ begin
 
 		-- per cpu config
 		cfg_sys_via_block_i					=> '1',					-- TODO: RiscV etc
-		cfg_t65_i								=> '1',					-- TODO: RiscV etc
 
 		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
 		cfg_swram_enable_i					=> cfg_swram_enable_i,
+		cfg_map0n1_i							=> cfg_map0n1_i,
 		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_swromx_i							=> cfg_swromx_i,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
@@ -268,13 +273,16 @@ begin
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
 		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
-		mos_throttle_i							=> not swmos_shadow_i,
-		throttle_all_i							=> throttle_cpu_2MHz_i,
+		throttle_mos_i							=> throttle_mos_i,
+		throttle_all_i							=> throttle_all_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
 		throttle_act_o							=> i_throttle_act,
 
 		-- noice signals
-		noice_debug_shadow_i					=> noice_debug_shadow_i
+		noice_debug_shadow_i					=> noice_debug_shadow_i,
+
+		-- preboot
+		preboot_i								=> preboot_i
 	);
 
 	
@@ -311,7 +319,7 @@ begin
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= throttle_cpu_2MHz_i or i_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= throttle_all_i or i_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;

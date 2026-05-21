@@ -133,7 +133,13 @@ entity fb_SYS_c20k is
       c20k_latch_o                     : out    std_logic_vector(7 downto 0);
       psg_audio_o                      : out    signed(13 downto 0);
 
-      p_d_cas_o                        : out    std_logic
+      p_d_cas_o                        : out    std_logic;
+
+      -- configure signals in
+      cfg_eco_station_id_i             : in     std_logic_vector(7 downto 0);
+
+      -- sid
+      sid_audio_o                      : out    signed(15 downto 0)
 
    );
 end fb_SYS_c20k;
@@ -228,10 +234,12 @@ architecture rtl of fb_SYS_c20k is
 
    signal   i_sysvia_d_o      : std_logic_vector(7 downto 0);
    signal   i_acia_d_o        : std_logic_vector(7 downto 0);
+   signal   i_sid_d_o         : std_logic_vector(7 downto 0);
    signal   r_local_d_o       : std_logic_vector(7 downto 0);
    signal   r_sysvia_nCS2     : std_logic;
    signal   r_serproc_nCS     : std_logic;
    signal   r_acia_nCS        : std_logic;
+   signal   r_sid_nCS         : std_logic;
    signal   i_sysvia_nIRQ     : std_logic;
    signal   i_sysvia_ca2      : std_logic;
    signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
@@ -268,6 +276,8 @@ architecture rtl of fb_SYS_c20k is
    signal   r_inton_nCS       : std_logic;
    signal   r_netint_gate     : std_logic;      
 
+   -- SID audio
+   signal   i_sid_audio       : signed(18 downto 0);
 
 begin
 
@@ -315,6 +325,12 @@ begin
          r_had_d_stb <= '0';
          r_d_wr <= (others => '0');
 
+         r_sysvia_nCS2 <= '1';
+         r_acia_nCS <= '1';
+         r_serproc_nCS <= '1';
+         r_inton_nCS <= '1';
+         r_intoff_nCS <= '1';
+         r_sid_nCS <= '1';
       else
          if rising_edge(fb_syscon_i.clk) then
 
@@ -333,6 +349,7 @@ begin
                   r_serproc_nCS <= '1';
                   r_inton_nCS <= '1';
                   r_intoff_nCS <= '1';
+                  r_sid_nCS <= '1';
 
                   if i_SYScyc_st_clken = '1' then
                      -- default idle cycle, drop buses
@@ -374,6 +391,8 @@ begin
                               r_inton_nCS <= '0';
                            elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "1" then
                               r_intoff_nCS <= '0';
+                           elsif fb_c2p_i.A(15 downto 5) & "0" = x"FC2" and G_INCL_SID then
+                              r_sid_nCS <= '0';
                            end if;  
                         end if;
                      end if;
@@ -700,10 +719,12 @@ begin
          if r_sys_RnW = '1' and mux_mhz2E_clk_o = '1' and i_MHz4_clken = '1' then
             if r_sysvia_nCS2 = '0' then
                r_local_d_o <= i_sysvia_d_o;
+            elsif r_sid_nCS = '0' then
+               r_local_d_o <= i_sid_d_o;
             elsif r_intoff_nCS = '0' then
-               r_local_d_o <= x"23";
+               r_local_d_o <= cfg_eco_station_id_i;
             else
-               r_local_d_o <= i_acia_d_o;
+               r_local_d_o <= i_acia_d_o;            
             end if;
          end if;
       end if;
@@ -729,6 +750,32 @@ begin
 
    psg_audio_o <= signed(i_psg_audio_u);
 
+
+   --------------------------------------------------------
+   -- SID 6581
+   --------------------------------------------------------
+
+   e_sid:entity work.sid6581
+    port map (
+        clk_1MHz       => fb_syscon_i.clk,
+        clken          => i_MHz1E_clken,
+        clk_SYS        => fb_syscon_i.clk,
+        clk_DAC        => '1',
+        reset          => fb_syscon_i.rst,
+        cs             => not r_sid_nCS,
+        we             => i_MHz1E_clken and not r_sys_RnW,
+
+        addr           => r_sys_A(4 downto 0),
+        di             => r_d_wr,
+        do             => i_sid_d_o,
+
+        pot_x          => '1',
+        pot_y          => '1',
+        audio_out      => open,
+        audio_data     => i_sid_audio
+        );
+
+   sid_audio_o <= resize2(i_sid_audio, 16);
 
    --------------------------------------------------------
    -- ACIA 6850

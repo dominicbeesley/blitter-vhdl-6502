@@ -40,6 +40,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 
 package common is
@@ -51,12 +52,35 @@ package common is
   function max(a:integer; b:integer) return integer;
   function my_or_reduce(s:std_logic_vector) return std_logic;
   function my_and_reduce(s:std_logic_vector) return std_logic;
+ 	function resize2(V:signed; N:natural) return signed;
+
 end package;
 
 library ieee;
 use ieee.math_real.all;
 
 package body common is
+
+	-- left justify and resize so that msb is left aligned
+	-- last big on the right repeats if destination larger than
+	-- source
+	function resize2(V:signed; N:natural) return signed is
+	variable ret : signed(N-1 downto 0);
+	variable J : integer;
+	variable L : std_logic;
+	begin
+		L := V(V'high);
+		for I in 0 to N-1 loop
+			J := V'high - I;
+			if J >= V'low then
+				L := V(J);
+			end if;
+			ret(N-1-I) := L;
+		end loop;
+
+		return ret;
+
+	end function;
 
 	function my_or_reduce(s:std_logic_vector) return std_logic is
 	variable ret : std_logic := '0';

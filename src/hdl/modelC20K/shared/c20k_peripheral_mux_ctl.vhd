@@ -56,7 +56,7 @@ generic (
       DEFAULT_SYS_DATA     : std_logic_vector(7 downto 0) := x"FE";
 --      DEFAULT_SYS_RnW      : std_logic := '0';        -- bodge FE onto bus for Tube detect, only works if MOS runs at 2MHz!
       DEFAULT_SYS_RnW      : std_logic := '1';
-      C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC20";  -- TODO: better address
+      C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC50";  -- TODO: better address
       C20K_LATCH_DEFAULT   : std_logic_vector(7 downto 0)  := "00100001"
    );
 port (
