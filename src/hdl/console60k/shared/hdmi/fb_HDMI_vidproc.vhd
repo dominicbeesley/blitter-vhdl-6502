@@ -166,7 +166,6 @@ begin
       PIXCLKEN     	=> PIXCLKEN_o,
       PIXDE        	=> PIXDE_o,
 
-		VGA				=> '0',
 		TTXT80			=> TTX80_i,
 
 		TTXT				=> TTX_o,
