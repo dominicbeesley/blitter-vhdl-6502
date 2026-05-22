@@ -379,6 +379,7 @@ begin
                     end if;
                     if alpha_next = '1' then
                         gfx <= '0';
+                        last_gfx <= (others => '0');
                     end if;
                     if is_flash_next = '1' then
                         is_flash <= '1';
@@ -410,7 +411,6 @@ begin
                                     gfx_next <= '1';
                                 else
                                     alpha_next <= '1';
-                                    gfx_release_next <= '1';
                                 end if;
                             end if;
                         else
