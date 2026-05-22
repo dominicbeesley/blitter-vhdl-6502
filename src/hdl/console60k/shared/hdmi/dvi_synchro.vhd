@@ -122,7 +122,7 @@ architecture rtl of dvi_synchro is
 	constant C_HSYNC_PIXELS			: natural := 252;
 	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
-	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 48;		-- margin from start of line to start ouputting pixels
+	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 80;		-- margin from start of line to start ouputting pixels
 
 	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 

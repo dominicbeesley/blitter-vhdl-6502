@@ -63,6 +63,9 @@ entity fb_HDMI_vidproc is
 		-- Teletext enabled
 		TTX_o									:  out std_logic;
 
+		-- Teletext or RobC attribute enabled
+		MHZ12_o								:  out std_logic;
+
 		-- 80 col telexted
 		TTX80_i								:  in std_logic;
 
@@ -169,6 +172,7 @@ begin
 		TTXT80			=> TTX80_i,
 
 		TTXT				=> TTX_o,
+		MHZ12				=> MHZ12_o,
 
 		MODE_ATTR		=> MODE_ATTR_i,
 		SPR_PX_CLKEN	=> SPR_PX_CLKEN,

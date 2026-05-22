@@ -161,7 +161,7 @@ begin
 
 				case state is
 					when idle =>
-						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and r_rd_ack = '0' then
 							r_addr <= fb_c2p_i.A(G_ADDR_W-1 downto 0);
 							if fb_c2p_i.we = '0' then
 								r_rd_ack <= '1';

@@ -167,6 +167,7 @@ architecture rtl of fb_hdmi is
 	signal i_B_TTX							: std_logic;
 	signal i_TTX							: std_logic;
 	signal i_TTX80							: std_logic;		-- 80 column teletext
+	signal i_MHZ12							: std_logic;		-- teletext OR Rob attribute mode
 
 	signal r_ttx_pixel_clken			: std_logic_vector(3 downto 0) := "1000";
 	signal i_ttx_pixel_clken			: std_logic;
@@ -259,7 +260,9 @@ begin
 		
 		SPR_PX_CLKEN		=> i_sprite_pixel_cken,
 		SPR_PX_ACT			=> i_sprite_pixel_act,
-		SPR_PX_DAT			=> i_sprite_pixel_dat
+		SPR_PX_DAT			=> i_sprite_pixel_dat,
+
+		MHZ12_o				=> i_MHZ12
 
 	);
 
@@ -666,7 +669,7 @@ end process;
       VID_HS_i                      => i_hsync_CRTC,
       VID_VS_i                      => i_vsync_CRTC,
       VID_DISEN_i                   => i_disen_VIDPROC,
-      TTX_i                         => i_TTX,
+      TTX_i                         => i_MHZ12,
       TTX80_i								=> i_TTX80,
    
       -- sound data in (48KHz)

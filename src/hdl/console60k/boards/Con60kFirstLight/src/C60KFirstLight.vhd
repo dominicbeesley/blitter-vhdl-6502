@@ -123,6 +123,7 @@ entity C60KFirstLight is
       edid_sda_io          : inout         std_logic;
       hdmi_cec_io          : inout         std_logic;
       hdmi_hpd_io          : inout         std_logic;
+      hdmi_pwr_save_o      : out           std_logic;
 
       i2c_scl_io           : inout         std_logic;
       i2c_sda_io           : inout         std_logic;
@@ -274,6 +275,8 @@ architecture rtl of C60KFirstLight is
 
 
 begin
+
+   hdmi_pwr_save_o <= '0';
 
    e_pll_50_48: entity work.pll_50_48
    port map (

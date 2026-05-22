@@ -28,6 +28,10 @@ IO_PORT "tmds_d_o_p[2]" PULL_MODE=NONE IO_TYPE=LVCMOS33D;
 //IO_LOC "tmds_d_n[2]" J17;
 //IO_PORT "tmds_d_n[2]" PULL_MODE=NONE IO_TYPE=LVCMOS33D;
 
+IO_LOC "hdmi_pwr_save_o" K14;
+IO_PORT "hdmi_pwr_save_o" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+
+
 IO_LOC "edid_scl_io" M13
 IO_PORT "edid_scl_io" PULL_MODE=NONE IO_TYPE=LVCMOS33;
 IO_LOC "edid_sda_io" L13
