@@ -193,6 +193,7 @@ architecture rtl of vidproc is
     signal rol_sprite_pixel :   std_logic_vector(5 downto 0);
     signal clken_shift      :   std_logic;
     signal clken_load       :   std_logic;
+    signal clken_scroll     :   std_logic;
     signal clken_fetch      :   std_logic;
     signal clken_counter    :   unsigned(3 downto 0) := (others => '0');
     signal clken_zero       :   std_logic;
@@ -442,12 +443,16 @@ begin
             pixen_prescale <= (others => '0');
             pixen_counter  <= (others => '0');
             clken_pixel <= '0';
+            clken_shift <= '0';
+            clken_load <= '0';
+            clken_scroll <= '0';
 
         elsif rising_edge(PIXCLK) then
 
             clken_pixel <= '0';
             clken_shift <= '0';
-            clken_load  <= '0';
+            clken_load <= '0';
+            clken_scroll <= '0';
 
             -- For 12MHz pixen_prescale counts: 0, 1, 2, 3
             -- For 16MHz pixen_prescale counts: 0, 1,    3
@@ -478,6 +483,13 @@ begin
                 -- clken_load is either 1MHz or 2MHz
                 if pixen_counter(2 downto 0) = 0 and (pixen_counter(3) = '0' or r0_crtc_2mhz = '1') then
                     clken_load <= '1';
+                end if;
+
+                -- clken_scroll is either 16MHz or 8MHz
+                if r0_crtc_2mhz = '0' or nula_speccy_attr_mode = '1' then
+                    clken_scroll <= not pixen_counter(0);
+                else
+                    clken_scroll <= '1';
                 end if;
 
                 -- clken_shift depends on the pixel rate
@@ -755,9 +767,7 @@ begin
             if clken_pixel = '1' then
 
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
-                if 
-                    (modeIs12MHz = '0' and (r0_crtc_2mhz = '1' or clken_counter(0) = '1')) or
-                    (modeIs12MHz = '1' and clken_shift = '1') then
+                if clken_scroll = '1' then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
                     invert_delay_reg <= invert_delay_reg(6 downto 0) & (vr_cursor_invert and vr_disen_reg_u);
                     -- delay disen by one more pixel
