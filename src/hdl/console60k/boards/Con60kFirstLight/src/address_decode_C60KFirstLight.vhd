@@ -69,8 +69,11 @@ begin
 	begin
 		peripheral_sel_oh_o <= (others => '0');
 
-		if addr_i(23 downto 16) = x"FF" then
-
+		if addr_i(23 downto 16) = x"FA" or addr_i(23 downto 16) = x"FB" then
+			-- hdmi FA/FB
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
+			peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';						
+		elsif addr_i(23 downto 16) = x"FF" then
 			if addr_i(15 downto 4) = x"FE0" and addr_i(3) = '0' and G_INCL_HDMI then 
 				-- crtc
 				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));

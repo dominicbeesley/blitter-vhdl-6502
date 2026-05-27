@@ -292,9 +292,9 @@ G_NOTSIM_SERIAL:IF NOT SIM GENERATE
 
    e_spirkov:hdmi
    generic map (
-      FREQ  => 54000000,              -- pixel clock frequency
+      FREQ  => 27000000,              -- pixel clock frequency
       FS    => 48000,                   -- audio sample rate - should be 32000, 44100 or 48000
-      CTS   => 54000,                  -- CTS = Freq(pixclk) * N / (128 * Fs)
+      CTS   => 27000,                  -- CTS = Freq(pixclk) * N / (128 * Fs)
       N     => 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
                           -- Check HDMI spec 7.2 for details
    )

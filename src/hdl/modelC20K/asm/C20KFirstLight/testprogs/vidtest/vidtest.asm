@@ -244,7 +244,7 @@ _CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
 			.byte	$00				; 5 Vertial Adjust	 =0
 			.byte	$20				; 6 Vertical Displayed	 =32
 			.byte	$22				; 7 VSync Position	 =&22
-			.byte	$01				; 8 Interlace+Cursor	 =&01  Cursor=0, Display=0, Interlace=On
+			.byte	$00				; 8 Interlace+Cursor	 =&00  Cursor=0, Display=0, Interlace=Off
 			.byte	$07				; 9 Scan Lines/Character =8
 			.byte	$67				; 10 Cursor Start Line	  =&67	Blink=On, Speed=1/32, Line=7
 			.byte	$08				; 11 Cursor End Line	  =8

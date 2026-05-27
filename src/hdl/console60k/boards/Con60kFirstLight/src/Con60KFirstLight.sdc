@@ -3,7 +3,7 @@ create_clock -name sys_clk_50 -period 20 [get_nets {sys_clk_50_i}]       // 50 M
 create_generated_clock -name CLOCK_48M -source [get_ports {sys_clk_50_i}] -master_clock sys_clk_50 -divide_by 25 -multiply_by 24 [get_nets {i_clk_pll_48M}]
 create_generated_clock -name CLOCK_128M -source [get_nets {i_clk_pll_48M}] -master_clock CLOCK_48M -divide_by 3 -multiply_by 8 [get_nets {i_clk_pll_128M}]
 
-create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_pll_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 90 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
+create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_pll_48M}] -master_clock CLOCK_48M -divide_by 32 -multiply_by 90 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
 create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}] -master_clock CLOCK_TMDS_HDMI -divide_by 5 -multiply_by 1 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_pixel}]
 #**************************************************************
 # Set Clock Groups

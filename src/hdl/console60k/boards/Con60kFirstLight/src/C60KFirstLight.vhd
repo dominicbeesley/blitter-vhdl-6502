@@ -78,7 +78,7 @@ entity C60KFirstLight is
 
       sup_nRST_i           : in            std_logic;
 
-      clk_ext_pal_i        : in            std_logic;
+      --clk_ext_pal_i        : in            std_logic;
 
       sdram_clk_o          : out           std_logic;
 --      sdram_cke_o          : out           std_logic;
@@ -91,20 +91,11 @@ entity C60KFirstLight is
       sdram_ba_o           : out           std_logic_vector(BANKBITS-1 downto 0);
       sdram_dqm_o          : out           std_logic_vector(2**LANEBITS - 1 downto 0);
 
-      aud_i2s_bck_pwm_L_o  : out           std_logic;
-      aud_i2s_dat_o        : out           std_logic;
-      aud_i2s_ws_pwm_R_o   : out           std_logic;
+      --aud_i2s_bck_pwm_L_o  : out           std_logic;
+      --aud_i2s_dat_o        : out           std_logic;
+      --aud_i2s_ws_pwm_R_o   : out           std_logic;
 
       led_o                : out           std_logic_vector(7 downto 0);
-
-      ds_clk_o             : out           std_logic;
-      ds_miso_i            : in            std_logic;
-      ds_mosi_o            : out           std_logic;
-      ds_cs_o              : out           std_logic;
-      ds_clk2_o            : out           std_logic;
-      ds_miso2_i           : in            std_logic;
-      ds_mosi2_o           : out           std_logic;
-      ds_cs2_o             : out           std_logic;
 
       usb1_dp_io           : inout         std_logic;
       usb1_dn_io           : inout         std_logic;
@@ -112,10 +103,10 @@ entity C60KFirstLight is
       usb2_dn_io           : inout         std_logic;
 
 
-      flash_ck_o           : out           std_logic;
-      flash_cs_o           : out           std_logic;
-      flash_miso_i         : in            std_logic;
-      flash_mosi_o         : out           std_logic;
+      --flash_ck_o           : out           std_logic;
+      --flash_cs_o           : out           std_logic;
+      --flash_miso_i         : in            std_logic;
+      --flash_mosi_o         : out           std_logic;
 
       tmds_clk_o_p         : out           std_logic;
       tmds_d_o_p           : out           std_logic_vector(2 downto 0);
@@ -125,13 +116,13 @@ entity C60KFirstLight is
       hdmi_hpd_io          : inout         std_logic;
       hdmi_pwr_save_o      : out           std_logic;
 
-      i2c_scl_io           : inout         std_logic;
-      i2c_sda_io           : inout         std_logic;
+      --i2c_scl_io           : inout         std_logic;
+      --i2c_sda_io           : inout         std_logic;
 
-      sd0_cs_o             : out           std_logic;
-      sd0_miso_i           : in            std_logic;
-      sd0_mosi_o           : out           std_logic;
-      sd0_sclk_o           : out           std_logic;
+      --sd0_cs_o             : out           std_logic;
+      --sd0_miso_i           : in            std_logic;
+      --sd0_mosi_o           : out           std_logic;
+      --sd0_sclk_o           : out           std_logic;
       
       uart2_rx_i           : in            std_logic;
       uart2_tx_o           : out           std_logic;
@@ -139,7 +130,12 @@ entity C60KFirstLight is
       dbg_d                : out           std_logic_vector(7 downto 0);
       dbg_a                : out           std_logic_vector(15 downto 0);
       dbg_rnw              : out           std_logic;
-      dbg_clken            : out           std_logic
+      dbg_clken            : out           std_logic;
+
+      dbg_vid_cs           : out           std_logic;
+      dbg_vid_vid          : out           std_logic;
+
+      dbg_1MHz             : out           std_logic
 
 );
 end entity;
@@ -276,7 +272,7 @@ architecture rtl of C60KFirstLight is
 
 begin
 
-   hdmi_pwr_save_o <= '0';
+   hdmi_pwr_save_o <= '1';
 
    e_pll_50_48: entity work.pll_50_48
    port map (
@@ -473,10 +469,10 @@ begin
    port map (
 
       -- eeprom signals
-      SPI_CS_o(0)                   => flash_cs_o,
-      SPI_CLK_o                     => flash_ck_o,
-      SPI_MOSI_o                    => flash_mosi_o,
-      SPI_MISO_i                    => flash_miso_i,
+      SPI_CS_o                      => open, --flash_cs_o,
+      SPI_CLK_o                     => open, --flash_ck_o,
+      SPI_MOSI_o                    => open, --flash_mosi_o,
+      SPI_MISO_i                    => '1', --flash_miso_i,
       SPI_DET_i                     => '1',
 
       -- fishbone signals
@@ -590,20 +586,31 @@ G_HDMI:IF G_INCL_HDMI GENERATE
       PCM_R_i           => r_dac_sample & "00000"
 	);
 END GENERATE;
-
-
-      i2c_scl_io           <= '1';
-      i2c_sda_io           <= 'Z';
-
-      sd0_cs_o             <= '0';
-      sd0_mosi_o           <= '0';
-      sd0_sclk_o           <= '0';
                            
 
 dbg_d(7 downto 0) <= <<signal e_fb_cpu_t65only.e_t65.i_t65_D_in : std_logic_vector(7 downto 0) >>;
 dbg_a(15 downto 0) <= <<signal e_fb_cpu_t65only.e_t65.i_t65_A : std_logic_vector(15 downto 0) >>;
 dbg_rnw <= <<signal e_fb_cpu_t65only.e_t65.i_t65_RnW : std_logic >>;
 dbg_clken <= <<signal e_fb_cpu_t65only.e_t65.r_t65_clken_h : std_logic >>;
+
+dbg_vid_vid <= i_vid_48_r(i_vid_48_r'high) or i_vid_48_g(i_vid_48_g'high) or i_vid_48_b(i_vid_48_b'high);
+dbg_vid_cs <= not(i_vid_48_hs xor i_vid_48_vs);
+
+p:process(i_fb_syscon)
+   variable v_ctr : unsigned(6 downto 0);
+begin
+   if rising_edge(i_fb_syscon.clk) then
+      v_ctr := v_ctr + 1;
+   end if;
+   dbg_1MHz <= v_ctr(v_ctr'high);
+
+end process;
+
+led_o(0) <= sup_nRST_i;
+led_o(1) <= i_fb_syscon.rst;
+led_o(2) <= not i_c2p_cpu.cyc;
+led_o(3) <= not i_p2c_cpu.ack;
+led_o(7 downto 4) <= i_c2p_cpu.A(15 downto 12);
 
 end architecture rtl;
       
