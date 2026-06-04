@@ -127,14 +127,16 @@ architecture rtl of dvi_synchro is
 	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 
 	signal   r_hsync_prev_crtc		: std_logic;
-	signal	r_hsync_lead_crtc		: std_logic_vector(C_META-1 downto 0);			-- flips on leading edge of hs from crtc
-	signal	r_hsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
-	signal	r_hsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
+	signal	r_hsync_lead_crtc		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	i_hsync_lead_dvi		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	r_hsync_lead_ack_dvi	: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
+	signal	r_hsync_lead_cken_dvi: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
 	signal	r_vsync_prev_crtc		: std_logic;
-	signal	r_vsync_lead_crtc		: std_logic_vector(C_META-1 downto 0);			-- flips on leading edge of hs from crtc
-	signal	r_vsync_lead_ack		: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
-	signal	r_vsync_lead_pulse	: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
+	signal	r_vsync_lead_crtc		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	i_vsync_lead_dvi		: std_logic;			-- flips on leading edge of hs from crtc
+	signal	r_vsync_lead_ack_dvi	: std_logic;			-- acknowledge of crt hs edge in dvi pixel clock domain
+	signal	r_vsync_lead_cken_dvi: std_logic;			-- single pixel clock pulse of hs leading edge in dvi clock domain
 
 	constant C_BUFMAX : natural := 720;
 
@@ -163,8 +165,8 @@ architecture rtl of dvi_synchro is
 
 begin
 
-	debug_vsync_det_o <= r_vsync_lead_ack;
-	debug_hsync_det_o <= r_hsync_lead_ack;
+	debug_vsync_det_o <= r_vsync_lead_ack_dvi;
+	debug_hsync_det_o <= r_hsync_lead_ack_dvi;
 	debug_hsync_crtc_o <= HSYNC_CRTC_i;
 	debug_odd_o <= r_odd;
 
@@ -210,7 +212,7 @@ begin
 
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
 				r_ula_read_wait <= '1';
-				if r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) = '0' then
+				if r_hsync_lead_crtc = '0' then
 					r_linebuf_ctr_ula <= to_unsigned(0, r_linebuf_ctr_ula'LENGTH);
 					r_linebuf_ctr_ula_max <= to_unsigned(C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 				else					
@@ -244,20 +246,17 @@ begin
 	begin
 		if RESET_48M_i = '1' then
 			r_hsync_prev_crtc <= '0';
-			r_hsync_lead_crtc <= (others => '0');
+			r_hsync_lead_crtc <= '0';
 			r_vsync_prev_crtc <= '0';
-			r_vsync_lead_crtc <= (others => '0');
+			r_vsync_lead_crtc <= '0';
 		elsif rising_edge(CLK_48M_i) then
 
-			r_hsync_lead_crtc <= r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) & r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH downto 1);
-			r_vsync_lead_crtc <= r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH) & r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH downto 1);
-
 			if HSYNC_CRTC_i = '1' and r_hsync_prev_crtc = '0' then
-				r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH) <= not r_hsync_lead_crtc(r_hsync_lead_crtc'HIGH);
+				r_hsync_lead_crtc <= not r_hsync_lead_crtc;
 			end if;
 
 			if VSYNC_CRTC_i = '1' and r_vsync_prev_crtc = '0' then
-				r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH) <= not r_vsync_lead_crtc(r_vsync_lead_crtc'HIGH);
+				r_vsync_lead_crtc <= not r_vsync_lead_crtc;
 			end if;
 
 			r_hsync_prev_crtc <= HSYNC_CRTC_i;
@@ -269,33 +268,55 @@ begin
 	end process;
 
 
+	--================================= CRTC clock domain to DVI clock domain ========
+
+	e_rm_hs:entity work.metadelay
+	generic map (
+		N		=> C_META
+	)
+	port map(
+		clk	=> clk_pixel_dvi,
+		i		=> r_hsync_lead_crtc,
+		o  	=> i_hsync_lead_dvi
+	);
+
+	e_rm_vs:entity work.metadelay
+	generic map (
+		N		=> C_META
+	)
+	port map(
+		clk	=> clk_pixel_dvi,
+		i		=> r_vsync_lead_crtc,
+		o  	=> i_vsync_lead_dvi
+	);
+
 	p_reg_syncs_dvi:process(RESET_48M_i, clk_pixel_dvi)
 	begin
 
 		if RESET_48M_i = '1' then
-			r_hsync_lead_ack <= '0';
-			r_hsync_lead_pulse <= '0';
-			r_vsync_lead_ack <= '0';
-			r_vsync_lead_pulse <= '0';
+			r_hsync_lead_ack_dvi <= '0';
+			r_hsync_lead_cken_dvi <= '0';
+			r_vsync_lead_ack_dvi <= '0';
+			r_vsync_lead_cken_dvi <= '0';
 			r_linebuf_ctr_dvi <= (others => '0');
 		elsif rising_edge(clk_pixel_dvi) then
 
-			r_hsync_lead_pulse <= '0';
-			if r_hsync_lead_crtc(0) /= r_hsync_lead_ack then
-				r_hsync_lead_ack <= r_hsync_lead_crtc(0);
-				r_hsync_lead_pulse <= '1';
+			r_hsync_lead_cken_dvi <= '0';
+			if i_hsync_lead_dvi /= r_hsync_lead_ack_dvi then
+				r_hsync_lead_ack_dvi <= i_hsync_lead_dvi;
+				r_hsync_lead_cken_dvi <= '1';
 			end if;
 
-			r_vsync_lead_pulse <= '0';
-			if r_vsync_lead_crtc(0) /= r_vsync_lead_ack then
-				r_vsync_lead_ack <= r_vsync_lead_crtc(0);
-				r_vsync_lead_pulse <= '1';
+			r_vsync_lead_cken_dvi <= '0';
+			if i_vsync_lead_dvi /= r_vsync_lead_ack_dvi then
+				r_vsync_lead_ack_dvi <= i_vsync_lead_dvi;
+				r_vsync_lead_cken_dvi <= '1';
 			end if;
 
 			if r_line_counter(1 downto 0) = "00" or pixel_double_i = '0' then
 				if r_line_counter < C_LINE_MARGIN then
 					r_linebuf_ctr_dvi_max <= r_linebuf_ctr_ula_prev_max;
-					if r_hsync_lead_ack = '0' then
+					if r_hsync_lead_ack_dvi = '0' then
 						r_linebuf_ctr_dvi <= to_unsigned(0, r_linebuf_ctr_dvi'LENGTH);
 					else					
 						r_linebuf_ctr_dvi <= to_unsigned(C_BUFMAX, r_linebuf_ctr_dvi'LENGTH);
@@ -340,7 +361,7 @@ begin
 	begin
 		if rising_edge(clk_pixel_dvi) then
 
-			if r_vsync_lead_pulse = '1' then
+			if r_vsync_lead_cken_dvi = '1' then
 				r_field_next_but_one <= '1';
 				if r_line_counter >= C_PIXELS_PER_LINE / 4 and r_line_counter < C_PIXELS_PER_LINE * 3 / 4 then
 					r_odd_next <= '1';
@@ -349,7 +370,7 @@ begin
 				end if;
 			end if;
 
-			if r_hsync_lead_pulse = '1' then
+			if r_hsync_lead_cken_dvi = '1' then
 
 				-- delay vsync detect by another line
 				if r_field_next_but_one = '1' then
