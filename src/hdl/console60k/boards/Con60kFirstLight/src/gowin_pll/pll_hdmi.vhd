@@ -161,7 +161,7 @@ begin
             FCLKIN => "48",
             IDIV_SEL => 2,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 8,
+            ODIV0_SEL => 4,
             ODIV1_SEL => 8,
             ODIV2_SEL => 8,
             ODIV3_SEL => 8,

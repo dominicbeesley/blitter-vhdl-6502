@@ -100,9 +100,9 @@ architecture rtl of vid15tohdmi is
 
    component hdmi is 
       generic (
-      FREQ: integer := 27000000;              -- pixel clock frequency
+      FREQ: integer := 54000000;              -- pixel clock frequency
       FS: integer := 48000;                   -- audio sample rate - should be 32000, 44100 or 48000
-      CTS: integer := 27000;                  -- CTS = Freq(pixclk) * N / (128 * Fs)
+      CTS: integer := 54000;                  -- CTS = Freq(pixclk) * N / (128 * Fs)
       N: integer := 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
                           -- Check HDMI spec 7.2 for details
    );

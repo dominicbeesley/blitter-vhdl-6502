@@ -22,7 +22,7 @@
 -en_lock false
 -dyn_dpa_en false
 -clkout0_bypass false
--odiv0_sel 8
+-odiv0_sel 4
 -odiv0_frac_sel 0
 -clkout0_dt_dir 1
 -clkout0_dt_step 0
