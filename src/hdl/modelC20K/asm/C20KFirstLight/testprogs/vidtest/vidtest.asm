@@ -56,24 +56,12 @@ START:
 		lda	_ULA_SETTINGS+7
 		sta	VIDPROC_CTL
 
-		ldy	#$0b				; Y=11
-		ldx	#$0b
-_BCBB0:		lda	_CRTC_REG_TAB7,X		; get end of 6845 registers 0-11 table
+		ldy	#$0f				; Y=11
+_BCBB0:		lda	_CRTC_REG_TAB7,Y		; get end of 6845 registers 0-11 table
 		sty	CRTC_IX
 		sta	CRTC_DAT
-		dex					; reduce pointers
-		dey					; 
+		dey					; reduce pointers
 		bpl	_BCBB0				; and if still >0 do it again
-
-
-		ldy	#12
-		sty	CRTC_IX
-		lda	#$20
-		sta	CRTC_DAT
-		ldy	#13
-		sty	CRTC_IX
-		lda	#0
-		sta	CRTC_DAT
 
 
 		lda	#$7C
@@ -112,12 +100,10 @@ _BCBB0:		lda	_CRTC_REG_TAB7,X		; get end of 6845 registers 0-11 table
 		bne	@wlp
 
 
-		ldy	#$0b			; Y=11
-		ldx	#$0b
-_BCBB0_2:	lda	_CRTC_REG_TAB,X		; get end of 6845 registers 0-11 table
+		ldy	#$0f			; Y=11
+_BCBB0_2:	lda	_CRTC_REG_TAB,Y		; get end of 6845 registers 0-11 table
 		sty	CRTC_IX
 		sta	CRTC_DAT
-		dex				; reduce pointers
 		dey				; 
 		bpl	_BCBB0_2		; and if still >0 do it again
 
@@ -165,15 +151,6 @@ pplp:		sta	VIDPROC_PAL
 		bne	@flp
 		inc	zp_ptr + 1
 		bpl	@flp
-
-		ldy	#12
-		sty	CRTC_IX
-		lda	#$06
-		sta	CRTC_DAT
-		ldy	#13
-		sty	CRTC_IX
-		lda	#0
-		sta	CRTC_DAT
 
 		ldx	#0
 @nula:		lda	NULAPALETTE, X
@@ -248,7 +225,8 @@ _CRTC_REG_TAB:		.byte	$7f				; 0 Horizontal Total	 =128
 			.byte	$07				; 9 Scan Lines/Character =8
 			.byte	$67				; 10 Cursor Start Line	  =&67	Blink=On, Speed=1/32, Line=7
 			.byte	$08				; 11 Cursor End Line	  =8
-
+			.byte	$6,0
+			.byte	$6,0
 
 
 
@@ -266,5 +244,7 @@ _CRTC_REG_TAB7:		.byte	$3f				; 0 Horizontal Total	 =64
 			.byte	$12				; 9 Scan Lines/Character =19
 			.byte	$72				; 10 Cursor Start Line	  =&72	Blink=On, Speed=1/32, Line=18
 			.byte	$13				; 11 Cursor End Line	  =19
+			.byte	$20,0
+			.byte	$20,0
 
 M7SCR:	.incbin "TEST25"
