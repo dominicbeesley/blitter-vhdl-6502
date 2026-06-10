@@ -1298,7 +1298,7 @@ END GENERATE;
       cpu_nNMI_o           <= '1';
       cpu_nRES_o           <= '1';
       
-      sd1_cs_o             <= '0';
+      sd1_cs_o             <= '1'; -- timing tickle
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
 
