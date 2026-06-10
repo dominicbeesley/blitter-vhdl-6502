@@ -219,7 +219,7 @@ begin
 					r_linebuf_ctr_ula <= to_unsigned(C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 					r_linebuf_ctr_ula_max <= to_unsigned(2*C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 				end if;
-				r_linebuf_ctr_ula_prev_max	<= r_linebuf_ctr_ula + 1;
+				r_linebuf_ctr_ula_prev_max	<= r_linebuf_ctr_ula;
 
 			elsif DISEN_CRTC_i = '1' and r_ula_read_wait = '1' then
 				r_ula_read_wait <= '0';
