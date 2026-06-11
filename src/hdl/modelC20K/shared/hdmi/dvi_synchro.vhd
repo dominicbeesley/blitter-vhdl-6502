@@ -116,11 +116,19 @@ architecture rtl of dvi_synchro is
 	constant C_FIELD_BLANK_BACK 	: natural := 22;		-- +0.5 for "odd" frames, include hsync!
 	constant	C_VSYNC_LINES		 	: natural := 3;
 
+-- 27MHz 1440x576 values
+	constant C_PIXELS_PER_LINE  	: natural := 1728; -- 64us * 27
+		-- numbers in () are fiddle factors to make correct relationships when monitoring on TVP401
+	constant C_LINE_BLANK_FRONT 	: natural := 24;		
+	constant C_HSYNC_PIXELS			: natural := 126 - (4);
+	constant C_LINE_BLANK_BACK  	: natural := 138 + C_HSYNC_PIXELS + (4); 	
 
-	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 27
-	constant C_LINE_BLANK_FRONT 	: natural := 48;	
-	constant C_HSYNC_PIXELS			: natural := 252;
-	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
+-- 54MHz 2880x576 values
+--	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 54
+--		-- numbers in () are fiddle factors to make correct relationships when monitoring on TVP401
+--	constant C_LINE_BLANK_FRONT 	: natural := 48;	
+--	constant C_HSYNC_PIXELS			: natural := 252;
+--	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
 	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 0;		-- margin from start of line to start ouputting pixels
 
@@ -323,7 +331,7 @@ begin
 				r_vsync_lead_cken_dvi <= '1';
 			end if;
 
-			if r_line_counter(1 downto 0) = "00" or pixel_double_i = '0' then
+			if r_line_counter(0 downto 0) = "0" or pixel_double_i = '0' then
 				if r_line_counter < C_LINE_MARGIN then
 					r_linebuf_ctr_dvi_max <= r_linebuf_ctr_ula_prev_max;
 					if r_hsync_lead_ack_dvi = '0' then

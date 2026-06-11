@@ -7,17 +7,17 @@
 
 -mod_name pll_hdmi
 -file_name pll_hdmi
--path C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC20K/boards/C20K/src/gowin_rpll/
+-path C:/Users/domin/OneDrive/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC20K/boards/C20K/src/gowin_rpll/
 -type PLL
 -rPll true
 -file_type vhdl
 -dev_type GW2A-18C
 -dyn_idiv_sel false
--idiv_sel 8
+-idiv_sel 16
 -dyn_fbdiv_sel false
 -fbdiv_sel 45
 -dyn_odiv_sel false
--odiv_sel 2
+-odiv_sel 4
 -dyn_da_en true
 -rst_sig false
 -rst_sig_p false
