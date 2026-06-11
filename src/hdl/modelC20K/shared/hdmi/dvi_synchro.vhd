@@ -122,7 +122,11 @@ architecture rtl of dvi_synchro is
 	constant C_HSYNC_PIXELS			: natural := 252;
 	constant C_LINE_BLANK_BACK  	: natural := 276 + C_HSYNC_PIXELS; 	
 	constant C_SYNC_LINE_LIMIT		: natural := 10;
-	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 80;		-- margin from start of line to start ouputting pixels
+	constant C_LINE_MARGIN			: natural := C_LINE_BLANK_BACK + 0;		-- margin from start of line to start ouputting pixels
+
+	-- PIXELS in the 48MHz domain, where to start saving pixels
+	constant C_PXSTART48				: natural := 11 * 48;
+	constant C_PXLINE48				: natural := 64 * 48;
 
 	constant C_META					: natural := 3;		-- meta stability between 48 and 27 MHz clock domains
 
@@ -162,6 +166,7 @@ architecture rtl of dvi_synchro is
 	signal	r_linebuf_ctr_dvi_max			:unsigned(NUMBITS((2*C_BUFMAX)-1)-1 downto 0);
 	signal	i_line_buffer_wren				: std_logic;
 	signal	i_line_buffer_Q					: std_logic_vector(11 downto 0);
+	signal   r_line_px_in_ctr48				:unsigned(NUMBITS(2*C_PXLINE48)-1 downto 0);
 
 begin
 
@@ -206,6 +211,7 @@ begin
 	p_reg_pix_ula:process(CLK_48M_i, RESET_48M_i)
 	begin
 		if RESET_48M_i = '1' then
+			r_line_px_in_ctr48 <= (others => '0');
 			r_linebuf_ctr_ula <= (others => '0');
 			r_linebuf_ctr_ula_max <= (others => '0');
 		elsif rising_edge(CLK_48M_i) then
@@ -220,23 +226,27 @@ begin
 					r_linebuf_ctr_ula_max <= to_unsigned(2*C_BUFMAX, r_linebuf_ctr_ula'LENGTH);
 				end if;
 				r_linebuf_ctr_ula_prev_max	<= r_linebuf_ctr_ula;
+				r_line_px_in_ctr48 <= (others => '0');
 
-			elsif DISEN_CRTC_i = '1' and r_ula_read_wait = '1' then
-				r_ula_read_wait <= '0';
-				r_ula_pixel_ring <= (others => '1');
-			elsif i_line_buffer_wren = '1' then
-				--if TTX_i = '1' and TTX80_i = '1' then
-				--	r_ula_pixel_ring <= "0010";
-				--els
-				if TTX_i = '1' then
-					r_ula_pixel_ring <= "1000";
+			else 
+				if r_line_px_in_ctr48 = C_PXSTART48 and r_ula_read_wait = '1' then
+					r_ula_read_wait <= '0';
+					r_ula_pixel_ring <= (others => '1');
+				elsif i_line_buffer_wren = '1' then
+					--if TTX_i = '1' and TTX80_i = '1' then
+					--	r_ula_pixel_ring <= "0010";
+					--els
+					if TTX_i = '1' then
+						r_ula_pixel_ring <= "1000";
+					else
+						r_ula_pixel_ring <= "0100";
+					end if;
+
+					r_linebuf_ctr_ula <= r_linebuf_ctr_ula + 1;
 				else
-					r_ula_pixel_ring <= "0100";
+					r_ula_pixel_ring <= "0" & r_ula_pixel_ring(3 downto 1);
 				end if;
-
-				r_linebuf_ctr_ula <= r_linebuf_ctr_ula + 1;
-			else
-				r_ula_pixel_ring <= "0" & r_ula_pixel_ring(3 downto 1);
+				r_line_px_in_ctr48 <= r_line_px_in_ctr48 + 1;
 			end if;
 		end if;
 
