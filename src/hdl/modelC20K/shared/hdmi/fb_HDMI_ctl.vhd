@@ -53,8 +53,8 @@ architecture rtl of fb_HDMI_ctl is
 -- 																						  		   3 2 1 0 9 8 7 6 5 4 3 2 1 K
 --	constant	C_DEFAULT_AVI					: std_logic_vector(111 downto 0) := x"0000000000000000031A880812B0";
 --	constant	C_DEFAULT_AVI					: std_logic_vector(111 downto 0) := x"0000000000000000031A841810A6";
-	constant	C_DEFAULT_AVI_ILACE			: std_logic_vector(111 downto 0) := x"00000000000000000115880812B7";
-	constant	C_DEFAULT_AVI					: std_logic_vector(111 downto 0) := x"00000000000000000117880812B5";
+	constant	C_DEFAULT_AVI_ILACE			: std_logic_vector(111 downto 0) := x"00000000000000000115840812BB";
+	constant	C_DEFAULT_AVI					: std_logic_vector(111 downto 0) := x"00000000000000000117840812B9";
 
 	signal r_avi							: std_logic_vector(111 downto 0) := C_DEFAULT_AVI;
 
