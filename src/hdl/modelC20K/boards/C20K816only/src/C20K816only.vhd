@@ -310,8 +310,7 @@ architecture rtl of C20K816only is
 	-----------------------------------------------------------------------------
 	-- cpu control signals
 	-----------------------------------------------------------------------------
-	signal i_cpu_IRQ_n					: std_logic;
-	signal i_chipset_cpu_halt			: std_logic; -- TODO: ignored
+	signal i_chipset_cpu_halt			: std_logic;
 	signal i_chipset_cpu_int			: std_logic; -- TODO: ignored
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
@@ -546,7 +545,7 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
       fb_per_p2c_i                  => i_per_p2c_intcon,
 
       peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_we_o         => i_intcon_peripheral_sel_we(0),
+      peripheral_sel_we_o           => i_intcon_peripheral_sel_we(0),
       peripheral_sel_i              => i_intcon_peripheral_sel(0),
       peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
    );
@@ -569,11 +568,10 @@ END GENERATE;
    i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
---TODO:NO MASTERS	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
---TODO:NO MASTERS   i_p2c_chipset_con    <= i_con_p2c_intcon(MAS_NO_CHIPSET);
-
-
+	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+
+	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
 	e_chipset:fb_chipset
@@ -760,31 +758,6 @@ END GENERATE;
       window_65816_wr_en_o          => i_window_65816_wr_en
 
 	);
-
-
---	e_fb_mem: entity work.fb_mem
---	generic map (
---		G_SWRAM_SLOT						=> G_MEM_SWRAM_SLOT,
---		G_FAST_IS_10						=> G_MEM_FAST_IS_10,
---		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45
---	)
---	port map (
---			-- 2M RAM/256K ROM bus
---		MEM_A_o								=> mem_A_io,
---		MEM_D_io								=> MEM_D_io,
---		MEM_nOE_o							=> MEM_nOE_o,
---		MEM_nWE_o							=> MEM_nWE_o,
---		MEM_ROM_nCE_o						=> MEM_ROM_nCE_o,
---		MEM_RAM_nCE_o						=> MEM_RAM_nCE_o,
---
---		-- fishbone signals
---
---		fb_syscon_i							=> i_fb_syscon,
---		fb_c2p_i								=> i_c2p_mem,
---		fb_p2c_o								=> i_p2c_mem,
---
---		debug_mem_a_stb_o					=> open
---	);
 
    e_fb_sys:entity work.fb_SYS_c20k
    generic map (
@@ -1028,7 +1001,8 @@ end generate;
       nmi_n_i                       => i_sys_nNMI,
       irq_n_i                       => i_sys_nIRQ,
       debug_btn_n_i                 => icipo_btn1,
-      cpu_halt_i                    => '0',
+      chipset_cpu_halt_i            => i_chipset_cpu_halt,
+      chipset_cpu_int_i             => i_chipset_cpu_int,
 
       noice_debug_shadow_i          => '0',     --TODO: reinstate?
 
@@ -1038,8 +1012,13 @@ end generate;
 
       -- fishbone signals
       fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_o                      => i_c2p_cpu,
-      fb_p2c_i                      => i_p2c_cpu,
+      -- cpu controller
+      fb_cpu_c2p_o                  => i_c2p_cpu,
+      fb_cpu_p2c_i                  => i_p2c_cpu,
+      -- mem peripheral
+      fb_mem_c2p_i                  => i_c2p_mem,
+      fb_mem_p2c_o                  => i_p2c_mem,
+
 
       -- debug
       debug_cpu_instr_A             => i_debug_cpu_instr_a,
@@ -1072,7 +1051,6 @@ end generate;
 
    );
    
-	i_cpu_IRQ_n <= not i_chipset_cpu_int and i_sys_nIRQ;
 
 g_led_arr:if G_INCL_LED_ARR generate
    i_per_p2c_intcon(PERIPHERAL_NO_LED_ARR)<= i_p2c_led_arr;
@@ -1286,14 +1264,7 @@ END GENERATE;
 
 
 
-e_null_brd_mem:entity work.fb_null
-   port map (
 
-      fb_syscon_i          => i_fb_syscon,
-
-      fb_c2p_i             => i_c2p_mem,
-      fb_p2c_o             => i_p2c_mem
-   );
 
 
 G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
@@ -1306,7 +1277,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    clkdiv5 : CLKDIV
    generic map (
       DIV_MODE => "5",            -- Divide by 5
-      GSREN => "false"
+      GSREN => "true"
    )
    port map (
       RESETN => '1',
@@ -1439,7 +1410,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clkdiv5_snd : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
-         GSREN => "false"
+         GSREN => "true"
       )
       port map (
          RESETN => '1',
