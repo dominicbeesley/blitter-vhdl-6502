@@ -18,6 +18,11 @@ mos_handle_res:
 	inx
 	stx	zp_CTR
 
+	; test screen mem pokes
+	lda	#20
+	sta	f:$FF4010
+	sta	f:$004011
+
 
 	lda	#DEVNO_C20K
 	sta	fred_JIM_DEVNO
@@ -48,6 +53,29 @@ mos_handle_res:
 	lda	#$02
 	sta	f:A16_CS_DMA_DEST_ADDR + 1
 	lda	#$03
+	sta	f:A16_CS_DMA_DEST_ADDR + 0
+
+	lda	#$00
+	sta	f:A16_CS_DMA_COUNT + 1
+	lda	#$11
+	sta	f:A16_CS_DMA_COUNT + 0
+
+	lda	#DMACTL_ACT|DMACTL_HALT|DMACTL_STEP_DEST_UP|DMACTL_STEP_SRC_UP
+	sta	f:A16_CS_DMA_CTL
+
+
+	lda	#$02
+	sta	f:A16_CS_DMA_SRC_ADDR + 2
+	lda	#$02
+	sta	f:A16_CS_DMA_SRC_ADDR + 1
+	lda	#$03
+	sta	f:A16_CS_DMA_SRC_ADDR + 0
+
+	lda	#$FF
+	sta	f:A16_CS_DMA_DEST_ADDR + 2
+	lda	#$40
+	sta	f:A16_CS_DMA_DEST_ADDR + 1
+	lda	#$10
 	sta	f:A16_CS_DMA_DEST_ADDR + 0
 
 	lda	#$00

@@ -26,7 +26,7 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-sound.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-dma.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -163,7 +163,8 @@ begin
    e_dut:entity work.C20K816only
    generic map (
       SIM                           => true,
-      CLOCKSPEED                    => 128
+      CLOCKSPEED                    => 128,
+      PROJECT_ROOT                  => "../../../"
    )
    port map (
 

@@ -435,7 +435,6 @@ begin
 
          if r_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
-            CPU_RDY_io <= '1'; 
          elsif i_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
          else

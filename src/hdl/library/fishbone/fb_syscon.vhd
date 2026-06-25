@@ -175,8 +175,9 @@ begin
 							r_rst_counter <= (others => '0');
 							r_rst_state <= prerun;
 							r_prerun_shift <= ( 0 => '1', others => '0');
+						else
+							r_rst_counter <= r_rst_counter + 1;
 						end if;
-						r_rst_counter <= r_rst_counter + 1;
 					end if;
 					i_fb_syscon.rst <= '1';
 				when prerun =>
