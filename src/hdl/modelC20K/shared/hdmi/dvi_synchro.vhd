@@ -120,8 +120,8 @@ architecture rtl of dvi_synchro is
 	constant C_PIXELS_PER_LINE  	: natural := 1728; -- 64us * 27
 		-- numbers in () are fiddle factors to make correct relationships when monitoring on TVP401
 	constant C_LINE_BLANK_FRONT 	: natural := 24;		
-	constant C_HSYNC_PIXELS			: natural := 126 - (4);
-	constant C_LINE_BLANK_BACK  	: natural := 138 + C_HSYNC_PIXELS + (4); 	
+	constant C_HSYNC_PIXELS			: natural := 126;
+	constant C_LINE_BLANK_BACK  	: natural := 138 + C_HSYNC_PIXELS; 	
 
 -- 54MHz 2880x576 values
 --	constant C_PIXELS_PER_LINE  	: natural := 3456; -- 64us * 54
