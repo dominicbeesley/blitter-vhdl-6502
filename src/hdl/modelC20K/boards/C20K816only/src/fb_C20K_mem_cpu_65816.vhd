@@ -435,7 +435,7 @@ begin
 
          if r_phys_A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
-         elsif i_phys_A(22 downto 21) = "11" then
+         elsif r_phys_A(22 downto 21) = "11" then
             MEM_RAM_nCE_o(0) <= '0';
          else
             MEM_RAM_nCE_o(to_integer(unsigned(r_phys_A(22 downto 21)))+1) <= '0';
