@@ -27,6 +27,15 @@ mos_handle_res:
 	sta	$FE36
 
 	txa
+	ror	A
+	and	#$01
+	sta	$FE37
+
+
+	inc	$10
+	dec	$10
+
+	txa
 	sta	sheila_SYSVIA_orb
 	lsr
 	ora	#7
@@ -51,13 +60,7 @@ mos_handle_res:
 	ldx	zp_CTR
 	inx
 	stx	zp_CTR
-@wl:	dex
-	bne	@wl
-
-@lp2:
-	inc	$fc00
-	jmp	@ask
-@ask:	jmp	@lp2
+	jmp 	@lp
 
 
 
