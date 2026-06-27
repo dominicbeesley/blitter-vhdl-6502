@@ -447,7 +447,7 @@ begin
       begin
 
          if r_phys_A(23) = '1' then
-            r_CPU_RDY <= '0'; -- slow for 55ns rom
+            r_CPU_RDY <= '1'; -- slow for 55ns rom
          elsif r_phys_A(22 downto 21) = "11" then
             r_CPU_RDY <= '1';
          else
