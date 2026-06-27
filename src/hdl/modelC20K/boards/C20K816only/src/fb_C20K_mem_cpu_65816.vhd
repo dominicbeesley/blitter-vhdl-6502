@@ -572,7 +572,7 @@ begin
                      CPU_BE_o <= '0';
                      CPU_A_nOE_o <= '1';
                      r_state <= mem1;
-                  elsif i_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
+                  elsif r_peripheral_sel_oh(PERIPHERAL_NO_CHIPRAM) = '1' then
                      mem_sel;
                      cpu_rdy;
                      -- local memory cycle
