@@ -699,7 +699,7 @@ begin
                      elsif (r_cyc_2M = '0' and i_throttle_act = '1') or chipset_cpu_halt_i = '1' then
                         r_state <= cpu_skip;                     
                      else
-                        r_State <= cpu_phys_a;
+                        r_state <= cpu_phys_a;
                      end if;
                   end if;
 
