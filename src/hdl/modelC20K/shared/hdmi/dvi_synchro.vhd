@@ -381,7 +381,7 @@ begin
 
 			if r_vsync_lead_cken_dvi = '1' then
 				r_field_next_but_one <= '1';
-				if r_line_counter >= C_PIXELS_PER_LINE / 4 and r_line_counter < C_PIXELS_PER_LINE * 3 / 4 then
+				if r_line_counter >= C_PIXELS_PER_LINE / 2 and r_line_counter < C_PIXELS_PER_LINE * 7 / 8 then
 					r_odd_next <= '1';
 				else
 					r_odd_next <= '0';
