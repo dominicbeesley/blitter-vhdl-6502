@@ -230,9 +230,13 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_cyc_2M_before  : std_logic;         -- a phi2 was detected this cycle, next will be valid for throttled cycles
    signal r_cyc_2M         : std_logic;         -- qualifies a cpu cycle as being the first after phi2 ended
 
-   signal i_throttle_act  : std_logic;   
+   signal i_throttle_act   : std_logic;   
+   signal i_throttle_all_E : std_logic;
 
 begin
+
+   i_throttle_all_E <= '0' when CPU_E_i = '0' and boot_65816_i = "11" else
+                     throttle_all_i;
 
    debug_throttle_act_o <= i_throttle_act;
 
@@ -356,7 +360,7 @@ begin
       JIM_page_i                    => JIM_page_i,
       turbo_lo_mask_i               => turbo_lo_mask_i,
       throttle_mos_i                => throttle_mos_i,
-      throttle_all_i                => throttle_all_i,
+      throttle_all_i                => i_throttle_all_E,
       rom_throttle_map_i            => rom_throttle_map_i,
       throttle_act_o                => i_throttle_act,
       rom_autohazel_map_i           => rom_autohazel_map_i,
