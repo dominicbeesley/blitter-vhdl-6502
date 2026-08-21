@@ -56,8 +56,8 @@ generic (
       DEFAULT_SYS_DATA     : std_logic_vector(7 downto 0) := x"FE";
 --      DEFAULT_SYS_RnW      : std_logic := '0';        -- bodge FE onto bus for Tube detect, only works if MOS runs at 2MHz!
       DEFAULT_SYS_RnW      : std_logic := '1';
-      C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC20";  -- TODO: better address
-      C20K_LATCH_DEFAULT   : std_logic_vector(7 downto 0)  := "00100001"
+      C20K_LATCH_ADDR      : std_logic_vector(15 downto 0) := x"FC58";  -- TODO: better address
+      C20K_LATCH_DEFAULT   : std_logic_vector(7 downto 0)  := "00100000"
    );
 port (
 
@@ -512,7 +512,9 @@ begin
       i_new_c20k_latch <= r_c20k_latch;
       i_new_ic32 <= r_beeb_ic32;
       if SYS_nRST_i = '1' then
-         if r_SYS_A = C20K_LATCH_ADDR then
+         if r_SYS_A(15 downto 3) = x"FE1" & "0" then
+            i_new_c20k_latch <= r_c20k_latch(7 downto 1) & r_SYS_D_wr(7);
+         elsif r_SYS_A = C20K_LATCH_ADDR then
             if r_SYS_D_wr(3) = '1' then
                i_new_c20k_latch <= r_c20k_latch or v_m;
             else
@@ -549,6 +551,8 @@ begin
          else
             if r_mhz1E_clken = '1' and r_SYS_RnW = '0' and r_SYS_A = x"FE40" then
                r_beeb_ic32 <= i_new_ic32;
+            elsif r_mhz2E_clken = '1' and r_SYS_RnW = '0' and r_SYS_A(15 downto 3) = x"FE1" & "0" then
+               r_c20k_latch <= i_new_c20k_latch;
             elsif r_mhz1E_clken = '1' and r_SYS_RnW = '0' and r_SYS_A = C20K_LATCH_ADDR then
                r_c20k_latch <= i_new_c20k_latch;
             end if;
@@ -625,6 +629,7 @@ begin
    i_MIO_nCS <= "0101"  when SYS_nRST_i = '0' else -- reset slow latch
                 "0101"  when r_SYS_A(15 downto 0)       = x"FE40" and r_SYS_RnW = '0' else -- BEEB IC32 WRITE
                 "0101"  when r_SYS_A(15 downto 0)       = C20K_LATCH_ADDR and r_SYS_RnW = '0' else -- C20K latch
+                "0101"  when r_SYS_A(15 downto 3)       = x"FE1" & "0" and r_SYS_RnW = '0' else -- C20K latch (cassette motor)
                 "1010"  when r_SYS_A(15 downto 8) = x"FC" else        -- PGFC -- TODO: local holes
                 "1011"  when r_SYS_A(15 downto 8) = x"FD" else        -- PGFD -- TODO: local holes/jim paging reg
                 "1100"  when r_SYS_A(15 downto 5) & "0" = x"FEE" else -- TUBE

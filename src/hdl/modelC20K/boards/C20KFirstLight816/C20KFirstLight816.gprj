@@ -41,6 +41,7 @@
         <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/metadelay.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/common.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/sn76489.vhd" type="file.vhdl" enable="1" />

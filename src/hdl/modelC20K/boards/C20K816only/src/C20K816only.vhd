@@ -395,8 +395,11 @@ architecture rtl of C20K816only is
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
    signal i_c20k_latch     : std_logic_vector(7 downto 0);
    signal i_psg_audio      : signed(13 downto 0);
-   signal r_dac_sample     : signed(10 downto 0);
-   signal i_paula_sample   : signed(9 downto 0);
+   signal r_dac_sample_l   : signed(15 downto 0);
+   signal r_dac_sample_r   : signed(15 downto 0);
+   signal i_paula_sample_l : signed(15 downto 0);
+   signal i_paula_sample_r : signed(15 downto 0);
+   signal i_sid_audio      : signed(15 downto 0);
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -453,7 +456,7 @@ begin
 
    e_div2_96_48: CLKDIV
    generic map (
-      DIV_MODE => "2",            -- Divide by 4
+      DIV_MODE => "2",            -- Divide by 2
       GSREN => "false"
    )
    port map (
@@ -603,8 +606,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-		snd_dat_o		=> i_paula_sample,
-		snd_dat_change_clken_o => open,
+		snd_dat_l_o		=> i_paula_sample_l,
+      snd_dat_r_o    => i_paula_sample_r,
 
       SD_CS_o              => sd0_cs_o,
       SD_CLK_o             => sd0_sclk_o,
@@ -619,26 +622,32 @@ END GENERATE;
 GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_chipset_cpu_halt <= '0';
 	i_chipset_cpu_int <= '0';
-	i_paula_sample <= (others => '0');
+	i_paula_sample_l <= (others => '0');
+   i_paula_sample_r <= (others => '0');
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
 END GENERATE;
 
 
-   G_SND_1BIT:if not G_C20K_I2S generate
-      --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-      
    p_reg_snd:process(i_fb_syscon)
    begin 
       if rising_edge(i_fb_syscon.clk) then
-         r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+         r_dac_sample_l <= 
+            shift_right(i_paula_sample_l, 1) + 
+            shift_right((i_psg_audio & "00"), 1) +
+            shift_right(i_sid_audio, 1);
+         r_dac_sample_r <= 
+            shift_right(i_paula_sample_r, 1) + 
+            shift_right((i_psg_audio & "00"), 1) +
+            shift_right(i_sid_audio, 1);
       end if;
    end process;
 
-
+   G_SND_1BIT:if not G_C20K_I2S generate
    --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 
-  e_dac_snd: entity work.dac_1bit 
+
+      e_dac_snd_l: entity work.dac_1bit 
   generic map (
      G_SAMPLE_SIZE     => 11,
      G_SYNC_DEPTH      => 0
@@ -647,33 +656,38 @@ END GENERATE;
      rst_i             => i_fb_syscon.rst,
      clk_dac           => i_fb_syscon.clk,
 
-     sample            => r_dac_sample,
+         sample            => r_dac_sample_l,
   
-     bitstream         => i_dac_snd_pwm
+         bitstream         => aud_i2s_bck_pwm_L_o
   );
 
+      e_dac_snd_r: entity work.dac_1bit 
+      generic map (
+         G_SAMPLE_SIZE     => 11,
+         G_SYNC_DEPTH      => 0
+      )
+      port map (
+         rst_i             => i_fb_syscon.rst,
+         clk_dac           => i_fb_syscon.clk,
 
-	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
-	aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
+         sample            => r_dac_sample_r,
+     
+         bitstream         => aud_i2s_ws_pwm_R_o
+      );
+
       aud_i2s_dat_o        <= '1';
 
    end generate;
 
    G_SND_i2s:if G_C20K_I2S generate
-      p_reg_snd:process(i_clk_snd)
-      begin 
-         if rising_edge(i_clk_snd) then
-            r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
-         end if;
-      end process;
 
       e_i2s:entity work.i2s
       port map (
          
          clk_i => i_clk_snd,
          rst_i => i_fb_syscon.rst,
-         pwm_l_i => r_dac_sample & "00000",
-         pwm_r_i => r_dac_sample & "00000",
+         pwm_l_i => r_dac_sample_l,
+         pwm_r_i => r_dac_sample_r,
 
          bck_o => aud_i2s_bck_pwm_L_o,
          ws_o  => aud_i2s_ws_pwm_R_o,
@@ -865,7 +879,9 @@ END GENERATE;
       p_d_cas_o                     => cassette_o,
 
       -- config in
-      cfg_eco_station_id_i          => i_cfg_eco_station_id
+      cfg_eco_station_id_i          => i_cfg_eco_station_id,
+
+      sid_audio_o                   => i_sid_audio
    );
    
    -------------------------------------
@@ -1259,8 +1275,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> r_dac_sample & "00000",
-      PCM_R_i           => r_dac_sample & "00000"
+		PCM_L_i				=> r_dac_sample_l,
+      PCM_R_i           => r_dac_sample_r
 	);
 END GENERATE;
 
