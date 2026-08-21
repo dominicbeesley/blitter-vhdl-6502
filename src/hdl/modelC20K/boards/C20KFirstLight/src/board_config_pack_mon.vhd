@@ -53,6 +53,8 @@ package board_config_pack is
 	constant G_OSROM						: string  := "/src/hdl/modelC20K/asm/C20KFirstLight/build/C20KBareMON.vec";
 		
    constant G_1BIT_DAC_VIDEO  		: boolean := true;
+   constant G_C20K_I2S			: boolean := true;
+   constant G_INCL_SID			: boolean := true;
 	constant G_INCL_HDMI					: boolean := true;
 	constant C_CPU_BYTELANES			: positive := 1;		
 
