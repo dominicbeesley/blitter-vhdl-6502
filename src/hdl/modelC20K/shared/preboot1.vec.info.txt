@@ -1,0 +1,3 @@
+Preboot mini-rom must be copied from the blitter-65xx-code/build/roms/preeboot1/c20k folder
+
+This version is commit 8bd52fa6e8230c31dc753d543d6e30bce3221092

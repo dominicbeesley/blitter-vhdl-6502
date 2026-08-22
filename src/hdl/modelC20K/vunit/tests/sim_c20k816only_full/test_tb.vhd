@@ -86,7 +86,7 @@ architecture rtl of test_tb is
    signal ibpi_btn1        : std_logic := '1';
    signal ibpi_btn2        : std_logic := '1';
    signal ibpi_btn3        : std_logic := '1';
-   signal ibpi_kb_pa7      : std_logic := '1';
+   signal ibpi_kb_pa7      : std_logic := '0';
    signal ibpio_P_D        : std_logic_vector(7 downto 0);
    signal ibpo_A           : std_logic_vector(7 downto 0);
 

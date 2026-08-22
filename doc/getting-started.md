@@ -1,6 +1,17 @@
 Getting Started - BBC Model B
 =============================
 
+# Long-Break
+
+The Blitter and C20k respond differently to the Break key depending on how 
+long it is held down. Pressing the Break key for less than 2 seconds results
+in normal operation. Holding the Break key down for more than 3 seconds will
+result in the configuration jumpers being re-scanned. It is recommended when
+performing a long break to always hold down the ctrl-key as well to force a
+cold boot.
+
+# Introduction
+
 This guide is intended to guide you through some first steps in using the 
 Blitter board. It is not intended to be a complete reference.
 
@@ -84,7 +95,7 @@ TODO
 
 ## Insert the Blitter into the motherboard
 
-Take great care when fitting the board as it is very easy to bend/break pins
+Take great care when fitting the board as it is very easy to damage the pins
 on the riser plug. 
 
 ### Raising the blitter
@@ -378,7 +389,7 @@ When you have finished you may wish to erase the Blitter copy of the BASIC2 rom
 This command can be used to clear any ROM/RAM slot (including motherboard sockets
 where sideways RAM is fitted).
 
-And Ctrl-Break - you may find the machine crashes when deleting the current 
+And CTRL-BREAK - you may find the machine crashes when deleting the current 
 language!
 
 
@@ -538,8 +549,9 @@ If you don't please check that the jumpers are set follows:
 
 J5 (config):
   
-  - CFG0 FITTED 
-  - CFG4 NOT FITTED 
+  - CFG0 FITTED (t65 enabled)
+  - CFG4 NOT FITTED (swromx disabled - map 0)
+  - CFG5 NOT FITTED (mosram disabled)
 
 Refer to [Hardware overview](harware-overview-mk2.md#j5-system-config)
 
@@ -616,11 +628,10 @@ follows:
 Refer to [Hardware overview](harware-overview-mk2.md#j5-system-config)
 
 You may change the jumper settings any time when the blitter is running
-- they will will only take effect after the next time Break is pressed.
-Usually when swapping between maps it is best to press CTRL-Break to 
-ensure that the MOS updates its ROM map.
+- they will will only take effect after the next time a [long-break](#long-break)
+is pressed.
 
-Press CTRL-Break, you should see:
+CTRL-LONG-BREAK, you should see:
 
 <img src="assets/getting-started/roms-alt-boot-lang.jpg" width="600" />
 
@@ -628,7 +639,7 @@ This shows that the MOS in slot #9 has been recognised but no other ROMS
 are present.
 
 Please now switch back to map 0 by removing the SWROMX jumper and reboot
-with CTRL-Break.
+with CTRL-LONG-BREAK.
 
 You should now load up the remainder of the ROMS to the alternate ROM
 set:
@@ -650,7 +661,8 @@ You should now be able to swap between sets and have a functioning system
 The following sections give a brief introduction to running alternate
 CPUs in the sockets provided on the Blitter board. 
 
-Please remove the SWROMX jumper if you fitted it above
+Please remove the SWROMX jumper if you fitted it above and perform a 
+CTRL-LONG-BREAK.
 
 ## Running a 65C02
 
@@ -713,7 +725,8 @@ Any unwanted roms should be unloaded using
 for each unwanted ROM, substituting the ROM number as appropriate.
 
 You are now ready to boot to the alternate ROM set. You should remove the 
-jumper from CFG0 to disable to disable the T65 CPU and press CTRL-Break.
+jumper from CFG0 to disable to disable the T65 CPU and perform a 
+CTRL-LONG-BREAK.
 
 <img src="assets/getting-started/w65c02-boot-1.jpg" width="600" />
 
@@ -736,14 +749,14 @@ as you did for the T65 soft CPU, to set them to full speed:
 There's not much you can do other than type in BASIC programs as there is
 no filing system present yet.
 
-Switch back to T65 by refitting CFG0 and pressing CTRL-Break
+Switch back to T65 by refitting CFG0 and pressing CTRL-LONG-BREAK.
 
     *DIN 0 TOOLS65
     LOAD"CLOCKSP"
     PRINT ~PAGE
 
 This will load the CLOCKSP program to memory and display page which will be
-something like "E00" or "1900". Remove CFG0 and press CTRL-Break again. Then
+something like "E00" or "1900". Remove CFG0 and press CTRL-BREAK again. Then
 execute the commands below, substituting XXXX for the value of page from 
 above.
 
@@ -772,7 +785,7 @@ Switch back to T65 by refitting CFG0 and loading BASIC 4.32
     *DIN 0 TOOLS65
     LOAD "CLOCKSP"
 
-Then switch back to the 65C02 by removing CFG0 and pressing CTRL-Break 
+Then switch back to the 65C02 by removing CFG0 (t65) and pressing CTRL-LONG-BREAK.
 
     PAGE=&XXXX
     OLD
@@ -820,7 +833,7 @@ damage could occur if these are not set first.
 **MK2**
 
 The speed grade of the CPU should be 8MHz or higher. Due to the fact that
-the 65816 needs CMOS voltage levels on the databus it is important that
+the 65816 needs CMOS voltage levels on the data-bus it is important that
 the 65816 voltage be set to 3.3V on P6.
 
 Insert the CPU into the board as pictured and set the CPU configuration
@@ -947,7 +960,7 @@ You should have these ROMS:
 <img src="assets/getting-started/6809-roms.jpg" width="600" />
 
 You should now be able to boot the 6809 by removing the T65 jumper (CFG0) and 
-press CTRL-Break. 
+perform a CTRL-LONG-BREAK.
 
 <img src="assets/getting-started/6809-boot-1.jpg" width="600" />
 
@@ -957,16 +970,17 @@ not much you can do other than type programs in and try them out.
 However, you may use the T65 mode to load BASIC programs into memory and then
 access them on the 6x09
 
-Switch back to T65 by refitting CFG0 and pressing CTRL-Break
+Switch back to T65 by refitting CFG0 (t65 enabled) and performing a 
+CTRL-LONG-BREAK.
 
     *DIN 0 TOOLS65
     LOAD"CLOCKSP"
     PRINT ~PAGE
 
 This will load the CLOCKSP program to memory and display page which will be
-something like "E00" or "1900". Remove CFG0 and press CTRL-Break again. Then
-execute the commands below, substituting XXXX for the value of page from 
-above.
+something like "E00" or "1900". Remove CFG0 (t65) and perform a 
+CTRL-LONG-BREAK again. Then execute the commands below, substituting XXXX for
+the value of page from above.
 
     PAGE=&XXXX
     OLD
@@ -1043,7 +1057,7 @@ This should give a little more of a boost
 
 <img src="assets/getting-started/6309-clocksp-2.jpg" width="600" />
 
-However, this is still no using all the facilities of the 6309 processor
+However, this is still not using all the facilities of the 6309 processor
 which features a "native" mode which runs around 25% faster than the 6809
 by eliminating most of the CPUs "dead" cycles. Also, the 6309 offers extra
 registers and instructions which may be used to improve performance.

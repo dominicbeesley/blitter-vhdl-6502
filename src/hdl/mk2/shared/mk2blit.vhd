@@ -53,12 +53,15 @@ use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_CPU_exp_pack.all;
 use work.fb_chipset_pack.all;
+use work.fb_intcon_pack.all;
 
 entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1"
+		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
+		G_DWRITE_HOLD						: natural := 6;								-- hold write data on system bus for this many cycles
+      PROJECT_ROOT                  : string  := "../"                     -- path to root of project (to find relative files, override in simulations)
 	);
 	port(
 		-- crystal osc 48MHz - not fitted on blit board
@@ -137,15 +140,21 @@ entity mk2blit is
 		CPUSKT_9nFIRQLnDTACK_o					: out		std_logic;
 
 		-- LEDs 
-		LED_o										: out		std_logic_vector(3 downto 0);
+		LED_o											: out		std_logic_vector(3 downto 0);
 
 		-- CONFIG / TEST connector
 
-		CFG_io									: inout	std_logic_vector(15 downto 0);
+		CFG_io										: inout	std_logic_vector(15 downto 0);
+
+		-- configuration memory SPI/Flash
+		flash_ck_o           					: out		std_logic;
+      flash_cs_o           					: out		std_logic;
+      flash_miso_i         					: in		std_logic;
+      flash_mosi_o         					: out		std_logic;
 
 		-- i2c EEPROM
-		I2C_SCL_io								: inout		std_logic;
-		I2C_SDA_io							: inout	std_logic
+		I2C_SCL_io									: inout	std_logic;
+		I2C_SDA_io									: inout	std_logic
 
 	);
 end mk2blit;
@@ -160,8 +169,8 @@ architecture rtl of mk2blit is
 
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
-	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
+	signal r_cfg_swromx			: std_logic;
 
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
@@ -172,6 +181,7 @@ architecture rtl of mk2blit is
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
 
+   signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -202,6 +212,9 @@ architecture rtl of mk2blit is
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
+   -- config wrapper
+   signal i_c2p_config        : fb_con_o_per_i_t;
+   signal i_p2c_config        : fb_con_i_per_o_t;
 	--chipset peripheral
 	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
 	signal i_p2c_chipset_per	: fb_con_i_per_o_t;
@@ -252,6 +265,7 @@ architecture rtl of mk2blit is
 	signal i_sys_dll_lock				: std_logic;							-- indicates whether the system dll is locked
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
+   signal i_preboot                 : std_logic;
 
 	-- intcon to peripheral sel
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
@@ -287,7 +301,8 @@ architecture rtl of mk2blit is
 	signal i_window_65816				: std_logic_vector(12 downto 0);
 	signal i_window_65816_wr_en		: std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_all     			: std_logic;
+    signal i_throttle_mos            : std_logic;
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
 
@@ -352,6 +367,7 @@ begin
 		fb_syscon_o							=> i_fb_syscon,
 
 		EXT_nRESET_i						=> SUP_nRESET_i,
+		EXT_nRESET_power_i					=> '1',
 
 		clk_fish_i							=> i_clk_fish_128M,
 		clk_lock_i							=> i_clk_lock,
@@ -382,7 +398,8 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true
+		G_REGISTER_CONTROLLER_P2C => true,
+		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => false -- TODO: this fails on mk.2 but seems ok on C20K and mk.3
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
@@ -404,7 +421,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 
 END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_one_to_many
+	e_fb_intcon: fb_intcon_one_to_many
 	generic map (
 		SIM 									=> SIM,
 		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
@@ -435,14 +452,14 @@ END GENERATE;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
 	i_per_p2c_intcon(PERIPHERAL_NO_SYS)		<=	i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
+   i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
 	i_p2c_cpu				<= i_con_p2c_intcon(MAS_NO_CPU);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
 	i_c2p_sys				<= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
-
-
+   i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)		<= i_c2p_chipset_con;
@@ -478,14 +495,14 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open,
-
       SD_CS_o              => open,
       SD_CLK_o             => open,
       SD_MOSI_o            => open,
       SD_MISO_i            => '1',
-      SD_DET_i             => '1'
+      SD_DET_i             => '1',
+		snd_dat_o		=> i_dac_sample,
+		snd_dat_change_clken_o => open
+
 
 
 	);
@@ -539,6 +556,18 @@ END GENERATE;
 
 	);
 
+   e_fb_config:entity work.fb_config
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_config,
+      fb_p2c_o                      => i_p2c_config,
+
+      cfg_eco_station_id_o          => open
+
+   );
+
 
 	e_memctl:entity work.fb_memctl 
 	generic map (
@@ -551,6 +580,9 @@ END GENERATE;
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
+        map0n1_swromx_i               => r_cfg_swromx,
+        map0n1_default_i              => r_cfg_cpu_use_t65,
+        map0n1_o                      => i_map0n1,
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				=> i_noice_debug_nmi_n,
@@ -565,9 +597,15 @@ END GENERATE;
 		-- noice debugger button		
 		noice_debug_button_i				=> r_noice_debug_btn,
 
+      	-- pre-boot
+      preboot_o                     => i_preboot,
+
 		-- cpu throttle
 
-		throttle_cpu_2MHz_o 				=> i_throttle_cpu_2MHz,
+		throttle_all_o  				  => i_throttle_all,
+      throttle_mos_o               => i_throttle_mos,
+      rom_throttle_map_o            => i_rom_throttle_map,
+      rom_autohazel_map_o           => i_rom_autohazel_map,
 
 		-- fishbone signals
 
@@ -579,17 +617,16 @@ END GENERATE;
 
 		boot_65816_o						=> i_boot_65816,
 		window_65816_o						=> i_window_65816,
-		window_65816_wr_en_o				=> i_window_65816_wr_en,
+		window_65816_wr_en_o				=> i_window_65816_wr_en
 
-		rom_throttle_map_o				=> i_rom_throttle_map,		
-		rom_autohazel_map_o				=> i_rom_autohazel_map		
 	);
 
 
 	e_fb_mem: entity work.fb_mem
 	generic map (
 		G_FLASH_IS_45						=> G_MEM_FLASH_IS_45,
-		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45		
+
+		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45	
 	)
 	port map (
 			-- 2M RAM/256K ROM bus
@@ -619,7 +656,8 @@ END GENERATE;
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
-		G_JIM_DEVNO => G_JIM_DEVNO
+		G_JIM_DEVNO => G_JIM_DEVNO,
+		G_DWRITE_HOLD => G_DWRITE_HOLD
 	)
 	port map (
       cfg_sys_type_i                => r_cfg_sys_type,
@@ -661,6 +699,83 @@ END GENERATE;
 
 	);
 
+ -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+   g_spi_flash:if G_INCL_XFLASH generate
+      b_spi:block
+         signal i_SPI_CS: std_logic_vector(7 downto 0);
+         -- FPGA config flash
+         signal i_c2p_xflash          : fb_con_o_per_i_t;
+         signal i_p2c_xflash          : fb_con_i_per_o_t;         
+      begin
+         e_fb_xflash:entity work.fb_spi
+         generic map (
+            SIM                           => SIM,
+            CLOCKSPEED                    => CLOCKSPEED,
+            PRESCALE                      => 1
+         )
+         port map (
+
+            -- eeprom signals
+            SPI_CS_o                      => i_SPI_CS,
+            SPI_CLK_o                     => flash_ck_o,
+            SPI_MOSI_o                    => flash_mosi_o,
+            SPI_MISO_i                    => flash_miso_i,
+            SPI_DET_i                     => '1',
+
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_xflash,
+            fb_p2c_o                      => i_p2c_xflash
+         );
+      
+         flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+         i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+      end block;
+   end generate;
+
+   g_not_spi_flash:if not G_INCL_XFLASH generate
+
+      flash_ck_o           <= '1';
+      flash_cs_o           <= '1';
+      flash_mosi_o         <= '1';
+
+   end generate;
+
+
+   -------------------------------------
+   -- PRE-BOOT ROM
+   -------------------------------------
+
+   g_pre_rom:if G_INCL_PREBOOT generate
+      b_spi:block
+         signal i_c2p_preboot          : fb_con_o_per_i_t;
+         signal i_p2c_preboot          : fb_con_i_per_o_t;         
+      begin
+
+         e_fb_mem_rom: entity work.fb_inferred_mem_altera
+         generic map (
+            G_ADDR_W => 8,   -- 256 bytes
+            G_READONLY => true,
+            INIT_FILE => PROJECT_ROOT & "../../shared/preboot1.mif" -- TODO: make this deploy from code project into here
+            )
+         port map (
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_preboot,
+            fb_p2c_o                      => i_p2c_preboot
+
+         );      
+
+         i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
+         i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
+      end block;
+   end generate;
 
 	e_fb_cpu: entity work.fb_cpu
 	generic map (
@@ -686,12 +801,13 @@ END GENERATE;
 		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
 		cfg_sys_type_i						=> r_cfg_sys_type,
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
@@ -716,10 +832,11 @@ END GENERATE;
 		noice_debug_opfetch_o			=> i_noice_debug_opfetch,
 
 
-		-- extra memory map control signals
+      -- logical mappings
 		sys_ROMPG_i 						=> i_sys_ROMPG,	
 		turbo_lo_mask_i					=> i_turbo_lo_mask,
-
+      JIM_en_i                      => i_JIM_en,      
+      JIM_page_i                    => i_JIM_page,
 
 		-- direct CPU control signals from system
 		nmi_n_i								=> SYS_nNMI_i,
@@ -737,12 +854,12 @@ END GENERATE;
 		window_65816_i						=> i_window_65816,
 		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
+		-- preboot
+		preboot_i							=> i_preboot,
+
 		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
 
-		debug_65816_vma_o					=> i_debug_65816_vma,
-
-		JIM_en_i								=> i_JIM_en,
-		JIM_page_i							=> i_JIM_page
+		debug_65816_vma_o					=> i_debug_65816_vma
 
 	);
 
@@ -821,6 +938,7 @@ CFG_io <= (others => 'Z');
 p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then
+		r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;	-- this can change at run time now
 		if i_fb_syscon.prerun(1) = '1' then
 
 			r_cfg_cpu_use_t65 <= not CFG_io(0);
@@ -828,7 +946,8 @@ begin
 			r_cfg_mosram <= not CFG_io(5);
 			r_cfg_swram_enable <= CFG_io(8);
 
-			r_cfg_ver_boot(15 downto 0) <= CFG_io;
+			r_cfg_ver_boot(15 downto 5) <= CFG_io(15 downto 5);
+			r_cfg_ver_boot(3 downto 0) <= CFG_io(3 downto 0);
 			r_cfg_ver_boot(31 downto 16) <= (others => '0');
 
 			-- TODOMK2:choose config switch
@@ -893,7 +1012,7 @@ i_memctl_configbits <=
 	CFG_io(15 downto 9) &
 	r_cfg_swram_enable &
 	CFG_io(7 downto 5) &
-	r_cfg_swromx &
+	(i_map0n1 xor not r_cfg_cpu_use_t65) & --swromx
 	r_cfg_mk2_cpubits &
 	not r_cfg_cpu_use_t65;
 

@@ -12,8 +12,8 @@
         <File path="../../shared/version.vhd" type="file.vhdl" enable="1"/>
 
         <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_rpll/pll_27_48.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_rpll/pll_48_128.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_27_360.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/pll_360_384_128.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
 
@@ -25,9 +25,7 @@
 
         <File path="src/gowin_rpll/pll_pal_sc.vhd" type="file.vhdl" enable="1"/>
 
-
-        <File path="src/gowin_rpll/pll_rgb_dac.vhd" type="file.vhdl" enable="1"/>
-        <File path="../../shared/1bitvid/dac1_oser.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/1bitvid/dac1_oserx1.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dac1_oserx2.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/1bitvid/dossy_chroma.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/ws2812_pack.vhd" type="file.vhdl" enable="1" />
@@ -56,8 +54,10 @@
         <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/metadelay.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/common.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/T6502/T65_MCode.vhd" type="file.vhdl" enable="1" />
@@ -65,6 +65,7 @@
         <File path="../../../library/3rdparty/T6502/T65_Pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_SYS_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_VERSION.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_config.vhd" type="file.vhdl" enable="1" />
 
 
         <File path="../../../library/3rdparty/MikeStirling/m6522.vhd" type="file.vhdl" enable="1" />
@@ -77,7 +78,11 @@
         <File path="../../../library/uart_tx.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/uart_rx.vhd" type="file.vhdl" enable="1" />
 
-
+        <File path="../../../library/3rdparty/SID/sid_6581.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/SID/sid_coeffs.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/SID/sid_components.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/SID/sid_filters.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/3rdparty/SID/sid_voice.vhd" type="file.vhdl" enable="1" />
 
 <!-- HDMI -->
 
@@ -85,6 +90,9 @@
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidataencoder.v" type="file.verilog" enable="1" />
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
+
+
+
         <File path="../../shared/hdmi//hdmi_out_gowin_2a.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />

@@ -74,8 +74,9 @@ component fb_chipset
 		clk_snd_i				: in std_logic;
 
 		-- sound output - do D->A business at top level as 1MPaula and Blitter use different DACs
-		snd_dat_o							: out		signed(9 downto 0);
-		snd_dat_change_clken_o			: out		std_logic;
+		snd_dat_o							: out		signed(15 downto 0);
+		snd_dat_l_o							: out		signed(15 downto 0);
+		snd_dat_r_o							: out		signed(15 downto 0);
 
 
 		-- 6845 signals to Aeris

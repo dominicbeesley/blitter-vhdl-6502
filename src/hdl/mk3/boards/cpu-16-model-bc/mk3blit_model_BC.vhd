@@ -168,8 +168,8 @@ architecture rtl of mk3blit is
 
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
-	signal r_cfg_swromx			: std_logic;
 	signal r_cfg_mosram			: std_logic;
+	signal r_cfg_swromx			: std_logic;
 
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
@@ -180,6 +180,10 @@ architecture rtl of mk3blit is
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
 
+   signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
+
+	signal i_hsync					: std_logic;
+	signal i_vsync					: std_logic;
 
 	-----------------------------------------------------------------------------
 	-- fishbone signals
@@ -207,6 +211,9 @@ architecture rtl of mk3blit is
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
+   -- config wrapper
+   signal i_c2p_config        : fb_con_o_per_i_t;
+   signal i_p2c_config        : fb_con_i_per_o_t;
 	--chipset peripheral
 	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
 	signal i_p2c_chipset_per	: fb_con_i_per_o_t;
@@ -260,8 +267,13 @@ architecture rtl of mk3blit is
 
 	-- intcon to peripheral sel
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+	signal i_intcon_peripheral_sel_we		: std_logic_vector(CONTROLLER_COUNT-1 downto 0);
 	signal i_intcon_peripheral_sel			: fb_arr_unsigned(CONTROLLER_COUNT-1 downto 0)(numbits(PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
 	signal i_intcon_peripheral_sel_oh		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);	-- address decoded selected peripherals as one-hot		
+
+	signal i_SD_CS							: std_logic;
+	signal i_SD_CLK						: std_logic;
+	signal i_SD_MOSI						: std_logic;
 
 	-----------------------------------------------------------------------------
 	-- sound signals
@@ -290,19 +302,24 @@ architecture rtl of mk3blit is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
-	signal i_65816_bool_act				: std_logic;
+	signal i_debug_65816_boot_act		: std_logic;
+	signal i_window_65816				: std_logic_vector(12 downto 0);
+	signal i_window_65816_wr_en		: std_logic;
 
-	signal i_throttle_cpu_2MHz			: std_logic;
+	signal i_throttle_all     			: std_logic;
+    signal i_throttle_mos            : std_logic;
 
 	signal i_cpu_2MHz_phi2_clken		: std_logic;
+
+	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
+
 
 	-- port direction/control signals
 	signal i_cpu_exp_PORTE_nOE			: std_logic;
 	signal i_cpu_exp_PORTF_nOE			: std_logic;
 	signal i_cpu_exp_PORTG_nOE			: std_logic;
 
-	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
-	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
 	-----------------------------------------------------------------------------
 	-- cpu expansion header wrapper signals
@@ -369,9 +386,9 @@ architecture rtl of mk3blit is
 	signal   i_debug_z180_m1			: std_logic;
 
 	signal  i_debug_80188_state			: std_logic_vector(2 downto 0);
-
+	
 	signal  i_sys_nIRQ					: std_logic;
-
+	
 begin
 
 	e_fb_clocks: entity work.clocks_pll
@@ -402,6 +419,7 @@ begin
 		fb_syscon_o							=> i_fb_syscon,
 
 		EXT_nRESET_i						=> SUP_nRESET_i,
+		EXT_nRESET_power_i					=> '1',
 
 		clk_fish_i							=> i_clk_fish_128M,
 		clk_lock_i							=> i_clk_lock,
@@ -421,6 +439,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
+		we_i							=> i_intcon_peripheral_sel_we(I),
 		peripheral_sel_o			=> i_intcon_peripheral_sel(I),
 		peripheral_sel_oh_o		=> i_intcon_peripheral_sel_oh(I)
 	);
@@ -432,7 +451,8 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true
+		G_REGISTER_CONTROLLER_P2C => true,
+		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
@@ -446,6 +466,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
+		peripheral_sel_we_o						=> i_intcon_peripheral_sel_we,
 		peripheral_sel_i							=> i_intcon_peripheral_sel,
 		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
@@ -471,6 +492,7 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 		fb_per_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
+		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
 		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
 		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
 	);
@@ -483,14 +505,14 @@ END GENERATE;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)	<=	i_p2c_mem;
 	i_per_p2c_intcon(PERIPHERAL_NO_SYS)		<=	i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
+   i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
 	i_p2c_cpu				<= i_con_p2c_intcon(MAS_NO_CPU);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
 	i_c2p_sys				<= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
-
-
+   i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
@@ -520,16 +542,27 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		cpu_halt_o		=> i_chipset_cpu_halt,
 		cpu_int_o		=> i_chipset_cpu_int,
 
-		vsync_i			=> i_vga_debug_vs,
-		hsync_i			=> i_vga_debug_hs,
+		vsync_i			=> i_vsync,
+		hsync_i			=> i_hsync,
 
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
+
+		SD_CS_o			=> i_SD_CS,
+		SD_CLK_o			=> i_SD_CLK,
+		SD_MOSI_o		=> i_SD_MOSI,
+		SD_MISO_i		=> SD_MISO_i,
+		SD_DET_i			=> SD_DET_i,
 
 		snd_dat_o		=> i_dac_sample,
 		snd_dat_change_clken_o => open
 
 	);
+
+	SD_CS_o <= i_SD_CS;
+	SD_CLK_o <= i_SD_CLK;
+	SD_MOSI_o <= i_SD_MOSI;
+	
 
 	--NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
 	G_SND_DAC:IF G_INCL_CS_SND GENERATE
@@ -560,6 +593,9 @@ GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
 	i_dac_snd_pwm <= '0';
 	I2C_SDA_io <= 'Z';
 	I2C_SCL_io <= 'Z';
+	SD_CS_o <= 'Z';
+	SD_CLK_o <= 'Z';
+	SD_MOSI_o <= 'Z';
 END GENERATE;
 
 	SND_R_o <= i_dac_snd_pwm;
@@ -579,6 +615,18 @@ END GENERATE;
 
 	);
 
+   e_fb_config:entity work.fb_config
+   port map (
+      -- fishbone signals
+
+      fb_syscon_i                   => i_fb_syscon,
+      fb_c2p_i                      => i_c2p_config,
+      fb_p2c_o                      => i_p2c_config,
+
+      cfg_eco_station_id_o          => open
+
+   );
+
 
 	e_memctl:entity work.fb_memctl 
 	generic map (
@@ -591,6 +639,9 @@ END GENERATE;
 		turbo_lo_mask_o					=> i_turbo_lo_mask,
 		swmos_shadow_o						=> i_swmos_shadow,
 		cfgbits_i							=> i_memctl_configbits,
+        map0n1_swromx_i               => r_cfg_swromx,
+        map0n1_default_i              => r_cfg_cpu_use_t65,
+        map0n1_o                      => i_map0n1,
 
 		-- noice debugger signals to cpu
 		noice_debug_nmi_n_o				=> i_noice_debug_nmi_n,
@@ -605,9 +656,15 @@ END GENERATE;
 		-- noice debugger button		
 		noice_debug_button_i				=> r_noice_debug_btn,
 
+      	-- pre-boot
+     	preboot_o                     		=> open,
+
 		-- cpu throttle
 
-		throttle_cpu_2MHz_o 				=> i_throttle_cpu_2MHz,
+		throttle_all_o  				  => i_throttle_all,
+      throttle_mos_o               => i_throttle_mos,
+      rom_throttle_map_o            => i_rom_throttle_map,
+      rom_autohazel_map_o           => i_rom_autohazel_map,
 
 		-- fishbone signals
 
@@ -618,9 +675,9 @@ END GENERATE;
 		-- cpu specific
 
 		boot_65816_o						=> i_boot_65816,
+		window_65816_o						=> i_window_65816,
+		window_65816_wr_en_o				=> i_window_65816_wr_en
 
-		rom_throttle_map_o				=> i_rom_throttle_map,
-		rom_autohazel_map_o				=> i_rom_autohazel_map
 	);
 
 
@@ -749,12 +806,13 @@ END GENERATE;
 		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
-		cfg_swromx_i						=> r_cfg_swromx,
 		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
 
 		-- cpu throttle
 
-		throttle_cpu_2MHz_i 				=> i_throttle_cpu_2MHz,
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
 		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
 		rom_throttle_map_i				=> i_rom_throttle_map,
 		rom_autohazel_map_i				=> i_rom_autohazel_map,
@@ -779,10 +837,11 @@ END GENERATE;
 		noice_debug_opfetch_o			=> i_noice_debug_opfetch,
 
 
-		-- extra memory map control signals
+      -- logical mappings
 		sys_ROMPG_i 						=> i_sys_ROMPG,	
 		turbo_lo_mask_i					=> i_turbo_lo_mask,
-
+      JIM_en_i                      => i_JIM_en,      
+      JIM_page_i                    => i_JIM_page,
 
 		-- direct CPU control signals from system
 		nmi_n_i								=> SYS_nNMI_i,
@@ -797,19 +856,17 @@ END GENERATE;
 		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
+		window_65816_i						=> i_window_65816,
+		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cpu_cyc,
 
 		debug_65816_vma_o					=> i_debug_65816_vma,
 
-		JIM_en_i								=> i_JIM_en,
-		JIM_page_i							=> i_JIM_page,
-
-		debug_SYS_VIA_block_o			=> i_debug_SYS_VIA_block,
 		debug_z180_m1_o					=> i_debug_z180_m1,
 		debug_65816_addr_meta_o			=> i_debug_65816_addr_meta,
 		debug_80188_state_o				=> i_debug_80188_state,
-		debug_65816_boot_act_o			=> i_65816_bool_act
+		debug_65816_boot_act_o			=> i_debug_65816_boot_act
 	);
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int and i_sys_nIRQ;
@@ -1000,6 +1057,8 @@ begin
 				when others =>
 					null;
 			end case;
+		else
+			r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;	-- this can change at run time now
 		end if;
 	end if;
 end process;
@@ -1010,7 +1069,7 @@ i_memctl_configbits <=
 	"1111111" &
 	r_cfg_swram_enable &
 	"111" &
-	r_cfg_swromx &
+	(i_map0n1 xor not r_cfg_cpu_use_t65) & --swromx
 	r_cfg_mk2_cpubits &
 	not r_cfg_cpu_use_t65;
 
@@ -1020,15 +1079,13 @@ i_cfg_debug_button <= SYS_AUX_io(6);
 --i_vsync <= SYS_AUX_io(4);
 
 
-LED_o(0) <= '0' 			 when i_fb_syscon.rst_state = reset else
-				i_flasher(3) when i_fb_syscon.rst_state = powerup else
-				i_flasher(2) when i_fb_syscon.rst_state = resetfull else
-				i_flasher(0) when i_fb_syscon.rst_state = lockloss else
-				'1'			 when i_fb_syscon.rst_state = run else
-				i_flasher(1);
-LED_o(1) <= not i_debug_SYS_VIA_block;
-LED_o(2) <= not i_JIM_en;
-LED_o(3) <= '0' when r_cfg_cpu_type = CPU_Z180 else '1';
+LED_o(2 downto 0) <= 
+		not std_logic_vector(
+			to_unsigned(
+				fb_rst_state_t'pos(i_fb_syscon.rst_state), 3
+			)
+		);
+LED_o(3) <= not i_JIM_en;
 
 SYS_AUX_o			<= i_vga27_debug_hs & i_vga27_debug_vs & i_debug_spr_mem_clken & i_vga27_debug_blank;
 SYS_AUX_io(0) 		<= not (i_vga_debug_hs xor i_vga_debug_vs);
@@ -1039,9 +1096,6 @@ SYS_AUX_io(3) 		<= i_debug_vsync_det;
 SYS_AUX_io <= (others => 'Z');
 
 
-SD_CS_o <= '1';
-SD_CLK_o <= '1';
-SD_MOSI_o <= '1';
 
 
 
@@ -1075,7 +1129,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		HDMI_G_o				=> HDMI_D1_o,
 		HDMI_R_o				=> HDMI_D2_o,
 
-		-- analogue video	straight from CRTC/ULA
+		-- debug video	
 
 		VGA_R_o				=> i_vga_debug_r,
 		VGA_G_o				=> i_vga_debug_g,
@@ -1095,8 +1149,9 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> i_dac_sample,
-
+		PCM_L_i				=> i_dac_sample & "000000",
+		PCM_R_i				=> i_dac_sample & "000000",
+		
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,
 		debug_hsync_crtc_o => i_debug_hsync_crtc,

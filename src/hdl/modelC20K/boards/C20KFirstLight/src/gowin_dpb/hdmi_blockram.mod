@@ -1,0 +1,24 @@
+-series GW2A
+-device GW2A-18
+-device_version C
+-package PBGA256
+-part_number GW2A-LV18PG256C8/I7
+
+
+-mod_name hdmi_blockram
+-file_name hdmi_blockram
+-path C:/Users/Dominic/Documents/GitHub/blitter-vhdl-6502/src/hdl/modelC20K/boards/C20K/src/gowin_dpb/
+-type RAM_DP
+-file_type vhdl
+-bram_b true
+-dev_type GW2A-18C
+-depth_0 32768
+-depth_1 32768
+-width_0 8
+-width_1 8
+-read_mode_0 bypass
+-read_mode_1 bypass
+-write_mode_0 write-through
+-write_mode_1 write-through
+-speed false
+-reset_mode async

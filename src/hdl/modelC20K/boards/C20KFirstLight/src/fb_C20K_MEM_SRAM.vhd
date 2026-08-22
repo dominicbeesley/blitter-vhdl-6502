@@ -66,9 +66,8 @@ entity fb_C20K_mem_sram is
 
       mem_A_o               			: out    std_logic_vector(20 downto 0); -- note: inout as can be to RAM or from CPU
       mem_D_io             			: inout  std_logic_vector(7 downto 0);
-      mem_nCE_o            			: out    std_logic_vector(3 downto 1);
-      mem_nCE_BB_o         			: out    std_logic;
-      mem_nCE_FL_o         			: out    std_logic;
+      mem_RAM_nCE_o         			: out    std_logic_vector(3 downto 0);
+      mem_ROM_nCE_o         			: out    std_logic;
       mem_nOE_o            			: out    std_logic;
       mem_nWE_o            			: out    std_logic
 
@@ -111,9 +110,8 @@ begin
 			MEM_D_io <= (others => 'Z');
 			MEM_nOE_o <= '1';
 			MEM_nWE_o <= '1';
-			MEM_nCE_o <= (others => '1');
-			MEM_nCE_BB_o <= '1';
-			MEM_nCE_FL_o <= '1';
+			MEM_RAM_nCE_o <= (others => '1');
+			MEM_ROM_nCE_o <= '1';
 			v_rdy_ctdn := RDY_CTDN_MAX;
 			r_rdy_ctdn <= RDY_CTDN_MIN;
 			r_ack <= '0';
@@ -129,9 +127,8 @@ begin
 						MEM_D_io <= (others => 'Z');
 						MEM_nOE_o <= '1';
 						MEM_nWE_o <= '1';
-						MEM_nCE_o <= (others => '1');
-						MEM_nCE_BB_o <= '1';
-						MEM_nCE_FL_o <= '1';
+						MEM_RAM_nCE_o <= (others => '1');
+						MEM_ROM_nCE_o <= '1';
 						r_rdy <= '0';
 						v_rdy_ctdn := RDY_CTDN_MAX;	
 
@@ -148,7 +145,7 @@ begin
 
 							-- work out which memory chip and what speed
 							if fb_c2p_i.A(23) = '1' then
-								MEM_nCE_FL_o <= '0';
+								MEM_ROM_nCE_o <= '0';
 								IF G_FLASH_IS_45 then
 									v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 								else
@@ -156,7 +153,7 @@ begin
 								end if;
 							elsif fb_c2p_i.A(22 downto 21) = "11" then -- BBRAM
 								if (G_SWRAM_SLOT = 0) then
-									MEM_nCE_BB_o <= '0';
+									MEM_RAM_nCE_o(0) <= '0';
 									-- slow BB RAM...how slow?
 									if G_SLOW_IS_45 then
 										v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
@@ -164,7 +161,7 @@ begin
 										v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 									end if;
 								else
-									MEM_nCE_o(G_SWRAM_SLOT) <= '0';
+									MEM_RAM_nCE_o(G_SWRAM_SLOT) <= '0';
 									if G_FAST_IS_10 then
 										v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 									else
@@ -173,7 +170,7 @@ begin
 								end if;
 							else
 							-- ram at 0..$5F FFFF maps
-								MEM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
+								MEM_RAM_nCE_o(to_integer(unsigned(fb_c2p_i.A(22 downto 21)))+1) <= '0';
 								if G_FAST_IS_10 then
 								v_rdy_ctdn := to_unsigned(1, RDY_CTDN_LEN);
 								else

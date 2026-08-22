@@ -67,14 +67,13 @@ entity fb_cpu_log2phys is
 		fb_per_p2c_i							: in	fb_con_i_per_o_t;
 
 		-- per cpu config
-		cfg_t65_i								: in std_logic;
 		cfg_sys_via_block_i					: in std_logic;
 
 		-- system type
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
-		cfg_swromx_i							: in std_logic;
+		cfg_map0n1_i							: in std_logic;
 
 		-- extra memory map control signals
 		sys_ROMPG_i								: in std_logic_vector(7 downto 0);
@@ -87,7 +86,7 @@ entity fb_cpu_log2phys is
 		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
 		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
 
-		mos_throttle_i							: in std_logic;
+		throttle_mos_i							: in std_logic;
 		throttle_all_i							: in std_logic;
 		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
 		throttle_act_o							: out std_logic;
@@ -98,7 +97,10 @@ entity fb_cpu_log2phys is
 
 		-- 65816/model-C extras
 		window_65816_i							: in	std_logic_vector(12 downto 0) := x"FF" & "11100";
-		window_65816_wr_en_i					: in	std_logic := '0'
+		window_65816_wr_en_i					: in	std_logic := '0';
+
+		-- preboot
+		preboot_i								: in  std_logic := '0'
 
 
 	);
@@ -254,9 +256,8 @@ begin
 		JIM_page_i							=> JIM_page_i,
 		sys_ROMPG_i							=> sys_ROMPG_i,
 		cfg_swram_enable_i				=> cfg_swram_enable_i,
-		cfg_swromx_i						=> cfg_swromx_i,
+		cfg_map0n1_i						=> cfg_map0n1_i,
 		cfg_mosram_i						=> cfg_mosram_i,
-		cfg_t65_i							=> cfg_t65_i,
 		cfg_sys_via_block_i				=> cfg_sys_via_block_i,
       cfg_sys_type_i                => cfg_sys_type_i,
 
@@ -267,7 +268,7 @@ begin
 
 		rom_autohazel_map_i				=> rom_autohazel_map_i,
 
-		mos_throttle_i						=> mos_throttle_i,
+		throttle_mos_i						=> throttle_mos_i,
 		throttle_all_i						=> throttle_all_i,
 		rom_throttle_map_i				=> rom_throttle_map_i,
 		throttle_act_o						=> i_throttle_act,
@@ -279,8 +280,10 @@ begin
 		A_o									=> i_phys_A,
 
 		-- 65816/model C extras
-		window_65816_i							=> window_65816_i,
-		window_65816_wr_en_i					=> window_65816_wr_en_i		
+		window_65816_i						=> window_65816_i,
+		window_65816_wr_en_i				=> window_65816_wr_en_i,
+
+		preboot_i							=> preboot_i
 		
 	);
 

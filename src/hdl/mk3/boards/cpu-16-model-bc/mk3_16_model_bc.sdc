@@ -56,7 +56,7 @@ create_generated_clock -name {snd_pll} -duty_cycle 50/1 -multiply_by 80 -divide_
 	-master_clock {CLK_48M} \
 	[get_pins "$MAINPLL|clk[1]"] 
 
-set HDMIPLL {\G_HDMI:e_fb_HDMI|\g_not_sim_pll:e_pll_hdmi|altpll_component|auto_generated|pll1}
+set HDMIPLL {fb_HDMI:\G_HDMI:e_fb_HDMI|vid15tohdmi:e_vid15tohdmi|pll_hdmi:\g_not_sim_pll:e_pll_hdmi|altpll:altpll_component|pll_hdmi_altpll:auto_generated|pll1}
 create_generated_clock -name {hdmi_tmds} -duty_cycle 50/1 -multiply_by 45 -divide_by 8 \
 	-source [get_pins "$HDMIPLL|inclk[0]"] \
 	-master_clock {CLK_48M} \

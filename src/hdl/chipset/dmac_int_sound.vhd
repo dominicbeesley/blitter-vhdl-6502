@@ -69,8 +69,9 @@ entity fb_DMAC_int_sound is
 
 		-- sound specific
 		snd_clk_i							: in		std_logic;
-		snd_dat_o							: out		signed(9 downto 0);
-		snd_dat_change_clken_o			: out		std_logic
+		snd_dat_o							: out		signed(15 downto 0);
+		snd_dat_l_o							: out		signed(15 downto 0);
+		snd_dat_r_o							: out		signed(15 downto 0)
 	 );
 
 	 -- sound
@@ -109,7 +110,9 @@ architecture Behavioral of fb_DMAC_int_sound is
 
 	signal	i_child_snd_dat			: snd_dat_arr(G_CHANNELS-1 downto 0);
 	signal	i_child_snd_dat_clken	: std_logic_vector(G_CHANNELS-1 downto 0);
-	signal	r_tot_snd_dat				: signed(9 downto 0);
+	signal	r_tot_snd_dat				: signed(15 downto 0);
+	signal	r_tot_snd_dat_l			: signed(15 downto 0);
+	signal	r_tot_snd_dat_r			: signed(15 downto 0);
 
 	signal 	i_snd_clken_sndclk		: std_logic;											-- gets set to 1 on each positive edge of the
 																											-- sound clock for one fishbone cycle
@@ -192,24 +195,32 @@ begin
 
 	p_snd_add:process(fb_syscon_i)
 	variable v_snd_tot : signed(CEIL_LOG2(G_CHANNELS-1)+7 downto 0);
+	variable v_snd_tot_l : signed(CEIL_LOG2(G_CHANNELS-1)+7 downto 0);
+	variable v_snd_tot_r : signed(CEIL_LOG2(G_CHANNELS-1)+7 downto 0);
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 			v_snd_tot := (others => '0');
+			v_snd_tot_l := (others => '0');
+			v_snd_tot_r := (others => '0');
 			for I in G_CHANNELS-1 downto 0 loop
 				v_snd_tot := v_snd_tot + i_child_snd_dat(I);
+				if (I mod 4 = 0) or (I mod 4 = 3) then
+					v_snd_tot_l := v_snd_tot_l + i_child_snd_dat(I);
+					v_snd_tot_r := v_snd_tot_r + shift_right(i_child_snd_dat(I), 2);
+				else
+					v_snd_tot_l := v_snd_tot_l + shift_right(i_child_snd_dat(I), 2);
+					v_snd_tot_r := v_snd_tot_r + i_child_snd_dat(I);
+					end if;
 			end loop;
-			r_tot_snd_dat <= resize(v_snd_tot, 10);
-
-			snd_dat_change_clken_o <= '0';
-			for C in G_CHANNELS-1 downto 0 loop
-				if i_child_snd_dat_clken(C) = '1' then
-					snd_dat_change_clken_o <= '1';
-				end if;
-			end loop;
+			r_tot_snd_dat <= resize2(v_snd_tot, 16);
+			r_tot_snd_dat_l <= resize2(v_snd_tot_l, 16);
+			r_tot_snd_dat_r <= resize2(v_snd_tot_r, 16);
 		end if;
 	end process;
 
 	snd_dat_o <= r_tot_snd_dat;
+	snd_dat_l_o <= r_tot_snd_dat_l;
+	snd_dat_r_o <= r_tot_snd_dat_r;
 
 	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
 

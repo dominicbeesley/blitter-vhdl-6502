@@ -160,7 +160,7 @@ signal max_scanline_hit       : std_logic;
 
 begin
 
-    ILACE <= interlaced_video;
+    ILACE <= r08_interlace(0);
 
     -- ===========================================================================
     --

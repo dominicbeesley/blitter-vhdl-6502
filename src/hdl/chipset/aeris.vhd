@@ -21,8 +21,12 @@
 -- THE SOFTWARE.
 -- -----------------------------------------------------------------------------
 
---TODO: uses ack, could maybe use rdy_ctdb?
+--TODO: combine pointers and counters in single array and work out state machine
+--      to only update one row per cycle
 
+--TODO: separate internal logic from bus controller process/module
+
+--TODO: simplify more like the Amiga with just WAIT, MOVE, SKIP?
 
 ----------------------------------------------------------------------------------
 -- Company: 			Dossytronics
@@ -116,8 +120,11 @@ architecture Behavioral of fb_dmac_aeris is
 		play_next			-- play check counter and advance
 	);
 
-	type t_ctr_arr is array (0 to 7) of std_logic_vector(7 downto 0);
-	type t_ptr_arr is array (0 to 7) of std_logic_vector(15 downto 0);
+	constant N_COUNTERS : natural := 8;
+	constant N_POINTERS : natural := 8;
+
+	type t_ctr_arr is array (0 to N_COUNTERS-1) of std_logic_vector(7 downto 0);
+	type t_ptr_arr is array (0 to N_POINTERS-1) of std_logic_vector(15 downto 0);
 
 	signal	r_counters		: t_ctr_arr;
 	signal	r_pointers		: t_ptr_arr;
@@ -256,260 +263,318 @@ begin
 -- C O P R O   S T A T E   M A C H I N E
 --==============================================================================
 
-	p_cop_mach_next:process(fb_syscon_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_pc <= (others => '0');
-			r_op <= (others => '0');
-			r_arg_0 <= (others => '0');
-			r_arg_1 <= (others => '0');
-			r_arg_2 <= (others => '0');
-			r_op_skip <= '0';
-			r_pointers <= (others => (others => '0'));
-			r_counters <= (others => (others => '0'));
-			r_play_ctr <= (others => '0');
-			r_play_ptrreg <= (others => '0');
-			r_play_started <= '0';
-			r_play_16 <= '0';
-			r_state <= idle;		
-			r_cpu_halt<= '0';	
-		elsif rising_edge(fb_syscon_i.clk) then 
-			r_con_cyc_ack <= '0';
+	b_cop_match_next:block
+		signal r_ctr_wr_ack : std_logic := '0';
+		signal r_ctr_wr_req : std_logic := '0';
+		signal r_ctr_wr_ix  : unsigned(numbits(N_COUNTERS)-1 downto 0) := (others => '0');
+		signal r_ctr_wr_val : std_logic_vector(7 downto 0) := (others => '0');
 
-			if r_ctl_wait_cyc = '0' then
+		signal r_ptr_wr_ack : std_logic := '0';
+		signal r_ptr_wr_req : std_logic := '0';
+		signal r_ptr_wr_ix  : unsigned(numbits(N_POINTERS)-1 downto 0) := (others => '0');
+		signal r_ptr_wr_val : std_logic_vector(15 downto 0) := (others => '0');
+	begin
+	
+		p_cop_mach_next:process(fb_syscon_i)
+
+			procedure COUNTER_WRITE(index: integer; value :std_logic_vector(7 downto 0)) is
+			begin
+				r_ctr_wr_req <= not r_ctr_wr_ack;
+				r_ctr_wr_ix <= to_unsigned(index, r_ctr_wr_ix'length);
+				r_ctr_wr_val <= value;
+			end;
+
+			procedure POINTER_WRITE(index: integer; value :std_logic_vector(15 downto 0)) is
+			begin
+				r_ptr_wr_req <= not r_ptr_wr_ack;
+				r_ptr_wr_ix <= to_unsigned(index, r_ptr_wr_ix'length);
+				r_ptr_wr_val <= value;
+			end;
+
+		begin
+			if fb_syscon_i.rst = '1' then
 				r_pc <= (others => '0');
-				ack_vs_edge_pgm <= tgl_vs_edge_pgm;
-				r_state <= idle;
+				r_op <= (others => '0');
+				r_arg_0 <= (others => '0');
+				r_arg_1 <= (others => '0');
+				r_arg_2 <= (others => '0');
 				r_op_skip <= '0';
+				r_play_ctr <= (others => '0');
+				r_play_ptrreg <= (others => '0');
 				r_play_started <= '0';
-				r_cpu_halt<= '0';	
-			elsif 
-					(	r_state = idle 
-						or (r_state = op_fetch and fb_con_p2c_i.ack = '1') 
-						or (r_state = exec and r_op(7 downto 4) = x"0") -- wait
-						or (r_state = exec and r_op(7 downto 4) = x"F") -- waith
-					)
-					and r_ctl_wait_cyc = '1' and tgl_vs_edge_pgm /= ack_vs_edge_pgm then
-				ack_vs_edge_pgm <= tgl_vs_edge_pgm;
-				r_pc <= r_prog_base(15 downto 0);
-				r_state <= op_fetch;
-				r_op_skip <= '0';
-				r_play_started <= '0';
-				r_cpu_halt<= '0';	
-				r_con_cyc_ack <= '1'; -- force a finish of any controller cycle
-			else
-				case r_state is
-					when idle =>
-						r_cpu_halt<= '0';	
-						r_state <= idle;
-					when op_fetch | play_op_fetch =>
-						-- wait for opcode fetch to complete then go to decode
-						if fb_con_p2c_i.ack = '1' then
-							if r_state = play_op_fetch then
-								if r_play_16 = '1' then
-									r_state <= arg_0_fetch; -- always a move16!
+				r_play_16 <= '0';
+				r_state <= idle;		
+				r_cpu_halt<= '0';		
+
+				r_ctr_wr_ack <= '0';
+				r_ctr_wr_req <= '1';
+				r_ctr_wr_ix <= (others => '0');
+				r_ctr_wr_val <= (others => '0');
+
+				r_ptr_wr_ack <= '0';
+				r_ptr_wr_req <= '1';
+				r_ptr_wr_ix <= (others => '0');
+				r_ptr_wr_val <= (others => '0');
+
+--				r_pointers <= (others => (others => '0')); -- allow these to initialise on release cycle
+--				r_counters <= (others => (others => '0')); -- allow these to initialise on release cycle
+
+
+			elsif rising_edge(fb_syscon_i.clk) then 
+				r_con_cyc_ack <= '0';
+
+				if r_ctr_wr_ack /= r_ctr_wr_req then
+					r_ctr_wr_ack <= r_ctr_wr_req;
+					r_counters(to_integer(r_ctr_wr_ix)) <= r_ctr_wr_val;
+				end if;
+
+				if r_ptr_wr_ack /= r_ptr_wr_req then
+					r_ptr_wr_ack <= r_ptr_wr_req;
+					r_pointers(to_integer(r_ptr_wr_ix)) <= r_ptr_wr_val;
+				end if;
+
+				if r_ctl_wait_cyc = '0' then
+					r_pc <= (others => '0');
+					ack_vs_edge_pgm <= tgl_vs_edge_pgm;
+					r_state <= idle;
+					r_op_skip <= '0';
+					r_play_started <= '0';
+					r_cpu_halt<= '0';	
+				elsif 
+						(	r_state = idle 
+							or (r_state = op_fetch and fb_con_p2c_i.ack = '1') 
+							or (r_state = exec and r_op(7 downto 4) = x"0") -- wait
+							or (r_state = exec and r_op(7 downto 4) = x"F") -- waith
+						)
+						and r_ctl_wait_cyc = '1' and tgl_vs_edge_pgm /= ack_vs_edge_pgm then
+					ack_vs_edge_pgm <= tgl_vs_edge_pgm;
+					r_pc <= r_prog_base(15 downto 0);
+					r_state <= op_fetch;
+					r_op_skip <= '0';
+					r_play_started <= '0';
+					r_cpu_halt<= '0';	
+					r_con_cyc_ack <= '1'; -- force a finish of any controller cycle
+				else
+					case r_state is
+						when idle =>
+							r_cpu_halt<= '0';	
+							r_state <= idle;
+						when op_fetch | play_op_fetch =>
+							-- wait for opcode fetch to complete then go to decode
+							if fb_con_p2c_i.ack = '1' then
+								if r_state = play_op_fetch then
+									if r_play_16 = '1' then
+										r_state <= arg_0_fetch; -- always a move16!
+									else
+										r_state <= arg_1_fetch; -- always a move!
+									end if;
+									r_op(3 downto 0) <= fb_con_p2c_i.D_rd(3 downto 0);
 								else
-									r_state <= arg_1_fetch; -- always a move!
+									r_state <= decode;
+									r_op <= fb_con_p2c_i.D_rd;
 								end if;
-								r_op(3 downto 0) <= fb_con_p2c_i.D_rd(3 downto 0);
+								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+								r_con_cyc_ack <= '1';
+								r_ack_hs_waith <= tgl_hs_edge;
+							end if;
+						when decode => 
+							r_play_started <= '0';
+							if r_op(7 downto 6) = "00" then
+								-- WAIT, SKIP, MOVE16, get all args
+								r_state <= arg_0_fetch;
+							elsif r_op(7 downto 6) = "01" then
+								-- MOVE, BRANCH, DBNZ, MOVEP
+								r_state <= arg_1_fetch;
+							elsif r_op(7 downto 6) = "10" then
+								-- MOVEC, PLAY, ADDx MOVErr
+								r_state <= arg_2_fetch;
 							else
-								r_state <= decode;
-								r_op <= fb_con_p2c_i.D_rd;
+								-- SYNC, UNSYNC, RET
+								r_state <= exec;
 							end if;
-							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_con_cyc_ack <= '1';
-							r_ack_hs_waith <= tgl_hs_edge;
-						end if;
-					when decode => 
-						r_play_started <= '0';
-						if r_op(7 downto 6) = "00" then
-							-- WAIT, SKIP, MOVE16, get all args
-							r_state <= arg_0_fetch;
-						elsif r_op(7 downto 6) = "01" then
-							-- MOVE, BRANCH, DBNZ, MOVEP
-							r_state <= arg_1_fetch;
-						elsif r_op(7 downto 6) = "10" then
-							-- MOVEC, PLAY, ADDx MOVErr
-							r_state <= arg_2_fetch;
-						else
-							-- SYNC, UNSYNC, RET
-							r_state <= exec;
-						end if;
-					when arg_0_fetch =>
-						if fb_con_p2c_i.ack = '1' then
-							r_arg_0 <= fb_con_p2c_i.D_rd;
-							r_state <= arg_1_fetch;
-							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_con_cyc_ack <= '1';
-						end if;
-					when arg_1_fetch =>
-						if fb_con_p2c_i.ack = '1' then
-							r_arg_1 <= fb_con_p2c_i.D_rd;
-							r_state <= arg_2_fetch;
-							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_con_cyc_ack <= '1';
-						end if;
-					when arg_2_fetch =>
-						if fb_con_p2c_i.ack = '1' then
-							r_arg_2 <= fb_con_p2c_i.D_rd;
-							r_state <= exec;
-							r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-							r_con_cyc_ack <= '1';
-						end if;
-					when exec =>
-						if r_op_skip = '1' then
-							r_state <= op_fetch;
-							r_op_skip <= '0';
-						elsif r_op(7 downto 4) = x"0" then
-							-- WAIT
-							if i_ctr_match = '1' then
-								r_state <= op_fetch;
+						when arg_0_fetch =>
+							if fb_con_p2c_i.ack = '1' then
+								r_arg_0 <= fb_con_p2c_i.D_rd;
+								r_state <= arg_1_fetch;
+								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+								r_con_cyc_ack <= '1';
 							end if;
-						elsif r_op(7 downto 4) = x"1" then
-							-- SKIP
-							if i_ctr_match = '1' then
-								r_state <= op_fetch;
-								r_op_skip <= '1';
-							else
-								r_state <= op_fetch;
+						when arg_1_fetch =>
+							if fb_con_p2c_i.ack = '1' then
+								r_arg_1 <= fb_con_p2c_i.D_rd;
+								r_state <= arg_2_fetch;
+								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+								r_con_cyc_ack <= '1';
 							end if;
-						elsif r_op(7 downto 4) = x"2" or r_op(7 downto 4) = x"3" then
-							r_state <= exec_move16_0;
-						elsif r_op(7 downto 4) = x"4" then
-							r_state <= exec_move;
-						elsif r_op(7 downto 4) = x"5" then
-							-- BRA
-							r_state <= op_fetch;
-							r_pc <= std_logic_vector(
+						when arg_2_fetch =>
+							if fb_con_p2c_i.ack = '1' then
+								r_arg_2 <= fb_con_p2c_i.D_rd;
+								r_state <= exec;
+								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+								r_con_cyc_ack <= '1';
+							end if;
+						when exec =>
+							if r_op_skip = '1' then
+								r_state <= op_fetch;
+								r_op_skip <= '0';
+							elsif r_op(7 downto 4) = x"0" then
+								-- WAIT
+								if i_ctr_match = '1' then
+									r_state <= op_fetch;
+								end if;
+							elsif r_op(7 downto 4) = x"1" then
+								-- SKIP
+								if i_ctr_match = '1' then
+									r_state <= op_fetch;
+									r_op_skip <= '1';
+								else
+									r_state <= op_fetch;
+								end if;
+							elsif r_op(7 downto 4) = x"2" or r_op(7 downto 4) = x"3" then
+								r_state <= exec_move16_0;
+							elsif r_op(7 downto 4) = x"4" then
+								r_state <= exec_move;
+							elsif r_op(7 downto 4) = x"5" then
+								-- BRA
+								r_state <= op_fetch;
+								r_pc <= std_logic_vector(
+												unsigned(r_pc) 
+												+ unsigned(std_logic_vector'(r_arg_1 & r_arg_2))
+											);
+								if (r_op(3) = '1') then --link
+									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))), r_pc);
+								end if;
+							elsif r_op(7 downto 4) = x"7" then
+								-- MOVEP
+								r_state <= op_fetch;
+									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))), std_logic_vector(
 											unsigned(r_pc) 
 											+ unsigned(std_logic_vector'(r_arg_1 & r_arg_2))
-										);
-							if (r_op(3) = '1') then --link
-								r_pointers(to_integer(unsigned(r_op(2 downto 0)))) <= r_pc;
-							end if;
-						elsif r_op(7 downto 4) = x"7" then
-							-- MOVEP
-							r_state <= op_fetch;
-							r_pointers(to_integer(unsigned(r_op(2 downto 0)))) 
-								<= std_logic_vector(
-										unsigned(r_pc) 
-										+ unsigned(std_logic_vector'(r_arg_1 & r_arg_2))
-									);
-						elsif r_op(7 downto 4) = x"8" then
-							-- MOVEC
-							r_state <= op_fetch;
-							r_counters(to_integer(unsigned(r_op(2 downto 0)))) <= r_arg_2;
-						elsif r_op(7 downto 4) = x"9" then
-							-- PLAY
-							if r_play_started = '0' then
-								r_play_ctr <= r_arg_2;
-								r_play_ptrreg <= r_op(2 downto 0);
-								r_play_started <= '1';
-								r_play_16 <= r_op(3);
-								r_state <= play_op_fetch;		
-								--swap PC and pointer for duration of the play
-								r_pointers(to_integer(unsigned(r_op(2 downto 0))))	<= r_pc;
-								r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
-							else
-								if r_play_16 = '1' then
-									r_state <= exec_move16_0;
+										));
+							elsif r_op(7 downto 4) = x"8" then
+								-- MOVEC
+								r_state <= op_fetch;
+								COUNTER_WRITE(to_integer(unsigned(r_op(2 downto 0))), r_arg_2);
+							elsif r_op(7 downto 4) = x"9" then
+								-- PLAY
+								if r_play_started = '0' then
+									r_play_ctr <= r_arg_2;
+									r_play_ptrreg <= r_op(2 downto 0);
+									r_play_started <= '1';
+									r_play_16 <= r_op(3);
+									r_state <= play_op_fetch;		
+									--swap PC and pointer for duration of the play
+									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))), r_pc);
+									r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
 								else
-									r_state <= exec_move;
+									if r_play_16 = '1' then
+										r_state <= exec_move16_0;
+									else
+										r_state <= exec_move;
+									end if;
 								end if;
-							end if;
-						elsif r_op(7 downto 4) = x"A" then -- ADDx
-							if r_op(3) = '0' then
-								r_counters(to_integer(unsigned(r_op(2 downto 0)))) 
-									<= std_logic_vector(
+							elsif r_op(7 downto 4) = x"A" then -- ADDx
+								if r_op(3) = '0' then
+									COUNTER_WRITE(to_integer(unsigned(r_op(2 downto 0))),
+										std_logic_vector(
 											unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) 
 											+ unsigned(r_arg_2)
-										);
-							else
-								r_pointers(to_integer(unsigned(r_op(2 downto 0)))) 
-									<= std_logic_vector(
-											unsigned(r_pointers(to_integer(unsigned(r_op(2 downto 0))))) 
-											+ unsigned(resize(signed(r_arg_2),16))
-										);
-							end if;
-							r_state <= op_fetch;
-						elsif r_op(7 downto 3) = "10110" then -- MOVECC/MOVEPP
-							if r_op(0) = '0' then
-								r_counters(to_integer(unsigned(r_arg_2(6 downto 4)))) 
-									<= r_counters(to_integer(unsigned(r_arg_2(2 downto 0))));
-							else
-								r_pointers(to_integer(unsigned(r_arg_2(6 downto 4)))) 
-									<= r_pointers(to_integer(unsigned(r_arg_2(2 downto 0))));
-							end if;
-							r_state <= op_fetch;
-						elsif r_op(7 downto 3) = "11000" then -- SYNC/UNSYNC
-							r_cpu_halt <= r_op(0);
-							r_state <= op_fetch;
-						elsif r_op(7 downto 4) = x"D" then -- RET
-							r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
-							r_state <= op_fetch;
-						elsif r_op(7 downto 4) = x"E" then -- DSZ
-							if unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) = 1 then
-								r_op_skip <= '1';
-							end if;
-							r_counters(to_integer(unsigned(r_op(2 downto 0)))) 
-								<= std_logic_vector(
-										unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) 
-										- 1
+										)
 									);
-							r_state <= op_fetch;
-						elsif r_op(7 downto 0) = x"F0" then -- WAITH
-							if r_ack_hs_waith /= tgl_hs_edge then
+								else
+									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))),
+										std_logic_vector(
+												unsigned(r_pointers(to_integer(unsigned(r_op(2 downto 0))))) 
+												+ unsigned(resize(signed(r_arg_2),16))
+											)
+									);
+								end if;
 								r_state <= op_fetch;
+							elsif r_op(7 downto 3) = "10110" then -- MOVECC/MOVEPP
+								if r_op(0) = '0' then
+									COUNTER_WRITE(
+										to_integer(unsigned(r_arg_2(6 downto 4))),
+										r_counters(to_integer(unsigned(r_arg_2(2 downto 0))))
+									);
+								else
+									POINTER_WRITE(
+											to_integer(unsigned(r_arg_2(6 downto 4))),
+											r_pointers(to_integer(unsigned(r_arg_2(2 downto 0))))
+									);
+								end if;
+								r_state <= op_fetch;
+							elsif r_op(7 downto 3) = "11000" then -- SYNC/UNSYNC
+								r_cpu_halt <= r_op(0);
+								r_state <= op_fetch;
+							elsif r_op(7 downto 4) = x"D" then -- RET
+								r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
+								r_state <= op_fetch;
+							elsif r_op(7 downto 4) = x"E" then -- DSZ
+								if unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) = 1 then
+									r_op_skip <= '1';
+								end if;
+								COUNTER_WRITE(
+										to_integer(unsigned(r_op(2 downto 0))),
+										std_logic_vector(
+											unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) 
+											- 1
+										)
+									);
+								r_state <= op_fetch;
+							elsif r_op(7 downto 0) = x"F0" then -- WAITH
+								if r_ack_hs_waith /= tgl_hs_edge then
+									r_state <= op_fetch;
+								end if;
+	 						else
+								-- unknown instruction trap
+								r_state <= idle;
 							end if;
- 						else
-							-- unknown instruction trap
+						when exec_move =>
+							-- MOVE
+							if fb_con_p2c_i.ack = '1' then
+								if r_play_started = '1' then
+									r_state <= play_next;
+								else
+									r_state <= op_fetch;
+								end if;
+								r_con_cyc_ack <= '1';
+							end if;
+						when exec_move16_0 =>
+							-- MOVE16
+							if fb_con_p2c_i.ack = '1' then
+								r_state <= exec_move16_1;
+								r_con_cyc_ack <= '1';
+								if r_op(4) = '0' then
+									r_arg_1 <= std_logic_vector(unsigned(r_arg_1) + 1);
+								end if;
+							end if;
+						when exec_move16_1 =>
+							-- MOVE
+							if fb_con_p2c_i.ack = '1' then
+								if r_play_started = '1' then
+									r_state <= play_next;
+								else
+									r_state <= op_fetch;
+								end if;
+								r_con_cyc_ack <= '1';
+							end if;
+						when play_next =>
+							r_play_ctr <= std_logic_vector(unsigned(r_play_ctr) - 1);
+							if unsigned(r_play_ctr) = 1 or tgl_vs_edge_pgm /= ack_vs_edge_pgm then
+								--swap back pointers
+								POINTER_WRITE(to_integer(unsigned(r_play_ptrreg)), r_pc);
+								r_pc <= r_pointers(to_integer(unsigned(r_play_ptrreg)));
+								r_state <= op_fetch;
+							else
+								r_state <= play_op_fetch;
+							end if;
+						when others =>
 							r_state <= idle;
-						end if;
-					when exec_move =>
-						-- MOVE
-						if fb_con_p2c_i.ack = '1' then
-							if r_play_started = '1' then
-								r_state <= play_next;
-							else
-								r_state <= op_fetch;
-							end if;
-							r_con_cyc_ack <= '1';
-						end if;
-					when exec_move16_0 =>
-						-- MOVE16
-						if fb_con_p2c_i.ack = '1' then
-							r_state <= exec_move16_1;
-							r_con_cyc_ack <= '1';
-							if r_op(4) = '0' then
-								r_arg_1 <= std_logic_vector(unsigned(r_arg_1) + 1);
-							end if;
-						end if;
-					when exec_move16_1 =>
-						-- MOVE
-						if fb_con_p2c_i.ack = '1' then
-							if r_play_started = '1' then
-								r_state <= play_next;
-							else
-								r_state <= op_fetch;
-							end if;
-							r_con_cyc_ack <= '1';
-						end if;
-					when play_next =>
-						r_play_ctr <= std_logic_vector(unsigned(r_play_ctr) - 1);
-						if unsigned(r_play_ctr) = 1 or tgl_vs_edge_pgm /= ack_vs_edge_pgm then
-							--swap back pointers
-							r_pointers(to_integer(unsigned(r_play_ptrreg)))	<= r_pc;
-							r_pc <= r_pointers(to_integer(unsigned(r_play_ptrreg)));
-							r_state <= op_fetch;
-						else
-							r_state <= play_op_fetch;
-						end if;
-					when others =>
-						r_state <= idle;
-				end case;
-			end if;
-		end if;		
-	end process;
+					end case;
+				end if;
+			end if;		
+		end process;
+	end block;
 
 	i_move_A_l <= 	r_arg_0 when r_state = exec_move16_0 or r_state = exec_move16_1 else
 						r_arg_1;

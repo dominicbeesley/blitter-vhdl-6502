@@ -29,9 +29,10 @@ SCRIPTS = ../../../../scripts
 all:: output_files/$(PROJECT).asm.rpt Makefile.deps
 
 clean:
-	rm -rf *.rpt *.chg smart.log *.htm *.eqn *.pin *.pof db incremental_db
-	rm output_files/$(PROJECT).sof
-	rm output_files/$(PROJECT).pof
+	-rm -rf *.rpt *.chg smart.log *.htm *.eqn *.pin *.pof db incremental_db
+	-rm output_files/$(PROJECT).sof
+	-rm output_files/$(PROJECT).pof
+	-rm version.tag version.vhd version.tmp
 
 
 map: $(PROJECT).map.rpt

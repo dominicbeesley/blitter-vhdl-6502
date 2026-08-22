@@ -114,8 +114,6 @@ entity vidproc is
         -- Indicates a 12MHz pixel clock (ttxt or Nula Attr mode)
         MHZ12       :   out std_logic;
 
-        -- Indicates special VGA Mode 7 (720x576p)
-        VGA         :   in  std_logic;
         -- Indicates special 80 column teletext with 24MHz pixels
         TTXT80      :   in  std_logic;
 
@@ -195,6 +193,7 @@ architecture rtl of vidproc is
     signal rol_sprite_pixel :   std_logic_vector(5 downto 0);
     signal clken_shift      :   std_logic;
     signal clken_load       :   std_logic;
+    signal clken_scroll     :   std_logic;
     signal clken_fetch      :   std_logic;
     signal clken_counter    :   unsigned(3 downto 0) := (others => '0');
     signal clken_zero       :   std_logic;
@@ -218,8 +217,7 @@ architecture rtl of vidproc is
     signal phys_col                   : std_logic_vector(3 downto 0);
 
 -- Delay line for physical colour to support horirontal scroll offset
-    signal phys_col_delay_reg         : std_logic_vector(27 downto 0);
-    signal phys_col_delay_mux         : std_logic_vector(31 downto 0);
+    signal phys_col_delay_reg         : std_logic_vector(31 downto 0);
     signal phys_col_delay_out         : std_logic_vector(3 downto 0);
     signal phys_col_final             : std_logic_vector(3 downto 0);
 
@@ -400,7 +398,7 @@ begin
     -- the shift register on the next CRTC clock edge
     clken_fetch <= CLKEN and
                   (not clken_counter(0)) and (not clken_counter(1)) and (not clken_counter(2)) and
-                  ((not clken_counter(3)) or r0_crtc_2mhz or (r0_teletext and VGA));
+                  ((not clken_counter(3)) or r0_crtc_2mhz);
 
     CLKEN_CRTC  <= clken_fetch;
     CLKEN_COUNT <= clken_counter;
@@ -445,18 +443,22 @@ begin
             pixen_prescale <= (others => '0');
             pixen_counter  <= (others => '0');
             clken_pixel <= '0';
+            clken_shift <= '0';
+            clken_load <= '0';
+            clken_scroll <= '0';
 
         elsif rising_edge(PIXCLK) then
 
             clken_pixel <= '0';
             clken_shift <= '0';
-            clken_load  <= '0';
+            clken_load <= '0';
+            clken_scroll <= '0';
 
             -- For 12MHz pixen_prescale counts: 0, 1, 2, 3
             -- For 16MHz pixen_prescale counts: 0, 1,    3
             -- For 24MHz pixen prescale counts: 0,       3
-            if (r0_teletext = '1' and (VGA = '1' or TTXT80 ='1')) and pixen_prescale = 0 then
-                -- Special case VGA mode, count at twice the rate
+            if (r0_teletext = '1' and TTXT80 ='1') and pixen_prescale = 0 then
+                -- Special case TTX80 mode, count at twice the rate
                 pixen_prescale <= pixen_prescale + 3;
             elsif modeIs12MHz = '0' and pixen_prescale = 1 then
                 pixen_prescale <= pixen_prescale + 2;
@@ -464,11 +466,7 @@ begin
                 pixen_prescale <= pixen_prescale + 1;
             end if;
 
-            if r0_teletext = '1' and VGA = '1' then
-               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-2 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high downto rol_sprite_pixel'high - 1);
-            else
-               rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-1 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high);
-            end if;
+            rol_sprite_pixel <= rol_sprite_pixel(rol_sprite_pixel'high-1 downto 0) & rol_sprite_pixel(rol_sprite_pixel'high);
  
             if pixen_prescale = 3 then
 
@@ -485,6 +483,13 @@ begin
                 -- clken_load is either 1MHz or 2MHz
                 if pixen_counter(2 downto 0) = 0 and (pixen_counter(3) = '0' or r0_crtc_2mhz = '1') then
                     clken_load <= '1';
+                end if;
+
+                -- clken_scroll is either 16MHz or 8MHz
+                if r0_crtc_2mhz = '0' or nula_speccy_attr_mode = '1' then
+                    clken_scroll <= not pixen_counter(0);
+                else
+                    clken_scroll <= '1';
                 end if;
 
                 -- clken_shift depends on the pixel rate
@@ -632,6 +637,7 @@ begin
                     disen1 <= disen0 and disen_delay_reg(to_integer(unsigned(nula_left_blanking_size)) - 1);
                 end if;
                 disen1_u <= disen0_u;
+                disen2_u <= disen1_u;
 
                 disen_delay_reg <= disen_delay_reg(disen_delay_reg'high - 1 downto 0) & disen0;
 
@@ -744,54 +750,60 @@ begin
     end process;
 
     -- Infer a large mux to select the appropriate hor scroll delay tap
-    phys_col_delay_mux <= phys_col_delay_reg & phys_col;
-    phys_col_delay_out <= phys_col_delay_mux(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
+    phys_col_delay_out <= phys_col_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)) * 4 + 3 downto to_integer(unsigned(nula_hor_scroll_offset)) * 4);
 
     phys_col_final <= phys_col_delay_out            when r0_teletext = '0' else
-                      '0' & B_IN   & G_IN   & R_IN  when VGA         = '0' else
-                      '0' & ttxt_B & ttxt_G & ttxt_R;
+                      '0' & B_IN   & G_IN   & R_IN;
 
     invert_final <= invert_delay_reg(to_integer(unsigned(nula_hor_scroll_offset)));
 
     process (PIXCLK)
     variable vr_disen_reg:std_logic;
+    variable vr_disen_reg_u:std_logic;
+    variable vr_cursor_invert:std_logic;
     begin
         if rising_edge(PIXCLK) then
 
             if clken_pixel = '1' then
 
-                -- One more pixel delay was needed in for VideoNuLA in VGA mode; this was the easist place to do it.
-                ttxt_R <= R_IN;
-                ttxt_G <= G_IN;
-                ttxt_B <= B_IN;
-                ttxt_PIXDE <= PIXDE_IN;
-
                 -- Shift pixels in from right (so bits 3..0 are the most recent)
-                if r0_crtc_2mhz = '1' or clken_counter(0) = '1' then
+                if clken_scroll = '1' then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
-                    invert_delay_reg <= invert_delay_reg(6 downto 0) & cursor_invert;
+                    invert_delay_reg <= invert_delay_reg(6 downto 0) & (vr_cursor_invert and vr_disen_reg_u);
                     -- delay disen by one more pixel
                     disenout <= vr_disen_reg;
+                end if;
+
+
+                if r0_teletext = '1' then
+                    if phys_col_final = "0000" then
+                        nula_RGB <= (others => cursor_invert);
+                    else
+                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (cursor_invert & cursor_invert & cursor_invert & cursor_invert))));        
+                    end if;
+                else
+                    if disenout = '0' then
+                        nula_RGB <= (others => invert_final);
+                    else
+                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
+                    end if;
+                end if;
+
+                if r0_teletext = '0' then
+                    PIXDE <= vr_disen_reg_u;
+                else
+                    PIXDE <= PIXDE_IN;
                 end if;
 
                 -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
                     vr_disen_reg := disen2;
+                    vr_disen_reg_u := disen2_u;
                 else
                     vr_disen_reg := disen1;
+                    vr_disen_reg_u := disen1_u;
                 end if;
-                if (r0_teletext = '1' and phys_col_final = "0000") or (r0_teletext = '0' and disenout = '0') then
-                    nula_RGB <= (others => invert_final);
-                else
-                    nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
-                end if;
-
-                if r0_teletext = '0' then
-                    PIXDE <= disen1_u;
-                else
-                    PIXDE <= ttxt_PIXDE;
-                end if;
-
+                vr_cursor_invert := cursor_invert;
 
             end if;
         end if;

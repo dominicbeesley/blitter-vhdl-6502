@@ -51,7 +51,8 @@
 --          |              |                 you may start one more write operation which will be 
 --          |              |                 latched and carried out after the current one.
 --	CTL=0		|  Write			|	 7 	: LSB    0 = MSB first, 1 = LSB first
---          |              |   5..6 : 			Unused-set to 0's
+--          |              |   5..6 : 			Delay this many byte places after first change of nCS
+--          |              |   					before the first byte is sent/received.
 --				|					|	 2..4 : CS     The chip select index (this chip select will be activated)
 --				|					|	    1 : CPOL   The SPI clock polarity
 --				|					|	    0 : CPHA   The SPI clock / data phase

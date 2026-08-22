@@ -21,10 +21,11 @@ mos_handle_res:
 
 	lda	#$D1
 	sta	fred_JIM_DEVNO
-	lda	#$60
+	lda	#$FC
 	sta	fred_JIM_PAGE_HI
-	lda	#$55
-	sta	JIM
+	lda	#$40
+	sta	fred_JIM_PAGE_LO
+	sta	JIM+$10
 
 	lda	#$55
 	pha

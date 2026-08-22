@@ -646,7 +646,7 @@ begin
 	p_ca1:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_prev_ca1 <= mb_vsync_i;
+			r_prev_ca1 <= '0';
 			r_mb_ca1_clr_ack <= '0';
 			r_ifr_ca1 <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
