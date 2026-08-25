@@ -383,8 +383,6 @@ architecture rtl of C20K is
    signal i_sys_nNMI        : std_logic;
 
    -- multiplex in to core, out from peripheral (I1 phase)   
-   signal icipo_j_i0       : std_logic;
-   signal icipo_j_i1       : std_logic;
    signal icipo_j_spi_miso : std_logic;
    signal icipo_btn0       : std_logic;
    signal icipo_btn1       : std_logic;
@@ -857,8 +855,6 @@ END GENERATE;
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_i0_o                      => icipo_j_i0,
-      p_j_i1_o                      => icipo_j_i1,
       p_j_spi_miso_o                => icipo_j_spi_miso,
       p_btn0_o                      => icipo_btn0,
       p_btn1_o                      => icipo_btn1,

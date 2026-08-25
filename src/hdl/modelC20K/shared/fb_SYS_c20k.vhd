@@ -107,8 +107,6 @@ entity fb_SYS_c20k is
       p_kb_nRST_o                      : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_i0_o                         : out    std_logic;
-      p_j_i1_o                         : out    std_logic;
       p_j_spi_miso_o                   : out    std_logic;
       p_btn0_o                         : out    std_logic;
       p_btn1_o                         : out    std_logic;
@@ -234,19 +232,24 @@ architecture rtl of fb_SYS_c20k is
 
    signal   i_sysvia_d_o      : std_logic_vector(7 downto 0);
    signal   i_acia_d_o        : std_logic_vector(7 downto 0);
+   signal   i_adc_d_o         : std_logic_vector(7 downto 0);
    signal   i_sid_d_o         : std_logic_vector(7 downto 0);
    signal   r_local_d_o       : std_logic_vector(7 downto 0);
    signal   r_sysvia_nCS2     : std_logic;
    signal   r_serproc_nCS     : std_logic;
    signal   r_acia_nCS        : std_logic;
+   signal   r_adc_nCS         : std_logic;
    signal   r_sid_nCS         : std_logic;
    signal   i_sysvia_nIRQ     : std_logic;
    signal   i_sysvia_ca2      : std_logic;
    signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
    signal   i_sysvia_PA_o     : std_logic_vector(7 downto 0);
    signal   i_sysvia_PA_nOE   : std_logic_vector(7 downto 0);
-   signal   i_sysvia_CB1_i    : std_logic;
    signal   i_sysvia_PB_i     : std_logic_vector(7 downto 0);
+
+   signal   i_j_i0            : std_logic;
+   signal   i_j_i1            : std_logic;
+   signal   i_nEOC            : std_logic;
 
    signal   ip_VID_CS         : std_logic;
 
@@ -294,7 +297,7 @@ begin
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
 
-   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' or r_intoff_nCS = '0' else                     
+   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' or r_intoff_nCS = '0' or r_adc_nCS = '0' else                     
                      r_D_rd; -- this used to be a latch but got rid for timing simplification
    fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
    fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
@@ -346,6 +349,7 @@ begin
                   r_had_d_stb <= '0';
                   r_sysvia_nCS2 <= '1';
                   r_acia_nCS <= '1';
+                  r_adc_nCS <= '1';
                   r_serproc_nCS <= '1';
                   r_inton_nCS <= '1';
                   r_intoff_nCS <= '1';
@@ -393,6 +397,8 @@ begin
                               r_intoff_nCS <= '0';
                            elsif fb_c2p_i.A(15 downto 5) & "0" = x"FC2" and G_INCL_SID then
                               r_sid_nCS <= '0';
+                           elsif fb_c2p_i.A(15 downto 5) & "0"  = x"FEC"  then
+                              r_adc_nCS <= '0';
                            end if;  
                         end if;
                      end if;
@@ -619,8 +625,8 @@ begin
       p_nmi_o                 => i_p_nmi,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_i0_o                => p_j_i0_o,
-      p_j_i1_o                => p_j_i1_o,
+      p_j_i0_o                => i_j_i0,
+      p_j_i1_o                => i_j_i1,
       p_j_spi_miso_o          => p_j_spi_miso_o,
       p_btn0_o                => p_btn0_o,
       p_btn1_o                => p_btn1_o,
@@ -669,7 +675,7 @@ begin
    i_sysvia_PA_i(7) <= i_p_kb_pa7 when i_beeb_ic32(3) = '0' else
                        '1';
 
-   i_sysvia_PB_i <= (others => '1');
+   i_sysvia_PB_i <= (4 => i_j_i0, 5 => i_j_i1, others => '1');
    
    e_sys_via:entity work.M6522
    port map (
@@ -695,7 +701,7 @@ begin
       O_PA_OE_L             => i_sysvia_PA_nOE,
 
       -- port b
-      I_CB1                 => i_sysvia_CB1_i,
+      I_CB1                 => i_nEOC,
       O_CB1                 => open,
       O_CB1_OE_L            => open,
 
@@ -723,6 +729,8 @@ begin
                r_local_d_o <= i_sid_d_o;
             elsif r_intoff_nCS = '0' then
                r_local_d_o <= cfg_eco_station_id_i;
+            elsif r_adc_nCS = '0' then
+               r_local_d_o <= i_adc_d_o;
             else
                r_local_d_o <= i_acia_d_o;            
             end if;
@@ -922,8 +930,29 @@ begin
       bitstream         => p_d_cas_o
    );
 
-   --TODO: intercept writes to cassette motor and finagle the mux into writing the slow latch
 
+   --------------------------------------------------------
+   -- ANALOGUE PORT
+   --------------------------------------------------------
    
+   e_adc:entity work.upd7002
+   port map (
+      clk        => fb_syscon_i.clk,
+      cpu_clken  => i_SYScyc_end_clken,
+      mhz1_clken => i_MHz1E_clken,
+      reset_n    => not fb_syscon_i.rst,
+      cs         => not r_adc_nCS,
+      r_nw       => r_sys_RnW,
+      addr       => r_sys_A(1 downto 0),
+      di         => r_d_wr,
+      do         => i_adc_d_o,
+      eoc_n      => i_nEOC,
+      ch0        => x"FAB",
+      ch1        => x"C0c",
+      ch2        => x"D1C",
+      ch3        => x"B0B"
+   );
+
+
 
 end rtl;
