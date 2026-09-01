@@ -47,9 +47,7 @@ begin
             busy_n       <= '1';
             completed_n  <= '1';
         elsif rising_edge(clk) then
-            if cpu_clken = '1' then
-                -- Write
-                if cs = '1' and r_nw = '0' and addr = "00" then
+            if cpu_clken = '1' and cs = '1' and r_nw = '0' and addr = "00" then
                     busy_n       <= '0';
                     completed_n  <= '1';
                     mux          <= di(1 downto 0);
@@ -60,9 +58,7 @@ begin
                     else
                         counter <= to_unsigned(convert_time_12bit, counter'length);
                     end if;
-                end if;
-            end if;
-            if mhz1_clken = '1' then
+            elsif mhz1_clken = '1' then
                 if busy_n = '0' then
                     counter <= counter - 1;
                     if counter = 0 then
