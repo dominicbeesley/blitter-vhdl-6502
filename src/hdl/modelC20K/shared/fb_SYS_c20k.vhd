@@ -107,7 +107,6 @@ entity fb_SYS_c20k is
       p_kb_nRST_o                      : out    std_logic;
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_spi_miso_o                   : out    std_logic;
       p_btn0_o                         : out    std_logic;
       p_btn1_o                         : out    std_logic;
       p_btn2_o                         : out    std_logic;
@@ -115,13 +114,8 @@ entity fb_SYS_c20k is
 
 
       -- random other multiplexed pins in from FPGA (O1 phase)
-      p_j_ds_nCS2_i                    : in     std_logic;
-      p_j_ds_nCS1_i                    : in     std_logic;
-      p_j_spi_clk_i                    : in     std_logic;
       p_VID_HS_i                       : in     std_logic;
       p_VID_VS_i                       : in     std_logic;
-      p_j_spi_mosi_i                   : in     std_logic;
-      p_j_adc_nCS_i                    : in     std_logic;
 
       -- other inputs to FPGA
       lpstb_i                          : in     std_logic;
@@ -250,12 +244,20 @@ architecture rtl of fb_SYS_c20k is
    signal   i_j_i0            : std_logic;
    signal   i_j_i1            : std_logic;
    signal   i_nEOC            : std_logic;
+   type t_adc_vals is array (natural range <>) of std_logic_vector(9 downto 0);
+   signal   i_adc_vals        : t_adc_vals(0 to 3);
+   signal   i_j_ds_nCS2       : std_logic;
+   signal   i_j_ds_nCS1       : std_logic;
+   signal   i_j_spi_clk       : std_logic;
+   signal   i_j_spi_mosi      : std_logic;
+   signal   i_j_adc_nCS       : std_logic;
+   signal   i_j_spi_miso      : std_logic;
 
    signal   ip_VID_CS         : std_logic;
 
    signal   i_psg_audio_u     : unsigned(13 downto 0);
 
-   signal   i_acia_IRQ       : std_logic;
+   signal   i_acia_IRQ        : std_logic;
    signal   i_acia_rxc        : std_logic;
    signal   i_acia_txc        : std_logic;
    signal   i_acia_rxd        : std_logic;
@@ -627,7 +629,7 @@ begin
       -- random other multiplexed pins out to FPGA (I1 phase)
       p_j_i0_o                => i_j_i0,
       p_j_i1_o                => i_j_i1,
-      p_j_spi_miso_o          => p_j_spi_miso_o,
+      p_j_spi_miso_o          => i_j_spi_miso,
       p_btn0_o                => p_btn0_o,
       p_btn1_o                => p_btn1_o,
       p_btn2_o                => p_btn2_o,
@@ -639,14 +641,14 @@ begin
       p_SER_RTS_i             => not i_p_SER_RTS,
 
       -- random other multiplexed pins in from FPGA (O1 phase)
-      p_j_ds_nCS2_i           => p_j_ds_nCS2_i,
-      p_j_ds_nCS1_i           => p_j_ds_nCS1_i,
-      p_j_spi_clk_i           => p_j_spi_clk_i,
+      p_j_ds_nCS2_i           => i_j_ds_nCS2,
+      p_j_ds_nCS1_i           => i_j_ds_nCS1,
+      p_j_spi_clk_i           => i_j_spi_clk,
       p_VID_HS_i              => ip_VID_CS, -- TRY: FOR VGA 15KHz p_VID_HS_i,
       p_VID_VS_i              => '1', --TRY: FOR VGA 15KHz p_VID_VS_i,
       p_VID_CS_i              => ip_VID_CS,
-      p_j_spi_mosi_i          => p_j_spi_mosi_i,
-      p_j_adc_nCS_i           => p_j_adc_nCS_i,
+      p_j_spi_mosi_i          => i_j_spi_mosi,
+      p_j_adc_nCS_i           => i_j_adc_nCS,
 
       -- emulated / synthesized back to core
       beeb_ic32_o             => i_beeb_ic32,
@@ -935,6 +937,7 @@ begin
    -- ANALOGUE PORT
    --------------------------------------------------------
    
+   -- simulates the BBC's D7002C chip
    e_adc:entity work.upd7002
    port map (
       clk        => fb_syscon_i.clk,
@@ -947,12 +950,61 @@ begin
       di         => r_d_wr,
       do         => i_adc_d_o,
       eoc_n      => i_nEOC,
-      ch0        => x"FAB",
-      ch1        => x"C0c",
-      ch2        => x"D1C",
-      ch3        => x"B0B"
+      ch0        => i_adc_vals(0) & i_adc_vals(0)(0) & i_adc_vals(0)(0),
+      ch1        => i_adc_vals(1) & i_adc_vals(1)(0) & i_adc_vals(1)(0),
+      ch2        => i_adc_vals(2) & i_adc_vals(2)(0) & i_adc_vals(2)(0),
+      ch3        => i_adc_vals(3) & i_adc_vals(3)(0) & i_adc_vals(3)(0)
    );
 
+   --continuous reads from each channel of MCP3004
 
+
+   b_adc_3004:block
+      signal r_clk      : std_logic; 
+      signal r_ch       : unsigned(1 downto 0);
+      signal r_shift_o  : std_logic_vector(4 downto 0);
+      signal r_shift_i  : std_logic_vector(9 downto 0);
+      signal r_cs_shift : std_logic_vector(17 downto 0) := (0 => '1', others => '0');
+   begin
+
+      p_adc:process(fb_syscon_i)
+      variable v_nextch : unsigned(1 downto 0);
+      begin
+         if fb_syscon_i.rst = '1' then
+            r_clk <= '0';
+            r_cs_shift <= (0 => '1', others => '0');
+
+         elsif rising_edge(fb_syscon_i.clk) then
+            if i_MHz1E_clken = '1' then
+               if r_clk = '0' then
+                  r_clk <= '1';
+                  r_shift_i <= r_shift_i(r_shift_i'left - 1 downto 0) & i_j_spi_miso;
+                  if r_cs_shift(0) = '1' then
+                     i_adc_vals(to_integer(r_ch)) <= r_shift_i;
+                  end if;
+               else
+                  r_clk <= '0';
+                  r_cs_shift <= r_cs_shift(0) & r_cs_shift(r_cs_shift'left downto 1);
+                  if r_cs_shift(0) = '1' then
+                     v_nextch := r_ch + 1;
+                     r_shift_o <= "110" & std_logic_vector(v_nextch);
+                     r_ch <= v_nextch;
+                  else
+                     r_shift_o <= r_shift_o(r_shift_o'left - 1 downto 0) & "1";
+                  end if;
+               end if;
+            end if;
+         end if;
+      end process;
+
+      i_j_spi_clk <= r_clk;
+      i_j_spi_mosi <= r_shift_o(r_shift_o'left);
+
+      i_j_ds_nCS2 <= r_cs_shift(0); --TODO: change
+      i_j_ds_nCS1 <= r_cs_shift(0); --TODO: change
+      i_j_adc_nCS <= r_cs_shift(0);
+
+   
+   end block;
 
 end rtl;
