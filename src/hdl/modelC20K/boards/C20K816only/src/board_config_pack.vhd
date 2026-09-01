@@ -72,12 +72,12 @@ package board_config_pack is
 	constant G_INCL_PREBOOT		: boolean := true;
 	constant G_INCL_XFLASH     : boolean := true;
 	constant G_INCL_CHIPSET		: boolean := true;
-	constant G_INCL_CS_DMA		: boolean := false;
+	constant G_INCL_CS_DMA		: boolean := true;
 	constant G_DMA_CHANNELS		: natural := 2;
-	constant G_INCL_CS_BLIT		: boolean := false;
-	constant G_INCL_CS_SND		: boolean := false;
+	constant G_INCL_CS_BLIT		: boolean := true;
+	constant G_INCL_CS_SND		: boolean := true;
 	constant G_SND_CHANNELS		: natural := 4;
-	constant G_INCL_CS_AERIS	: boolean := false;
+	constant G_INCL_CS_AERIS	: boolean := true;
 	constant G_INCL_CS_EEPROM	: boolean := true;
 	constant G_INCL_CS_SDCARD  : boolean := true;
 	constant G_INCL_LED_ARR		: boolean := false;
@@ -115,9 +115,9 @@ package board_config_pack is
 	constant PERIPHERAL_NO_CONFIG 		: natural := 9;
 	constant PERIPHERAL_NO_LED_ARR	: natural := 7;
 
-	constant CONTROLLER_COUNT 			: natural := 1;
+	constant CONTROLLER_COUNT 			: natural := 2;
 	constant MAS_NO_CPU					: natural := 0;
-	constant MAS_NO_CHIPSET				: natural := 0;
+	constant MAS_NO_CHIPSET				: natural := 1;
 
 end board_config_pack;
 

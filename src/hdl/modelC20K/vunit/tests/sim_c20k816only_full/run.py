@@ -41,7 +41,6 @@ lib.add_source_files("../../../boards/C20k816only/src/fb_c20k_mem_cpu_65816.vhd"
 lib.add_source_files("../../../shared/ws2812_pack.vhd")
 lib.add_source_files("../../../shared/ws2812.vhd")
 lib.add_source_files("../../../shared/fb_ws2812.vhd")
-lib.add_source_files("../../../shared/fb_P20K_MEM.vhd")
 
 lib.add_source_files("../../../shared/1bitvid/dac1_oser.vhd")
 lib.add_source_files("../../../shared/1bitvid/dac1_oserx2.vhd")
@@ -61,7 +60,16 @@ lib.add_source_files("../../../../shared/fb_memctl.vhd")
 lib.add_source_files("../../../../shared/address_decode_chipset.vhd")
 lib.add_source_files("../../../../chipset/fb_chipset_pack.vhd")
 lib.add_source_files("../../../../chipset/fb_chipset.vhd")
+lib.add_source_files("../../../../chipset/blit_types.vhd")
+lib.add_source_files("../../../../chipset/blit_int.vhd")
+lib.add_source_files("../../../../chipset/blit_addr.vhd")
+lib.add_source_files("../../../../chipset/aeris.vhd")
+lib.add_source_files("../../../../chipset/dmac_int_sound.vhd")
+lib.add_source_files("../../../../chipset/dmac_int_sound_cha.vhd")
 lib.add_source_files("../../../../chipset/dac_1bit.vhd")
+lib.add_source_files("../../../../chipset/dmac_int_dma.vhd")
+lib.add_source_files("../../../../chipset/dmac_int_dma_cha.vhd")
+
 lib.add_source_files("../../../../shared/fb_spi.vhd")
 
 lib.add_source_files("../../../../chipset/dac_1bit.vhd")
@@ -71,10 +79,17 @@ lib.add_source_files("../../../../library/bbc/bbc_slow_cyc.vhd")
 lib.add_source_files("../../../../library/fishbone/fb_syscon.vhd")
 
 lib.add_source_files("../../../../library/fishbone/fishbone_pack.vhd")
+lib.add_source_files("../../../../library/fishbone/fb_intcon_many_to_one.vhd")
 lib.add_source_files("../../../../library/fishbone/fb_intcon_one_to_many.vhd")
+lib.add_source_files("../../../../library/fishbone/fb_arbiter_prior.vhd")
+lib.add_source_files("../../../../library/fishbone/fb_arbiter_roundrobin.vhd")
+lib.add_source_files("../../../../library/fishbone/fb_intcon_shared.vhd")
 lib.add_source_files("../../../../library/fishbone/fb_null.vhd")
+lib.add_source_files("../../../../library/fishbone/fb_inferred_mem.vhd")
+
 
 lib.add_source_files("../../../../library/clockreg.vhd")
+lib.add_source_files("../../../../library/metadelay.vhd")
 lib.add_source_files("../../../../library/common.vhd")
 lib.add_source_files("../../../../shared/fb_SYS_pack.vhd")
 lib.add_source_files("../../../../shared/fb_VERSION.vhd")
@@ -89,6 +104,13 @@ lib.add_source_files("../../../../shared/fb_uart.vhd")
 
 lib.add_source_files("../../../../library/uart_tx.vhd")
 lib.add_source_files("../../../../library/uart_rx.vhd")
+
+lib.add_source_files("../../../../library/3rdparty/SID/sid_6581.vhd")
+lib.add_source_files("../../../../library/3rdparty/SID/sid_coeffs.vhd")
+lib.add_source_files("../../../../library/3rdparty/SID/sid_components.vhd")
+lib.add_source_files("../../../../library/3rdparty/SID/sid_filters.vhd")
+lib.add_source_files("../../../../library/3rdparty/SID/sid_voice.vhd")
+
 
 lib.add_source_files("../../../../library/3rdparty/hdmi_alexey_spirkov/encoder.vhd")
 lib.add_source_files("../../../../library/3rdparty/hdmi_alexey_spirkov/hdmi.vhd")
@@ -129,6 +151,7 @@ fmf = vu.add_library("fmf")
 fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
 
 # Make a phoney version .vec file
 

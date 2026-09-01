@@ -178,7 +178,7 @@ begin
 						end if;
 					end if;
 				else
-					if sys_ROMPG_i(3 downto 0) = x"E" and G_MK3 then -- special turbo ROM
+					if sys_ROMPG_i(3 downto 0) = x"E" and (G_MK3 or G_C20K) then -- special turbo ROM
 						r_pagrom_A <= x"1F" & "01";
 					elsif (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1' or cfg_sys_type_i /= SYS_ELK) then
 						if sys_ROMPG_i(0) = '0' then
