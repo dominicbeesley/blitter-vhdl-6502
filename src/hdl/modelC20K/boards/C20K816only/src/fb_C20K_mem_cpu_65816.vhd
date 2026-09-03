@@ -677,7 +677,9 @@ begin
                   end if;
 
                   if r_CPU_RDY = '1' then   -- memsel will have set this to 0 for slow (4MHz) accesses
-                     if i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     if i_ring_next(C_CPU_DIV_PHI1_DHR - 1) = '1' then
+                        MEM_nWE_o <= '1';
+                     elsif i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                         CPU_A_nOE_o <= '0';
                         mem_unsel;
