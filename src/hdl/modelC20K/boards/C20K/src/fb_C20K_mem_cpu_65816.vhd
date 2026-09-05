@@ -250,7 +250,6 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_mem_D_WR       : std_logic_vector(7 downto 0);
 
    signal r_CPU_RDY        : std_logic;
-   signal r_mem_RDY        : std_logic;
 
    signal i_throttle_all_E : std_logic;
 
@@ -464,17 +463,6 @@ begin
          end if;
       end cpu_rdy;
 
-      procedure mem_rdy is
-      begin
-
-         if r_phys_A(23) = '1' and r_mem_RnW = '0' then
-            r_mem_RDY <= '0'; -- slow for 55ns rom
-         else
-            r_mem_RDY <= '1';
-         end if;
-      end mem_rdy;
-
-
    begin
       if fb_syscon_i.rst = '1' then
          r_state      <= reset;
@@ -485,7 +473,6 @@ begin
 
          CPU_A_nOE_o <= '0';
          r_CPU_RDY <= '1';
-         r_mem_RDY <= '1';
          mem_unsel;
          r_A <= (others => '0');
          r_A_stb <= '0';
@@ -517,7 +504,6 @@ begin
                when wait_asetup =>
 
                   r_CPU_RDY <= '0';
-                  r_mem_RDY <= '0';
                   CPU_BE_o <= '1';
                   fb_cpu_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_ADS) = '0' and i_ring_next(C_CPU_DIV_ADS + 1) = '0' then
@@ -727,23 +713,12 @@ begin
                when mem1 =>
                   -- do nothing - time for BE to take effect
                   r_CPU_RDY <= '0';
-                  mem_rdy;
                   r_state <= mem2;
                when mem2 =>
                   mem_sel;
-
-                  if r_cpu_phi_DHR = '1' and r_mem_RnW = '0' then
-                     MEM_D_io <= r_mem_D_WR;
-                  end if;
-
                   MEM_A_io(7 downto 0) <= r_phys_A(7 downto 0);
                   r_state <= mem3;
                when mem3 =>
-
-                  if r_cpu_phi_DHR = '1' and r_mem_RnW = '0' then
-                     MEM_D_io <= r_mem_D_WR;
-                  end if;
-
                   MEM_nWE_o <= r_mem_RnW;
                   MEM_nOE_o <= '0';
                   r_state <= mem4;
@@ -753,11 +728,6 @@ begin
                      MEM_D_io <= r_mem_D_WR;
                   end if;
 
-                  if i_ring_next(C_CPU_DIV_ADS) = '1' then
-                     r_mem_RDY <= '1';
-                  end if;
-
-                  if r_mem_RDY = '1' then
                      if i_ring_next(C_CPU_DIV_END_MEM - 1) = '1' then
                         fb_mem_p2c_o.ack <= '1';
                         fb_mem_p2c_o.rdy <= '1';
@@ -771,7 +741,6 @@ begin
                         MEM_A_io(7 downto 0) <= (others => 'Z');
                      elsif i_ring_next(C_CPU_DIV_ADS) = '1' then
                         r_state <= cpu_log_a;
-                     end if;
                   end if;
                when others =>
                   r_state <= reset;
