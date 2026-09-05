@@ -26,8 +26,7 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-   constant G_MOSROMFILE : string := "C:/Users/domin/OneDrive/Documents/Programming/HostFS/roms65/MOS120.M";
-   --constant G_MOSROMFILE : string := "../../../../../asm/C20KFirstLight/build/C20KTestMOS-sound.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
@@ -87,7 +86,7 @@ architecture rtl of test_tb is
    signal ibpi_btn0        : std_logic := '1';
    signal ibpi_btn1        : std_logic := '1';
    signal ibpi_btn2        : std_logic := '1';
-   signal ibpi_btn3        : std_logic := '1';
+   signal ibpi_btn3        : std_logic := '0'; -- SELECT ;816
    signal ibpi_kb_pa7      : std_logic := '0';
    signal ibpio_P_D        : std_logic_vector(7 downto 0);
    signal ibpo_A           : std_logic_vector(7 downto 0);
@@ -100,6 +99,19 @@ architecture rtl of test_tb is
    signal i_mem_ROM_nCE    : std_logic;
    signal i_mem_nOE        : std_logic;
    signal i_mem_nWE        : std_logic;
+
+   -- cpu on motherboard
+
+   signal i_cpu_A_nOE      : std_logic;
+   signal i_cpu_PHI2       : std_logic;
+   signal i_cpu_BE         : std_logic;
+   signal i_cpu_RDY        : std_logic;
+   signal i_cpu_nRES       : std_logic;
+   signal i_cpu_nIRQ       : std_logic;
+   signal i_cpu_nNMI       : std_logic;
+   signal i_cpu_nABORT     : std_logic;
+   signal i_cpu_MX         : std_logic;
+   signal i_cpu_E          : std_logic;
 
 begin
    p_brd_clk:process
@@ -182,15 +194,16 @@ begin
       mem_nOE_o            => i_mem_nOE,
       mem_nWE_o            => i_mem_nWE,
 
-      cpu_A_nOE_o          => open,
-      cpu_BE_o             => open,
-      cpu_E_i              => '1',
-      cpu_MX_i             => '1',
-      cpu_PHI2_o           => open,
-      cpu_RDY_io           => open,
-      cpu_nIRQ_o           => open,
-      cpu_nNMI_o           => open,
-      cpu_nRES_o           => open,
+      cpu_A_nOE_o          => i_cpu_A_nOE,
+      cpu_BE_o             => i_cpu_BE,
+      cpu_E_i              => i_cpu_E,
+      cpu_MX_i             => i_cpu_MX,
+      cpu_PHI2_o           => i_cpu_PHI2,
+      cpu_RDY_io           => i_cpu_RDY,
+      cpu_nABORT_o         => i_cpu_nABORT,
+      cpu_nIRQ_o           => i_cpu_nIRQ,
+      cpu_nNMI_o           => i_cpu_nNMI,
+      cpu_nRES_o           => i_cpu_nRES,
 
 
       aud_i2s_bck_pwm_L_o  => open,
@@ -331,50 +344,29 @@ begin
 
 
 
-   --actually just the same ROM repeated!
-   e_blit_rom_512: entity work.ram_tb 
+   e_brd_memcpu: entity work.sim_cpu_mem
    generic map (
-      size        => 16*1024,
-      dump_filename => "",
-      romfile => G_MOSROMFILE,
-      tco => 55 ns,
-      taa => 55 ns
+       G_MOSROMFILE  => G_MOSROMFILE
    )
    port map (
-      A           => i_MEM_A(13 downto 0),
-      D           => i_MEM_D,
-      nCS         => i_mem_ROM_nCE,
-      nOE         => i_MEM_nOE,
-      nWE         => '1',
       
-      tst_dump    => '0'
+      MEM_A_io       => i_MEM_A,
+      MEM_D_io       => i_MEM_D,
+      MEM_nCE_i      => i_mem_RAM_nCE,
+      MEM_FL_nCE_i   => i_mem_ROM_nCE,
+      MEM_nOE_i      => i_MEM_nOE,
+      MEM_nWE_i      => i_MEM_nWE,
 
-   );
-
-   -- single non BB ram
-   --TODO the timings are wrong!
-   e_blit_ram_2048: entity work.ram_tb 
-   generic map (
-      size        => 2*1024*1024,
-      dump_filename => "c:/temp/ram_dump_blit_dip40_poc-blitram.bin",
-      tco => 10 ns,
-      taa => 10 ns,
-      toh => 2 ns,      
-      tohz => 3 ns,  
-      thz => 3 ns,
-      tolz => 3 ns,
-      tlz => 3 ns,
-      toe => 4.5 ns,
-      twed => 6.5 ns
-   )
-   port map (
-      A           => i_MEM_A(20 downto 0),
-      D           => i_MEM_D,
-      nCS         => i_MEM_RAM_nCE(1),
-      nOE         => i_MEM_nOE,
-      nWE         => i_MEM_nWE,
-      
-      tst_dump    => '0'
+      CPU_A_nOE_i    => i_cpu_A_nOE,
+      CPU_PHI2_i     => i_cpu_PHI2,
+      CPU_BE_i       => i_cpu_BE,
+      CPU_RDY_io     => i_cpu_RDY,
+      CPU_nRES_i     => i_cpu_nRES,
+      CPU_nIRQ_i     => i_cpu_nIRQ,
+      CPU_nNMI_i     => i_cpu_nNMI,
+      CPU_nABORT_i   => i_cpu_nABORT,
+      CPU_MX_o       => i_cpu_MX,
+      CPU_E_o        => i_cpu_E
 
    );
 
