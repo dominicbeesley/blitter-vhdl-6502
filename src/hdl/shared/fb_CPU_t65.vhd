@@ -115,7 +115,7 @@ begin
 
 	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
 
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_t65_clken /= '1' else
+	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_t65_clken /= '1' and cpu_en_i = '1' else
 								'0';
 
 	wrap_o.BE				<= '0';
