@@ -111,6 +111,7 @@ entity C20K816only is
       aud_i2s_ws_pwm_R_o   : out           std_logic;
 
 
+	-- configuration memory SPI/Flash		
       flash_ck_o           : out           std_logic;
       flash_cs_o           : out           std_logic;
       flash_miso_i         : in            std_logic;
@@ -199,7 +200,6 @@ architecture rtl of C20K816only is
    -----------------------------------------------------------------------------
 	-- config signals
 	-----------------------------------------------------------------------------
-
 
 	signal r_cfg_swram_enable	: std_logic;
    signal r_cfg_sys_type      : sys_type;
@@ -1257,11 +1257,6 @@ END GENERATE;
 	sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
-
-
-
-
-
 
 
 G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate

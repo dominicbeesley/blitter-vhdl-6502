@@ -62,6 +62,7 @@ entity fb_cpu_t65only is
 
 		-- configuration
 
+      cfg_cpu_use_t65_i                : in std_logic;
 		cfg_sys_type_i							: in sys_type;
 		cfg_swram_enable_i					: in std_logic;
 		cfg_mosram_i							: in std_logic;
@@ -301,7 +302,7 @@ begin
 	port map (
 
 		-- configuration
-		cpu_en_i									=> '1',
+		cpu_en_i									=> cfg_cpu_use_t65_i,
 		fb_syscon_i								=> fb_syscon_i,
 
 		wrap_o									=> i_wrap_o_cur_act,
