@@ -146,15 +146,30 @@ lib.add_source_files("../../../shared/hdmi/vid15tohdmi.vhd")
 lib.add_source_files("../../../../library/simulation/ram_tb.vhd")
 lib.add_source_files("../../../../library/simulation/rom_tb.vhd")
 
+#need a separate lib for 816 files - they clash with gowin prim sims
+lib816 = vu.add_library("lib816")
+lib816.add_source_files("../../../../library/simulation/real65816_tb.vhd")
+lib816.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
+
+
 fmf = vu.add_library("fmf")
 
 fmf.add_source_files("../../../../library/3rdparty/fmf/*.vhd")
 
-lib816 = vu.add_library("lib816")
-lib816.add_source_files("../../../../library/3rdparty/P65C816/*.vhd")
-lib816.add_source_files("../../../../library/simulation/real65816_tb.vhd")
-
 vu.set_sim_option("disable_ieee_warnings",1)
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
+
+# Make a phoney version .vec file
+
+sim_path = "./vunit_out/" + vu.get_simulator_name() + "/"
+
+with  open(sim_path + "version_strings.vec", "w") as text_file:
+    text_file.write(
+        "\n".join(
+            [format(ord(c), "08b") for c in "DOM\r\0IS\r\0ACE\r\0"]
+        )
+    )
+
 
 # Run vunit function
 vu.main()
