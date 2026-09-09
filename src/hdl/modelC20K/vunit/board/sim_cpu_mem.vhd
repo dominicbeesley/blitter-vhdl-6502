@@ -131,7 +131,8 @@ begin
 
    e_U38:entity lib816.real_65816_tb
    generic map (
-      dly_dsetup => 7 ns -- TODO: this is fake, what should it be?
+      dly_dsetup => 7 ns, -- TODO: this is fake, what should it be?
+      dly_be => 10 ns -- TODO: this is fake/guess
       )
    port map (
       A(7 downto 0)  => MEM_A_io(7 downto 0),
@@ -187,7 +188,9 @@ begin
       tolz => 3 ns,
       tlz => 3 ns,
       toe => 4.5 ns,
-      twed => 6.5 ns
+      twed => 6.5 ns,
+      tsd => 6 ns,
+      DEFAULT_DATA => "10101010"      
    )
    port map (
       A           => MEM_A_io(20 downto 0),
@@ -200,6 +203,33 @@ begin
 
    );
 
+   -- single BB ram
+   --TODO the timings are wrong!
+   e_U21: entity work.ram_tb 
+   generic map (
+      size        => 1*1024*1024,
+      dump_filename => "",
+      tco => 45 ns,
+      taa => 45 ns,
+      toh => 8 ns,      
+      tohz => 18 ns,  
+      thz => 18 ns,
+      tolz => 5 ns,
+      tlz => 10 ns,
+      toe => 4.5 ns,
+      twed => 35 ns,
+      DEFAULT_DATA => "10100101"      
+   )
+   port map (
+      A           => MEM_A_io(19 downto 0),
+      D           => MEM_D_io,
+      nCS         => MEM_nCE_i(0),
+      nOE         => MEM_nOE_i,
+      nWE         => MEM_nWE_i,
+      
+      tst_dump    => '0'
+
+   );
 
 
 end architecture rtl;
