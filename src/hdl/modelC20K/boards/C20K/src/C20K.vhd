@@ -211,7 +211,7 @@ architecture rtl of C20K is
 	
    attribute syn_maxfan : integer;
    signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
-   attribute syn_maxfan of r_cfg_cpu_use_t65 : signal is 1;
+   attribute syn_maxfan of r_cfg_cpu_use_t65 : signal is 10;
 
 	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
@@ -278,6 +278,12 @@ architecture rtl of C20K is
    -- intcon peripheral->controller
    signal i_per_c2p_intcon    : fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
    signal i_per_p2c_intcon    : fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
+
+   attribute syn_keep of i_con_c2p_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_con_p2c_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_per_c2p_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_per_p2c_intcon : signal is 1; -- keep for CST?
+
 
 	-----------------------------------------------------------------------------
 	-- inter component (non-fishbone) signals

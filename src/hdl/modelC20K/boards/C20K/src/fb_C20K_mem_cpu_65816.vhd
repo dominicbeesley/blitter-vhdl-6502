@@ -187,7 +187,12 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    constant C_CPU_DIV_MDS        : integer   := C_CPU_DIV_PHI2 + cdiv(T_MDS, C_CLOCK_PER);
    constant C_CPU_DIV_PHI2_DSR   : integer   := C_DIV_TOTAL - maximum(cdiv(T_DSR, C_CLOCK_PER), cdiv(T_PCS , C_CLOCK_PER));
 
-   constant C_CPU_DIV_END_MEM    : integer   := 2;
+   constant C_CPU_DIV_END_MEM    : integer   := 0;
+
+   function cw(index:integer) return integer is
+   begin
+      return index mod C_DIV_TOTAL;
+   end function;
 
    signal r_nmi            : std_logic;
    signal r_nmi_meta       : std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
@@ -250,6 +255,7 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_mem_D_WR       : std_logic_vector(7 downto 0);
 
    signal r_CPU_RDY        : std_logic;
+   signal r_MEM_RDY        : std_logic;
 
    signal i_throttle_all_E : std_logic;
 
@@ -463,6 +469,16 @@ begin
          end if;
       end cpu_rdy;
 
+      procedure mem_rdy is
+      begin
+         if r_phys_A(23) = '1' then
+            r_MEM_RDY <= '0'; -- slow for 55ns rom
+         else
+            r_MEM_RDY <= '1';
+         end if;
+      end mem_rdy;
+
+
    begin
       if fb_syscon_i.rst = '1' then
          r_state      <= reset;
@@ -473,6 +489,7 @@ begin
 
          CPU_A_nOE_o <= '0';
          r_CPU_RDY <= '1';
+         r_MEM_RDY <= '1';
          mem_unsel;
          r_A <= (others => '0');
          r_A_stb <= '0';
@@ -504,11 +521,13 @@ begin
                when wait_asetup =>
 
                   r_CPU_RDY <= '0';
-                  CPU_BE_o <= '1';
+                  r_MEM_RDY <= '1';
                   fb_cpu_c2p_o <= fb_c2p_unsel;
                   if i_ring_next(C_CPU_DIV_ADS) = '0' and i_ring_next(C_CPU_DIV_ADS + 1) = '0' then
+                     CPU_BE_o <= '1';
                      CPU_A_nOE_o <= '0';
                   else
+                     CPU_BE_o <= '0';
                      CPU_A_nOE_o <= '1';
                   end if;
                   mem_unsel;
@@ -559,9 +578,11 @@ begin
                      CPU_A_nOE_o <= '1';
                      r_state <= mem1;
                   else
-                     if (r_cyc_2M = '0' and i_throttle_act = '1') or chipset_cpu_halt_i = '1' then
+                     if cfg_cpu_use_t65_i = '1' or chipset_cpu_halt_i = '1' then
+                        r_state <= cpu_dead;
+                     elsif (r_cyc_2M = '0' and i_throttle_act = '1') then
                         r_state <= cpu_skip;
-                     elsif (r_VPA = '0' and r_VDA = '0') or cfg_cpu_use_t65_i = '1' then
+                     elsif (r_VPA = '0' and r_VDA = '0') then
                         r_state <= cpu_dead;
                      else
                         if r_VPA = '1' and r_VDA = '1' then
@@ -714,13 +735,14 @@ begin
                   -- do nothing - time for BE to take effect
                   r_CPU_RDY <= '0';
                   r_state <= mem2;
-               when mem2 =>
+                  mem_rdy;
                   mem_sel;
                   MEM_A_io(7 downto 0) <= r_phys_A(7 downto 0);
+                  MEM_nWE_o <= r_mem_RnW;
+                  MEM_nOE_o <= not r_mem_RnW;
+               when mem2 =>
                   r_state <= mem3;
                when mem3 =>
-                  MEM_nWE_o <= r_mem_RnW;
-                  MEM_nOE_o <= '0';
                   r_state <= mem4;
                when mem4 =>
 
@@ -728,19 +750,26 @@ begin
                      MEM_D_io <= r_mem_D_WR;
                   end if;
 
-                     if i_ring_next(C_CPU_DIV_END_MEM - 1) = '1' then
+                  if r_MEM_RDY = '0' then
+                     if i_ring_next(cw(C_CPU_DIV_END_MEM+1)) = '1' then
+                        r_MEM_RDY <= '1';
+                     end if;
+                  else
+
+                     if i_ring_next(cw(C_CPU_DIV_END_MEM - 1)) = '1' then
                         fb_mem_p2c_o.ack <= '1';
                         fb_mem_p2c_o.rdy <= '1';
                         fb_mem_p2c_o.D_rd <= MEM_D_io;
                         MEM_nWE_o <= '1';
-                        MEM_nOE_o <= '1';  
-                     elsif i_ring_next(C_CPU_DIV_END_MEM) = '1' then
+                     elsif i_ring_next(cw(C_CPU_DIV_END_MEM)) = '1' then
                         -- TODO: massive assumptions about timing, just hope it all fits
                         -- TODO: write D_wr_stb check
+                        MEM_nOE_o <= '1';  
                         mem_unsel;
                         MEM_A_io(7 downto 0) <= (others => 'Z');
-                     elsif i_ring_next(C_CPU_DIV_ADS) = '1' then
-                        r_state <= cpu_log_a;
+                     elsif i_ring_next(cw(C_CPU_DIV_END_MEM+1)) = '1' then
+                        r_state <= wait_asetup;
+                     end if;
                   end if;
                when others =>
                   r_state <= reset;
