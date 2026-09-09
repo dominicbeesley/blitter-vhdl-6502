@@ -60,12 +60,14 @@ entity RAM_tb is
 		taa		: time := 70 ns;
 		
 		twed		: time := 40 ns;	-- this is bogus!
+		tsd		: time := 28 ns;
 		
 		size		: integer := 1024;
 		
 		dump_filename : string := "d:\temp\ram";
 		
-		romfile	: string := ""
+		romfile	: string := "";
+		DEFAULT_DATA : std_logic_vector(7 downto 0) := "ZZZZZZZZ"
 	);
 	port (
 		A				: in		std_logic_vector(numbits(size)-1 downto 0);
@@ -108,7 +110,7 @@ begin
 
 	i_A_nCS_DLY <= nCS after tco;
 	i_A_DLY <= A after taa;
-	i_D_in_dly <= transport D after tco;			-- huge bodge!
+	i_D_in_dly <= transport D after tsd;
 
 	p_add2d: process(i_A_DLY, i_A_nCS_DLY)
 	begin
@@ -151,6 +153,10 @@ begin
 					--report "Char: " & " #" & integer'image(byte_v);
 				end loop;
 				file_close(char_file);
+			else
+				for i in 0 to size-1 loop
+					i_data(i) <= DEFAULT_DATA;
+				end loop;
 			end if;
 			init := false;
 		elsif (rising_edge(nWE) and i_nCS_OE_dly = '0') or (rising_edge(nCS) and i_nWE_dly = '0') then
