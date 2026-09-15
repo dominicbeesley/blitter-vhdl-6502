@@ -601,6 +601,8 @@ begin
                      r_MLB <= MEM_A_io(18);
                      r_cpu_RnW <= MEM_A_io(19);
                      r_VPB <= MEM_A_io(20);
+
+                     fb_mem_p2c_o.stall <= '0';
                      r_state <= cpu_log_a;
 
                      -- we will accept slave requests next cycle
@@ -624,7 +626,9 @@ begin
                      else
                         if r_VPA = '1' and r_VDA = '1' then
                            debug_cpu_instr_a <= r_A;
-                        end if;                  
+                        end if;               
+
+                        fb_mem_p2c_o.stall <= '0';
                         r_state <= cpu_phys_a;
                      end if;
                   end if;
@@ -645,10 +649,12 @@ begin
                         fb_cpu_c2p_o.A <= r_phys_A;
                         fb_cpu_c2p_o.A_stb <= '1';                     
                         r_had_fb_ack <= '0';
-                        if r_cpu_RnW = '1' then
+                        if r_cpu_RnW = '1' then                           
+                           fb_mem_p2c_o.stall <= '0';
                            r_state <= cpu_read_fb;
                         else
                            fb_cpu_c2p_o.we <= '1';
+                           fb_mem_p2c_o.stall <= '0';                     
                            r_state <= cpu_write_fb;
                         end if;
                      end if;
@@ -660,6 +666,9 @@ begin
                         fb_cpu_c2p_o.A_stb <= '0';
                      else
                         v_skip := checkandservice_incoming;
+                        if not v_skip then
+                           fb_mem_p2c_o.stall <= '0';
+                        end if;
                      end if;
                   end if;
                   if not v_skip then
@@ -683,6 +692,8 @@ begin
                      if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
+                  else
+                     fb_cpu_c2p_o.cyc <= '0';                  
                   end if;
 
                when cpu_write_fb =>
@@ -692,6 +703,9 @@ begin
                         fb_cpu_c2p_o.A_stb <= '0';
                      else
                         v_skip := checkandservice_incoming;
+                        if not v_skip then
+                           fb_mem_p2c_o.stall <= '0';
+                        end if;                        
                      end if;
                   end if;
                   if not v_skip then
@@ -713,6 +727,8 @@ begin
                      if r_CPU_RDY = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
                         r_state <= wait_asetup;
                      end if;
+                  else
+                     fb_cpu_c2p_o.cyc <= '0';
                   end if;
                when cpu_read_local|cpu_write_local =>
                   MEM_nWE_o <= r_cpu_RnW;
