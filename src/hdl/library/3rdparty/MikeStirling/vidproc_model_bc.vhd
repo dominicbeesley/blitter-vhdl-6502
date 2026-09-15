@@ -257,6 +257,9 @@ architecture rtl of vidproc is
 -- Additional VideoNuLA signals
     signal nula_nreset                 : std_logic := '0';
 
+    type t_logical_colours is (bpp_1, bpp_2, bpp_4, bpp_8);
+    signal nula_logical_colours         : t_logical_colours;
+
 begin
 
     PIXCLKEN <= clken_pixel;
@@ -273,6 +276,7 @@ begin
             r0_pixel_rate <= "00";
             r0_teletext <= '0';
             r0_flash <= '0';
+            nula_logical_colours <= bpp_4;
 
             for colour in 0 to 15 loop
                 palette(colour) <= (others => '0');
@@ -289,6 +293,18 @@ begin
                         r0_pixel_rate <= DI_CPU(3 downto 2);
                         r0_teletext <= DI_CPU(1);
                         r0_flash <= DI_CPU(0);
+
+                        case DI_CPU(4 downto 2) is
+                            when "000" => nula_logical_colours <= bpp_4; -- mode 8
+                            when "001" => nula_logical_colours <= bpp_2; -- mode 5
+                            when "010" => nula_logical_colours <= bpp_1; -- mode 4,6,(7)
+                            when "011" => nula_logical_colours <= bpp_1; -- 80 columns in mode 1 - not possible, think of a use?
+                            when "100" => nula_logical_colours <= bpp_8; -- mode 13! New mode? 10 columns @ 256 colours
+                            when "101" => nula_logical_colours <= bpp_4; -- mode 2
+                            when "110" => nula_logical_colours <= bpp_2; -- mode 1
+                            when others => nula_logical_colours <= bpp_1; -- mode 0,3
+                        end case;
+
                     else
                         -- Access palette register
                         palette(to_integer(unsigned(DI_CPU(7 downto 4)))) <= DI_CPU(3 downto 0);
@@ -739,7 +755,11 @@ begin
                 if SPR_PX_ACT = '1' then
                     phys_col <= SPR_PX_DAT;
                 elsif nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
-                    phys_col <= palette_a;
+                    case nula_logical_colours is
+                        when bpp_1 => phys_col <= "000" & palette_a(3);
+                        when bpp_2 => phys_col <= "00" & palette_a(3) & palette_a(1);
+                        when others => phys_col <= palette_a;
+                    end case;
                 elsif mode16 = '1' then
                     phys_col <= dot_val(3) & blue_val & green_val & red_val;
                 else
@@ -785,7 +805,17 @@ begin
                     if disenout = '0' then
                         nula_RGB <= (others => invert_final);
                     else
-                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
+                        if nula_logical_colours = bpp_8 then
+                            nula_RGB <= 
+                                (   shiftreg(7 downto 5) & shiftreg(5) & 
+                                    shiftreg(4 downto 2) & shiftreg(2) & 
+                                    shiftreg(1 downto 0) & shiftreg(0) & shiftreg(0))
+                                xor (invert_final & invert_final & invert_final & invert_final & 
+                                    invert_final & invert_final & invert_final & invert_final & 
+                                    invert_final & invert_final & invert_final & invert_final);
+                        else
+                            nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));                        
+                        end if;
                     end if;
                 end if;
 
