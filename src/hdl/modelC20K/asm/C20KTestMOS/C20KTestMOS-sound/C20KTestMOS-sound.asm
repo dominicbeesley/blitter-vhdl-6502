@@ -58,33 +58,13 @@ mos_handle_res:
 
 	lda	#$0
 	sta	f:A16_CS_SND_PERIOD + 1
-	lda	#$10
+	lda	#$1
 	sta	f:A16_CS_SND_PERIOD + 0
 
 	lda	#$81
 	sta	f:A16_CS_SND_STATUS
 
-there:	ldx	#10
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	inx
-	stx	$0000
-
-
-
-
-	lda	#$55
+there:	lda	#$55
 	pha
 	lda	#$AA
 	pla

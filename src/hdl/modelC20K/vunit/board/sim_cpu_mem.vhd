@@ -91,6 +91,8 @@ architecture rtl of sim_cpu_mem is
    signal i_U40_A    : std_logic_vector(7 downto 0);
    signal i_U40_B    : std_logic_vector(7 downto 0);
 
+   signal mem_bb_nCE_dly : std_logic;
+
 begin 
 
 
@@ -203,6 +205,8 @@ begin
 
    );
 
+   mem_bb_nCE_dly <= transport MEM_nCE_i(0) after 8.2 ns;
+
    -- single BB ram
    --TODO the timings are wrong!
    e_U21: entity work.ram_tb 
@@ -223,7 +227,7 @@ begin
    port map (
       A           => MEM_A_io(19 downto 0),
       D           => MEM_D_io,
-      nCS         => MEM_nCE_i(0),
+      nCS         => mem_bb_nCE_dly,
       nOE         => MEM_nOE_i,
       nWE         => MEM_nWE_i,
       

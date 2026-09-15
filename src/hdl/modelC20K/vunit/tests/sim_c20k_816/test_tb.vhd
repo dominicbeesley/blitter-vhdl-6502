@@ -25,8 +25,9 @@ entity test_tb is
 end test_tb;
 
 architecture rtl of test_tb is
-
-   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
+   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-sound.rom";
+--   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-dma.rom";
+--   constant G_MOSROMFILE : string := "../../../../../asm/C20KTestMOS/build/C20KTestMOS-ThrottleOff.rom";
 
    constant BOARD_CLOCKSPEED : natural := 27;
 
