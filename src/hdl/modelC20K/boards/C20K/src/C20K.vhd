@@ -1072,8 +1072,6 @@ end generate;
       CPU_MX_i                      => CPU_MX_i,
       CPU_E_i                       => CPU_E_i
 
-
-
    );
 
    e_fb_cpu_t65only: entity work.fb_cpu_t65only
@@ -1203,7 +1201,7 @@ end generate;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
             vr_btn := (others => '0');
-         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
+         elsif vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
                if r_cfg_cpu_use_t65 = '1' then
                   i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
