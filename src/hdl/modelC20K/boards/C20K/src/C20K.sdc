@@ -14,14 +14,19 @@ create_generated_clock -name CLOCK_96M -source [get_nets {i_clk_pll_384M}] -mast
 create_generated_clock -name CLOCK_48M -source [get_nets {i_clk_div_96M}] -master_clock CLOCK_96M -divide_by 2 -multiply_by 1 [get_nets {i_clk_div_48M}]
 
 
-create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 90 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
+create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 45 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
 create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}] -master_clock CLOCK_TMDS_HDMI -divide_by 5 -multiply_by 1 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_pixel}]
 
-#create_generated_clock -name CLOCK_72M  -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 5 -multiply_by 1 [get_nets {i_clk_div_72M}]
+create_generated_clock -name CLOCK_72M  -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 5 -multiply_by 1 [get_nets {i_clk_div_72M}]
 
-## actually generated but div/mul too large
+#create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_nets {i_clk_chroma_x4_jitter}]
+## actual numbers for CLOCK_CHROMA are bollocks but close
 ##TODO: reenable for real chroma
-create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_nets {i_clk_chroma_x4_jitter}]
+create_generated_clock -name CLOCK_CHROMA -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 1600 -multiply_by 591 [get_nets {i_clk_chroma_x4_jitter}]
+create_generated_clock -name CLOCK_CHROMA_x60 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 1 -multiply_by 60 [get_nets {i_clk_chroma_x60_dac}]
+create_generated_clock -name CLOCK_CHROMA_x20 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 1 -multiply_by 20 [get_nets {i_clk_chroma_x20_dac}]
+create_generated_clock -name CLOCK_CHROMA_x12 -source [get_nets {i_clk_chroma_x60_dac}] -master_clock CLOCK_CHROMA_x60 -divide_by 5 -multiply_by 1 [get_nets {i_clk_chroma_x12_px}]
+create_generated_clock -name CLOCK_CHROMA_x4 -source [get_nets {i_clk_chroma_x20_dac}] -master_clock CLOCK_CHROMA_x20 -divide_by 5 -multiply_by 1 [get_nets {i_clk_chroma_x4}]
 create_generated_clock -name CLOCK_SOUND -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 5 -multiply_by 1 [get_nets {i_clk_snd}]
 
 ##TODO: bodge for no chroma
