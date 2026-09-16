@@ -539,7 +539,7 @@ begin
          r_A_stb <= '0';
          CPU_BE_o <= '1';
          r_mem_D_WR <= (others => '1');
-         MEM_D_io <= (others => 'Z');
+         MEM_D_io <= (others => '1');                 -- we need this to start up as a 1 D[5] is shared with RECONFIG_N
 
       else
          if rising_edge(fb_syscon_i.clk) then
@@ -561,7 +561,7 @@ begin
                   if i_ring_next(C_CPU_DIV_PHI2) = '1' then
                      r_state <= wait_asetup;
                   end if;
-                  MEM_D_io <= (others => 'Z');
+                  MEM_D_io <= (others => '1');
                when wait_asetup =>
 
                   r_CPU_RDY <= '0';
