@@ -508,14 +508,14 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
 		e_dac_snd: entity work.dac_1bit 
 		generic map (
-			G_SAMPLE_SIZE		=> 16,
+			G_SAMPLE_SIZE		=> 10,
 			G_SYNC_DEPTH		=> 0
 		)
    	port map (
 			rst_i					=> i_fb_syscon.rst,
 			clk_dac				=> i_fb_syscon.clk,
 
-			sample				=> i_dac_sample,
+			sample				=> i_dac_sample(15 downto 6),
 		
 			bitstream			=> i_dac_snd_pwm
 		);

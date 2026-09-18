@@ -281,7 +281,7 @@ architecture rtl of mk3blit is
 
 	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
+	signal i_dac_sample					: signed(15 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -544,8 +544,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		SD_MISO_i		=> SD_MISO_i,
 		SD_DET_i			=> SD_DET_i,
 
-		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_o		=> i_dac_sample
+		
 
 	);
 
@@ -566,7 +566,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 			rst_i					=> i_fb_syscon.rst,
 			clk_dac				=> i_fb_syscon.clk,
 
-			sample				=> i_dac_sample,
+			sample				=> i_dac_sample(15 downto 6),
 		
 			bitstream			=> i_dac_snd_pwm
 		);
