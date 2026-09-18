@@ -279,7 +279,7 @@ architecture rtl of mk2blit is
 
 	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
+	signal i_dac_sample					: signed(15 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -474,7 +474,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		CLOCKSPEED => CLOCKSPEED
 	)
 	port map (
-		fb_syscon_i						=> i_fb_syscon,
+		fb_syscon_i		=> i_fb_syscon,
 
 		-- peripheral port connect to controllers
 		fb_per_c2p_i 	=> i_c2p_chipset_per,
@@ -489,21 +489,18 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		cpu_halt_o		=> i_chipset_cpu_halt,
 		cpu_int_o		=> i_chipset_cpu_int,
 
-		vsync_i								=> i_vsync,
-		hsync_i								=> i_hsync,
+		vsync_i			=> i_vsync,
+		hsync_i			=> i_hsync,
 
 		I2C_SDA_io		=> I2C_SDA_io,
 		I2C_SCL_io		=> I2C_SCL_io,
 
-      SD_CS_o              => open,
-      SD_CLK_o             => open,
-      SD_MOSI_o            => open,
-      SD_MISO_i            => '1',
-      SD_DET_i             => '1',
-		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open
-
-
+      SD_CS_o        => open,
+      SD_CLK_o       => open,
+      SD_MOSI_o      => open,
+      SD_MISO_i      => '1',
+      SD_DET_i       => '1',
+		snd_dat_o		=> i_dac_sample
 
 	);
 
@@ -511,7 +508,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 
 		e_dac_snd: entity work.dac_1bit 
 		generic map (
-			G_SAMPLE_SIZE		=> 10,
+			G_SAMPLE_SIZE		=> 16,
 			G_SYNC_DEPTH		=> 0
 		)
    	port map (
