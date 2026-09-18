@@ -7,4 +7,12 @@
 * SIDs on MMC
 * Beeb games on MMC
 * new BB RAM CS2 fix, clean up
-* Why can't get preboot when tricky test rom running - check VIA!?
+* TIME / RTCDUMP documentation
+* Explain extra buttons
+* refresh MMB/disc images, write to SDCARD
+* BB RAM - notes, life, 1F, poss battery
+
+DONE:
+
+* Why can't get preboot when tricky test rom running - check VIA!? - WAS ?&FF!=0
+

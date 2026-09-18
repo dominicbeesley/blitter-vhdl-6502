@@ -646,6 +646,9 @@ begin
       p_j_spi_clk_i           => i_j_spi_clk,
       p_VID_HS_i              => ip_VID_CS, -- TRY: FOR VGA 15KHz p_VID_HS_i,
       p_VID_VS_i              => '1', --TRY: FOR VGA 15KHz p_VID_VS_i,
+--      p_VID_HS_i              => p_VID_CS_i,
+--      p_VID_VS_i              => p_VID_VS_i,
+
       p_VID_CS_i              => ip_VID_CS,
       p_j_spi_mosi_i          => i_j_spi_mosi,
       p_j_adc_nCS_i           => i_j_adc_nCS,
