@@ -12,12 +12,87 @@ of how to use some of the extended features and how to load new ROMs etc.
 C20K Hardware overview
 ======================
 
-![Hardware as an svg](assets/c20K-components-top.svg){width="800", height="600"}
+<img src="assets/c20k-components-top.png" width="800" />
 
 [UKWebb - if there are any connectors, or motherboard features you'd like explained
 let me know and I'll update this guide. I'm sure you can work most of it out so 
 I'll just try to explain the stuff I think is odd/new.]
 
+### RS232
+
+The serial port is at RS232 levels but as the MAX232 is powered from a 3.3V supply 
+these are broadly compatible with the RS432 levels of the beeb.
+
+I've gone for the following pinout
+
+| pin # | C20K connection | Usual DCE name | Notes 
+|:------|----------------:|---------------:|----------------------------------
+|  1    |             n/c | Carrier Detect |
+|  2    |              RX |            RXD | Data in to C20K
+|  3    |              TX |            TXD | Data out from C20K
+|  4    |            link |            DTR | Can link to pin 6 DSR
+|  5    |             GND |            GND |
+|  6    |            link |            DSR | Can link to pin 4 DTR
+|  7    |             RTS |            RTS | 
+|  8    |             CTS |            CTS |
+|  9    |             n/c |            RI  |
+
+The pins 4 and 6 can be linked together by fitting solder jumper JP4. RTS and CTS
+like on the Beeb have a slightly odd meaning as Acorn used the 6850 in a slightly
+odd way. I've left this as-is so most software should work normally.
+
+[UkWebb, I've fitted JP4 on yours - let me know if you have any problems, I seem
+to have got good results when using null-modem cables to the PC so far]
+
+### Video connectors
+
+These can all be used simultaneously though using the 6-pin RGB and VGA sockets
+together may cause the levels to drop a little.
+
+#### HDMI
+
+The HDMI outputs 576i/25 and 288p/50 modes depending on interlace setting. You
+may find some computer monitors don't like these modes. TV's tend to be more 
+ready to accept these modes but computer monitors tend not like anything not
+at 60Hz.
+
+[UkWebb, the HDMI socket has a few known problems, it can cause the machine to
+fail to boot as it draws a small amount of parasitic power from the attached 
+HDMI device, which can confuse the FPGA, if you find you're having trouble let 
+me know. I've plans to attempt to do more modes to support more monitors.]
+
+#### Monochrome video
+
+This is a standard monochrome output at 75 ohm, with roughly 1V p-p levels.
+
+#### Composite video
+
+This is a PAL colour signal it should be more "standard" then that of the 
+BBC B and Master series computers.
+
+[UkWebb, the PAL subcarrier is generated on the FPGA and can cause patterning 
+on some monitors. Please feedback if you get problems with this or any 
+feedback let me know]
+
+#### 6-pin RGB
+
+This should output roughly the same levels as a Model B with a NULA fitted. 
+There are 3 solder jumpers JP1-3 which can be altered to slightly raise the
+levels which may be needed with some monitors. 
+
+[UkWebb, I've set yours in the East position which should make non-NULA modes
+work well on a TTL monitor but might appear a bit dark on an Analogue CUB. I'd
+be very interested to hear how it looks on your monitors]
+
+#### 15-pin VGA
+
+The current firmware doesn't properly support VGA at present (which would require
+a line-doubler). 
+
+[UkWebb, this connector has been bodged to work with a 15KHz monitor such as the 
+Skitphrati but is unlikely to work with much else at present. The HS pin carries
+composite sync, the VS pin is set to '1'. Anything else and the Skitphrati 
+monitor is a juddery mess].
 
 ## Notes on Types of Memory in the C20K
 
@@ -36,6 +111,17 @@ This is the larger part of the memory it can be up to 6MiB in size. This memory
 is the fastest in the system. This memory can be accessed for programs and data
 in 65816 native mode and for graphics and sound by the Blitter/Sound Chipset.
 
+### Battery Backed RAM
+
+There is a 1MiB battery backed RAM chip fitted and a 1 Farad super capacitor.
+This can be used to store ROM images (in even numbered slots).
+
+[UkWebb, unfortunately this only seems to give about 3 days of memory retention. 
+I'm working on a fix, that's what the horrid long bodge wires are but I'm not 
+convinced it's much better. I think in the next re-spin I need find a less
+power hungry grade of chip. I suspect I picked "automotive" chips when I ordered
+as these are cheaper but need a higher stand-by current]
+
 ### FPGA Configuration "SPI-Flash"
 
 This holds the VHDL firmware that is loaded to the FPGA to configure its logic.
@@ -51,6 +137,13 @@ accessed using \*STATUS and \*CONFIG commands
 
 This is a large 512KiB EEPROM and is used to hold ROM images that appear in odd-
 numbered ROM slots. Roughly half of the EEPROM is available for end-user purposes.
+
+## RTC
+
+[UkWebb, there is a small Real Time Clock. This runs off the Super Cap and as a 
+consequence tends to lose time after a few days. If you prefer it might be possible
+to configure the BB RAM to not be battery backed and just run the clock off the
+Super Capacitor]
 
 
 Getting Started - C20K
@@ -114,6 +207,7 @@ You should power-up with the R key held down which should reset the
 configuration. Note: this will only work if your BLTUTIL ROM is newer than 
 Nov 2024.
 
+
 <img src="assets/getting-started/c20k-cmos-reset-1st.jpg" width="600" />
 
 You can now press CTRL-BREAK to get to the normal boot screen.
@@ -164,7 +258,9 @@ commands:
 
 You should now press CTRL-BREAK to update the current settings from the CMOS.
 
-It is usual to have the CPU boot with throttling turned ON so that games will work.
+It is usual to have the CPU boot with throttling turned ON so that games will 
+work. The throttle option locks the frequency of the CPU to the 2MHz signal
+that a regular Model B's CPU would use.
 
 Typing
 
@@ -568,3 +664,13 @@ and the CRC for slot #9 should now be 4694 which is the CRC of the MOS
 ROM.
 
 .... More to come ....
+
+
+# Preboot Menu System
+
+As there are no physical PROMs in the C20K it is relatively easy to update the
+MOS and ROMS and hence also easy to brick the machine. For this reason a pre-
+boot menu system is available. 
+
+If you reset or power-cycle the machine with CTRL-DELETE-BREAK held down then
+release BREAK you should be presented with the preboot menu system:
