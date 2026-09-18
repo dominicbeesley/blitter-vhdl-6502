@@ -258,10 +258,6 @@ commands:
 
 You should now press CTRL-BREAK to update the current settings from the CMOS.
 
-It is usual to have the CPU boot with throttling turned ON so that games will 
-work. The throttle option locks the frequency of the CPU to the 2MHz signal
-that a regular Model B's CPU would use.
-
 Typing
 
     *ROMS
@@ -272,17 +268,36 @@ will show the ROMs are now no longer all marked with 'T'
 <img src="assets/getting-started/empty-roms-fast.jpg" width="600" />
 
 
+It is usual to have the CPU boot with throttling turned ON so that games will 
+work. The throttle option locks the frequency of the CPU to the 2MHz signal
+that a regular Model B's CPU would use. Here we've turned it off at boot so the
+CPU will run as fast as it can for now. When you start to use the machine 
+normally you'll want to do
+
+    *CON. BLSLOW
+
+to throttle at boot.
+
+The BLSLOWROMS option is useful if you find there are ROMs that crash or
+misbehave when throttling is turned off. This can be used to throttle those
+particular ROMs despite other ROMs running at full speed. For instance th
+normal MMFS ROM for the user-port contains timing loops that don't work
+correctly at 8MHz. So, if you wish to use the user port MMC it will be 
+necessary to throttle that ROM, for instance if MMFS was in slot 3:
+
+    *CON. BLSLOWROMS R3
+
+
 # Loading other ROMs
 
 WARNING: The BLTUTIL ROM needs to be updated to properly accommodate the 
 C20K. For this reason:
- * Loading ROM images to slots 4-7 isn't currently supported and will fail
  * Loading ROM images to slot 9 is not supported, instead it will overwrite
-   the MOS - you will need to follow [Prime Flash](PrimeFlashNoICE.md) to 
-   recover.
+   the MOS - you will need to follow 
+   [Preboot Menu System](#preboot-menu-system) to recover.
 
 This section will guide you through loading some ROMs to the slots provided
-by the C20K.
+by the C20K from the filing system.
 
 When following these examples the syntax of the BLTUTIL ROM utilities can
 be found on the [GitHub Wiki](https://github.com/dominicbeesley/blitter-vhdl-6502/wiki/BLTUTIL-Star-Commands)
@@ -290,19 +305,18 @@ be found on the [GitHub Wiki](https://github.com/dominicbeesley/blitter-vhdl-650
 ## Check BLTUTILS is in slot \#F (15)
 
 It is desirable to have the utility ROM be in the highest slot:
- * the NoIce debugger only works in slot F
  * holding down "£" at boot can be used to "catch" corrupted ROMs (see 
    [Troubleshooting](#troubleshooting))
  * The Hazel feature only works on ROM slots with a number below that of the
    BLTUTIL ROM
-
-    *ROMS
-
+```
+   *ROMS
+```
 Should show
 
-<img src="assets/getting-started/srload-2.jpg" width="600" />
+<img src="assets/getting-started/empty-roms-fast.jpg" width="600" />
 
-Note: if you attempt to overwrite the current BLTUTIL rom at any time
+Note: if you attempt to overwrite the current BLTUTIL ROM at any time
 the load should work but you will not be returned to the command prompt, 
 instead the machine will hang after the "...OK" message. This is deliberate
 you will need to press CTRL-BREAK to get the MOS to reload the ROMS table.
@@ -326,17 +340,28 @@ There are also options
 
 It can be useful to keep a note of ROM CRCs when they are first loaded,
 especially to sideways RAM to check for corruption. Here you can see that
-the ROMS at #1 and #F have the same CRC.
+the ROMS at #1 and #F have different CRCs and are different versions of the
+same ROM.
+
+It's worth noting that BASIC2 has a CRC of EC08 and MOS 1.20 has a CRC of 4694
+- the MOS is usually loaded from SLOT #9 on the C20K, or from slot #8 if the
+MOSRAM button is held down at boot see [Extra buttons](#extra-buttons)
 
 ## ROM Notes
 
-In map 0 (the default map, for alternate map see [Alternate ROM sets](#alternate-rom-sets))
-the even numbered slots map to battery backed RAM and odd numbered slots
-map to Flash EEPROM. There is little difference between the two except
-that RAM is marginally faster but is more susceptible to accidental 
-erasure or corruption
+On the C20K slot #E (14) maps to ChipRAM, other even numbered slots map to 
+battery backed RAM and odd numbered slots map to Flash EEPROM. There is little
+difference between the two except that RAM is faster but is more susceptible 
+to accidental erasure or corruption.
 
-## VideoNULA
+[UkWebb, the current firmware the Flash memory runs at 4MHz in 6502 emulation
+mode - I'm aiming to get it running at 8MHz in which case there will be no
+difference in speed between RAM and Flash. I'd be interested if you have any
+opinion on how to arrange Flash vs BB Ram, I went odd-even and it kind of stuck
+but maybe there's a better plan? I'll probably get rid of slot #E being
+different at some point soon.]
+
+## Load VideoNULA ROM
 
 Some of the demos in this document work best when there is a VideoNULA 
 ROM loaded. They use the advanced palette features of the NULA. However, 
@@ -349,9 +374,8 @@ image in the current drive and type
     *SRLOAD NULA 3
 
 Note: it is worth loading ROM images for frequently used and important
-ROMS to odd-numbered sockets or to a motherboard socket (4-7) as the
-sideways RAM sockets are more prone to becoming corrupted by errant
-software.
+ROMS to odd-numbered sockets as the sideways RAM sockets are more prone
+to becoming corrupted by errant software or battery failure.
 
 # Try out CLOCKSP
 
@@ -377,9 +401,9 @@ If we now turn off throttling and rerun the benchmark:
 <img src="assets/getting-started/clocksp-base2.jpg" width="600" />
 
 
-We get roughly 8.8MHz. Even though the T65 core is capable of running at up to 
-12MHz(!?check?!) per cycle on this firmware it is being held back to by the 
-fact that the BASIC ROM is running from a slower sideways ROM. 
+We get roughly 4.8MHz. Even though the T65 core is capable of running at up to 
+8MHz per cycle on this firmware it is being held back to by the fact that the 
+BASIC ROM is running from a slower sideways ROM. 
 
 We could make BASIC a little faster by loading the BASIC ROM in to a sideways 
 RAM socket E - slot E is special in that it comes from the faster 10ns ChipRAM
@@ -392,11 +416,53 @@ And press CTRL-Break
 
     *BLTURBO -T
     *DIN 501
-    CHAIN"CLOCKSP"
+    CHAIN"CLOCKDP"
 
 <img src="assets/getting-started/clocksp-f2.jpg" width="600"" />
 
-This has got us up to 12.4 MHz but we should be able to do more:
+This has got us up to 8.0 MHz. 
+
+We will see later that things are slightly different when running in 65816 mode.
+
+# 65816 mode
+
+We'll now try to boot into 65816 mode. Before we try this we should check the
+other ROM map. On the C20K there are two ROM maps 0 and 1. In normal operation
+all the ROMs for the T65 core (NMOS 6502 emulation) come from map 0 - which
+we've been using until now. All the ROMs for 65816 come from map 1. We can list
+the ROMs for the other map using
+
+    *ROMS VACX
+
+<img src="assets/getting-started/roms-vacx.jpg" width="600" />
+
+The "X" (for exchange) shows the other map's ROMS we could also do 
+```*ROMS VAC1```
+
+If your romset for map 1 doesn't look like the listing above then use the 
+[Preboot Menu System](#preboot-menu-system) to load the standard set to map 1 -
+don't forget you may need to erase map 1 first.
+
+We can now boot to 65816 mode, to do so hold down the rear-most button on the
+left hand side of the C20K whilst either clicking the reset button (next to the
+power inlet) or holding down BREAK for 3 seconds. You should now be rebooted into
+65816 mode:
+
+<img src="assets/getting-started/816-1-boot.jpg" width="600" />
+
+See that the boot message now says "65816 8MHz ROMS set 1".
+
+Note: if this is the first time you've done this and find the screen is rolling
+you may need to press CTRL-R-BREAK to reset the CMOS.
+
+You should ensure that fast mode is enabled at boot for these tests:
+
+    *CON. BLNOSLOW
+    *CON. BLSLOWROMS -R0-R15
+
+
+
+
 
     MODE 7
     *BLTURBO L7F
@@ -674,3 +740,5 @@ boot menu system is available.
 
 If you reset or power-cycle the machine with CTRL-DELETE-BREAK held down then
 release BREAK you should be presented with the preboot menu system:
+
+# Extra buttons
