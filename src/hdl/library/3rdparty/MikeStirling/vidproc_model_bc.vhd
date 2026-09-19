@@ -754,7 +754,9 @@ begin
                 -- Output physical colour, to be used by VideoNuLA
                 if SPR_PX_ACT = '1' then
                     phys_col <= SPR_PX_DAT;
-                elsif nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
+                elsif nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
+                    phys_col <= palette_a;
+                elsif nula_palette_mode = '1'  then
                     case nula_logical_colours is
                         when bpp_1 => phys_col <= "000" & palette_a(3);
                         when bpp_2 => phys_col <= "00" & palette_a(3) & palette_a(1);
