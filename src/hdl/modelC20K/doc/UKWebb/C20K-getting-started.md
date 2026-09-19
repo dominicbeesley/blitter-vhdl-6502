@@ -268,7 +268,7 @@ will show the ROMs are now no longer all marked with 'T'
 <img src="assets/getting-started/empty-roms-fast.jpg" width="600" />
 
 
-It is usual to have the CPU boot with throttling turned ON so that games will 
+Note: It is usual to have the CPU boot with throttling turned ON so that games will 
 work. The throttle option locks the frequency of the CPU to the 2MHz signal
 that a regular Model B's CPU would use. Here we've turned it off at boot so the
 CPU will run as fast as it can for now. When you start to use the machine 
@@ -278,6 +278,8 @@ normally you'll want to do
 
 to throttle at boot.
 
+However, for now leave it configured run fast at boot.
+
 The BLSLOWROMS option is useful if you find there are ROMs that crash or
 misbehave when throttling is turned off. This can be used to throttle those
 particular ROMs despite other ROMs running at full speed. For instance th
@@ -286,7 +288,6 @@ correctly at 8MHz. So, if you wish to use the user port MMC it will be
 necessary to throttle that ROM, for instance if MMFS was in slot 3:
 
     *CON. BLSLOWROMS R3
-
 
 # Loading other ROMs
 
@@ -462,6 +463,9 @@ You should ensure that fast mode is enabled at boot for these tests:
 
 
 
+
+
+...........TODO.....CHECK.....REST......
 
 
     MODE 7
@@ -740,5 +744,3 @@ boot menu system is available.
 
 If you reset or power-cycle the machine with CTRL-DELETE-BREAK held down then
 release BREAK you should be presented with the preboot menu system:
-
-# Extra buttons
