@@ -236,7 +236,7 @@ architecture rtl of vidproc is
     signal speccy_bg                  : std_logic_vector(3 downto 0);
 
 -- Additional VideoNuLA registers
-    signal nula_palette_mode          : std_logic;
+    signal nula_log_pal_mode          : std_logic;
     signal nula_hor_scroll_offset     : std_logic_vector(2 downto 0);
     signal nula_left_blanking_size    : std_logic_vector(3 downto 0);
     signal nula_disable_a1            : std_logic;
@@ -333,7 +333,7 @@ begin
                 -- triggered by three things: power up, nRESET and &FE22=&4x
 
                 if nula_nreset = '0' then
-                    nula_palette_mode          <= '0';
+                    nula_log_pal_mode          <= '0';
                     nula_hor_scroll_offset     <= (others => '0');
                     nula_left_blanking_size     <= (others => '0');
                     nula_disable_a1            <= '0';
@@ -365,7 +365,7 @@ begin
                         -- &FE22 - Auxiliary Control Register
                         case DI_CPU(7 downto 4) is
                             when x"1" =>
-                                nula_palette_mode          <= DI_CPU(0);
+                                nula_log_pal_mode          <= DI_CPU(0);
                             when x"2" =>
                                 nula_hor_scroll_offset     <= DI_CPU(2 downto 0);
                             when x"3" =>
@@ -688,18 +688,33 @@ begin
     -- constant (running this at the pixel rate would cause
     -- the display to move slightly depending on which mode was selected).
     process(PIXCLK,nRESET)
-        variable palette_a : std_logic_vector(3 downto 0);
-        variable dot_val : std_logic_vector(3 downto 0);
-        variable red_val : std_logic;
-        variable green_val : std_logic;
-        variable blue_val : std_logic;
-        variable do_flash : std_logic;
-        variable mode16 : std_logic;
+        variable palette_a  : std_logic_vector(3 downto 0);
+        variable dot_val    : std_logic_vector(3 downto 0);
+        variable physcol_1  : std_logic_vector(3 downto 0);
+        variable mode16     : std_logic;
     begin
+
+
+        -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
+        -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
+        -- cols=10 and f=1Mhz
+        -- DOB: 2026-09-21 - this to merge with bpp stuff
+        if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
+            mode16 := '1';
+        elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
+            mode16 := '1';
+        elsif nula_reg6 /= "00" or nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
+            mode16 := '1';
+        else
+            mode16 := '0';
+        end if;
+
+
         if nRESET = '0' then
             phys_col <= (others =>'0');
         elsif rising_edge(PIXCLK) then
             if clken_pixel = '1' then
+                -- attr_bits already left justified above with '0' in right column if required
                 -- Look up dot value in the palette.  Bits are as follows:
                 -- bit 3 - FLASH
                 -- bit 2 - Not BLUE
@@ -727,45 +742,30 @@ begin
                     palette_a := shiftreg(7) & shiftreg(5) & shiftreg(3) & shiftreg(1);
                 end if;
 
-                dot_val := palette(to_integer(unsigned(palette_a)));
+                if nula_log_pal_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
+                    if mode16 = '1' or MODE_ATTR = '1' or nula_speccy_attr_mode = '1' then
+                        dot_val := palette_a;
+                    else
+                        case nula_logical_colours is
+                            when bpp_1 => dot_val := "000" & palette_a(3);
+                            when bpp_2 => dot_val := "00" & palette_a(3) & palette_a(1);
+                            when others => dot_val := palette_a;
+                        end case;
+                    end if;
+                else
+                    dot_val := palette(to_integer(unsigned(palette_a))) xor "0111";
+                end if;
 
                 -- Apply flash inversion if required
-                do_flash := r0_flash;
-                if nula_flashing_flags(to_integer(unsigned(dot_val(2 downto 0)))) = '0' then
-                    do_flash := '0';
-                end if;
-                red_val := (dot_val(3) and do_flash) xor not dot_val(0);
-                green_val := (dot_val(3) and do_flash) xor not dot_val(1);
-                blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
-
-                -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
-                -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
-                -- cols=10 and f=1Mhz
-                if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
-                    mode16 := '1';
-                elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
-                    mode16 := '1';
-                elsif nula_reg6 /= "00" then
-                    mode16 := '1';
-                else
-                    mode16 := '0';
+                if nula_flashing_flags(to_integer(unsigned(not dot_val(2 downto 0)))) = '1' and r0_flash='1' and dot_val(3)='1' and nula_speccy_attr_mode = '0' then
+                    dot_val := dot_val xor "0111";
                 end if;
 
                 -- Output physical colour, to be used by VideoNuLA
                 if SPR_PX_ACT = '1' then
                     phys_col <= SPR_PX_DAT;
-                elsif nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
-                    phys_col <= palette_a;
-                elsif nula_palette_mode = '1'  then
-                    case nula_logical_colours is
-                        when bpp_1 => phys_col <= "000" & palette_a(3);
-                        when bpp_2 => phys_col <= "00" & palette_a(3) & palette_a(1);
-                        when others => phys_col <= palette_a;
-                    end case;
-                elsif mode16 = '1' then
-                    phys_col <= dot_val(3) & blue_val & green_val & red_val;
                 else
-                    phys_col <= '0' & blue_val & green_val & red_val;
+                    phys_col <= dot_val;
                 end if;
         	end if;
         end if;
