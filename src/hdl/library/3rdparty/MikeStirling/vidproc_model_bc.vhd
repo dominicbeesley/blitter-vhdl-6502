@@ -228,7 +228,6 @@ architecture rtl of vidproc is
     signal invert_final               : std_logic;
 
 -- Attribue bits
-    signal mode1                      : std_logic;
     signal attr_bits                  : std_logic_vector(2 downto 0);
     signal first_byte                 : std_logic;
     signal speccy_attr                : std_logic_vector(7 downto 0);
@@ -540,8 +539,6 @@ begin
         end if;
     end process;
 
-    mode1 <= '1' when r0_crtc_2mhz = '1' and r0_pixel_rate = "10" else '0';
-
     -- Shift register control
     process(PIXCLK,nRESET)
         variable fg : std_logic_vector(3 downto 0);
@@ -563,7 +560,7 @@ begin
                     speccy_bg <= di1(7 downto 4);
                 elsif nula_normal_attr_mode = '1' then
                     shiftreg <= di0;
-                    if mode1 = '1' then
+                    if nula_logical_colours = bpp_2 then
                         -- mode 1
                         attr_bits <= di0(4) & di0(0) & '0';
                     else
@@ -693,24 +690,7 @@ begin
         variable palette_a  : std_logic_vector(3 downto 0);
         variable dot_val    : std_logic_vector(3 downto 0);
         variable physcol_1  : std_logic_vector(3 downto 0);
-        variable mode16     : std_logic;
     begin
-
-
-        -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
-        -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
-        -- cols=10 and f=1Mhz
-        -- DOB: 2026-09-21 - this to merge with bpp stuff
-        if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
-            mode16 := '1';
-        elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
-            mode16 := '1';
-        elsif nula_reg6 /= "00" or nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
-            mode16 := '1';
-        else
-            mode16 := '0';
-        end if;
-
 
         if nRESET = '0' then
             phys_col <= (others =>'0');
@@ -723,7 +703,7 @@ begin
                 -- bit 1 - Not GREEN
                 -- bit 0 - Not RED
                 if nula_normal_attr_mode = '1' or nula_text_attr_mode = '1' then
-                    if mode1 = '1' then
+                    if nula_logical_colours = bpp_2 then
                         palette_a := attr_bits(2 downto 1) & shiftreg(7) & shiftreg(3);
                     else
                         palette_a := attr_bits(2 downto 0)               & shiftreg(7);
@@ -745,7 +725,7 @@ begin
                 end if;
 
                 if nula_log_pal_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
-                    if mode16 = '1' or MODE_ATTR = '1' or nula_speccy_attr_mode = '1' then
+                    if MODE_ATTR = '1' or nula_normal_attr_mode = '1' or nula_speccy_attr_mode = '1' or nula_text_attr_mode = '1' then
                         dot_val := palette_a;
                     else
                         case nula_logical_colours is
