@@ -590,33 +590,35 @@ begin
                         if nula_reg6(0) = '0' then
                             -- Spectrum mode (mode 2) specific behaviour
                             if speccy_attr = x"80" then
-                        -- attribute 0x80 is used to indicate border
-                        -- which is then mapped to logical colour 0
+                                -- attribute 0x80 is used to indicate border
+                                -- which is then mapped to logical colour 0
                                 fg := x"0";
                                 bg := x"0";
-                        else
-                            -- remap light black (0) to dark black (8) so
-                            -- logical colour zero can only be border
-                            if fg = x"0" then
-                                fg := x"8";
-                            end if;
-                            if bg = x"0" then
-                                bg := x"8";
-                            end if;
+                            else
+                                -- remap light black (0) to dark black (8) so
+                                -- logical colour zero can only be border
+                                if fg = x"0" then
+                                    fg := x"8";
+                                end if;
+                                if bg = x"0" then
+                                    bg := x"8";
+                                end if;
                             end if;
                         else
                             -- Thomson mode (mode 3) specific behaviour
                             bg(3) := speccy_attr(7);
                         end if;
-                            -- now handle flashing
-                            if speccy_attr(7) = '1' and r0_flash = '1' then
-                                speccy_fg <= bg;
-                                speccy_bg <= fg;
-                            else
-                                speccy_fg <= fg;
-                                speccy_bg <= bg;
-                            end if;
+
+                        -- now handle flashing
+                        if speccy_attr(7) = '1' and r0_flash = '1' then
+                            speccy_fg <= bg;
+                            speccy_bg <= fg;
+                        else
+                            speccy_fg <= fg;
+                            speccy_bg <= bg;
                         end if;
+                    end if;
+                    
                     if disen1 = '0' and disen2 = '1' then
                         first_byte <= '1';
                     else
