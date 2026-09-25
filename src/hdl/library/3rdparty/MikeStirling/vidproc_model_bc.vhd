@@ -74,6 +74,7 @@
 --
 -- Synchronous implementation for FPGA
 --
+-- (C) 2026 Dominic Beesley
 -- (C) 2018 David Banks
 -- (C) 2011 Mike Stirling
 --
@@ -774,8 +775,12 @@ begin
                 if clken_scroll = '1' then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
                     invert_delay_reg <= invert_delay_reg(6 downto 0) & (vr_cursor_invert and vr_disen_reg_u);
-                    -- delay disen by one more pixel
-                    disenout <= vr_disen_reg;
+                    -- delay disen
+                    if nula_logical_colours = bpp_8 then
+                        disenout <= disen1;
+                    else
+                        disenout <= vr_disen_reg;
+                    end if;
                 end if;
 
 
@@ -809,8 +814,8 @@ begin
                     PIXDE <= PIXDE_IN;
                 end if;
 
-                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
+                    -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                     vr_disen_reg := disen2;
                     vr_disen_reg_u := disen2_u;
                 else
