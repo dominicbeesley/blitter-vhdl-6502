@@ -84,6 +84,8 @@ end vid15tohdmi;
 
 architecture rtl of vid15tohdmi is
 
+   attribute syn_keep : integer;
+
    component hdmi_out_gowin_2a is
       port (
       clock_pixel_i     : in std_logic;   -- x1
@@ -146,6 +148,8 @@ architecture rtl of vid15tohdmi is
    -- DVI PLL
    signal i_clk_hdmi_pixel          : std_logic;
    signal i_clk_hdmi_tmds           : std_logic;
+   attribute syn_keep of i_clk_hdmi_pixel : signal is 1; -- keep for SDC?
+   attribute syn_keep of i_clk_hdmi_tmds : signal is 1; -- keep for SDC?
 
    --============================================================
    -- Re-timed video signals to hdmi pixel clock (27MHz)
