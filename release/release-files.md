@@ -159,7 +159,7 @@ Good for trouble shooting - on the C20K this can be loaded to either map.
 
 ## roms65.ssd
 
-This SSD contains ROMS for use with the Blitter board.
+This SSD contains ROMS for use with the Blitter board/C20K
 
 |Filename   | Description
 |-----------|-------------------------
@@ -174,12 +174,13 @@ This SSD contains ROMS for use with the Blitter board.
 | BBLMMFS   | Auto-Hazel MMFS PAGE=E00 - mk.3 / c20k extra SD card port
 | UBLMMFS   | Auto-Hazel MMFS PAGE=E00 - mk.2 user port SD card
 | ADFSH30   | Auto-Hazel ADFS PAGE=E00 - 1MHz bus SCSI / WD1770
+| VNULA     | VideoNULA support ROM
 
 https://github.com/dominicbeesley/blitter-65xx-code/tree/main/src/roms/bltutil
 
 ## tools65.ssd 
 
-A set of tools for testing the on-board devices of the Blitter
+A set of tools for testing the on-board devices of the Blitter/C20K
 
 |Filename   | Description
 |-----------|-------------------------
@@ -192,9 +193,14 @@ A set of tools for testing the on-board devices of the Blitter
 | MEMSZ		| Check ChipRAM and report size
 | RTCDUMP   | Query mk.3 / c20k real time clock
 | I2CDUMP   | Query i2c devices / eeprom
-| JIMTEST	| *JIMTES D1 200000 - tests memory
+| JIMTEST	| *JIMTEST - tests memory
 | I2CDUMP	| Dump I2C EEPROM contents
 | FLSHTST	| Test and report on board Flash EEPROM
+| POKEAVI   | Alter the HDMI/VIC metadata at runtime
+| XMDUMP    | deprecated - use BLTUTIL ROM
+| BLTURBO   | deprecated - use BLTUTIL ROM
+| SRNUKE    | deprecated - use Preboot
+
 
 https://github.com/dominicbeesley/blitter-65xx-code/tree/main/src/tools65
 

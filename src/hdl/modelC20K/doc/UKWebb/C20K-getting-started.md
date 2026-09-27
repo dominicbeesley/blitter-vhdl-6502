@@ -616,6 +616,51 @@ sockets where sideways RAM is fitted).
 And Ctrl-Break - you may find the machine crashes when deleting the current 
 language!
 
+You might like to try out the SPHERE program included on the tools65 ssd. This
+really shows the power of using BAS432 in turbo mode!
+
+# Real Time Clock
+
+If the rv-8263 chip has been fitted then you should be able to get the current
+time using ```*TIME``` or PRINT TIME$ in BASIC when running BASIC 4.
+
+The clock is powered by the on-board super capacitor which only has limited
+capacity. If you find that the time has been lost you will need to reset it
+using the ```*RTCDUMP``` command on the tools65 SSD. [I will get round to 
+making TIME$= and ```*SETTIME``` soon!]
+
+    *DIN 501
+    *RTCDUMP C
+
+Will show a clock at the top of the screen and can be used to check the time.
+
+    *DIN 501
+    *RTCDUMP
+
+Will show the contents of the registers of the real time clock chip
+
+    *DIN 501
+    *RTCDUMP W 04 <ss> <mm> <hh> <dd> <wd> <mm> <yy>
+
+Can be used to set the time and date where:
+
+| Reg no. | label | Description                                    |
+|--------:|------:|:-----------------------------------------------|
+|       4 |    ss | Seconds 00 to 60                               |
+|       5 |    mm | Minutes 00 to 60                               |
+|       6 |    hh | Hours 00 to 23                                 |
+|       7 |    dd | Day of month 00 to 31                          |
+|       8 |    wd | Day of week 00 to 06 (Sun..Sat)                |
+|       9 |    mm | Month 01 to 12 (Jan..Dec)                      |
+|      10 |    yy | Year 00 to 99                                  |
+
+If the time is still not set you may need to perform a reset before re-setting
+the time as above.
+
+    *RTCDUMP W 00 58
+
+See [RV-8263 application notes](https://www.microcrystal.com/fileadmin/Media/Products/RTC/App.Manual/RV-8263-C8_App-Manual.pdf)
+for more details on the registers.
 
 # Testing Sound
 
@@ -667,6 +712,19 @@ If L is no L00 then:
 
 This is a problem with the MODPLAY demo program which doesn't take into account
 the turbo setting and blindly uses video memory. This may be fixed in future.
+
+## Playing some SID tunes
+
+As well as Paula emulation the C20K emulates a SID chip you can try this out
+by running the SIDTEST ssd
+
+    *DBOOT 510
+
+## Control sound from BASIC
+
+The BLTUTIL rom contains operating system extensions that mean you can control
+the Paula emulation from BASIC using SOUND and ENVELOPE commands. See
+[The Sound Quickstart guide](https://github.com/dominicbeesley/blitter-65xx-code/blob/main/doc/SoundQuickstart.md)
 
 # Blitter
 
@@ -851,7 +909,7 @@ are being added actively.
 You can use the cursor keys to select menu items, RETurn to select and ESCape
 to exit/cancel.
 
-# Clear memory
+## Clear memory
 
 This feature can be used to clear out ROM slots in either map 0 or map 1 and
 select whether to clear all memory in the map or just (F)lash or (R)am or 
@@ -859,7 +917,7 @@ select whether to clear all memory in the map or just (F)lash or (R)am or
 
 <img src="assets/getting-started/preboot-2-clear.jpg" width="600" />
 
-# Load romset 
+## Load romset 
 
 This feature allows you to load a pre-baked set of ROMS. 
 
@@ -888,7 +946,7 @@ Note: load romset doesn't clear out slots not in the set of ROMs, if you're
 starting from scratch it's usually wise to use the Clear memory function to 
 clear the entire map.
 
-# Reboot
+## Reboot
 
 This will restart the C20K, it should restart with the same 65816/map options. 
 It will always force a cold-boot though to ensure update ROMs are registered.

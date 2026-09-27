@@ -13,8 +13,8 @@ CODE65=../../blitter-65xx-code
 HOSTFS=~/hostfs
 SSD65DIR=${CODE65}/build/ssds
 
-SSDS_65="roms65 tools65 demo65 adventure bigfonts examblit paula"
-SSDS="z80 bas816 roms69"
+SSDS_65="roms65 tools65 demo65 adventure bigfonts examblit paula nulatest"
+SSDS="z80 bas816 roms69 ttx80 vgatest"
 
 PREBOOT=${CODE65}/build/roms/preboot
 
@@ -49,6 +49,14 @@ Z80_ITEMS="FIRSTL.M.inf TEST.M.inf _21BOOT.inf _21FIRST.inf"
 BAS816_SRC=${HOSTFS}/bas816_blit
 BAS816_ITEMS="BAS816.inf CLOCKSP.inf RUNB816.inf _21BOOT.inf"
 BAS816_OPT4=3
+
+TTX80_SRC=${HOSTFS}/ttx80
+TTX80_ITEMS="MO78.B.inf TRICKY1.inf TT80.8.inf TTX80.R.inf _21BOOT.inf"
+TTX80_OPT4=3
+
+VGATEST_SRC=${HOSTFS}/vgatest
+VGATEST_ITEMS="!BOOT.inf BARS2.inf BARS3.inf BARS4.inf BARSEBU.inf MO7.inf NSTC1.inf NTSC1.inf TEST3.inf TESTPG2.inf VDU240.inf"
+VGATEST_OPT4=3
 
 if [[ -d "${BUILDDIR}" ]]; then
 	echo "Clear ${BUILDDIR}"
@@ -103,18 +111,16 @@ for ssd in ${SSDS} ${SSDS_65}; do
 	dfs info ${_SSD}
 done;
 
+for ssd in sourcefiles/*.ssd; do
+	cp "$ssd" ${BUILDDIR}/ssd
+done;
+
 cp release-files.md ${BUILDDIR}
 cp ../src/hdl/mk2/boards/mk2/output_files/mk2blit.jic ${BUILDDIR}/fpga
 cp ../src/hdl/mk3/boards/cpu-16-max/output_files/mk3_16_max.pof ${BUILDDIR}/fpga
 cp ../src/hdl/modelC20K/boards/C20K/impl/pnr/C20K.fs ${BUILDDIR}/fpga
-cp ../src/hdl/modelC20K/boards/C20K816only/impl/pnr/C20K816only.fs ${BUILDDIR}/fpga
-cp ../src/hdl/modelC20K/boards/C20KFirstLight/impl/pnr/C20KFirstMON.fs ${BUILDDIR}/fpga
-cp ../src/hdl/modelC20K/boards/C20KFirstLight/impl/pnr/C20KFirstNoICE.fs ${BUILDDIR}/fpga
 
 chmod a+w ${BUILDDIR}/fpga/C20K.fs
-chmod a+w ${BUILDDIR}/fpga/C20K816only.fs
-chmod a+w ${BUILDDIR}/fpga/C20KFirstMON.fs
-chmod a+w ${BUILDDIR}/fpga/C20KFirstNoICE.fs
 
 cp ${PREBOOT}/romset-c20k.bin ${BUILDDIR}/preboot
 cp ${PREBOOT}/preboot2/c20k/preboot2.bin ${BUILDDIR}/preboot/preboot2-c20k.bin
@@ -124,5 +130,47 @@ mkdir -p ${BUILDDIR}/roms65
 dfs read -i -d "${BUILDDIR}/roms65" "${BUILDDIR}/ssd/roms65.ssd"
 tar -cvzf "${BUILDDIR}/roms65.tgz" ${BUILDDIR}/roms65/*
 rm -R "${BUILDDIR}/roms65/"
+
+which dput_ssd.pl >/dev/null || (echo "Cannot find dput_ssd.pl - install mmb_utils!" && exit 1)
+
+MMB=${BUILDDIR}/BEEB.MMB
+
+cp sourcefiles/BEEB.MMB ${MMB}
+
+dkill.pl -f "${MMB}" -y 500 || true
+dput_ssd.pl -f "${MMB}" 500 ${BUILDDIR}/ssd/roms65.ssd R
+
+dkill.pl -f "${MMB}" -y 501 || true
+dput_ssd.pl -f "${MMB}" 501 ${BUILDDIR}/ssd/tools65.ssd
+
+dkill.pl -f "${MMB}" -y 502 || true
+dput_ssd.pl -f "${MMB}" 502 ${BUILDDIR}/ssd/paula.ssd
+
+dkill.pl -f "${MMB}" -y 503 || true
+dput_ssd.pl -f "${MMB}" 503 ${BUILDDIR}/ssd/demo65.ssd
+
+dkill.pl -f "${MMB}" -y 504 || true
+dput_ssd.pl -f "${MMB}" 504 ${BUILDDIR}/ssd/bigfonts.ssd
+
+dkill.pl -f "${MMB}" -y 505 || true
+dput_ssd.pl -f "${MMB}" 505 ${BUILDDIR}/ssd/bas816.ssd
+
+dkill.pl -f "${MMB}" -y 506 || true
+dput_ssd.pl -f "${MMB}" 506 ${BUILDDIR}/ssd/ttx80.ssd
+
+dkill.pl -f "${MMB}" -y 507 || true
+dput_ssd.pl -f "${MMB}" 507 ${BUILDDIR}/ssd/examblit.ssd
+
+dkill.pl -f "${MMB}" -y 508 || true
+dput_ssd.pl -f "${MMB}" 508 ${BUILDDIR}/ssd/nulatest.ssd
+
+dkill.pl -f "${MMB}" -y 509 || true
+dput_ssd.pl -f "${MMB}" 509 ${BUILDDIR}/ssd/vgatest.ssd
+
+dkill.pl -f "${MMB}" -y 510 || true
+dput_ssd.pl -f "${MMB}" 510 ${BUILDDIR}/ssd/sidtest.ssd
+
+dkill.pl -f "${MMB}" -y 511 || true
+dput_ssd.pl -f "${MMB}" 511 ${BUILDDIR}/ssd/soundqs.ssd
 
 tar -cvzf release-$(date +%Y-%m-%d).tgz ${BUILDDIR}/*
