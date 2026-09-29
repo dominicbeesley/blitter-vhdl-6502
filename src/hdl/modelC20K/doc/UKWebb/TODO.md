@@ -1,10 +1,11 @@
 
-* SIDs on MMC, in notes
 * Explain extra buttons
 * refresh MMB/disc images, write to SDCARD
+* Tricky test rom crashes when run from MOSRAM
 
 DONE:
 
+* SIDs on MMC, in notes
 * new BB RAM CS2 fix, clean up
 * check rebuild all ssds
 * rebuild tools65 ssd - and check what gets included, include SPHERE

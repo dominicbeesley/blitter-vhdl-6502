@@ -14,7 +14,7 @@ HOSTFS=~/hostfs
 SSD65DIR=${CODE65}/build/ssds
 
 SSDS_65="roms65 tools65 demo65 adventure bigfonts examblit paula nulatest"
-SSDS="z80 bas816 roms69 ttx80 vgatest"
+SSDS="z80 bas816 roms69 vgatest"
 
 PREBOOT=${CODE65}/build/roms/preboot
 
@@ -49,10 +49,6 @@ Z80_ITEMS="FIRSTL.M.inf TEST.M.inf _21BOOT.inf _21FIRST.inf"
 BAS816_SRC=${HOSTFS}/bas816_blit
 BAS816_ITEMS="BAS816.inf CLOCKSP.inf RUNB816.inf _21BOOT.inf"
 BAS816_OPT4=3
-
-TTX80_SRC=${HOSTFS}/ttx80
-TTX80_ITEMS="MO78.B.inf TRICKY1.inf TT80.8.inf TTX80.R.inf _21BOOT.inf"
-TTX80_OPT4=3
 
 VGATEST_SRC=${HOSTFS}/vgatest
 VGATEST_ITEMS="!BOOT.inf BARS2.inf BARS3.inf BARS4.inf BARSEBU.inf MO7.inf NSTC1.inf NTSC1.inf TEST3.inf TESTPG2.inf VDU240.inf"

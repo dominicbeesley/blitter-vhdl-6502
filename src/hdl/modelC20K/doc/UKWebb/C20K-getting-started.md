@@ -10,8 +10,10 @@ This guide introduces a few features of the C20K then takes you through some
 examples of how to use some of the extended features and how to load new ROMs
 etc.
 
-C20K Hardware overview
-======================
+
+
+
+# C20K Hardware overview
 
 <img src="assets/c20k-components-top.png" width="800" />
 
@@ -19,7 +21,7 @@ C20K Hardware overview
 explained let me know and I'll update this guide. I'm sure you can work most of
 it out so I'll just try to explain the stuff I think is odd/new.
 
-### RS232
+## RS232
 
 The serial port is at RS232 levels but as the MAX232 is powered from a 3.3V 
 supply these are broadly compatible with the RS432 levels of the beeb.
@@ -45,12 +47,12 @@ slightly odd way. I've left this as-is so most software should work normally.
 > UkWebb, I've fitted JP4 on yours - let me know if you have any problems, I 
 seem to have got good results when using null-modem cables to the PC so far
 
-### Video connectors
+## Video connectors
 
 These can all be used simultaneously though using the 6-pin RGB and VGA sockets
 together may cause the levels to drop a little.
 
-#### HDMI
+### HDMI
 
 The HDMI outputs 576i/25 and 288p/50 modes depending on interlace setting. You
 may find some computer monitors don't like these modes. TV's tend to be more 
@@ -62,11 +64,11 @@ fail to boot as it draws a small amount of parasitic power from the attached
 HDMI device, which can confuse the FPGA, if you find you're having trouble let 
 me know. I've plans to attempt to do more modes to support more monitors.
 
-#### Monochrome video
+### Monochrome video
 
 This is a standard monochrome output at 75 ohm, with roughly 1V p-p levels.
 
-#### Composite video
+### Composite video
 
 This is a PAL colour signal it should be more "standard" then that of the 
 BBC B and Master series computers.
@@ -75,7 +77,7 @@ BBC B and Master series computers.
 on some monitors. Please feedback if you get problems with this or any 
 feedback let me know
 
-#### 6-pin RGB
+### 6-pin RGB
 
 This should output roughly the same levels as a Model B with a NULA fitted. 
 There are 3 solder jumpers JP1-3 which can be altered to slightly raise the
@@ -85,7 +87,7 @@ levels which may be needed with some monitors.
 work well on a TTL monitor but might appear a bit dark on an Analogue CUB. I'd
 be very interested to hear how it looks on your monitors
 
-#### 15-pin VGA
+### 15-pin VGA
 
 The current firmware doesn't properly support VGA at present (which would 
 require a line-doubler). 
@@ -149,9 +151,14 @@ a consequence tends to lose time after a few days. If you prefer it might be
 possible to configure the BB RAM to not be battery backed and just run the 
 clock off the Super Capacitor
 
+> Andy C - I'll send you a chip to solder on when the next batch arrives from
+Digikey.
 
-Getting Started - C20K
-======================
+There's a RTC option on the C20K - see [Real Time Clock](#real-time-clock)
+in the getting started guid for more information.
+
+
+# Getting Started - C20K
 
 This guide is intended to guide you through some first steps in using the 
 C20k. It is not intended to be a complete reference.
@@ -163,7 +170,7 @@ this guide.
 > UKWebb - I should have inserted the MMC into the SOM socket! Let me know if
 we forget it.
 
-# Preparing the base machine
+## Preparing the base machine
 
 The C20K should have been provided with a default set of ROMs loaded which will
 work for this guide and so the machine shouldn't need any preparation. The 
@@ -175,7 +182,7 @@ at the end of this document to reload the ROMs.
 If you need to reload the ROMs to complete this guide you should use the set 
 labeled "Standard C20K 6502 Guide" as a starting point.
 
-## Filing systems
+### Filing systems
 
 The C20K in 6502 mode should work with most Model B filing systems *except* for 
 unmodified RetroClinic DataCentre board which take over the 1MHz bus JIM 
@@ -190,7 +197,7 @@ that have been widely tested are:
  * 8271 DFS
  * HOSTFS
 
-## MMFS Versions
+#### MMFS Versions
 
 There are several MMFS versions present on the ROMS65/MMB image:
 
@@ -200,7 +207,7 @@ There are several MMFS versions present on the ROMS65/MMB image:
 
 You should normally use BBLMMFS with the SOM micro-SD port.
 
-## ADFS
+#### ADFS
 
 There's a special version of ADFS1.30 provided on the MMB and in the "Big" 
 romsets - this uses the auto-Hazel features of the C20K to keep PAGE=&E00. You
@@ -210,14 +217,14 @@ will set PAGE higher.
 > UkWebb, other filing systems you use? I've not got round to doing hazel DFS
 yet but that is probably the next to tackle.
 
-## MMFS
+#### MMFS
 
 The commands in the examples below i.e. DIN refer to the MMFS insert disk
 command where this command is seen and you are using a different filing 
 system then insert the relevant disc using the relevant command or by
 inserting the given floppy disc.
 
-# First boot
+## First boot
 
 You should power-up with the R key held down which should reset the 
 configuration. Note: this will only work if your BLTUTIL ROM is newer than 
@@ -238,7 +245,7 @@ at the command prompt and receive a display of the ROMS in the machine thus:
 
 <img src="assets/getting-started/empty-roms.jpg" width="600" />
 
-# Configuration
+## Configuration
 
 The C20K allows you to save some configuration to an on board EEPROM and
 gives its own versions of \*CONFIGURE and \*STATUS as found on the Master 
@@ -294,7 +301,7 @@ necessary to throttle that ROM, for instance if MMFS was in slot 3:
 
     *CON. BLSLOWROMS R3
 
-# Loading other ROMs
+## Loading other ROMs
 
 WARNING: The BLTUTIL ROM needs to be updated to properly accommodate the 
 C20K. For this reason:
@@ -353,7 +360,7 @@ It's worth noting that BASIC2 has a CRC of EC08 and MOS 1.20 has a CRC of 4694
 - the MOS is usually loaded from SLOT #9 on the C20K, or from slot #8 if the
 MOSRAM button is held down at boot see [Extra buttons](#extra-buttons)
 
-## ROM Notes
+### ROM Notes
 
 On the C20K slot #E (14) maps to ChipRAM, other even numbered slots map to 
 battery backed RAM and odd numbered slots map to Flash EEPROM. There is little
@@ -367,7 +374,7 @@ opinion on how to arrange Flash vs BB Ram, I went odd-even and it kind of stuck
 but maybe there's a better plan? I'll probably get rid of slot #E being
 different at some point soon.
 
-## Load VideoNULA ROM
+### Example: Load VideoNULA ROM
 
 Some of the demos in this document work best when there is a VideoNULA 
 ROM loaded. They use the advanced palette features of the NULA. However, 
@@ -383,7 +390,7 @@ Note: it is worth loading ROM images for frequently used and important
 ROMS to odd-numbered sockets as the sideways RAM sockets are more prone
 to becoming corrupted by errant software or battery failure.
 
-# Try out CLOCKSP
+## Try out CLOCKSP
 
 You may now check to see the speed of the system, insert the tools65 image
 and run:
@@ -431,7 +438,7 @@ This has got us up to 8.0 MHz.
 We will see later that things are slightly different when running in 65816
 mode.
 
-# 65816 mode
+## 65816 mode
 
 We'll now try to boot into 65816 mode. Before we try this we should check the
 other ROM map. On the C20K there are two ROM maps 0 and 1. In normal operation
@@ -662,7 +669,10 @@ the time as above.
 See [RV-8263 application notes](https://www.microcrystal.com/fileadmin/Media/Products/RTC/App.Manual/RV-8263-C8_App-Manual.pdf)
 for more details on the registers.
 
-# Testing Sound
+If you have BASIC 4 loaded on the 65816 core you can set the time with the
+BASIC TIME$= statement. [See the Master Reference Manual L.2-67](https://stardot.org.uk/forums/viewtopic.php?t=20466)
+
+## Testing Sound
 
 The C20K contains a Chipset feature called Paula which is closely modeled on 
 the Amiga's Chip of the same name. One of the distinctive features of the 
@@ -684,7 +694,7 @@ Sound output options.
       both speakers must be connected* otherwise the driver chip will go
       into shutdown. 3-16ohm speakers 4ohm recommnded for loudest sound!
 
-## Playing some tunes
+### Playing some tunes
 
 The paula.ssd demo disk contains a handful of tracker modules and a player.
 More mod's are available on stardot.org.uk - as these are quite large it is
@@ -713,30 +723,31 @@ If L is no L00 then:
 This is a problem with the MODPLAY demo program which doesn't take into account
 the turbo setting and blindly uses video memory. This may be fixed in future.
 
-## Playing some SID tunes
+### Playing some SID tunes
 
 As well as Paula emulation the C20K emulates a SID chip you can try this out
 by running the SIDTEST ssd
 
     *DBOOT 510
 
-## Control sound from BASIC
+### Control sound from BASIC
 
 The BLTUTIL rom contains operating system extensions that mean you can control
 the Paula emulation from BASIC using SOUND and ENVELOPE commands. See
 [The Sound Quickstart guide](https://github.com/dominicbeesley/blitter-65xx-code/blob/main/doc/SoundQuickstart.md)
 
-# Blitter
+## Blitter
 
 The Blitter Chipset feature is a virtual device for quickly performing
 various bitmap operations such as drawing sprites and lines. For more
 information see [Chipset](chipset.md#the-blitter)
 
-## Run the demo
-
+### Demo: Scroller using blitter
 
     *DIN 503
     shift-break
+
+This is also available on the demo65.ssd
 
 You should see demo which shows some smooth scrolling of large graphics
 at 50 frames a second.
@@ -744,7 +755,7 @@ at 50 frames a second.
 <img src="assets/getting-started/demo65.jpg" width="600" />
 
 
-# Aeris
+## Aeris
 
 The Aeris is a Chipset feature which is analogous to [Copper](https://second.wiki/wiki/copper_amiga)
 chip of the Amiga. It can very quickly perform operations that are
@@ -755,7 +766,7 @@ the CPU free to handle game or demo control logic.
 
 For more information see [Chipset Aeris](chipset.md#the-aeris)
 
-## Bigfonts demo
+### Demo: Bigfonts
 
 The supplied bigfonts.ssd demo shows off some of the capabilities of the 
 Aeris by scrolling some large bitmaps (using the Blitter Chipset) and 
@@ -784,7 +795,7 @@ music player demo above and pressing the 'A' key. The colours of certain
 text-columns in mode 7 are used to form a vu-meter.
 
 
-# Alternate ROM sets
+## Alternate ROM sets
 
 As noted earlier it is possible to load ROMs to an alternate "map". In this 
 section an example will be given of loading up an alternate ROM set.
@@ -799,14 +810,14 @@ parts are circled.
 If you don't please hold down BREAK for 3 seconds with no buttons held on the
 left.
 
-## Accessing the alternate ROM set
+### Accessing the alternate ROM set
 
 The SRLOAD, SRERASE and ROMS commands all take an optional X switch which
 will display the opposite set map to the one currently being accessed by the
 CPU. Alternatively the map to use can be explicitly set by adding a 0 or 1 as
 the final parameter.
 
-### Check alternate set is blank
+#### Check alternate set is blank
 
 Before following this part of the guide you should erase map 1. You can
 use either the [Preboot Menu System](#preboot-menu-system). 
@@ -818,7 +829,7 @@ use either the [Preboot Menu System](#preboot-menu-system).
     select "Y" to continue
     select "Reboot"
 
-### List alternate ROMs
+#### List alternate ROMs
 
 Executing the next line when in T65 mode in map 0 will list the alternate ROM 
 set from map 1
@@ -846,7 +857,7 @@ type
 
 replacing # for the number of the non-blank slot.
 
-## Loading up an alternate ROM set
+### Loading up an alternate ROM set
 
 When the Blitter has an alternate ROM set active not only do the sideways
 ROM slots come from the alternate ROM set so does the operating system MOS
@@ -952,3 +963,69 @@ This will restart the C20K, it should restart with the same 65816/map options.
 It will always force a cold-boot though to ensure update ROMs are registered.
 
 You can now test the new romset by holding button 3 with a long BREAK
+
+# The Extra Buttons
+
+## Rear reset button
+
+There is a small reset button near the power inlet. This can be used to perform
+a full cold-reset and can be used in place of power cycling. 
+
+## Left side buttons
+
+The C20K features a set of extra buttons at the left hand side of the machine
+that can be used to access some extra functions. 
+
+[The firmware is still in a state of flux so these may change in the future]
+
+The buttons are numbered 0 to 3 from front to back
+
+### Button 0
+
+Holding down this button at boot-time will cause the machine to load the 
+operating system from slot #8 in whatever map you're in. This is handy for 
+loading the MOS to a read-write slot during debugging with the NoIce debugger.
+
+    *DIN 500
+    *SRLOAD M.OSTEST 8
+
+Will load the tricky test ROM to slot #8
+
+Holding down button 0 and pressing the reset button or break should now boot
+to the tricky test ROM.
+
+[TODO: Investigate, tricky test ROM is a bit crashy when running from RAM - 
+does it overwrite itself?]
+
+### Button 1
+
+When holding down button 1 at reset will cause the ROM maps to swap. That is
+the T65 core will load rom set 1 and the 65816 will load rom set 0. 
+
+In addition, button 1 can be used to cause a special NMI for use with the 
+NoIce debugger ROM.
+
+### Button 2
+
+Button 2 when depressed will lock the debug RGB LEDS to the right of the 
+keyboard such that they will indicate the address of the instruction running
+when the button was pressed. The LEDs can be read to give an address as
+
+    BBBBBBBB GGGGGGGG RRRRRRRR
+
+The most significant bit towards the front of the case.
+
+i.e.: reading from the front of the case:
+
+        <CYAN>  <BLUE>  <BK>    <RED>   <CYAN>  <GREEN> <YELLW> <MAGENTA>
+        1       1       0       0       1       0       0       1   
+        1       0       0       0       1       1       1       0
+        0       0       0       1       0       0       1       1  
+
+which gives an address of "C98E13" most of the time when running 6502 code the
+most significant byte will be FF.
+
+### Button 3
+
+This button when held down at reset will boot the 65816 CPU instead of the T65
+(NMOS 6502) mode.
