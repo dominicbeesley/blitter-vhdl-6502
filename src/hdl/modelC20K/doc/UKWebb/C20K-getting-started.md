@@ -11,8 +11,6 @@ examples of how to use some of the extended features and how to load new ROMs
 etc.
 
 
-
-
 # C20K Hardware overview
 
 <img src="assets/c20k-components-top.png" width="800" />
@@ -626,7 +624,7 @@ language!
 You might like to try out the SPHERE program included on the tools65 ssd. This
 really shows the power of using BAS432 in turbo mode!
 
-# Real Time Clock
+## Real Time Clock
 
 If the rv-8263 chip has been fitted then you should be able to get the current
 time using ```*TIME``` or PRINT TIME$ in BASIC when running BASIC 4.
