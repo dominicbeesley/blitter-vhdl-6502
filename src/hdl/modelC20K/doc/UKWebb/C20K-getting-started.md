@@ -453,7 +453,8 @@ The "X" (for exchange) shows the other map's ROMS we could also do
 
 If your romset for map 1 doesn't look like the listing above then use the 
 [Preboot Menu System](#preboot-menu-system) to load the standard set to map 1 -
-don't forget you may need to erase map 1 first.
+don't forget you may need to erase map 1 first. Note: don't worry if the CRCs
+are different just make sure you have the right ROMs loaded.
 
 We can now boot to 65816 mode, to do so hold down the rear-most button on the
 left hand side of the C20K whilst either clicking the reset button (next to the
