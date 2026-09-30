@@ -119,6 +119,10 @@ incr j
 puts $of "00000000"
 incr j
 
+set n [expr { int(rand()*255) }]
+set bx [format %08b $n ]
+puts $of "$bx"
+
 close $of
 
 

@@ -785,7 +785,7 @@ begin
 	);
 
 
-	i_preboot <= r_cpu_en_t65 and preboot_i;
+	i_preboot <= (r_cpu_en_t65 or r_cpu_en_65816) and preboot_i;
 	throttle_act_o <= i_throttle_act;
 
 

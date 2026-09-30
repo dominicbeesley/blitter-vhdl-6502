@@ -76,7 +76,6 @@ begin
 	--	11xx xxx1	FF			SYS and other emulated devices (TODO: move memctl to SYS?)
 	
 
-
 	p_map:process(addr_i, we_i)
 	begin
 		peripheral_sel_oh_o <= (others => '0');

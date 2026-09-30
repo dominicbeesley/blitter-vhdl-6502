@@ -87,7 +87,7 @@ package board_config_pack is
 	constant G_INCL_CPU_65C02	: boolean := false;
 	constant G_INCL_CPU_6800	: boolean := false;
 	constant G_INCL_CPU_80188	: boolean := false;
-	constant G_INCL_CPU_65816	: boolean := false;
+	constant G_INCL_CPU_65816	: boolean := true;
 	constant G_INCL_CPU_6x09	: boolean := false;
 	constant G_INCL_CPU_Z80		: boolean := false;
 	constant G_INCL_CPU_68008	: boolean := false;
@@ -99,7 +99,7 @@ package board_config_pack is
 --	constant G_MEM_FAST_IS_10	: boolean := false;		-- for testing put back (TODO: constrain mem pins)
 --	constant G_MEM_SLOW_IS_45	: boolean := false;		-- for testing put back
 	constant G_MEM_FAST_IS_10	: boolean := true;
-	constant G_MEM_SLOW_IS_45	: boolean := false;
+	constant G_MEM_SLOW_IS_45	: boolean := true;
 
 	constant PERIPHERAL_COUNT			: natural := 10;
 	constant PERIPHERAL_NO_VERSION	: natural := 0;
@@ -114,8 +114,9 @@ package board_config_pack is
 	constant PERIPHERAL_NO_CONFIG 		: natural := 9;
 	constant PERIPHERAL_NO_LED_ARR	: natural := 7;
 
-	constant CONTROLLER_COUNT 			: natural 		:= 2;
-	constant MAS_NO_CPU					: natural		:= 1;
+	constant CONTROLLER_COUNT 			: natural 		:= 3;
+	constant MAS_NO_CPU					: natural		:= 2;
+	constant MAS_NO_CPU816				: natural		:= 1;
 	constant MAS_NO_CHIPSET				: natural		:= 0;
 
 end board_config_pack;

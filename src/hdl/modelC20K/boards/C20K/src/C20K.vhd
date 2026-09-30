@@ -99,8 +99,8 @@ entity C20K is
       cpu_E_i              : in            std_logic;
       cpu_MX_i             : in            std_logic;
       cpu_PHI2_o           : out           std_logic;
-      cpu_RDY_o            : out           std_logic;
-      cpu_nABORT_io        : in            std_logic;
+      cpu_RDY_io           : out           std_logic;
+      cpu_nABORT_o         : out           std_logic;
       cpu_nIRQ_o           : out           std_logic;
       cpu_nNMI_o           : out           std_logic;
       cpu_nRES_o           : out           std_logic;
@@ -208,7 +208,11 @@ architecture rtl of C20K is
 	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
 	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
 	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
-	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	
+   attribute syn_maxfan : integer;
+   signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+   attribute syn_maxfan of r_cfg_cpu_use_t65 : signal is 10;
+
 	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
 
 	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
@@ -223,13 +227,17 @@ architecture rtl of C20K is
 
    signal i_fb_syscon         : fb_syscon_t;                   -- shared bus signals
 
-   -- cpu wrapper
+   -- t65 cpu wrapper
    signal i_c2p_cpu           : fb_con_o_per_i_t;
    signal i_p2c_cpu           : fb_con_i_per_o_t;
 
+   -- '816 cpu wrapper
+   signal i_c2p_cpu816        : fb_con_o_per_i_t;
+   signal i_p2c_cpu816        : fb_con_i_per_o_t;
+
 	-- cpu beeb motherboard wrapper
-   signal i_c2p_sys               : fb_con_o_per_i_t;
-   signal i_p2c_sys               : fb_con_i_per_o_t;
+   signal i_c2p_sys           : fb_con_o_per_i_t;
+   signal i_p2c_sys           : fb_con_i_per_o_t;
 
 	-- blitter board RAM/ROM memory wrapper
 	signal i_c2p_mem				: fb_con_o_per_i_t;
@@ -253,8 +261,8 @@ architecture rtl of C20K is
    signal i_p2c_led_arr       : fb_con_i_per_o_t;
 
    -- debug uart wrapper
-   signal i_c2p_uart       : fb_con_o_per_i_t;
-   signal i_p2c_uart       : fb_con_i_per_o_t;
+   signal i_c2p_uart          : fb_con_o_per_i_t;
+   signal i_p2c_uart          : fb_con_i_per_o_t;
 
 	--chipset peripheral
 	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
@@ -270,6 +278,12 @@ architecture rtl of C20K is
    -- intcon peripheral->controller
    signal i_per_c2p_intcon    : fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
    signal i_per_p2c_intcon    : fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
+
+   attribute syn_keep of i_con_c2p_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_con_p2c_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_per_c2p_intcon : signal is 1; -- keep for CST?
+   attribute syn_keep of i_per_p2c_intcon : signal is 1; -- keep for CST?
+
 
 	-----------------------------------------------------------------------------
 	-- inter component (non-fishbone) signals
@@ -324,7 +338,8 @@ architecture rtl of C20K is
 	signal i_chipset_cpu_int			: std_logic;
 
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
-	signal i_65816_bool_act				: std_logic;
+   signal i_window_65816            : std_logic_vector(12 downto 0);
+   signal i_window_65816_wr_en      : std_logic;
 
 	signal i_throttle_all     			: std_logic;
    signal i_throttle_mos            : std_logic;
@@ -333,7 +348,6 @@ architecture rtl of C20K is
 
 	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
 	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
-   signal i_debug_throttle_act      : std_logic;
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
 	-----------------------------------------------------------------------------
@@ -383,19 +397,10 @@ architecture rtl of C20K is
    signal i_sys_nNMI        : std_logic;
 
    -- multiplex in to core, out from peripheral (I1 phase)   
-   signal icipo_j_spi_miso : std_logic;
    signal icipo_btn0       : std_logic;
    signal icipo_btn1       : std_logic;
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
-
-
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_j_ds_nCS2  : std_logic;
-   signal icopi_j_ds_nCS1  : std_logic;
-   signal icopi_j_spi_clk  : std_logic;
-   signal icopi_j_spi_mosi : std_logic;
-   signal icopi_j_adc_nCS  : std_logic;
 
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
@@ -410,6 +415,7 @@ architecture rtl of C20K is
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
    signal i_debug_cpu_instr_a : std_logic_vector(23 downto 0);
+   signal i_debug_cpu_instr816_a : std_logic_vector(23 downto 0);
 
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
@@ -565,6 +571,7 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 END GENERATE;   
 
 	i_con_c2p_intcon(MAS_NO_CPU)              <= i_c2p_cpu;
+   i_con_c2p_intcon(MAS_NO_CPU816)           <= i_c2p_cpu816;
 	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	   <=	i_p2c_memctl;
 	i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)   <=	i_p2c_mem;
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)       <= i_p2c_sys;
@@ -572,6 +579,7 @@ END GENERATE;
    i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
+   i_p2c_cpu816         <= i_con_p2c_intcon(MAS_NO_CPU816);
 	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
 	i_c2p_mem				<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
@@ -776,33 +784,10 @@ END GENERATE;
 
 		-- cpu specific
 
-		boot_65816_o						=> i_boot_65816
+		boot_65816_o						=> i_boot_65816,
+	    window_65816_o                => i_window_65816,
+        window_65816_wr_en_o          => i_window_65816_wr_en
 
-	);
-
-
-	e_fb_mem: entity work.fb_mem
-	generic map (
-		G_SWRAM_SLOT						=> G_MEM_SWRAM_SLOT,
-		G_FAST_IS_10						=> G_MEM_FAST_IS_10,
-		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45
-	)
-	port map (
-			-- 2M RAM/256K ROM bus
-		MEM_A_o								=> mem_A_io,
-		MEM_D_io								=> MEM_D_io,
-		MEM_nOE_o							=> MEM_nOE_o,
-		MEM_nWE_o							=> MEM_nWE_o,
-		MEM_ROM_nCE_o						=> MEM_ROM_nCE_o,
-		MEM_RAM_nCE_o						=> MEM_RAM_nCE_o,
-
-		-- fishbone signals
-
-		fb_syscon_i							=> i_fb_syscon,
-		fb_c2p_i								=> i_c2p_mem,
-		fb_p2c_o								=> i_p2c_mem,
-
-		debug_mem_a_stb_o					=> open
 	);
 
    e_fb_sys:entity work.fb_SYS_c20k
@@ -855,7 +840,6 @@ END GENERATE;
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_spi_miso_o                => icipo_j_spi_miso,
       p_btn0_o                      => icipo_btn0,
       p_btn1_o                      => icipo_btn1,
       p_btn2_o                      => icipo_btn2,
@@ -863,13 +847,8 @@ END GENERATE;
 
 
       -- random other multiplexed pins in from FPGA (O1 phase)
-      p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
-      p_j_ds_nCS1_i                 => icopi_j_ds_nCS1,
-      p_j_spi_clk_i                 => icopi_j_spi_clk,
       p_VID_HS_i                    => r_vid_128_hs,
       p_VID_VS_i                    => r_vid_128_vs,
-      p_j_spi_mosi_i                => icopi_j_spi_mosi,
-      p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 
       -- other inputs to FPGA
       lpstb_i                       => pj_LPSTB_i,
@@ -1008,6 +987,92 @@ G_DBG_UART:if G_INCL_DBG_UART generate
    );
 end generate;
 
+   e_mem_cpu_65816: entity work.fb_C20K_mem_cpu_65816
+   generic map (
+      SIM => SIM,
+      CLOCKSPEED => CLOCKSPEED * 1000000,
+      CPU_SPEED => 8000000
+   )
+   port map (
+
+		-- configuration
+
+--		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+--		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+     	cfg_sys_type_i                => r_cfg_sys_type,      
+		cfg_swram_enable_i				=> r_cfg_swram_enable,
+		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
+
+		-- cpu throttle
+
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
+		cpu_2MHz_phi2_clken_i			=> i_cpu_2MHz_phi2_clken,
+		rom_throttle_map_i				=> i_rom_throttle_map,
+		rom_autohazel_map_i				=> i_rom_autohazel_map,
+
+      -- memctl signals
+      swmos_shadow_i                => i_swmos_shadow,
+
+      -- logical mappings
+		sys_ROMPG_i 						=> i_sys_ROMPG,	
+		turbo_lo_mask_i					=> i_turbo_lo_mask,
+      JIM_en_i                      => i_JIM_en,      
+      JIM_page_i                    => i_JIM_page,
+
+      -- direct CPU control signals from system
+      nmi_n_i                       => i_sys_nNMI,
+      irq_n_i                       => i_sys_nIRQ,
+      debug_btn_n_i                 => icipo_btn1,
+      chipset_cpu_halt_i            => i_chipset_cpu_halt,
+      chipset_cpu_int_i             => i_chipset_cpu_int,
+
+      noice_debug_shadow_i          => '0',     --TODO: reinstate?
+
+      boot_65816_i                  => i_boot_65816,
+      window_65816_i                => i_window_65816,
+      window_65816_wr_en_i          => i_window_65816_wr_en,
+
+      -- fishbone signals
+      fb_syscon_i                   => i_fb_syscon,
+      -- cpu controller
+      fb_cpu_c2p_o                  => i_c2p_cpu816,
+      fb_cpu_p2c_i                  => i_p2c_cpu816,
+      -- mem peripheral
+      fb_mem_c2p_i                  => i_c2p_mem,
+      fb_mem_p2c_o                  => i_p2c_mem,
+
+
+      -- debug
+      debug_cpu_instr_A             => i_debug_cpu_instr816_a,
+      debug_throttle_act_o          => open,
+
+      -- preboot
+      preboot_i                     => i_preboot,
+
+      -- memory motherboard signals
+      MEM_A_io                      => MEM_A_io,
+      MEM_D_io                      => MEM_D_io,
+      MEM_RAM_nCE_o                 => MEM_RAM_nCE_o,
+      MEM_ROM_nCE_o                 => MEM_ROM_nCE_o,
+      MEM_nOE_o                     => MEM_nOE_o,
+      MEM_nWE_o                     => MEM_nWE_o,
+
+      -- cpu motherboard signals
+      CPU_A_nOE_o                   => CPU_A_nOE_o,
+      CPU_PHI2_o                    => CPU_PHI2_o,
+      CPU_BE_o                      => CPU_BE_o,
+      CPU_RDY_io                    => CPU_RDY_io,
+      CPU_nRES_o                    => CPU_nRES_o,
+      CPU_nIRQ_o                    => CPU_nIRQ_o,
+      CPU_nNMI_o                    => CPU_nNMI_o,
+      CPU_nABORT_o                  => CPU_nABORT_o,
+      CPU_MX_i                      => CPU_MX_i,
+      CPU_E_i                       => CPU_E_i
+
+   );
 
    e_fb_cpu_t65only: entity work.fb_cpu_t65only
    generic map (
@@ -1019,7 +1084,7 @@ end generate;
 		-- configuration
 
 --		cfg_cpu_type_i						=> r_cfg_cpu_type,
---		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
 --		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
@@ -1068,7 +1133,7 @@ end generate;
 
       -- debug
       debug_cpu_instr_A             => i_debug_cpu_instr_a,
-      debug_throttle_act_o          => i_debug_throttle_act,
+      debug_throttle_act_o          => open,
 
       -- preboot
       preboot_i                     => i_preboot 
@@ -1136,11 +1201,17 @@ end generate;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
             vr_btn := (others => '0');
-         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
+         elsif vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
-               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
-               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
-               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
+               if r_cfg_cpu_use_t65 = '1' then
+                  i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
+                  i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
+                  i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
+               else
+                  i_debug_leds(I).red <= (0 => i_debug_cpu_instr816_a(I), others => '0');
+                  i_debug_leds(I).green <= (0 => i_debug_cpu_instr816_a(I + 8), others => '0');
+                  i_debug_leds(I).blue <= (0 => i_debug_cpu_instr816_a(I + 16), others => '0');
+               end if;
                --i_debug_leds(I).red <= (others => '0');
                --i_debug_leds(I).green <= (others => '0');
                --i_debug_leds(I).blue <= (others => '0');
@@ -1175,12 +1246,14 @@ begin
    if rising_edge(i_fb_syscon.clk) then
       if i_fb_syscon.rst = '1' then
          r_cfg_mosram <= not icipo_btn0;
+         if i_fb_syscon.rst_state = resetfull or i_fb_syscon.rst_state = powerup then
+            r_cfg_cpu_use_t65 <= icipo_btn3;
+         end if;
       end if;
    end if;
 end process;
 
                      
-r_cfg_cpu_use_t65 <= '1';
 r_cfg_swram_enable <= '1';
 r_cfg_sys_type <= SYS_BBC;
 r_cfg_do6502_debug <= '1'; 
@@ -1284,17 +1357,8 @@ END GENERATE;
       ddr_dq_io            <= (others => 'Z');
       ddr_dqs_io           <= (others => 'Z');
       ddr_dm_io            <= (others => 'Z');
-
-
-      cpu_A_nOE_o          <= '1';
-      cpu_BE_o             <= '0';
-      cpu_PHI2_o           <= '0';
-      cpu_RDY_o            <= '1';
-      cpu_nIRQ_o           <= '1';
-      cpu_nNMI_o           <= '1';
-      cpu_nRES_o           <= '1';
       
-      sd1_cs_o             <= '1'; -- timing tickle
+      sd1_cs_o             <= '0';
       sd1_mosi_o           <= '0';
       sd1_sclk_o           <= '0';
 
@@ -1309,7 +1373,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    clkdiv5 : CLKDIV
    generic map (
       DIV_MODE => "5",            -- Divide by 5
-      GSREN => "false"
+      GSREN => "true"
    )
    port map (
       RESETN => '1',
@@ -1442,7 +1506,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
       clkdiv5_snd : CLKDIV
       generic map (
          DIV_MODE => "5",            -- Divide by 5
-         GSREN => "false"
+         GSREN => "true"
       )
       port map (
          RESETN => '1',

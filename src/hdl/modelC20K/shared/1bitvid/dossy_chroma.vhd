@@ -137,7 +137,7 @@ signal r_burst  : std_logic;
 
 signal r_pal_swich : std_logic := '0';
 
-signal i_clk_chroma_x4 : std_logic;
+signal i_clk_chroma_x4 : std_logic := '0';
 
 constant PAL_BURST : natural := integer((2.0**G_INBITS) * 40.0 * G_GAIN);
 constant NTSC_BURST : natural := integer((2.0**G_INBITS) * 60.0 * G_GAIN);

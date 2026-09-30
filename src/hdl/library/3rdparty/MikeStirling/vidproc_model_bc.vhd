@@ -74,6 +74,7 @@
 --
 -- Synchronous implementation for FPGA
 --
+-- (C) 2026 Dominic Beesley
 -- (C) 2018 David Banks
 -- (C) 2011 Mike Stirling
 --
@@ -228,7 +229,6 @@ architecture rtl of vidproc is
     signal invert_final               : std_logic;
 
 -- Attribue bits
-    signal mode1                      : std_logic;
     signal attr_bits                  : std_logic_vector(2 downto 0);
     signal first_byte                 : std_logic;
     signal speccy_attr                : std_logic_vector(7 downto 0);
@@ -236,7 +236,7 @@ architecture rtl of vidproc is
     signal speccy_bg                  : std_logic_vector(3 downto 0);
 
 -- Additional VideoNuLA registers
-    signal nula_palette_mode          : std_logic;
+    signal nula_log_pal_mode          : std_logic;
     signal nula_hor_scroll_offset     : std_logic_vector(2 downto 0);
     signal nula_left_blanking_size    : std_logic_vector(3 downto 0);
     signal nula_disable_a1            : std_logic;
@@ -257,6 +257,9 @@ architecture rtl of vidproc is
 -- Additional VideoNuLA signals
     signal nula_nreset                 : std_logic := '0';
 
+    type t_logical_colours is (bpp_1, bpp_2, bpp_4, bpp_8);
+    signal nula_logical_colours         : t_logical_colours;
+
 begin
 
     PIXCLKEN <= clken_pixel;
@@ -273,6 +276,7 @@ begin
             r0_pixel_rate <= "00";
             r0_teletext <= '0';
             r0_flash <= '0';
+            nula_logical_colours <= bpp_4;
 
             for colour in 0 to 15 loop
                 palette(colour) <= (others => '0');
@@ -289,6 +293,18 @@ begin
                         r0_pixel_rate <= DI_CPU(3 downto 2);
                         r0_teletext <= DI_CPU(1);
                         r0_flash <= DI_CPU(0);
+
+                        case DI_CPU(4 downto 2) is
+                            when "000" => nula_logical_colours <= bpp_4; -- mode 8
+                            when "001" => nula_logical_colours <= bpp_2; -- mode 5
+                            when "010" => nula_logical_colours <= bpp_1; -- mode 4,6,(7)
+                            when "011" => nula_logical_colours <= bpp_1; -- 80 columns in mode 1 - not possible, think of a use?
+                            when "100" => nula_logical_colours <= bpp_8; -- mode 13! New mode? 10 columns @ 256 colours
+                            when "101" => nula_logical_colours <= bpp_4; -- mode 2
+                            when "110" => nula_logical_colours <= bpp_2; -- mode 1
+                            when others => nula_logical_colours <= bpp_1; -- mode 0,3
+                        end case;
+
                     else
                         -- Access palette register
                         palette(to_integer(unsigned(DI_CPU(7 downto 4)))) <= DI_CPU(3 downto 0);
@@ -317,7 +333,7 @@ begin
                 -- triggered by three things: power up, nRESET and &FE22=&4x
 
                 if nula_nreset = '0' then
-                    nula_palette_mode          <= '0';
+                    nula_log_pal_mode          <= '0';
                     nula_hor_scroll_offset     <= (others => '0');
                     nula_left_blanking_size     <= (others => '0');
                     nula_disable_a1            <= '0';
@@ -349,7 +365,7 @@ begin
                         -- &FE22 - Auxiliary Control Register
                         case DI_CPU(7 downto 4) is
                             when x"1" =>
-                                nula_palette_mode          <= DI_CPU(0);
+                                nula_log_pal_mode          <= DI_CPU(0);
                             when x"2" =>
                                 nula_hor_scroll_offset     <= DI_CPU(2 downto 0);
                             when x"3" =>
@@ -524,8 +540,6 @@ begin
         end if;
     end process;
 
-    mode1 <= '1' when r0_crtc_2mhz = '1' and r0_pixel_rate = "10" else '0';
-
     -- Shift register control
     process(PIXCLK,nRESET)
         variable fg : std_logic_vector(3 downto 0);
@@ -547,7 +561,7 @@ begin
                     speccy_bg <= di1(7 downto 4);
                 elsif nula_normal_attr_mode = '1' then
                     shiftreg <= di0;
-                    if mode1 = '1' then
+                    if nula_logical_colours = bpp_2 then
                         -- mode 1
                         attr_bits <= di0(4) & di0(0) & '0';
                     else
@@ -574,33 +588,35 @@ begin
                         if nula_reg6(0) = '0' then
                             -- Spectrum mode (mode 2) specific behaviour
                             if speccy_attr = x"80" then
-                        -- attribute 0x80 is used to indicate border
-                        -- which is then mapped to logical colour 0
+                                -- attribute 0x80 is used to indicate border
+                                -- which is then mapped to logical colour 0
                                 fg := x"0";
                                 bg := x"0";
-                        else
-                            -- remap light black (0) to dark black (8) so
-                            -- logical colour zero can only be border
-                            if fg = x"0" then
-                                fg := x"8";
-                            end if;
-                            if bg = x"0" then
-                                bg := x"8";
-                            end if;
+                            else
+                                -- remap light black (0) to dark black (8) so
+                                -- logical colour zero can only be border
+                                if fg = x"0" then
+                                    fg := x"8";
+                                end if;
+                                if bg = x"0" then
+                                    bg := x"8";
+                                end if;
                             end if;
                         else
                             -- Thomson mode (mode 3) specific behaviour
                             bg(3) := speccy_attr(7);
                         end if;
-                            -- now handle flashing
-                            if speccy_attr(7) = '1' and r0_flash = '1' then
-                                speccy_fg <= bg;
-                                speccy_bg <= fg;
-                            else
-                                speccy_fg <= fg;
-                                speccy_bg <= bg;
-                            end if;
+
+                        -- now handle flashing
+                        if speccy_attr(7) = '1' and r0_flash = '1' then
+                            speccy_fg <= bg;
+                            speccy_bg <= fg;
+                        else
+                            speccy_fg <= fg;
+                            speccy_bg <= bg;
                         end if;
+                    end if;
+                    
                     if disen1 = '0' and disen2 = '1' then
                         first_byte <= '1';
                     else
@@ -672,25 +688,23 @@ begin
     -- constant (running this at the pixel rate would cause
     -- the display to move slightly depending on which mode was selected).
     process(PIXCLK,nRESET)
-        variable palette_a : std_logic_vector(3 downto 0);
-        variable dot_val : std_logic_vector(3 downto 0);
-        variable red_val : std_logic;
-        variable green_val : std_logic;
-        variable blue_val : std_logic;
-        variable do_flash : std_logic;
-        variable mode16 : std_logic;
+        variable palette_a  : std_logic_vector(3 downto 0);
+        variable dot_val    : std_logic_vector(3 downto 0);
+        variable physcol_1  : std_logic_vector(3 downto 0);
     begin
+
         if nRESET = '0' then
             phys_col <= (others =>'0');
         elsif rising_edge(PIXCLK) then
             if clken_pixel = '1' then
+                -- attr_bits already left justified above with '0' in right column if required
                 -- Look up dot value in the palette.  Bits are as follows:
                 -- bit 3 - FLASH
                 -- bit 2 - Not BLUE
                 -- bit 1 - Not GREEN
                 -- bit 0 - Not RED
                 if nula_normal_attr_mode = '1' or nula_text_attr_mode = '1' then
-                    if mode1 = '1' then
+                    if nula_logical_colours = bpp_2 then
                         palette_a := attr_bits(2 downto 1) & shiftreg(7) & shiftreg(3);
                     else
                         palette_a := attr_bits(2 downto 0)               & shiftreg(7);
@@ -711,39 +725,30 @@ begin
                     palette_a := shiftreg(7) & shiftreg(5) & shiftreg(3) & shiftreg(1);
                 end if;
 
-                dot_val := palette(to_integer(unsigned(palette_a)));
+                if nula_log_pal_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1' then
+                    if MODE_ATTR = '1' or nula_normal_attr_mode = '1' or nula_speccy_attr_mode = '1' or nula_text_attr_mode = '1' then
+                        dot_val := palette_a;
+                    else
+                        case nula_logical_colours is
+                            when bpp_1 => dot_val := "000" & palette_a(3);
+                            when bpp_2 => dot_val := "00" & palette_a(3) & palette_a(1);
+                            when others => dot_val := palette_a;
+                        end case;
+                    end if;
+                else
+                    dot_val := palette(to_integer(unsigned(palette_a))) xor "0111";
+                end if;
 
                 -- Apply flash inversion if required
-                do_flash := r0_flash;
-                if nula_flashing_flags(to_integer(unsigned(dot_val(2 downto 0)))) = '0' then
-                    do_flash := '0';
-                end if;
-                red_val := (dot_val(3) and do_flash) xor not dot_val(0);
-                green_val := (dot_val(3) and do_flash) xor not dot_val(1);
-                blue_val := (dot_val(3) and do_flash) xor not dot_val(2);
-
-                -- DOB: 2024-11-20 - experimentation suggests that top bit of ULA palette is 
-                -- is ignored in NULA look in modes other than where cols=20 and f=2Mhz or
-                -- cols=10 and f=1Mhz
-                if r0_pixel_rate = "01" and r0_crtc_2mhz = '1' then -- 20 cols fast = 16 colours
-                    mode16 := '1';
-                elsif r0_pixel_rate = "00" and r0_crtc_2mhz = '0' then -- 10 cols slow = 16 colours
-                    mode16 := '1';
-                elsif nula_reg6 /= "00" then
-                    mode16 := '1';
-                else
-                    mode16 := '0';
+                if nula_flashing_flags(to_integer(unsigned(not dot_val(2 downto 0)))) = '1' and r0_flash='1' and dot_val(3)='1' and nula_speccy_attr_mode = '0' then
+                    dot_val := dot_val xor "0111";
                 end if;
 
                 -- Output physical colour, to be used by VideoNuLA
                 if SPR_PX_ACT = '1' then
                     phys_col <= SPR_PX_DAT;
-                elsif nula_palette_mode = '1' or nula_speccy_attr_mode = '1' or MODE_ATTR = '1'  then
-                    phys_col <= palette_a;
-                elsif mode16 = '1' then
-                    phys_col <= dot_val(3) & blue_val & green_val & red_val;
                 else
-                    phys_col <= '0' & blue_val & green_val & red_val;
+                    phys_col <= dot_val;
                 end if;
         	end if;
         end if;
@@ -770,8 +775,12 @@ begin
                 if clken_scroll = '1' then
                     phys_col_delay_reg <= phys_col_delay_reg(phys_col_delay_reg'high - 4 downto 0) & phys_col;
                     invert_delay_reg <= invert_delay_reg(6 downto 0) & (vr_cursor_invert and vr_disen_reg_u);
-                    -- delay disen by one more pixel
-                    disenout <= vr_disen_reg;
+                    -- delay disen
+                    if nula_logical_colours = bpp_8 then
+                        disenout <= disen1;
+                    else
+                        disenout <= vr_disen_reg;
+                    end if;
                 end if;
 
 
@@ -785,7 +794,17 @@ begin
                     if disenout = '0' then
                         nula_RGB <= (others => invert_final);
                     else
-                        nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));
+                        if nula_logical_colours = bpp_8 then
+                            nula_RGB <= 
+                                (   shiftreg(7 downto 5) & shiftreg(5) & 
+                                    shiftreg(4 downto 2) & shiftreg(2) & 
+                                    shiftreg(1 downto 0) & shiftreg(0) & shiftreg(0))
+                                xor (invert_final & invert_final & invert_final & invert_final & 
+                                    invert_final & invert_final & invert_final & invert_final & 
+                                    invert_final & invert_final & invert_final & invert_final);
+                        else
+                            nula_RGB <= nula_palette(to_integer(unsigned(phys_col_final xor (invert_final & invert_final & invert_final & invert_final))));                        
+                        end if;
                     end if;
                 end if;
 
@@ -795,8 +814,8 @@ begin
                     PIXDE <= PIXDE_IN;
                 end if;
 
-                -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                 if nula_speccy_attr_mode = '1' then
+                    -- DOB note this is one cycle pixel delayed to match up with delayed physical colour and inverts
                     vr_disen_reg := disen2;
                     vr_disen_reg_u := disen2_u;
                 else

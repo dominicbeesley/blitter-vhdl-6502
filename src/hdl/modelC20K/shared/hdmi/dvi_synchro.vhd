@@ -288,25 +288,52 @@ begin
 
 	--================================= CRTC clock domain to DVI clock domain ========
 
-	e_rm_hs:entity work.metadelay
-	generic map (
-		N		=> C_META
-	)
-	port map(
-		clk	=> clk_pixel_dvi,
-		i		=> r_hsync_lead_crtc,
-		o  	=> i_hsync_lead_dvi
-	);
+--	e_rm_hs:entity work.metadelay
+--	generic map (
+--		N		=> C_META
+--	)
+--	port map(
+--		clk	=> clk_pixel_dvi,
+--		i		=> r_hsync_lead_crtc,
+--		o  	=> i_hsync_lead_dvi
+--	);
+--
+--	e_rm_vs:entity work.metadelay
+--	generic map (
+--		N		=> C_META
+--	)
+--	port map(
+--		clk	=> clk_pixel_dvi,
+--		i		=> r_vsync_lead_crtc,
+--		o  	=> i_vsync_lead_dvi
+--	);
 
-	e_rm_vs:entity work.metadelay
-	generic map (
-		N		=> C_META
-	)
-	port map(
-		clk	=> clk_pixel_dvi,
-		i		=> r_vsync_lead_crtc,
-		o  	=> i_vsync_lead_dvi
-	);
+	-- We need to synchronise the hsync / vsync signals from the 48 to 27/54 MHz pixel
+	-- domain. 
+	-- To do this we detect the change in the 27MHz domain and then resample a couple of
+	-- clocks later
+	-- There's hysteresis set to avoid hunting and we must set a period for the sample
+	-- position.
+	-- This is borrowed from BeebFPGA's scan doubler 
+	-- see https://github.com/hoglet67/BeebFpga/blob/dev/src/common/scandoubler/rgb2vga_scandoubler.vhd#L212
+
+	e_synsyn:entity work.sync_sync 
+   generic map (
+      G_PERIOD => 9,
+      G_HYSTERESIS => 2,
+      G_TRAIL => 4,
+      G_META => 2
+   )
+   port map(
+      HSYNC_SRC_e_i     => r_hsync_lead_crtc,
+      VSYNC_SRC_e_i     => r_vsync_lead_crtc,
+
+      CLK_DEST_i        => clk_pixel_dvi,
+      
+      HSYNC_DST_e_o     => i_hsync_lead_dvi,
+      VSYNC_DST_e_o     => i_vsync_lead_dvi
+
+   );
 
 	p_reg_syncs_dvi:process(RESET_48M_i, clk_pixel_dvi)
 	begin
