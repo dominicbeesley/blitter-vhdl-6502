@@ -429,7 +429,7 @@ And press CTRL-Break
     *DIN 501
     CHAIN"CLOCKDP"
 
-<img src="assets/getting-started/clocksp-f2.jpg" width="600"" />
+<img src="assets/getting-started/clocksp-f2.jpg" width="600" />
 
 This has got us up to 8.0 MHz. 
 
