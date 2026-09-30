@@ -498,7 +498,7 @@ We are now running the 65816 in turbo mode. Let's run clock speed again.
     *DIN 501
     CH."CLOCKDP"
 
-<img src="assets/getting-started/816-3-clocksp-64" width="600" />
+<img src="assets/getting-started/816-3-clocksp-64.jpg" width="600" />
 
 This gives us a rough speed of 6.4MHZ, but the 816 is running at 8MHz. This
 time it's the video memory that is running slightly slower. Like the Beeb
@@ -715,7 +715,7 @@ low-memory is set to L00:
 
     *BLTURBO ?
 
-If L is no L00 then:
+If L is not L00 then:
 
     *BLTURBO L00
 
