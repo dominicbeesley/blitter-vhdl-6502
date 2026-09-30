@@ -90,6 +90,9 @@ end fb_dmac_aeris;
 
 architecture Behavioral of fb_dmac_aeris is
 
+   attribute syn_keep : integer;
+   attribute syn_preserve : integer;
+
 	-- peripheral interface sigs
 	type		per_strate_t		is (idle, wait_d_stb, rd);
 
@@ -128,6 +131,11 @@ architecture Behavioral of fb_dmac_aeris is
 
 	signal	r_counters		: t_ctr_arr;
 	signal	r_pointers		: t_ptr_arr;
+
+   attribute syn_keep of r_counters : signal is 1; -- keep for sdc?
+   attribute syn_keep of r_pointers : signal is 1; -- keep for sdc?
+   attribute syn_preserve of r_counters : signal is 1; -- keep for sdc?
+   attribute syn_preserve of r_pointers : signal is 1; -- keep for sdc?
 
 	signal	r_ctl_wait_cyc		: std_logic;		-- when '1' start program on next VS
 	signal	r_ctl_feedback	: std_logic_vector(3 downto 0);
