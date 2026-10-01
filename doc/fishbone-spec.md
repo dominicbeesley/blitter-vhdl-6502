@@ -3,11 +3,19 @@ New rules:
 - d_wr_stb may be asserted after a_stb
 - d_wr_stb must be asserted for every we cycle unless cyc is dropped
 - d_wr_stb for cycle n - may be asserted after a_stb for n+i - TODO: check, if not then assert stall must *should* be asserted until d_wr_stb?
+- to allow ack signals to be generated using clocked logic the associated stb should be baukled during the ack cycle
 
+Extra rules Oct 2026:
 
+- stall removed
+- stall replaced with A_ack
+- ack renamed done
+- d_ack added to acknowledge receipt of a D_wr_stb or D_rd is ready
+- done added to indicate end of cycle, asserted until cyc dropped
+- d_ack/done must be coincident with or after A_ack
 
-Masters must handle slaves that ack a write cycle *before* d_wr_stb has been asserted (where a write is inappropriate for example)
-
+Controllers must handle slaves that signal a write cycle _done_ *before
+d_wr_stb has been asserted* (where a writes are inappropriate for example)
 
 # Introduction
 
