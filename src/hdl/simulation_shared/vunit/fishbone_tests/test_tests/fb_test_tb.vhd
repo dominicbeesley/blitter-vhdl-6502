@@ -17,13 +17,17 @@ end test_tb;
 
 architecture rtl of test_tb is
 
-	constant CLOCKSPEED : natural := 128;
+	constant CLOCKSPEED 		: natural := 128;
 
-	constant CLOCK_PER : time := (1000000/CLOCKSPEED) * 1 ps;
+	constant CLOCK_PER 		: time := (1000000/CLOCKSPEED) * 1 ps;
 
-	signal i_fb_syscon : fb_syscon_t;
-	signal i_fb_con_c2p : fb_con_o_per_i_t;
-	signal i_fb_con_p2c : fb_con_i_per_o_t;
+	signal i_fb_syscon 		: fb_syscon_t;
+	signal i_fb_con_c2p 		: fb_con_o_per_i_t;
+	signal i_fb_con_p2c 		: fb_con_i_per_o_t;
+
+	signal is_A_ACK_DLY		: natural := 0;
+	signal is_D_WR_ACK_DLY	: natural := 0;
+	signal is_D_RD_ACK_DLY	: natural := 0;
 
 begin
 	p_syscon_clk:process
@@ -61,6 +65,10 @@ begin
 	end procedure UNEXD;
 
 	begin
+
+		is_A_ACK_DLY 	 <= 0;
+		is_D_WR_ACK_DLY <= 0;
+		is_D_RD_ACK_DLY <= 0;
 
 		test_runner_setup(runner, runner_cfg);
 
@@ -226,7 +234,101 @@ begin
 				UNEXD(v_D_arrtest(2), x"AD");
 				UNEXD(v_D_arrtest(3), x"BE");
 				UNEXD(v_D_arrtest(4), x"EF");
+
+			elsif run("multi_mem_write_slowA") then
+
+				is_A_ACK_DLY <= 5;
+
+				-- simple single read, with 5 clock a_stb delay
+
+				fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
+
+				v_D_arrtest(0) := x"12";
+				v_D_arrtest(1) := x"DE";
+				v_D_arrtest(2) := x"AD";
+				v_D_arrtest(3) := x"BE";
+				v_D_arrtest(4) := x"EF";
+
+				fbtest_multi_write(
+					i_fb_syscon,
+					i_fb_con_p2c,
+					i_fb_con_c2p,
+					x"000012",
+					5,
+					v_D_arrtest,
+					0,
+					0,
+					1
+				);
+
+				v_D_arrtest := (others => (others => 'U'));
+
+				fbtest_multi_read(
+					i_fb_syscon,
+					i_fb_con_p2c,
+					i_fb_con_c2p,
+					x"000012",
+					5,
+					v_D_arrtest,
+					0,
+					1
+				);
+
+				UNEXD(v_D_arrtest(0), x"12");
+				UNEXD(v_D_arrtest(1), x"DE");
+				UNEXD(v_D_arrtest(2), x"AD");
+				UNEXD(v_D_arrtest(3), x"BE");
+				UNEXD(v_D_arrtest(4), x"EF");
+
+			elsif run("multi_mem_write_slowD") then
+
+				is_A_ACK_DLY <= 0;
+				is_D_RD_ACK_DLY <= 10;
+				is_D_WR_ACK_DLY <= 8;
+
+				-- simple single read, with 5 clock a_stb delay
+
+				fbtest_wait_reset(i_fb_syscon, i_fb_con_c2p);
+
+				v_D_arrtest(0) := x"12";
+				v_D_arrtest(1) := x"DE";
+				v_D_arrtest(2) := x"AD";
+				v_D_arrtest(3) := x"BE";
+				v_D_arrtest(4) := x"EF";
+
+				fbtest_multi_write(
+					i_fb_syscon,
+					i_fb_con_p2c,
+					i_fb_con_c2p,
+					x"000012",
+					5,
+					v_D_arrtest,
+					0,
+					0,
+					1
+				);
+
+				v_D_arrtest := (others => (others => 'U'));
+
+				fbtest_multi_read(
+					i_fb_syscon,
+					i_fb_con_p2c,
+					i_fb_con_c2p,
+					x"000012",
+					5,
+					v_D_arrtest,
+					0,
+					1
+				);
+
+				UNEXD(v_D_arrtest(0), x"12");
+				UNEXD(v_D_arrtest(1), x"DE");
+				UNEXD(v_D_arrtest(2), x"AD");
+				UNEXD(v_D_arrtest(3), x"BE");
+				UNEXD(v_D_arrtest(4), x"EF");
+
 			end if;
+
 
 		end loop;
 
@@ -244,7 +346,10 @@ begin
 		fb_c2p_i => i_fb_con_c2p,
 		fb_p2c_o => i_fb_con_p2c,
 
-		stall_i  => '0'
+		sim_A_ACK_DLY 		=> is_A_ACK_DLY,
+		sim_D_WR_ACK_DLY 	=> is_D_WR_ACK_DLY,
+		sim_D_RD_ACK_DLY 	=> is_D_RD_ACK_DLY
+
 	);
 
 

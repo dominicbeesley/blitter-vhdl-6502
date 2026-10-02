@@ -329,12 +329,12 @@ package body fb_tester_pack is
       signal c2p_o      : out fb_con_o_per_i_t;
 
          A        : in  std_logic_vector(23 downto 0);
-         N        : positive;
+         N        : in  positive;
          D        : out t_fbtest_byte_array;
 
-         A_stb_dl : natural := 0;       -- no of cycles to delay a_stb after cyc and between cycles
+         A_stb_dl : in  natural := 0;       -- no of cycles to delay a_stb after cyc and between cycles
 
-         A_INC    : natural := 1
+         A_INC    : in  natural := 1
       ) is
    variable v_tx : natural; -- number of a_stb's sent
    variable v_rx : natural; -- number of acks sent

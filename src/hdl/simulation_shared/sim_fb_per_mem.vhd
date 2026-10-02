@@ -47,19 +47,21 @@ use work.fishbone.all;
 
 entity sim_fb_per_mem is
 generic (
-		G_SIZE : natural := 8;
-		G_A_ACK_DLY : natural := 0;
-		G_D_WR_ACK_DLY : natural := 0;
-		G_D_RD_ACK_DLY : natural := 0
+		G_SIZE : natural := 8
 	);
 port (
 
 		fb_syscon_i								: in	fb_syscon_t;
 
-		fb_c2p_i									: in fb_con_o_per_i_t;
+		fb_c2p_i									: in 	fb_con_o_per_i_t;
 		fb_p2c_o									: out	fb_con_i_per_o_t;
 
-		stall_i									: in std_logic
+		sim_stall_i								: in  std_logic := '0';
+		sim_A_ACK_DLY 							: in  natural := 0;
+		sim_D_WR_ACK_DLY 						: in  natural := 0;
+		sim_D_RD_ACK_DLY 						: in  natural := 0
+
+
 	);
 
 end sim_fb_per_mem;
@@ -100,11 +102,11 @@ begin
 			r_A_ack <= '0';
 			r_D_ack <= '0';
 			r_D_rd <= (others => '-');
-			v_A_ack_dly := G_A_ACK_DLY;
 
 			wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
+			v_A_ack_dly := sim_A_ACK_DLY;
 
-			while v_A_ack_dly > 0 or stall_i = '1' loop
+			while v_A_ack_dly > 0 or sim_stall_i = '1' loop
 				wait until rising_edge(fb_syscon_i.clk);
 				if fb_c2p_i.cyc = '0' then
 					r_done <= '0';
@@ -114,13 +116,16 @@ begin
 					report "Cyc dropped during write wait for a_ack" severity note;
 					return;
 				end if;
+				if v_A_ack_dly > 0 then
+					v_A_ack_dly := v_A_ack_dly - 1;
+				end if;
 			end loop;
 			
 			v_a := fb_c2p_i.A;
 			r_A_ack <= '1';
 
 			if fb_c2p_i.we = '1' then
-				v_D_ack_dly := G_D_WR_ACK_DLY;
+				v_D_ack_dly := sim_D_WR_ACK_DLY;
 				while fb_c2p_i.D_wr_stb /= '1' and fb_c2p_i.cyc = '1' loop
 					report "wait wr stb" severity note;
 					wait until rising_edge(fb_syscon_i.clk);
@@ -129,6 +134,7 @@ begin
 				while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
 					wait until rising_edge(fb_syscon_i.clk);
 					r_A_ack <= '0';
+					v_D_ack_dly := v_D_ack_dly - 1;
 				end loop;
 						
 				if fb_c2p_i.cyc = '1' then
@@ -143,11 +149,12 @@ begin
 					return;
 				end if;
 			else
-				v_D_ack_dly := G_D_RD_ACK_DLY;
+				v_D_ack_dly := sim_D_RD_ACK_DLY;
 
 				while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
 					wait until rising_edge(fb_syscon_i.clk);
 					r_A_ack <= '0';
+					v_D_ack_dly := v_D_ack_dly - 1;
 				end loop;
 
 				if fb_c2p_i.cyc = '0' then

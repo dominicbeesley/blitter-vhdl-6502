@@ -109,13 +109,14 @@ end fb_cpu_log2phys;
 
 architecture rtl of fb_cpu_log2phys is 
 
-	type state_t is (idle, waitstall, wait_d_stb);
+	type state_t is (idle, wait_a_ack, wait_d_stb);
 
 	signal r_state 		: state_t;
 
+	signal r_A_ack_host				: std_logic;
 	signal r_cyc						: std_logic;
-	signal r_A_stb						: std_logic;							-- output address strobe
-	signal i_A_stb						: std_logic;							-- input qualified address strobe
+	signal r_A_stb_client			: std_logic;							-- output address strobe
+	signal i_A_stb_host				: std_logic;							-- input qualified address strobe
 	signal i_phys_A					: std_logic_vector(23 downto 0);
 	signal r_phys_A					: std_logic_vector(23 downto 0);
 	signal r_we							: std_logic;
@@ -131,15 +132,16 @@ architecture rtl of fb_cpu_log2phys is
 begin
 
 
-	fb_con_p2c_o.stall <= '0' when r_state = idle else '1';
-	fb_con_p2c_o.ack <= fb_per_p2c_i.ack;
+	fb_con_p2c_o.A_ack <= r_A_ack_host;
+	fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack;
 	fb_con_p2c_o.rdy <= fb_per_p2c_i.rdy;
 	fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
+	fb_con_p2c_o.done <= fb_per_p2c_i.done;
 
 	fb_per_c2p_o.cyc			<=	r_cyc;
 	fb_per_c2p_o.we			<=	r_we;
 	fb_per_c2p_o.A				<=	r_phys_A;
-	fb_per_c2p_o.A_stb		<= r_A_stb;
+	fb_per_c2p_o.A_stb		<= r_A_stb_client;
 	fb_per_c2p_o.D_wr			<= r_D_wr;
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
@@ -150,7 +152,7 @@ begin
 	-- State Machine 
 	-- ================================================================================================ --
 
-	i_A_stb 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
+	i_A_stb_host 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
 					'0';
 
 
@@ -165,11 +167,14 @@ begin
 			r_D_wr_stb <= '0';
 			r_D_wr <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MAX;
-			r_a_stb <= '0';
+			r_a_stb_client <= '0';
 			r_done_r_d_wr_stb <= '0';
+			r_A_ack_host <= '0';
+			r_throttle_act <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
-			r_a_stb <= '0';
+			r_a_stb_client <= '0';
+			r_A_ack_host <= '0';
 
 			v_accept_wr_stb := false;
 
@@ -177,21 +182,22 @@ begin
 				when idle =>
 					r_done_r_d_wr_stb <= '0';
 					r_D_wr_stb <= '0';
-					if i_A_stb then
+					if i_A_stb_host then
 						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
 						r_throttle_act <= i_throttle_act;
 						r_we <= fb_con_c2p_i.we;
 						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 						r_cyc <= '1';
-						r_state <= waitstall;
-						r_a_stb <= '1';
+						r_state <= wait_a_ack;
+						r_a_stb_client <= '1';
+						r_a_ack_host <= '1';
 					end if;
-				when waitstall =>
+				when wait_a_ack =>
 					v_accept_wr_stb := true;
-					if fb_per_p2c_i.stall = '1' then
-						r_a_stb <= '1';
-						r_State <= waitstall;
+					if fb_per_p2c_i.A_ack = '0' then
+						r_a_stb_client <= '1';
+						r_State <= wait_a_ack;
 					else
 						if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
 							r_state <= idle;
@@ -226,7 +232,7 @@ begin
 			end if;
 
 			if fb_con_c2p_i.cyc = '0' then
-				r_A_stb <= '0';
+				r_A_stb_client <= '0';
 				r_cyc <= '0';
 				r_state <= idle;
 				r_D_wr_stb <= '0';
@@ -275,7 +281,7 @@ begin
 
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
-		A_stb_i								=> i_A_stb,
+		A_stb_i								=> i_A_stb_host,
 
 		A_o									=> i_phys_A,
 
