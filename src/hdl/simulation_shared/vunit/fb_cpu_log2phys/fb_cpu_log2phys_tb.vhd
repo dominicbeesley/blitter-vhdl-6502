@@ -278,7 +278,7 @@ begin
 		fb_c2p_i => i_fb_per_c2p,
 		fb_p2c_o => i_fb_per_p2c,
 
-		sim_stall_i  => i_per_stall
+		sim_A_ack_hold_i  => i_per_stall
 	);
 
 

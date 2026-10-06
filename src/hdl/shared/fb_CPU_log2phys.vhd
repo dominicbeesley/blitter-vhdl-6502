@@ -136,7 +136,6 @@ begin
 	fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack;
 	fb_con_p2c_o.rdy <= fb_per_p2c_i.rdy;
 	fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
-	fb_con_p2c_o.done <= fb_per_p2c_i.done;
 
 	fb_per_c2p_o.cyc			<=	r_cyc;
 	fb_per_c2p_o.we			<=	r_we;
