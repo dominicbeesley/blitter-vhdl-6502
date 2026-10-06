@@ -12,6 +12,7 @@ CODE65=../../blitter-65xx-code
 
 HOSTFS=~/hostfs
 SSD65DIR=${CODE65}/build/ssds
+TTX80DIR=../../ttx80/sw/BUILD
 
 SSDS_65="roms65 tools65 demo65 adventure bigfonts examblit paula nulatest"
 SSDS="z80 bas816 roms69 vgatest"
@@ -110,6 +111,8 @@ done;
 for ssd in sourcefiles/*.ssd; do
 	cp "$ssd" ${BUILDDIR}/ssd
 done;
+
+cp ${TTX80DIR}/ttx80.ssd ${BUILDDIR}/ssd
 
 cp release-files.md ${BUILDDIR}
 cp ../src/hdl/mk2/boards/mk2/output_files/mk2blit.jic ${BUILDDIR}/fpga
