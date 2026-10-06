@@ -47,7 +47,8 @@ use work.fishbone.all;
 
 entity sim_fb_per_mem is
 generic (
-		G_SIZE : natural := 8
+		G_SIZE : natural := 8;
+		G_VALUE_XOR : std_logic_vector(7 downto 0) := x"00"
 	);
 port (
 
@@ -191,7 +192,7 @@ begin
 		if (init) then
 			init := false;
 			for i in 0 to G_SIZE-1 loop
-				r_mem(i) <= std_logic_vector(to_unsigned(i mod 255 ,8)) xor x"FF";
+				r_mem(i) <= std_logic_vector(to_unsigned(i mod 255 ,8)) xor x"FF" xor G_VALUE_XOR;
 			end loop;
 		else
 
