@@ -146,7 +146,6 @@ package fishbone is
 		A_ack => '0',
 		D_rd => (others => '1'),
 		D_ack => '0',
-		done => '0',
 		rdy => '0'
 		);
 

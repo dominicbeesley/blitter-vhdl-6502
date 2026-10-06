@@ -346,9 +346,9 @@ begin
 		fb_c2p_i => i_fb_con_c2p,
 		fb_p2c_o => i_fb_con_p2c,
 
-		sim_A_ACK_DLY 		=> is_A_ACK_DLY,
-		sim_D_WR_ACK_DLY 	=> is_D_WR_ACK_DLY,
-		sim_D_RD_ACK_DLY 	=> is_D_RD_ACK_DLY
+		sim_A_ack_dly_i 		=> is_A_ACK_DLY,
+		sim_D_wr_ack_dly_i 	=> is_D_WR_ACK_DLY,
+		sim_D_rd_ack_dly_i 	=> is_D_RD_ACK_DLY
 
 	);
 

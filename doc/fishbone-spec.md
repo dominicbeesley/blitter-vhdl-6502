@@ -491,3 +491,54 @@ D_wr/d_wr_stb coincident with a_stb, A_ack, D_ack, rdy ASAP
 Note: this shows overlapped writes
 not rdy_ctdn is ignored for writes and rdy is coincident with D_ack
 
+# Code style
+
+The following conventions are used in the Fishbone VHDL in this repository.
+
+## Naming
+
+From Oct 2026 use the following naming conventions. Old code may use older
+conventions but should be updated where convenient.
+
+        +--------------------+----------------------------------------------------------+
+        | Pattern            | Meaning                                                  |
+        +--------------------+----------------------------------------------------------+
+        | fb_syscon_i        | Syscon record (fb_syscon_t)                              |
+        +--------------------+----------------------------------------------------------+
+        | fb_up_*            | Fishbone record ports facing the controller (the block   |
+        |                    | acts as a peripheral there)                              |
+        +--------------------+----------------------------------------------------------+
+        | fb_dn_*            | Fishbone record ports facing the peripheral(s) (the      |
+        |                    | block acts as a controller there)                        |
+        +--------------------+----------------------------------------------------------+
+        | *_c2p_*            | Controller to peripheral record (fb_con_o_per_i_t/_arr)  |
+        +--------------------+----------------------------------------------------------+
+        | *_p2c_*            | Peripheral to controller record (fb_con_i_per_o_t/_arr)  |
+        +--------------------+----------------------------------------------------------+
+        | peripheral_sel_*   | Ports to an external address decoder, see                |
+        |                    | fb_intcon_pack.vhd                                       |
+        +--------------------+----------------------------------------------------------+
+        | *_i / *_o / *_io   | Port direction in / out / inout                          |
+        +--------------------+----------------------------------------------------------+
+        | i_*                | Internal combinatorial signal                            |
+        +--------------------+----------------------------------------------------------+
+        | r_*                | Register                                                 |
+        +--------------------+----------------------------------------------------------+
+        | v_*                | Process variable, assigned before use in each pass of    |
+        |                    | the process (combinatorial)                              |
+        +--------------------+----------------------------------------------------------+
+        | vr_*               | Process variable whose value is kept and used in the     |
+        |                    | next pass of the process (implemented as a register)     |
+        +--------------------+----------------------------------------------------------+
+        | G_*                | Generics, in upper case e.g. G_PERIPHERAL_COUNT          |
+        +--------------------+----------------------------------------------------------+
+        | C_*                | Immutable local constants                                |
+        +--------------------+----------------------------------------------------------+
+
+For example an interconnect has ports fb_up_c2p_i, fb_up_p2c_o, fb_dn_c2p_o 
+and fb_dn_p2c_i.
+
+Use the terms Controller/Peripheral, not Master/Slave.
+
+Note: in the Blitter and C20k projects G_ has also been used (confusingly) for
+global definitions coming from packages.

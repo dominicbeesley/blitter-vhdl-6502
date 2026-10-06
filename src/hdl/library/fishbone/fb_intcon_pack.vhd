@@ -8,6 +8,39 @@ use work.fishbone.all;
 
 package fb_intcon_pack is
 
+-- -----------------------------------------------------------------------------
+-- Peripheral select (address decoder) interface
+-- -----------------------------------------------------------------------------
+-- Interconnects with peripheral_sel_* ports do not decode addresses
+-- themselves. The decoder is a separate, purely combinatorial block so that
+-- different address maps can be plugged in (one set of ports per controller
+-- on many-controller interconnects):
+--
+--   peripheral_sel_addr_o : address of the current A_stb
+--   peripheral_sel_we_o   : we of the current A_stb, so that reads and writes
+--                           of the same address may select different
+--                           peripherals
+--   peripheral_sel_i      : selected peripheral index,
+--                           numbits(G_PERIPHERAL_COUNT) bits
+--   peripheral_sel_oh_i   : the same selection as a one-hot
+--
+-- The decoder returns both in the same clock. Testing suggests having both may
+-- be faster and use fewer resources: the decoder can produce each directly
+-- from the address, and the interconnect uses the one-hot to steer strobes
+-- and mux returned signals and the index for comparisons. To keep this
+-- benefit a decoder should not derive one from the other.
+--
+-- The decoder must:
+--   * map every address to a valid peripheral (index < G_PERIPHERAL_COUNT)
+--   * set exactly one bit of the one-hot, agreeing with the index
+--
+-- Interconnects also rely on these rules from the Fishbone spec:
+--   * a peripheral returns exactly one D_ack per A_ack'd transaction
+--   * a peripheral ignores D_wr_stb unless it has an accepted write still
+--     waiting for its data; this lets a D_wr_stb belonging to a write that is
+--     still blocked for another peripheral sit harmlessly on the current one
+-- -----------------------------------------------------------------------------
+
 component fb_intcon_shared is
 	generic (
 		SIM								: boolean := false;
@@ -41,28 +74,26 @@ end component;
 
 component fb_intcon_one_to_many is
 	generic (
-		SIM					: boolean := false;
-		G_PERIPHERAL_COUNT		: POSITIVE;
-		G_ARB_ROUND_ROBIN : boolean := false;
-		G_ADDRESS_WIDTH	: POSITIVE 						-- width of the address that we care about
+		G_PERIPHERAL_COUNT	: positive := 4;		-- number of peripherals
+		G_MAXOUT					: positive := 15		-- max outstanding transactions
 	);
 	port (
 
 		fb_syscon_i				: in	fb_syscon_t;
 
-		-- peripheral port connect to controllers
-		fb_con_c2p_i			: in	fb_con_o_per_i_t;
-		fb_con_p2c_o			: out	fb_con_i_per_o_t;
+		-- peripheral port connect to controller
+		fb_up_c2p_i				: in	fb_con_o_per_i_t;
+		fb_up_p2c_o				: out	fb_con_i_per_o_t;
 
-		-- controller port connecto to peripherals
-		fb_per_c2p_o			: out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
-		fb_per_p2c_i			: in 	fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
+		-- controller port connect to peripherals
+		fb_dn_c2p_o				: out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
+		fb_dn_p2c_i				: in 	fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 
-		-- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
-		peripheral_sel_addr_o		: out	std_logic_vector(G_ADDRESS_WIDTH-1 downto 0);
-		peripheral_sel_we_o		   : out	std_logic;
-		peripheral_sel_i				: in unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
-		peripheral_sel_oh_i			: in std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		-- address decoded selected peripherals as one-hot
+		-- peripheral select interface (see above)
+		peripheral_sel_addr_o	: out	std_logic_vector(23 downto 0);
+		peripheral_sel_we_o		: out	std_logic;
+		peripheral_sel_i			: in	unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);	-- selected peripheral index
+		peripheral_sel_oh_i		: in	std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		-- selected peripheral one-hot
 
 	);
 end component;

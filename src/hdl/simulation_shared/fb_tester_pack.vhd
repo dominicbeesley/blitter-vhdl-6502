@@ -33,8 +33,11 @@
 -- Description:      Fishbone bus component testers
 -- Dependencies: 
 --
--- Revision: 
--- Additional Comments: 
+-- Revision:
+--                   06/10/2026 Oct 2026 Fishbone: done removed, transactions
+--                   complete on D_ack; rdy checked on every D_ack; multi
+--                   read/write counter and D_wr_stb delay fixes; fbtest_abort
+-- Additional Comments:
 --                   Procedures for stimulating fishbone components
 --
 ----------------------------------------------------------------------------------
@@ -106,8 +109,23 @@ package fb_tester_pack is
          D        : in t_fbtest_byte_array;
 
          A_stb_dl : natural := 0;       -- no of cycles to delay a_stb after cyc and between cycles
-         D_stb_dl : natural := 0;
+         D_stb_dl : natural := 0;       -- no of cycles to delay each d_wr_stb after its a_stb / the previous d_ack
          A_INC    : natural := 1
+      );
+
+   -- start a single transaction then drop cyc after abort_dl_i clocks (unless
+   -- it completed first), then check that nothing is acknowledged while cyc
+   -- is low
+   procedure fbtest_abort(
+      signal syscon_i   : in  fb_syscon_t;
+      signal p2c_i      : in  fb_con_i_per_o_t;
+      signal c2p_o      : out fb_con_o_per_i_t;
+
+         A_i         : in  std_logic_vector(23 downto 0);
+         we_i        : in  std_logic;
+         D_i         : in  std_logic_vector(7 downto 0);   -- write data, presented with A_stb
+         abort_dl_i  : in  natural;                        -- clocks after A_stb to drop cyc
+         completed_o : out boolean                         -- D_ack seen before cyc dropped
       );
 end package;
 
@@ -200,22 +218,18 @@ package body fb_tester_pack is
       c2p_o.a_stb <= '0';
       c2p_o.a <= (others => '-');
 
-      -- wait for done - may be coincident with A_ack
+      -- wait for D_ack - may be coincident with A_ack
       v_iter := 0;
-      loop
-         if p2c_i.d_ack = '1' then
-            D_o := p2c_i.D_rd;
-            v_read_done := true;
-         end if;
-         if p2c_i.done = '1' then
-            exit;
-         end if;
+      while p2c_i.D_ack /= '1' loop
          wait until rising_edge(syscon_i.clk);
          v_iter := v_iter + 1;
          if v_iter > 100000 then
-            report "Failed waiting for done/d_ack" severity error;
+            report "Failed waiting for D_ack" severity error;
          end if;
       end loop;
+      assert p2c_i.rdy = '1' report "rdy not asserted with D_ack" severity error;
+      D_o := p2c_i.D_rd;
+      v_read_done := true;
 
       c2p_o <= fb_c2p_unsel;
 
@@ -298,24 +312,17 @@ package body fb_tester_pack is
          c2p_o.D_wr_stb <= '1';    
       end if;
 
+      -- wait for D_ack - completes the transaction
+      v_iter := 0;
       while not v_had_d_ack loop
          wait until rising_edge(syscon_i.clk);
          v_had_d_ack := v_had_d_ack or ((c2p_o.D_wr_stb and p2c_i.d_ack) = '1');
-      end loop;
-
-      c2p_o.D_wr <= (others => '-');
-      c2p_o.D_wr_stb <= '0';
-
-      -- wait for ack
-
-      v_iter := 0;
-      while p2c_i.done /= '1' loop
-         wait until rising_edge(syscon_i.clk);
          v_iter := v_iter + 1;
          if v_iter > 100000 then
-            report "Failed waiting for ack" severity error;
+            report "Failed waiting for D_ack" severity error;
          end if;
       end loop;
+      assert p2c_i.rdy = '1' report "rdy not asserted with D_ack" severity error;
 
       c2p_o <= fb_c2p_unsel;
 
@@ -336,8 +343,8 @@ package body fb_tester_pack is
 
          A_INC    : in  natural := 1
       ) is
-   variable v_tx : natural; -- number of a_stb's sent
-   variable v_rx : natural; -- number of acks sent
+   variable v_tx : natural; -- number of a_stb's A_ack'd
+   variable v_rx : natural; -- number of D_acks received
    variable v_wt : natural;
    variable v_tot: natural;
    variable v_wt_A_ack:boolean;
@@ -351,6 +358,8 @@ package body fb_tester_pack is
       c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
       c2p_o.we <= '0';
 
+      v_tx := 0;
+      v_rx := 0;
       v_tot := 0;
       v_wt := A_stb_dl;
       v_wt_A_ack := false;
@@ -360,10 +369,9 @@ package body fb_tester_pack is
          assert v_tot < N * 2000 report "multi read " & to_hex_string(A) & "[" & natural'image(N) & "] took too many cyles" severity error;
 
          if v_tx < N and v_wt = 0 and not v_wt_A_ack then
-            c2p_o.A <= std_logic_vector(unsigned(A) + v_tx);
+            c2p_o.A <= std_logic_vector(unsigned(A) + v_tx * A_INC);
             c2p_o.A_stb <= '1';
             v_wt_A_ack := true;
-            report "THERE" severity note;
          elsif v_wt > 0 then
             v_wt := v_wt -1;
          end if;
@@ -375,12 +383,12 @@ package body fb_tester_pack is
             c2p_o.A_stb <= '0';
             c2p_o.A <= (others => '-');
             v_wt := A_stb_dl;
-            v_tx := v_tx + A_INC;
-            report "HERE" severity note;
+            v_tx := v_tx + 1;
          end if;
 
-
          if p2c_i.D_ack = '1' then
+            assert p2c_i.rdy = '1' report "rdy not asserted with D_ack" severity error;
+            assert v_rx < v_tx report "D_ack before A_ack" severity error;
             D(v_rx) := p2c_i.D_rd;
             v_rx := v_rx + 1;
          end if;
@@ -402,10 +410,10 @@ package body fb_tester_pack is
          D        : in t_fbtest_byte_array;
 
          A_stb_dl : natural := 0;       -- no of cycles to delay a_stb after cyc and between cycles
-         D_stb_dl : natural := 0;
+         D_stb_dl : natural := 0;       -- no of cycles to delay each d_wr_stb after its a_stb / the previous d_ack
          A_INC    : natural := 1
       ) is
-   variable v_tx : natural; -- number of a_stb's sent
+   variable v_tx : natural; -- number of a_stb's A_ack'd
    variable v_dx : natural; -- number of d_acks recvd
    variable v_wt : natural;
    variable v_wtd: natural;
@@ -422,9 +430,11 @@ package body fb_tester_pack is
       c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
       c2p_o.we <= '1';
 
+      v_tx := 0;
+      v_dx := 0;
       v_tot := 0;
       v_wt := A_stb_dl;
-      v_wtd:= D_stb_dl + A_stb_dl;
+      v_wtd:= D_stb_dl;
       v_wt_A_ack := false;
       v_wt_d_ack := false;
       while v_dx < N or v_tx < N loop
@@ -433,19 +443,25 @@ package body fb_tester_pack is
          assert v_tot < N * 2000 report "multi write " & to_hex_string(A) & "[" & natural'image(N) & "] took too many cyles" severity error;
 
          if v_tx < N and v_wt = 0 and not v_wt_A_ack then
-            c2p_o.A <= std_logic_vector(unsigned(A) + v_tx);
+            c2p_o.A <= std_logic_vector(unsigned(A) + v_tx * A_INC);
             c2p_o.A_stb <= '1';
             v_wt_A_ack := true;
          elsif v_wt > 0 then
             v_wt := v_wt -1;
          end if;
 
-         if v_dx < N and v_wtd = 0 and not v_wt_d_ack then
-            c2p_o.D_wr <= D(v_dx);
-            c2p_o.D_wr_stb <= '1';
-            v_wt_d_ack := true;
+         -- the data for write v_dx may only be strobed once its A_stb has
+         -- been issued (A_ack'd already or being strobed now)
+         if v_dx < N and not v_wt_d_ack and
+            (v_dx < v_tx or (v_dx = v_tx and v_wt_A_ack)) then
+            if v_wtd = 0 then
+               c2p_o.D_wr <= D(v_dx);
+               c2p_o.D_wr_stb <= '1';
+               v_wt_d_ack := true;
+            else
+               v_wtd := v_wtd - 1;
+            end if;
          end if;
-
 
          wait until rising_edge(syscon_i.clk);
 
@@ -454,15 +470,16 @@ package body fb_tester_pack is
             c2p_o.A_stb <= '0';
             c2p_o.A <= (others => '-');
             v_wt := A_stb_dl;
-            v_tx := v_tx + A_INC;
+            v_tx := v_tx + 1;
          end if;
 
          if v_wt_d_ack and p2c_i.D_ack = '1' then
+            assert p2c_i.rdy = '1' report "rdy not asserted with D_ack" severity error;
             v_wt_d_ack := false;
             c2p_o.D_wr_stb <= '0';
             c2p_o.D_wr <= (others => '-');         
             v_wtd:= D_stb_dl;
-            v_dx := v_dx + A_INC;
+            v_dx := v_dx + 1;
          end if;
 
       end loop;
@@ -471,6 +488,64 @@ package body fb_tester_pack is
 
 
    end fbtest_multi_write;
+
+   procedure fbtest_abort(
+      signal syscon_i   : in  fb_syscon_t;
+      signal p2c_i      : in  fb_con_i_per_o_t;
+      signal c2p_o      : out fb_con_o_per_i_t;
+
+         A_i         : in  std_logic_vector(23 downto 0);
+         we_i        : in  std_logic;
+         D_i         : in  std_logic_vector(7 downto 0);
+         abort_dl_i  : in  natural;
+         completed_o : out boolean
+      ) is
+   variable v_completed : boolean;
+   begin
+
+      c2p_o <= fb_c2p_unsel;
+      v_completed := false;
+
+      wait until rising_edge(syscon_i.clk);
+
+      c2p_o <= (
+         cyc         => '1',
+         we          => we_i,
+         A           => A_i,
+         A_stb       => '1',
+         D_wr        => D_i,
+         D_wr_stb    => we_i,
+         rdy_ctdn    => RDY_CTDN_TEST
+      );
+
+      for i in 1 to abort_dl_i loop
+         wait until rising_edge(syscon_i.clk);
+         if p2c_i.A_ack = '1' then
+            c2p_o.A_stb <= '0';
+            c2p_o.A <= (others => '-');
+         end if;
+         if p2c_i.D_ack = '1' then
+            v_completed := true;
+            exit;
+         end if;
+      end loop;
+
+      -- drop cyc
+      c2p_o <= fb_c2p_unsel;
+
+      -- nothing may be acknowledged while cyc is low; the clock in which
+      -- cyc drops may still carry an ack registered from the previous clock
+      wait until rising_edge(syscon_i.clk);
+      for i in 1 to 8 loop
+         wait until rising_edge(syscon_i.clk);
+         assert p2c_i.A_ack = '0' report "A_ack after cyc dropped" severity error;
+         assert p2c_i.D_ack = '0' report "D_ack after cyc dropped" severity error;
+         assert p2c_i.rdy   = '0' report "rdy after cyc dropped" severity error;
+      end loop;
+
+      completed_o := v_completed;
+
+   end fbtest_abort;
 
 
 end fb_tester_pack;
