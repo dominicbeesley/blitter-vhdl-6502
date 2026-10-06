@@ -124,9 +124,7 @@ package fishbone is
 		A_ack					:  std_logic;							-- acknowledge receipt of A_stb
 		D_rd					: 	std_logic_vector(7 downto 0);	-- data in during a read
 		D_ack					:  std_logic;							-- signal data ready (read) data accepted (write strobe ack)
-		done					:	std_logic;							-- cycle complete, controller can/should terminate cycle now, data was supplied or latched
 		rdy					:  std_logic;							-- cycle will be complete in (at most) rdy_ctdn (input) bus cycles
-
 	end record fb_con_i_per_o_t;
 
 	type fb_con_o_per_i_arr is array(natural range <>) of fb_con_o_per_i_t;
