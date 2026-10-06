@@ -22,30 +22,30 @@
 -- ----------------------------------------------------------------------
 
 
--- Company: 				Dossytronics
--- Engineer: 				Dominic Beesley
+-- Company:             Dossytronics
+-- Engineer:            Dominic Beesley
 -- 
--- Create Date:    		25/10/2022
+-- Create Date:         25/10/2022
 -- Design Name: 
--- Module Name:    		work.sim_fb_per_mem
+-- Module Name:         work.sim_fb_per_mem
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 			A simple memory peripheral
+-- Description:         A simple memory peripheral
 -- Dependencies:
 --
 -- Revision:
---		06/10/2026		Oct 2026 Fishbone: done removed (rdy is a copy of D_ack),
---						stall replaced by sim_A_ack_hold_i, sim ports renamed
+--    06/10/2026     Oct 2026 Fishbone: done removed (rdy is a copy of D_ack),
+--                stall replaced by sim_A_ack_hold_i, sim ports renamed
 -- Additional Comments:
---		Blocking: A_ack for a transaction is not given until the previous
---		transaction has been D_ack'd. D_wr_stb is only looked at once a write
---		has been accepted (A_ack'd or being A_ack'd).
+--    Blocking: A_ack for a transaction is not given until the previous
+--    transaction has been D_ack'd. D_wr_stb is only looked at once a write
+--    has been accepted (A_ack'd or being A_ack'd).
 --
---		sim_A_ack_dly_i		clocks to delay A_ack after A_stb is seen
---		sim_A_ack_hold_i		hold off A_ack while '1'
---		sim_D_wr_ack_dly_i	clocks to delay D_ack after D_wr_stb is seen
---		sim_D_rd_ack_dly_i	clocks to delay D_ack after A_ack for reads
+--    sim_A_ack_dly_i      clocks to delay A_ack after A_stb is seen
+--    sim_A_ack_hold_i     hold off A_ack while '1'
+--    sim_D_wr_ack_dly_i   clocks to delay D_ack after D_wr_stb is seen
+--    sim_D_rd_ack_dly_i   clocks to delay D_ack after A_ack for reads
 --
 ----------------------------------------------------------------------------------
 library ieee;
@@ -57,151 +57,151 @@ use work.fishbone.all;
 
 entity sim_fb_per_mem is
 generic (
-		G_SIZE : natural := 8;
-		G_VALUE_XOR : std_logic_vector(7 downto 0) := x"00"
-	);
+      G_SIZE : natural := 8;
+      G_VALUE_XOR : std_logic_vector(7 downto 0) := x"00"
+   );
 port (
 
-		fb_syscon_i								: in	fb_syscon_t;
+      fb_syscon_i                      : in  fb_syscon_t;
 
-		fb_c2p_i									: in 	fb_con_o_per_i_t;
-		fb_p2c_o									: out	fb_con_i_per_o_t;
+      fb_c2p_i                         : in  fb_con_o_per_i_t;
+      fb_p2c_o                         : out fb_con_i_per_o_t;
 
-		sim_A_ack_hold_i						: in  std_logic := '0';
-		sim_A_ack_dly_i 						: in  natural := 0;
-		sim_D_wr_ack_dly_i 					: in  natural := 0;
-		sim_D_rd_ack_dly_i 					: in  natural := 0
+      sim_A_ack_hold_i                 : in  std_logic := '0';
+      sim_A_ack_dly_i                  : in  natural := 0;
+      sim_D_wr_ack_dly_i               : in  natural := 0;
+      sim_D_rd_ack_dly_i               : in  natural := 0
 
 
-	);
+   );
 
 end sim_fb_per_mem;
 
 architecture rtl of sim_fb_per_mem is
-	
-	type t_mem is array (0 to G_SIZE-1) of std_logic_vector(7 downto 0);
+   
+   type t_mem is array (0 to G_SIZE-1) of std_logic_vector(7 downto 0);
 
-	signal r_mem : t_mem;
+   signal r_mem : t_mem;
 
-	signal r_A_ack   	: std_logic;
-	signal r_D_ack   	: std_logic;
-	signal r_d_rd		: std_logic_vector(7 downto 0);
+   signal r_A_ack    : std_logic;
+   signal r_D_ack    : std_logic;
+   signal r_d_rd     : std_logic_vector(7 downto 0);
 
 begin
 
-			fb_p2c_o <= (
-					A_ack => r_A_ack,
-					rdy => r_D_ack,
-					D_ack => r_D_ack,
-					D_rd => r_D_rd
-				);
+         fb_p2c_o <= (
+               A_ack => r_A_ack,
+               rdy => r_D_ack,
+               D_ack => r_D_ack,
+               D_rd => r_D_rd
+            );
 
 
 
-	p_per:process
-	variable vr_init:boolean := true;
-	variable v_a: std_logic_vector(23 downto 0);
-	variable v_d: std_logic_vector(7 downto 0);
+   p_per:process
+   variable vr_init:boolean := true;
+   variable v_a: std_logic_vector(23 downto 0);
+   variable v_d: std_logic_vector(7 downto 0);
 
-	procedure DO_CYC is
-	variable v_A_ack_dly : natural := 0;
-	variable v_D_ack_dly : natural := 0;
-	begin
-			r_A_ack <= '0';
-			r_D_ack <= '0';
-			r_D_rd <= (others => '-');
+   procedure DO_CYC is
+   variable v_A_ack_dly : natural := 0;
+   variable v_D_ack_dly : natural := 0;
+   begin
+         r_A_ack <= '0';
+         r_D_ack <= '0';
+         r_D_rd <= (others => '-');
 
-			wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
-			v_A_ack_dly := sim_A_ack_dly_i;
+         wait until fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and rising_edge(fb_syscon_i.clk);
+         v_A_ack_dly := sim_A_ack_dly_i;
 
-			while v_A_ack_dly > 0 or sim_A_ack_hold_i = '1' loop
-				wait until rising_edge(fb_syscon_i.clk);
-				if fb_c2p_i.cyc = '0' then
-					r_A_ack <= '0';
-					r_D_ack <= '0';
-					r_D_rd <= (others => '-');
-					report "Cyc dropped during wait for a_ack" severity note;
-					return;
-				end if;
-				if v_A_ack_dly > 0 then
-					v_A_ack_dly := v_A_ack_dly - 1;
-				end if;
-			end loop;
-			
-			v_a := fb_c2p_i.A;
-			r_A_ack <= '1';
+         while v_A_ack_dly > 0 or sim_A_ack_hold_i = '1' loop
+            wait until rising_edge(fb_syscon_i.clk);
+            if fb_c2p_i.cyc = '0' then
+               r_A_ack <= '0';
+               r_D_ack <= '0';
+               r_D_rd <= (others => '-');
+               report "Cyc dropped during wait for a_ack" severity note;
+               return;
+            end if;
+            if v_A_ack_dly > 0 then
+               v_A_ack_dly := v_A_ack_dly - 1;
+            end if;
+         end loop;
+         
+         v_a := fb_c2p_i.A;
+         r_A_ack <= '1';
 
-			if fb_c2p_i.we = '1' then
-				v_D_ack_dly := sim_D_wr_ack_dly_i;
-				while fb_c2p_i.D_wr_stb /= '1' and fb_c2p_i.cyc = '1' loop
-					report "wait wr stb" severity note;
-					wait until rising_edge(fb_syscon_i.clk);
-					r_A_ack <= '0';
-				end loop;			
-				while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
-					wait until rising_edge(fb_syscon_i.clk);
-					r_A_ack <= '0';
-					v_D_ack_dly := v_D_ack_dly - 1;
-				end loop;
-						
-				if fb_c2p_i.cyc = '1' then
-					r_mem(to_integer(unsigned(v_a)) mod G_SIZE) <= fb_c2p_i.D_wr;
-					report "Written " & to_hex_string(fb_c2p_i.D_wr) & " to " & to_hex_string(v_a) severity note;
-				else
-					r_A_ack <= '0';
-					r_D_ack <= '0';
-					r_D_rd <= (others => '-');
-					report "Cyc dropped during write wait for d_wr_stb" severity note;
-					return;
-				end if;
-			else
-				v_D_ack_dly := sim_D_rd_ack_dly_i;
+         if fb_c2p_i.we = '1' then
+            v_D_ack_dly := sim_D_wr_ack_dly_i;
+            while fb_c2p_i.D_wr_stb /= '1' and fb_c2p_i.cyc = '1' loop
+               report "wait wr stb" severity note;
+               wait until rising_edge(fb_syscon_i.clk);
+               r_A_ack <= '0';
+            end loop;         
+            while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
+               wait until rising_edge(fb_syscon_i.clk);
+               r_A_ack <= '0';
+               v_D_ack_dly := v_D_ack_dly - 1;
+            end loop;
+                  
+            if fb_c2p_i.cyc = '1' then
+               r_mem(to_integer(unsigned(v_a)) mod G_SIZE) <= fb_c2p_i.D_wr;
+               report "Written " & to_hex_string(fb_c2p_i.D_wr) & " to " & to_hex_string(v_a) severity note;
+            else
+               r_A_ack <= '0';
+               r_D_ack <= '0';
+               r_D_rd <= (others => '-');
+               report "Cyc dropped during write wait for d_wr_stb" severity note;
+               return;
+            end if;
+         else
+            v_D_ack_dly := sim_D_rd_ack_dly_i;
 
-				while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
-					wait until rising_edge(fb_syscon_i.clk);
-					r_A_ack <= '0';
-					v_D_ack_dly := v_D_ack_dly - 1;
-				end loop;
+            while v_D_ack_dly > 0 and fb_c2p_i.cyc = '1' loop
+               wait until rising_edge(fb_syscon_i.clk);
+               r_A_ack <= '0';
+               v_D_ack_dly := v_D_ack_dly - 1;
+            end loop;
 
-				if fb_c2p_i.cyc = '0' then
-					r_A_ack <= '0';
-					r_D_ack <= '0';
-					r_D_rd <= (others => '-');
-					report "cyc dropped during wait for read" severity note;
-					return;
-				end if;
-				v_d := r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
-				r_D_Rd <= v_d;
-				report "read " & to_hex_string(v_d) & " from " & to_hex_string(v_a) severity note;
-			end if;
-			
-			if fb_c2p_i.cyc = '0' then
-				r_A_ack <= '0';
-				r_D_ack <= '0';
-				r_D_rd <= (others => '-');
-				report "cyc dropped during wait for d_ack" severity note;
-				return;
-			end if;
-			r_D_ack <= '1';
-			wait until rising_edge(fb_syscon_i.clk);
-			r_A_ack <= '0';
-			r_D_ack <= '0';
-			r_D_rd <= (others => '-');
-	end procedure;	
-	begin
+            if fb_c2p_i.cyc = '0' then
+               r_A_ack <= '0';
+               r_D_ack <= '0';
+               r_D_rd <= (others => '-');
+               report "cyc dropped during wait for read" severity note;
+               return;
+            end if;
+            v_d := r_mem(to_integer(unsigned(v_a)) mod G_SIZE);
+            r_D_Rd <= v_d;
+            report "read " & to_hex_string(v_d) & " from " & to_hex_string(v_a) severity note;
+         end if;
+         
+         if fb_c2p_i.cyc = '0' then
+            r_A_ack <= '0';
+            r_D_ack <= '0';
+            r_D_rd <= (others => '-');
+            report "cyc dropped during wait for d_ack" severity note;
+            return;
+         end if;
+         r_D_ack <= '1';
+         wait until rising_edge(fb_syscon_i.clk);
+         r_A_ack <= '0';
+         r_D_ack <= '0';
+         r_D_rd <= (others => '-');
+   end procedure; 
+   begin
 
-		if (vr_init) then
-			vr_init := false;
-			for i in 0 to G_SIZE-1 loop
-				r_mem(i) <= std_logic_vector(to_unsigned(i mod 256, 8)) xor x"FF" xor G_VALUE_XOR;
-			end loop;
-		else
+      if (vr_init) then
+         vr_init := false;
+         for i in 0 to G_SIZE-1 loop
+            r_mem(i) <= std_logic_vector(to_unsigned(i mod 256, 8)) xor x"FF" xor G_VALUE_XOR;
+         end loop;
+      else
 
-			DO_CYC;
+         DO_CYC;
 
-		end if;
+      end if;
 
-	end process;
+   end process;
 
 
 

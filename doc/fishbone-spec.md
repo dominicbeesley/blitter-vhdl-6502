@@ -333,6 +333,13 @@ D_ack should be active for exactly one cycle per transaction
 D_ack may be asserted coincident with A_ack at the earliest (so long as 
 D_wr_stb has been received for writes or D_rd is ready).
 
+D_acks for successive transactions may be asserted on consecutive clocks,
+for example when a pipelined peripheral returns queued data. Controllers
+and interconnects must therefore count each clock in which D_ack is
+asserted as one transaction, rather than looking for a rising edge. The
+same applies to rdy, which may stay asserted across the consecutive
+D_acks.
+
 # Bus Cycle
 
 A bus cycle may take many clocks to service or may be over in a minimum of 2 
