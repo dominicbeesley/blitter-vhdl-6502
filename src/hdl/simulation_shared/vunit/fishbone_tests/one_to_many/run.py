@@ -17,6 +17,7 @@ lib.add_source_files(str(HDL / "library/fishbone/fishbone_pack.vhd"))
 lib.add_source_files(str(HDL / "library/fishbone/fb_intcon_one_to_many.vhd"))
 lib.add_source_files(str(HDL / "library/common.vhd"))
 lib.add_source_files(str(HDL / "simulation_shared/sim_fb_per_mem.vhd"))
+lib.add_source_files(str(HDL / "simulation_shared/sim_fb_per_mem_pipe.vhd"))
 lib.add_source_files(str(HDL / "simulation_shared/fb_tester_pack.vhd"))
 
 # Run vunit function
