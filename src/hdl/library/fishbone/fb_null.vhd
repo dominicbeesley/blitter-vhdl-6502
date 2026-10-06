@@ -46,11 +46,9 @@ use ieee.numeric_std.all;
 
 library work;
 use work.fishbone.all;
-use work.common.all;
 
 entity fb_null is
 	generic (
-		SIM						: boolean := false;								-- skip some stuff, i.e. slow sdram start up
 		G_READ_VAL				: std_logic_vector(7 downto 0) := x"FF"	-- default value to read back	
 	);
 	port(
@@ -64,37 +62,44 @@ entity fb_null is
 end fb_null;
 
 architecture rtl of fb_null is
-signal r_cyc : std_logic;
-signal r_we  : std_logic;
-signal r_ack : std_logic;
+signal r_wait_we : std_logic;
+signal r_A_ack : std_logic;
+signal r_D_ack : std_logic;
 begin
 	
 	p_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_cyc <= '0';
-			r_we <= '0';
-			r_ack <= '0';
+			r_wait_we <= '0';
+			r_A_ack <= '0';
+			r_D_ack <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_cyc = '1' then
-				if r_we = '0' or fb_c2p_i.d_wr_stb = '1' then
-					r_ack <= '1';
-					r_cyc <= '0';
+			r_A_ack <= '0';
+			r_D_ack <= '0';
+
+			if r_wait_we = '1' then
+				if fb_c2p_i.d_wr_stb = '1' then
+					r_D_ack <= '1';
+					r_wait_we <= '0';
 				end if;
-			elsif fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
-				r_we <= fb_c2p_i.we;
-				r_cyc <= '1';
+			elsif fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' and r_A_ack = '0' then
+				r_A_ack <= '1';
+				if fb_c2p_i.we = '1' and (fb_c2p_i.d_wr_stb = '0' or r_D_ack = '1') then
+					r_wait_we <= '1';
+				else
+					r_D_ack <= '1';
+				end if;
 			end if;
 
 			if fb_c2p_i.cyc = '0' then
-				r_cyc <= '0';
+				r_wait_we <= '0';
 			end if;
 		end if;
 	end process;
 
-	fb_p2c_o.stall <= r_cyc;
+	fb_p2c_o.A_ack <= r_A_ack;
 	fb_p2c_o.D_rd <= G_READ_VAL;
-	fb_p2c_o.ack <= r_ack;
-	fb_p2c_o.rdy <= r_ack;
+	fb_p2c_o.D_ack <= r_D_ack;
+	fb_p2c_o.rdy <= r_D_ack;
 
 end rtl;
