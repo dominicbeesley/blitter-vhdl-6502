@@ -47,11 +47,17 @@ use work.fb_tester_pack.all;
 --
 -- Most tests check several conditions in turn; the notes on each say which.
 --
--- Not yet exercised: G_MAXOUT, as the default (15) is more than peripheral
--- 1's G_DEPTH.
+-- G_MAXOUT is passed to the interconnect. At the default (15), more than
+-- peripheral 1's G_DEPTH (4), peripheral 1 limits the transactions
+-- outstanding. run.py also runs cross_read and cross_write with G_MAXOUT 2,
+-- so that the interconnect holds off A_stb while peripheral 1's queue still
+-- has room.
 
 entity test_tb is
-	generic (runner_cfg : string);
+	generic (
+		runner_cfg 	: string;
+		G_MAXOUT		: positive := 15
+	);
 end test_tb;
 
 architecture rtl of test_tb is
@@ -368,7 +374,7 @@ begin
 	e_dut:entity work.fb_intcon_one_to_many
 	generic map (
 		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
-		G_MAXOUT						=> 2
+		G_MAXOUT						=> G_MAXOUT
 	)
 	port map (
 
