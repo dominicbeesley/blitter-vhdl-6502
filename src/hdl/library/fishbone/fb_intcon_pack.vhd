@@ -152,5 +152,25 @@ component fb_intcon_crossbar is
 end component;
 
 
+component fb_intcon_buffer is
+   generic (
+      G_REG_C2P            : boolean; -- insert a set of registers to the c2p signals
+      G_REG_P2C            : boolean  -- insert a set of registers in the p2c signals
+   );
+   port(
+
+      fb_syscon_i          : in  fb_syscon_t;
+
+      -- upstream peripheral port connect to controller
+      fb_up_c2p_i          : in  fb_con_o_per_i_t;
+      fb_up_p2c_o          : out fb_con_i_per_o_t;
+
+      -- downstream controller port connect to peripheral
+      fb_dn_c2p_o          : out fb_con_o_per_i_t;
+      fb_dn_p2c_i          : in  fb_con_i_per_o_t
+
+   );
+end component;
+
 
 end fb_intcon_pack;

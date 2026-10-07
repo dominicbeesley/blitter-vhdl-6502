@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2022 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2026 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@
 --
 -- Revision: 
 -- Additional Comments: 
---                   The buffer will add at least one or two clock cycles of 
+--                   The buffer will add at 0, 1 or 2 clock cycles of 
 --                   latency depending on the G_REG_C2P and G_REG_P2C settings.
 --                   * When G_REG_C2P is true the A, we, D_wr and D_wr_stb are 
 --                     registered, the return A_ack signal is synthesized 
@@ -96,9 +96,9 @@ architecture rtl of fb_intcon_buffer is
 begin
    
    -- mask the d_wr_stb that is passed on depending on which stages are buffered
-   i_d_wr_stb_mask <=   ((not fb_dn_p2c_i.D_ack) or not b2s(G_REG_P2C))
+   i_d_wr_stb_mask <=   ((not fb_dn_p2c_i.D_ack) or not b2s(G_REG_C2P))
                         and 
-                        ((not r_up_D_ack) or not b2s(G_REG_C2P));
+                        ((not r_up_D_ack) or not b2s(G_REG_P2C));
 
 
    p_stage : process(fb_syscon_i)
@@ -164,18 +164,27 @@ begin
    p_p2c:process(all)
    begin
       if G_REG_P2C then
-         fb_up_p2c_o <= (
-            A_ack          => r_up_A_ack,
-            D_rd           => r_up_D_rd,
-            D_ack          => r_up_D_ack,
-            rdy            => r_up_rdy
-         );
+         if G_REG_C2P then
+            fb_up_p2c_o <= (
+               A_ack          => r_up_A_ack,
+               D_rd           => r_up_D_rd,
+               D_ack          => r_up_D_ack,
+               rdy            => r_up_rdy
+            );
+         else
+            fb_up_p2c_o <= (
+               A_ack          => fb_dn_p2c_i.A_ack,
+               D_rd           => r_up_D_rd,
+               D_ack          => r_up_D_ack,
+               rdy            => r_up_rdy
+            );
+         end if;
       elsif G_REG_C2P then
          fb_up_p2c_o <= (
             A_ack          => r_up_A_ack,
             D_rd           => fb_dn_p2c_i.D_rd,
-            D_ack          => fb_dn_p2c_i.D_ack,
-            rdy            => fb_dn_p2c_i.rdy
+            D_ack          => fb_dn_p2c_i.D_ack and r_dn_cyc,
+            rdy            => fb_dn_p2c_i.rdy and r_dn_cyc
          );
       else
          fb_up_p2c_o <= fb_dn_p2c_i;
