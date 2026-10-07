@@ -11,7 +11,12 @@ use work.fishbone.all;
 use work.common.all;
 use work.fb_tester_pack.all;
 
--- Tests for fb_intcon_one_to_many with three sim memory peripherals:
+--- Tests for fb_intcon_one_to_many with three sim memory peripherals,
+-- and an fb_intcon_buffer on each side of the interconnect:
+--
+--   controller -> e_buf_con -> e_dut -+-> peripheral 0
+--   (fbtest_*)                        +-> e_buf_per -> peripheral 1
+--                                     +-> peripheral 2
 --
 --   0x0x_xxxx -> peripheral 0, blocking sim_fb_per_mem,
 --                initial contents (A mod 256) xor FF
@@ -52,6 +57,33 @@ use work.fb_tester_pack.all;
 -- outstanding. run.py also runs cross_read and cross_write with G_MAXOUT 2,
 -- so that the interconnect holds off A_stb while peripheral 1's queue still
 -- has room.
+--
+-- Buffers: e_buf_con (G_CON_REG_*) sits between the controller and the
+-- interconnect, and e_buf_per (G_PER_REG_*) between the interconnect and
+-- peripheral 1, the pipelined peripheral, so that a buffer sees queued
+-- transactions. run.py runs every test with both buffers set the same way:
+--   nobuf  both generics false, the buffers are pass-throughs
+--   c2p    A, we, D_wr, strobes and cyc registered, A_ack made locally
+--   p2c    D_ack, D_rd and rdy registered
+--   both   both directions registered
+-- The buffers only add latency (a clock per registered direction on each
+-- round trip), so the tests and the data they expect are the same in every
+-- setting. The timings described above are for nobuf. A buffer passes a
+-- transaction every 2 clocks, so peripheralrate
+-- and its queue still fills. Across the settings the tests also check that:
+--   * no transaction is lost when a c2p buf
+--     interconnect or peripheral holds off its own A_ack (slow tests,
+--     crossings, a full queue)
+--   * a stale D_wr_stb, still showing after a D_ack, is masked and not
+--     taken as the next write's data (cross is
+--     already queued in peripheral 1 when it gives a D_ack)
+--   * dropping cyc clears the buffers (abor
+-- The generic defaults (all true) are the "both" setting, used when the
+-- bench is run without run.py's configurati
+--
+-- p_check watches the controller side of e_ide
+-- of the interconnect (the interconnect side of e_buf_per). So its
+-- controller-side checks apply to e_buf_con and the interconnect together.
 
 entity test_tb is
    generic (

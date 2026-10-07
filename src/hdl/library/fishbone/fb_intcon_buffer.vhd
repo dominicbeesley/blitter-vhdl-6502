@@ -39,12 +39,14 @@
 -- Additional Comments: 
 --                   The buffer will add at 0, 1 or 2 clock cycles of 
 --                   latency depending on the G_REG_C2P and G_REG_P2C settings.
---                   * When G_REG_C2P is true the A, we, D_wr and D_wr_stb are 
---                     registered, the return A_ack signal is synthesized 
---                     locally
+--                   * When G_REG_C2P is true the cyc, A/stb, we, D_wr and 
+--                     D_wr_stb are registered
 --                   * When G_REG_P2C is true the D_rd, D_ack and rdy signals 
---                     are registered, the return A_ack signal is synthesized 
+--                     are registered
+--                   * if both are true the return A_ack signal is synthesized 
 --                     locally
+--                   * if neither are true the buffer just passes through with
+--                     no registers or delays
 ----------------------------------------------------------------------------------
 
 
@@ -90,6 +92,7 @@ architecture rtl of fb_intcon_buffer is
    signal   r_dn_we        : std_logic;
    signal   r_dn_D_wr      : std_logic_vector(7 downto 0);
    signal   r_dn_D_wr_stb  : std_logic;
+   signal   r_dn_rdy_ctdn  :  t_rdy_ctdn
 
    signal   i_d_wr_stb_mask: std_logic;
 
@@ -113,6 +116,7 @@ begin
          r_up_rdy <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
          r_up_A_ack <= '0';
+         r_dn_rdy_ctdn <= fb_up_c2p_i.rdy_ctdn;
          if fb_up_c2p_i.cyc = '0' then
             r_full <= '0'; 
             r_dn_cyc <= '0'; 
@@ -153,7 +157,7 @@ begin
             A_stb          => r_full,
             D_wr           => r_dn_D_wr,
             D_wr_stb       => r_dn_D_wr_stb,
-            rdy_ctdn       => fb_up_c2p_i.rdy_ctdn
+            rdy_ctdn       => r_dn_rdy_ctdn
          );
       else
          fb_dn_c2p_o <= fb_up_c2p_i;
