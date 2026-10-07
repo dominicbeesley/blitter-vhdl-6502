@@ -15,6 +15,7 @@ lib = vu.add_library("lib")
 lib.add_source_files(str(HERE / "*.vhd"))
 lib.add_source_files(str(HDL / "library/fishbone/fishbone_pack.vhd"))
 lib.add_source_files(str(HDL / "library/fishbone/fb_intcon_one_to_many.vhd"))
+lib.add_source_files(str(HDL / "library/fishbone/fb_intcon_buffer.vhd"))
 lib.add_source_files(str(HDL / "library/common.vhd"))
 lib.add_source_files(str(HDL / "simulation_shared/sim_fb_per_mem.vhd"))
 lib.add_source_files(str(HDL / "simulation_shared/sim_fb_per_mem_pipe.vhd"))
@@ -25,6 +26,7 @@ lib.add_source_files(str(HDL / "simulation_shared/fb_tester_pack.vhd"))
 # transactions) and below it (the interconnect limits them). Adding a
 # configuration removes a test's default one, so both are listed.
 tb = lib.test_bench("test_tb")
+
 for name in ("cross_read", "cross_write"):
     test = tb.test(name)
     test.add_config(name="maxout15", generics=dict(G_MAXOUT=15))

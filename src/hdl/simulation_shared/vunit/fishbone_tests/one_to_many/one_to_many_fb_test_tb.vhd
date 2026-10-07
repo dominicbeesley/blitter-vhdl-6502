@@ -56,7 +56,13 @@ use work.fb_tester_pack.all;
 entity test_tb is
 	generic (
 		runner_cfg 	: string;
-		G_MAXOUT		: positive := 15
+		G_MAXOUT		: positive := 15;
+
+		G_CON_REG_P2C	: boolean := true;
+		G_CON_REG_C2P	: boolean := true;
+
+		G_PER_REG_P2C	: boolean := true;
+		G_PER_REG_C2P	: boolean := true
 	);
 end test_tb;
 
@@ -83,8 +89,14 @@ architecture rtl of test_tb is
 	signal i_fb_con_c2p		: fb_con_o_per_i_t;
 	signal i_fb_con_p2c		: fb_con_i_per_o_t;
 
+	signal i_fb_con_c2p_buf	: fb_con_o_per_i_t;
+	signal i_fb_con_p2c_buf	: fb_con_i_per_o_t;
+
 	signal i_fb_per_c2p 		: fb_con_o_per_i_arr(PERIPHERAL_COUNT-1 downto 0);
 	signal i_fb_per_p2c 		: fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
+
+	signal i_fb_per_c2p1_buf: fb_con_o_per_i_t;
+	signal i_fb_per_p2c1_buf: fb_con_i_per_o_t;
 
 	signal is_A_ACK_DLY		: natural := 0;
 	signal is_D_WR_ACK_DLY	: natural := 0;
@@ -371,6 +383,23 @@ begin
 		end if;
 	end process;
 
+	e_buf_con:entity work.fb_intcon_buffer
+	generic map (
+		G_REG_C2P	=> G_CON_REG_C2P,
+		G_REG_P2C	=> G_CON_REG_P2C
+	)
+	port map (
+
+		fb_syscon_i						=> i_fb_syscon,
+
+		fb_up_c2p_i						=> i_fb_con_c2p,
+		fb_up_p2c_o						=> i_fb_con_p2c,
+
+		fb_dn_c2p_o						=> i_fb_con_c2p_buf,
+		fb_dn_p2c_i						=> i_fb_con_p2c_buf
+
+	);
+
 	e_dut:entity work.fb_intcon_one_to_many
 	generic map (
 		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
@@ -380,8 +409,8 @@ begin
 
 		fb_syscon_i						=> i_fb_syscon,
 
-		fb_up_c2p_i						=> i_fb_con_c2p,
-		fb_up_p2c_o						=> i_fb_con_p2c,
+		fb_up_c2p_i						=> i_fb_con_c2p_buf,
+		fb_up_p2c_o						=> i_fb_con_p2c_buf,
 
 		fb_dn_c2p_o						=> i_fb_per_c2p,
 		fb_dn_p2c_i						=> i_fb_per_p2c,
@@ -402,7 +431,7 @@ begin
 										"010" when i_peripheral_sel_addr_o(23 downto 20) = x"1" else
 										"100";
 
-	e_sim_mem1:entity work.sim_fb_per_mem
+	e_sim_mem0:entity work.sim_fb_per_mem
 	generic map (
 		G_SIZE => 256,
 		G_VALUE_XOR => x"00"
@@ -418,15 +447,33 @@ begin
 
 	);
 
-	e_sim_mem2:entity work.sim_fb_per_mem_pipe
+	-- add a buffer for peripheral 1
+	e_buf_per:entity work.fb_intcon_buffer
+	generic map (
+		G_REG_C2P	=> G_PER_REG_C2P,
+		G_REG_P2C	=> G_PER_REG_P2C
+	)
+	port map (
+
+		fb_syscon_i						=> i_fb_syscon,
+
+		fb_up_c2p_i						=> i_fb_per_c2p(1),
+		fb_up_p2c_o						=> i_fb_per_p2c(1),
+
+		fb_dn_c2p_o						=> i_fb_per_c2p1_buf,
+		fb_dn_p2c_i						=> i_fb_per_p2c1_buf
+
+	);
+
+	e_sim_mem1:entity work.sim_fb_per_mem_pipe
 	generic map (
 		G_SIZE => 256,
 		G_VALUE_XOR => x"A5"
 		)
 	port map (
 		fb_syscon_i => i_fb_syscon,
-		fb_c2p_i 	=> i_fb_per_c2p(1),
-		fb_p2c_o 	=> i_fb_per_p2c(1),
+		fb_c2p_i 	=> i_fb_per_c2p1_buf,
+		fb_p2c_o 	=> i_fb_per_p2c1_buf,
 
 		sim_A_ack_dly_i 		=> 1,
 		sim_D_miss_dly_i		=> 16,
@@ -434,7 +481,7 @@ begin
 	);
 
 
-	e_sim_mem3:entity work.sim_fb_per_mem
+	e_sim_mem2:entity work.sim_fb_per_mem
 	generic map (
 		G_SIZE => 256,
 		G_VALUE_XOR => x"5A"
