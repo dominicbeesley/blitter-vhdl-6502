@@ -92,7 +92,7 @@ architecture rtl of fb_intcon_buffer is
    signal   r_dn_we        : std_logic;
    signal   r_dn_D_wr      : std_logic_vector(7 downto 0);
    signal   r_dn_D_wr_stb  : std_logic;
-   signal   r_dn_rdy_ctdn  :  t_rdy_ctdn
+   signal   r_dn_rdy_ctdn  :  t_rdy_ctdn;
 
    signal   i_d_wr_stb_mask: std_logic;
 
