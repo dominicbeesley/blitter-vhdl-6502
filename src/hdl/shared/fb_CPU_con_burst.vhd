@@ -173,7 +173,9 @@ begin
             r_A <= A_i;
             r_instr_fetch <= instr_fetch_i;
          elsif r_cyc = '1' then
-            if fb_con_p2c_i.A_ack = '1' and my_or_reduce(i_tx_cur) = '1' then
+            if cyc_i = '0' then
+               r_tx_mas <= (others => '0');
+            elsif fb_con_p2c_i.A_ack = '1' and my_or_reduce(i_tx_cur) = '1' then
                r_tx_mas <= r_tx_mas and not i_tx_cur;
                r_A <= std_logic_vector(unsigned(r_A) + 1);
             end if;
@@ -192,7 +194,9 @@ begin
          if r_cyc = '0' and cyc_i = '1' then
             r_txd_mas <= (others => '1');
          elsif r_cyc = '1' then
-            if fb_con_p2c_i.D_ack = '1' and my_or_reduce(i_txd_cur) = '1' then
+            if cyc_i = '0' then
+               r_txd_mas <= (others => '0');
+            elsif fb_con_p2c_i.D_ack = '1' and my_or_reduce(i_txd_cur) = '1' then
                r_txd_mas <= r_txd_mas and not i_txd_cur;
             end if;
          else
