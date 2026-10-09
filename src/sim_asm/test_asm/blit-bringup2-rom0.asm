@@ -563,6 +563,16 @@ mos_handle_res:
 
 	lda	#$A5
 
+	ldx #9
+@tlp1:	txa
+	jsr	_KEYBOARD_SCAN
+	cpx	#$80
+	ror	$FC
+	tax
+	dex
+	bne	@tlp1
+
+
 	; test BBC slow bus bodge
 	sta	sheila_SYSVIA_orb
 	lda	sheila_SYSVIA_ora
@@ -1481,6 +1491,17 @@ AERTEST2:
 	lda	#$80
 	sta	jim_DMAC_AERIS_CTL
 	rts
+
+
+_KEYBOARD_SCAN:
+
+	ldy	#$03				; stop Auto scan
+	sty	sheila_SYSVIA_orb			; by writing to system VIA
+	ldy	#$7f				; set bits 0 to 6 of port A to input on bit 7
+	sty	sheila_SYSVIA_ddra		;
+	stx	sheila_SYSVIA_ora_nh		; write X to Port A system VIA
+	ldx	sheila_SYSVIA_ora_nh		; read back &80 if key pressed (M set)
+	rts					; and return
 
 
 ;		; wait until blit done
