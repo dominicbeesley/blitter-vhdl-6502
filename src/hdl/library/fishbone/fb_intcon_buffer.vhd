@@ -43,8 +43,8 @@
 --                     D_wr_stb are registered
 --                   * When G_REG_P2C is true the D_rd, D_ack and rdy signals 
 --                     are registered
---                   * if both are true the return A_ack signal is synthesized 
---                     locally
+--                   * when G_REG_C2P is true the return A_ack signal is 
+--                     synthesized locally
 --                   * if neither are true the buffer just passes through with
 --                     no registers or delays
 ----------------------------------------------------------------------------------
