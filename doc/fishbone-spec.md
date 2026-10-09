@@ -270,7 +270,17 @@ the arbitration logic to make the requesting controller take precedence before
 transactions are ready. This should be used sparingly and may be ignored by an 
 arbitrator.
 
-Cyc may be dropped at any point to abort any outstanding transactions.
+Cyc may be dropped at any point to abort any outstanding transactions. However,
+it should be noted that this is not *normal* behaviour and is likely to cause
+inappropriate behaviour. For instance when accessing the fb_SYS module to 
+access memory or devices on a BBC Micro's bus a bus write will still occur but
+possibly with corrupted data if the D_wr_stb signal hasn't arrived at the 
+fb_SYS module before cyc is dropped. 
+
+In general controllers and interconnects should not drop cyc to abort a 
+transaction that has started (i.e. a_stb has been asserted). However, all 
+peripherals and interconnects should be constructed in such a way that they 
+don't hang the bus should a cyc be dropped at _any_ point.
 
 ## Peripheral to Controller signals
 
