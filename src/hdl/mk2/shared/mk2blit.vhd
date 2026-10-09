@@ -183,6 +183,10 @@ architecture rtl of mk2blit is
 
    signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
 
+   -----------------------------------------------------------------------------
+   -- Aeris external signals in from CRTC
+   -----------------------------------------------------------------------------
+
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
@@ -208,7 +212,7 @@ architecture rtl of mk2blit is
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
 	signal i_p2c_memctl			: fb_con_i_per_o_t;
 
-	-- memory control registers wrapper
+	-- version information wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
@@ -899,7 +903,14 @@ END GENERATE;
 
 
 
-	p_debug_btn:process(i_fb_syscon)
+	
+
+
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
+
+p_debug_btn:process(i_fb_syscon)
 	variable vcnt:unsigned(7 downto 0);
 	begin
 		if i_fb_syscon.rst = '1' then
@@ -920,11 +931,6 @@ END GENERATE;
 			end if;
 		end if;
 	end process;
-
-
--- ================================================================================================ --
--- BOOT TIME CONFIGURATION
--- ================================================================================================ --
 
 
 
