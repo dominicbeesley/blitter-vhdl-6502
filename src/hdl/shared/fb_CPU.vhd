@@ -62,19 +62,7 @@ entity fb_cpu is
 	generic (
 		G_NMI_META_LEVELS					: natural := 5;
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		G_INCL_CPU_T65						: boolean := false;
-		G_INCL_CPU_65C02					: boolean := false;
-		G_INCL_CPU_6800					: boolean := false;
-		G_INCL_CPU_80188					: boolean := false;
-		G_INCL_CPU_65816					: boolean := false;
-		G_INCL_CPU_6x09					: boolean := false;
-		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_Z180					: boolean := false;
-		G_INCL_CPU_680x0					: boolean := false;
-		G_INCL_CPU_68008					: boolean := false;
-		G_INCL_CPU_ARM2					: boolean := false;
-		G_MK3									: boolean := false
+		CLOCKSPEED							: natural										-- fast clock speed in mhz						
 	);
 	port(
 
@@ -145,8 +133,6 @@ entity fb_cpu is
 		debug_wrap_cyc_o						: out std_logic;
 
 		debug_65816_vma_o						: out std_logic;
-
-		debug_SYS_VIA_block_o				: out std_logic;
 
 		debug_Z180_M1_o						: out std_logic;
 
