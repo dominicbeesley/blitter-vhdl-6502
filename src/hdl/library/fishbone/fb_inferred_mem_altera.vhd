@@ -113,15 +113,15 @@ begin
 				if r_wait_d_stb = '1' then
 					if fb_c2p_i.cyc = '0' then
 						r_wait_d_stb <= '0';
-					end if;
-					if fb_c2p_i.D_wr_stb = '1' then
+					elsif fb_c2p_i.D_wr_stb = '1' then
 						r_mem(to_integer(unsigned(r_addr))) <= fb_c2p_i.D_wr;
 						r_D_ack <= '1';
 						r_wait_d_stb <= '0';
 					end if;
 				else
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and r_A_ack = '0' then
 						r_addr <= i_addr;
+						r_A_ack <= '1';
 						if fb_c2p_i.we = '0' then
 							-- read
 							fb_p2c_o.D_Rd <= r_mem(to_integer(unsigned(i_addr)));
