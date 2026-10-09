@@ -39,6 +39,13 @@
 --
 ----------------------------------------------------------------------------------
 
+-- TODO: 
+--  * make instruction fetch (and other cycle types?) part of the request
+--    address decode is it possible to have some sort of generic cycle type
+--    as a parameter or project level setting - different CPUs have different
+--    cycle types. Supervisor/User Translate/Not (Arm?)/Vector pull/instruction 
+--    fetch etc
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
