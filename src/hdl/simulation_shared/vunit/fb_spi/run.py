@@ -13,4 +13,6 @@ lib.add_source_files("../../../library/common.vhd")
 lib.add_source_files("../../../shared/fb_spi.vhd")
 
 # Run vunit function
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
+vu.set_sim_option("disable_ieee_warnings",1)
 vu.main()

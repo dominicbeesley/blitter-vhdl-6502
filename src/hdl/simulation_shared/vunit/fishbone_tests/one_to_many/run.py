@@ -60,4 +60,6 @@ for test in tb.get_tests():
             )
 
 # Run vunit function
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
+vu.set_sim_option("disable_ieee_warnings",1)
 vu.main()
