@@ -35,7 +35,8 @@
 --
 -- Revision: 
 -- Additional Comments: 
---
+--                   Note: dropping a cyc before D_wr_stb has been received
+--                   causes corrupted data to be written.
 ----------------------------------------------------------------------------------
 
 --TODOPIPE: separate peripheral and motherboard cycle r_state machines
@@ -419,19 +420,23 @@ begin
 
                when jim_dev_rd =>
                   -- TODO: should this wait for end of cycle? Probably not but consider it
-                  v_next_state := idle;     
-                  r_rdy <= '1';
-                  r_D_ack <= '1';     
-                  r_D_rd <= G_JIM_DEVNO xor x"FF";          
+                  v_next_state := idle;    
+                  if fb_c2p_i.cyc = '1' then
+                     r_rdy <= '1';
+                     r_D_ack <= '1';     
+                     r_D_rd <= G_JIM_DEVNO xor x"FF";          
+                  end if;
                when jim_page_rd =>
                   -- TODO: should this wait for end of cycle? Probably not but consider it
                   v_next_state := idle;     
-                  r_rdy <= '1';
-                  r_D_ack <= '1';     
-                  if r_sys_A(0) = '0' then
-                     r_D_rd <= r_JIM_page(7 downto 0);            
-                  else
-                     r_D_rd <= r_JIM_page(15 downto 8);           
+                  if fb_c2p_i.cyc = '1' then
+                     r_rdy <= '1';
+                     r_D_ack <= '1';     
+                     if r_sys_A(0) = '0' then
+                        r_D_rd <= r_JIM_page(7 downto 0);            
+                     else
+                        r_D_rd <= r_JIM_page(15 downto 8);           
+                     end if;
                   end if;
                when jim_page_wr =>
                   -- TODO: what's all this r_con_cyc for, I suspect it can go and cyc drop handled more elegantly
@@ -459,11 +464,17 @@ begin
 
             end case;
 
-            if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' and r_state /= idle and r_we = '1' and r_had_d_stb = '0' then
+            if r_we = '1' and fb_c2p_i.cyc = '1' and r_con_cyc = '1'
+                  and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' and r_had_d_stb = '0' then
                r_had_d_stb <= '1';
                r_D_ack <= '1'; -- this means controller can get on with its life early, might cause game/demo timing issues?
                r_rdy <= '1';
-               r_d_wr <= fb_c2p_i.d_wr;
+               r_d_wr <= fb_c2p_i.d_wr;            
+            end if;
+
+            -- don't hold rdy='1' after a D_ack
+            if r_D_ack = '1' then
+               r_rdy <= '0';
             end if;
 
             r_state <= v_next_state;
