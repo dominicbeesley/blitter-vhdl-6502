@@ -62,7 +62,9 @@ entity fb_cpu is
 	generic (
 		G_NMI_META_LEVELS					: natural := 5;
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural										-- fast clock speed in mhz						
+		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
+		G_MK3									: boolean;
+		G_C20K								: boolean
 	);
 	port(
 

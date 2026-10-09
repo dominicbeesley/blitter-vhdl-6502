@@ -22,16 +22,16 @@
 -- -----------------------------------------------------------------------------
 
 
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company:          Dossytronics
+-- Engineer:         Dominic Beesley
 -- 
--- Create Date:    	28/7/2020
+-- Create Date:      28/7/2020
 -- Design Name: 
--- Module Name:    	address_decode
+-- Module Name:      address_decode
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		Blitter board mk.3 address decoder
+-- Description:      Blitter board mk.3 address decoder
 -- Dependencies: 
 --
 -- Revision: 
@@ -51,35 +51,43 @@ use work.fishbone.all;
 use work.board_config_pack.all;
 
 entity address_decode_simple is
-	port(
-		addr_i						: in		std_logic_vector(23 downto 0);
-		we_i							: in     std_logic;
-		peripheral_sel_o			: out		unsigned(0 downto 0);
-		peripheral_sel_oh_o		: out		std_logic_vector(1 downto 0)		
-	);
+   port(
+      addr_i                  : in     std_logic_vector(23 downto 0);
+      we_i                    : in     std_logic;
+      peripheral_sel_o        : out    unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);
+      peripheral_sel_oh_o     : out    std_logic_vector(PERIPHERAL_COUNT-1 downto 0)      
+   );
 end address_decode_simple;
 
 architecture rtl of address_decode_simple is
 begin
 
-	--	Match			Spec		Device
-	--	11xx xxxx
-	-- 11xx 101x	FA-FB		HDMI
-	--	11xx xxx1	FF			SYS and other emulated devices (TODO: move memctl to SYS?)
-	
 
-	p_map:process(all)
-	begin
-		peripheral_sel_oh_o <= (others => '0');
-		peripheral_sel_o <= "0";
 
-		if addr_i(23 downto 16) = x"FF" then
-			peripheral_sel_oh_o <= "01";
-			peripheral_sel_o <= "0";
-		else
-			peripheral_sel_oh_o <= "10";
-			peripheral_sel_o <= "1";
-		end if;
-	end process;
+   p_map:process(all)
+   begin
+      peripheral_sel_oh_o <= (others => '0');
+      if (addr_i(23 downto 22) = "11") then                       -- "11xx xxxx"
+         -- peripherals/sys
+         if (addr_i(16) = '1') then                                              -- "11xx xxx1"    FF
+            -- SYS
+            peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(PERIPHERAL_COUNT));
+            peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
+         else
+            if addr_i(14) = '1' then
+               peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CONFIG, numbits(PERIPHERAL_COUNT));
+               peripheral_sel_oh_o(PERIPHERAL_NO_CONFIG) <= '1';
+            else
+               -- version
+               peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(PERIPHERAL_COUNT));
+               peripheral_sel_oh_o(PERIPHERAL_NO_VERSION) <= '1';
+            end if;
+         end if;
+      else
+         -- memory
+         peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPRAM, numbits(PERIPHERAL_COUNT));
+         peripheral_sel_oh_o(PERIPHERAL_NO_CHIPRAM) <= '1';
+      end if;
+   end process;
 
 end rtl;

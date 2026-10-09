@@ -159,6 +159,34 @@ end mk2blit;
 
 architecture rtl of mk2blit is
    
+	-----------------------------------------------------------------------------
+	-- config signals
+	-----------------------------------------------------------------------------
+
+	signal i_cfg_debug_button  : std_logic;
+
+	signal r_cfg_swram_enable	: std_logic;
+   signal r_cfg_sys_type      : sys_type;
+	signal r_cfg_mosram			: std_logic;
+	signal r_cfg_swromx			: std_logic;
+
+	signal r_cfg_do6502_debug	: std_logic;							-- enable 6502 extensions for NoIce debugger
+	signal r_cfg_mk2_cpubits	: std_logic_vector(2 downto 0);	-- config bits as presented in memctl register to utils rom TODO: change this!
+	signal r_cfg_cpu_type		: cpu_type;								-- hard cpu type
+	signal r_cfg_cpu_use_t65	: std_logic;							-- if '1' boot to T65
+	signal r_cfg_cpu_speed_opt : cpu_speed_opt;						-- hard cpu dependent speed/option
+
+	-- the following registers contain the boot configuration fed to FC 0104..FC 0108
+	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
+
+   signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
+
+   -----------------------------------------------------------------------------
+   -- Aeris external signals in from CRTC
+   -----------------------------------------------------------------------------
+
+	signal i_hsync					: std_logic;
+	signal i_vsync					: std_logic;
 
    -----------------------------------------------------------------------------
    -- fishbone signals
@@ -178,6 +206,14 @@ architecture rtl of mk2blit is
    signal i_c2p_mem           : fb_con_o_per_i_t;
    signal i_p2c_mem           : fb_con_i_per_o_t;
 
+	-- memory control registers wrapper
+	-- version information wrapper
+	signal i_c2p_version			: fb_con_o_per_i_t;
+	signal i_p2c_version			: fb_con_i_per_o_t;
+
+   -- config wrapper
+   signal i_c2p_config        : fb_con_o_per_i_t;
+   signal i_p2c_config        : fb_con_i_per_o_t;
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
    signal i_con_p2c_intcon    : fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
@@ -198,6 +234,8 @@ architecture rtl of mk2blit is
                                                                      -- paging register, used to select
                                                                      -- on board paged roms from flash/sram
 
+   signal r_noice_debug_btn			: std_logic;
+
    signal i_flasher                 : std_logic_vector(3 downto 0);  -- a simple set of slow clocks for generating flashing 
                                                                      -- LED sfishals
    signal i_clk_fish_128M           : std_logic;                     -- the main system clock from the pll - don't use this
@@ -205,6 +243,8 @@ architecture rtl of mk2blit is
    signal i_clk_lock                : std_logic;                     -- indicates whether the main pll is locked
    signal i_sys_dll_lock            : std_logic;                     -- indicates whether the system dll is locked
 
+   signal i_memctl_configbits			: std_logic_vector(15 downto 0);
+   signal i_preboot                 : std_logic;
    -- intcon to peripheral sel
    signal i_intcon_peripheral_sel_addr    : fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
    signal i_intcon_peripheral_sel_we      : std_logic_vector(CONTROLLER_COUNT-1 downto 0);
@@ -302,27 +342,64 @@ END GENERATE;
    i_con_c2p_intcon(MAS_NO_CPU)        <= i_c2p_cpu;
    i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)   <= i_p2c_mem;
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
+	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
+   i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
    i_c2p_mem            <= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
+	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
+   i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 
-   e_fb_mem: entity work.fb_inferred_mem_altera
-   generic map (
-      G_ADDR_W => 10,   -- 1024
-      G_READONLY => false
-      )
+   
+	e_fb_version:entity work.fb_version
+	port map (
+		-- fishbone signals
+
+		fb_syscon_i							=> i_fb_syscon,
+		fb_c2p_i								=> i_c2p_version,
+		fb_p2c_o								=> i_p2c_version,
+
+		cfg_bits_i							=> r_cfg_ver_boot
+
+	);
+
+   e_fb_config:entity work.fb_config
    port map (
-
       -- fishbone signals
 
       fb_syscon_i                   => i_fb_syscon,
-      fb_c2p_i                      => i_c2p_mem,
-      fb_p2c_o                      => i_p2c_mem
+      fb_c2p_i                      => i_c2p_config,
+      fb_p2c_o                      => i_p2c_config,
+
+      cfg_eco_station_id_o          => open
 
    );
+	e_fb_mem: entity work.fb_mem
+	generic map (
+		G_FLASH_IS_45						=> G_MEM_FLASH_IS_45,
 
+		G_SLOW_IS_45						=> G_MEM_SLOW_IS_45	
+	)
+	port map (
+			-- 2M RAM/256K ROM bus
+		MEM_A_o								=> MEM_A_o,
+		MEM_D_io								=> MEM_D_io,
+		MEM_nOE_o							=> MEM_nOE_o,
+		MEM_ROM_nWE_o						=> MEM_ROM_nWE_o,
+		MEM_RAM_nWE_o						=> MEM_RAM_nWE_o,
+		MEM_ROM_nCE_o						=> MEM_ROM_nCE_o,
+		MEM_RAM0_nCE_o						=> MEM_RAM0_nCE_o,
+
+		-- fishbone signals
+
+		fb_syscon_i							=> i_fb_syscon,
+		fb_c2p_i								=> i_c2p_mem,
+		fb_p2c_o								=> i_p2c_mem,
+
+		debug_mem_a_stb_o					=> open
+	);
    e_fb_sys: entity work.fb_sys
    generic map (
       SIM => SIM,
@@ -374,19 +451,21 @@ END GENERATE;
    e_fb_cpu: entity work.fb_cpu
    generic map (
       SIM => SIM,
-      CLOCKSPEED => CLOCKSPEED
+      CLOCKSPEED => CLOCKSPEED,
+      G_MK3 => false,
+      G_C20K => false
    )
    port map (
 
       -- configuration
 
-      cfg_cpu_type_i                => NONE,
-      cfg_cpu_use_t65_i             => '1',
-      cfg_cpu_speed_opt_i           => NONE,
-      cfg_sys_type_i                => SYS_BBC,
-      cfg_swram_enable_i            => '0',
-      cfg_mosram_i                  => '0',
-      cfg_map0n1_i                  => '1',
+		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+		cfg_sys_type_i						=> r_cfg_sys_type,
+		cfg_swram_enable_i				=> r_cfg_swram_enable,
+		cfg_mosram_i						=> r_cfg_mosram,
+      cfg_map0n1_i                  => i_map0n1,
 
       -- cpu throttle
 
@@ -489,15 +568,7 @@ END GENERATE;
 --------------------------------------------------------------------------------
 -- Default signals
 --------------------------------------------------------------------------------
-
-   MEM_A_o        <= (others => '0');
-   MEM_D_io       <= (others => 'Z');
-   MEM_nOE_o      <= '1';
-   MEM_ROM_nWE_o  <= '1';
-   MEM_RAM_nWE_o  <= '1';
-   MEM_ROM_nCE_o  <= '1';
-   MEM_RAM0_nCE_o <= '1';
-
+   
    SND_BITS_L_o <= '0';
    SND_BITS_R_o <= '0';
    SND_BITS_L_aux_o <= '0';
@@ -511,9 +582,117 @@ END GENERATE;
    I2C_SDA_io <= 'Z';
 
 
+
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
+	p_debug_btn:process(i_fb_syscon)
+	variable vcnt:unsigned(7 downto 0);
+	begin
+		if i_fb_syscon.rst = '1' then
+			vcnt := (others => '1');
+			r_noice_debug_btn <= '0';			
+		else
+			if rising_edge(i_fb_syscon.clk) then
+				if i_cfg_debug_button = '0' then
+					if vcnt = 0 then
+						r_noice_debug_btn <= '1';
+					else
+						vcnt := vcnt - 1;
+					end if;
+				else
+					vcnt := (others => '1');
+					r_noice_debug_btn <= '0';
+				end if;
+			end if;
+		end if;
+	end process;
+
 CFG_io <= (others => 'Z');
 
 
+p_config:process(i_fb_syscon)
+begin
+	if rising_edge(i_fb_syscon.clk) then
+		r_cfg_ver_boot(4) <= i_map0n1 xor not r_cfg_cpu_use_t65;	-- this can change at run time now
+		if i_fb_syscon.prerun(1) = '1' then
+
+			r_cfg_cpu_use_t65 <= not CFG_io(0);
+			r_cfg_swromx <= not CFG_io(4);
+			r_cfg_mosram <= not CFG_io(5);
+			r_cfg_swram_enable <= CFG_io(8);
+
+			r_cfg_ver_boot(15 downto 5) <= CFG_io(15 downto 5);
+			r_cfg_ver_boot(3 downto 0) <= CFG_io(3 downto 0);
+			r_cfg_ver_boot(31 downto 16) <= (others => '0');
+
+			-- TODOMK2:choose config switch
+			-- TODOMK2:harmonise settings and registers for config between mk3 and mk2, move to chipset registers?
+
+
+			case CFG_io(13 downto 11) is
+				when "110" =>
+					r_cfg_SYS_type <= SYS_ELK;		
+				when others =>
+					r_cfg_SYS_type <= SYS_BBC;		
+			end case;
+
+			r_cfg_mk2_cpubits <= CFG_io(3 downto 1);
+
+			r_cfg_do6502_debug <= '0';
+
+			if r_cfg_cpu_use_t65 = '1' then
+				r_cfg_do6502_debug <= '1';
+			end if;
+
+			r_cfg_cpu_type <= NONE;
+			r_cfg_cpu_speed_opt <= NONE;
+
+			-- select cpu configuration	
+			case CFG_io(3 downto 1) is
+				when "001" =>
+					r_cfg_cpu_type <= CPU_65816;
+					r_cfg_mk2_cpubits <= "001";
+					-- r_cfg_do6502_debug <= '1'; -- doesn't work for 65816 yet
+				when "110" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_mk2_cpubits <= "110";
+				when "010" =>
+					r_cfg_cpu_type <= CPU_6x09;
+					r_cfg_cpu_speed_opt <= CPUSPEED_6309_3_5;
+					r_cfg_mk2_cpubits <= "010";
+				when "000" =>
+					r_cfg_cpu_type <= CPU_68008;
+					r_cfg_mk2_cpubits <= "000";
+				when "100" =>
+					r_cfg_cpu_type <= CPU_Z80;
+					r_cfg_mk2_cpubits <= "100";
+				when "011" =>
+					r_cfg_cpu_type <= CPU_65C02;
+					r_cfg_mk2_cpubits <= "011";
+					r_cfg_do6502_debug <= '1';
+				when "101" =>
+					r_cfg_cpu_type <= CPU_65C02;
+					r_cfg_cpu_speed_opt <= CPUSPEED_65C02_8;
+					r_cfg_mk2_cpubits <= "101";
+					r_cfg_do6502_debug <= '1';
+				when others =>
+					null;
+			end case;
+		end if;
+	end if;
+end process;
+
+--TODO: remove after updating BLTUTILS ROMs
+i_memctl_configbits <= 
+	CFG_io(15 downto 9) &
+	r_cfg_swram_enable &
+	CFG_io(7 downto 5) &
+	(i_map0n1 xor not r_cfg_cpu_use_t65) & --swromx
+	r_cfg_mk2_cpubits &
+	not r_cfg_cpu_use_t65;
+
+i_cfg_debug_button <= CFG_io(7);
 LED_o(0) <= '0'          when i_fb_syscon.rst_state = reset else
             i_flasher(3) when i_fb_syscon.rst_state = powerup else
             i_flasher(2) when i_fb_syscon.rst_state = resetfull else

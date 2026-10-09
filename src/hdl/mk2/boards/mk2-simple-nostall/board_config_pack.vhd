@@ -54,17 +54,28 @@ package board_config_pack is
    constant FW_BOARD_LEVEL          : firmware_board_level := MK2;
    constant G_JIM_DEVNO             : std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
    constant G_IORB_BLOCK            : boolean := true;
-   constant G_MK3                   : boolean := false;
-   constant G_C20K                  : boolean := false;
 
-   constant G_INCL_PREBOOT          : boolean := false;
+	constant G_INCL_HDMI					: boolean := false;
+	constant G_INCL_PREBOOT				: boolean := false;
+	constant G_INCL_XFLASH     		: boolean := false;
+	constant G_INCL_CHIPSET				: boolean := false;
+	constant G_INCL_CS_DMA				: boolean := false;
+	constant G_DMA_CHANNELS				: natural := 2;
+	constant G_INCL_CS_BLIT				: boolean := false;
+	constant G_INCL_CS_SND				: boolean := false;
+	constant G_SND_CHANNELS				: natural := 4;
+	constant G_INCL_CS_AERIS			: boolean := false;
+	constant G_INCL_CS_EEPROM			: boolean := false;
+	constant G_INCL_CS_SDCARD			: boolean := false;		-- TODO: figure out if there are pins available?
+	constant G_INCL_LED_ARR						: boolean := false;
+	constant G_INCL_DBG_UART					: boolean := false;
 
    constant C_CPU_BYTELANES         : positive := 1;     
    constant G_INCL_CPU_T65          : boolean := true;
    constant G_INCL_CPU_65C02        : boolean := false;
    constant G_INCL_CPU_6800         : boolean := false;
    constant G_INCL_CPU_80188        : boolean := false;
-   constant G_INCL_CPU_65816        : boolean := false;
+   constant G_INCL_CPU_65816        : boolean := true;
    constant G_INCL_CPU_6x09         : boolean := false;
    constant G_INCL_CPU_Z80          : boolean := false;
    constant G_INCL_CPU_Z180         : boolean := false;
@@ -72,9 +83,15 @@ package board_config_pack is
    constant G_INCL_CPU_68008        : boolean := false;
    constant G_INCL_CPU_ARM2         : boolean := false;
 
-   constant PERIPHERAL_COUNT        : natural := 2;
-   constant PERIPHERAL_NO_SYS       : natural := 0;
-   constant PERIPHERAL_NO_CHIPRAM   : natural := 1;
+	constant G_MEM_FAST_IS_10			: boolean := true;
+	constant G_MEM_SLOW_IS_45			: boolean := false;
+	constant G_MEM_FLASH_IS_45			: boolean := false;
+
+   constant PERIPHERAL_COUNT        : natural := 4;
+   constant PERIPHERAL_NO_VERSION	: natural := 0;
+   constant PERIPHERAL_NO_SYS	 	: natural := 1;
+   constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
+   constant PERIPHERAL_NO_CONFIG 	: natural := 3; 
 
    constant CONTROLLER_COUNT        : natural := 1;
    constant MAS_NO_CPU              : natural := 0;

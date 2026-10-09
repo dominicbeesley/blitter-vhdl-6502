@@ -80,7 +80,7 @@ output_files/$(PROJECT).sof output_files/$(PROJECT).asm.rpt: $(PROJECT).qsf outp
 program: output_files/$(PROJECT).sof reprogram
 
 reprogram:
-	$(QUARTUS_PGM) --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
+	$(QUARTUS_PGM) -c USB-Blaster --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
 
 program-pof: $(PROJECT).pof
 	$(QUARTUS_PGM) --no_banner --mode=jtag -o "BVP;$(PROJECT).pof"
