@@ -94,6 +94,8 @@ architecture Behavioral of RAM_tb is
 	signal	i_D				: std_logic_vector(7 downto 0);	
 	signal	i_D_in_dly		: std_logic_vector(7 downto 0);
 	signal	i_data			: ram_type := (others => (others => '0'));
+
+	signal   i_data_change	: std_logic := '0';
 	
 	function has_meta(X:std_logic_vector) return boolean is
 	begin
@@ -112,9 +114,10 @@ begin
 	i_A_DLY <= A after taa;
 	i_D_in_dly <= transport D after tsd;
 
-	p_add2d: process(i_A_DLY, i_A_nCS_DLY)
+	p_add2d: process(all)
 	begin
-		if (i_A_DLY'event or i_A_nCS_DLY'event) and i_A_nCS_DLY = '0' then
+		if (i_A_DLY'event or i_A_nCS_DLY'event or i_data_change'event) and i_A_nCS_DLY = '0' then
+		report "KKKKK" severity note;
 			if has_meta(i_A_DLY) then
 				i_D <= (others => 'Z');
 			elsif to_integer(unsigned(i_A_DLY)) < size then
@@ -160,8 +163,9 @@ begin
 			end if;
 			init := false;
 		elsif (rising_edge(nWE) and i_nCS_OE_dly = '0') or (rising_edge(nCS) and i_nWE_dly = '0') then
---			report "WRITE :" & integer'image(to_integer(unsigned(i_A_DLY))) & ":" & integer'image(to_integer(unsigned(i_D_in_dly)));
+			report "WRITE :" & integer'image(to_integer(unsigned(i_A_DLY))) & ":" & integer'image(to_integer(unsigned(i_D_in_dly)));
 			i_data(to_integer(unsigned(i_A_DLY)) mod size) <= i_D_in_dly;		-- TODO: using delayed address here not sure this is right check with datasheet!
+			i_data_change <= not i_data_change;
 		end if;
 	end process;
 	
