@@ -117,7 +117,6 @@ begin
 	p_add2d: process(all)
 	begin
 		if (i_A_DLY'event or i_A_nCS_DLY'event or i_data_change'event) and i_A_nCS_DLY = '0' then
-		report "KKKKK" severity note;
 			if has_meta(i_A_DLY) then
 				i_D <= (others => 'Z');
 			elsif to_integer(unsigned(i_A_DLY)) < size then
