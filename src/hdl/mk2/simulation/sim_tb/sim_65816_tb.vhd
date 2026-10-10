@@ -26,7 +26,9 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity sim_65816_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+
+--	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+   G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/MOS120.M"
 	);
 end sim_65816_tb;
 
@@ -65,9 +67,6 @@ architecture Behavioral of sim_65816_tb is
 
 
 	signal	i_CFG					: std_logic_vector(15 downto 0);
-	signal	i_hsync									:  std_logic;
-	signal	i_vsync									:  std_logic;
-
 
 	signal	i_CPU_A									:	std_logic_vector(19 downto 0);
 	signal	i_CPU_D									:  std_logic_vector(7 downto 0);
@@ -89,18 +88,61 @@ architecture Behavioral of sim_65816_tb is
 	signal	i_CPU_nRES								:	std_logic;
 	signal	i_CPU_9nFIRQLnDTACK					:	std_logic;
 
+   signal   i_hsync                          :  std_logic;
+   signal   i_vsync                          :  std_logic;
+
+
 begin
 	
+e_SYS:entity work.sim_SYS_tb
+   generic map (
+      G_MOSROMFILE => G_MOSROMFILE,
+      G_RAMDUMPFILE => "d:\\temp\\ram_dump_blit_dip40_poc-sysram.bin",
+      G_MK3 => false
+   )
+   port map (
+      SYS_phi0_o           => i_SYS_phi0,
+      SYS_phi1_i           => i_SYS_phi1,
+      SYS_phi2_i           => i_SYS_phi2,
+      SYS_A_i              => i_SYS_A,
+      SYS_D_io             => i_SYS_D,
+      SYS_RnW_i            => i_SYS_RnW,
+      SYS_SYNC_i           => i_SYS_SYNC,
+      SYS_nNMI_o           => i_SYS_nNMI,
+      SYS_nIRQ_o           => i_SYS_nIRQ,
+      SYS_nRESET_i         => i_SUP_nRESET,
+
+      SYS_BUF_D_nOE_i      => '1',           -- disabled
+      SYS_BUF_D_DIR_i      => '0',           -- disabled
+
+      hsync_o              => i_hsync,
+      vsync_o              => i_vsync,
+
+      sim_ENDSIM           => sim_ENDSIM,
+      sim_dump_ram         => sim_dump_ram,
+      sim_reg_halt_o       => sim_reg_halt
+   );
+
+--	i_CFG <= (
+--	0				=>	'1',	-- don't use t65 core
+--	3 downto 1 	=> "001", -- 65816 @ 8MHz
+--	4 				=> '1', -- swromx off
+--	7				=> '1', -- debug button
+--	8				=> '1', -- onboard swrom/ram disable
+--	14				=> i_vsync,
+--	15				=> i_hsync,
+--	others		=> 'H');
 
 	i_CFG <= (
 	0				=>	'1',	-- don't use t65 core
 	3 downto 1 	=> "001", -- 65816 @ 8MHz
-	4 				=> '1', -- swromx off
+	4 				=> '0', -- swromx on
 	7				=> '1', -- debug button
-	8				=> '1', -- onboard swrom/ram enable
+	8				=> '0', -- onboard swrom/ram disable
 	14				=> i_vsync,
 	15				=> i_hsync,
 	others		=> 'H');
+
 
 	i_CPU_nSO6MX9AVMAKFC1ZnIOREQ <= 'H';
 
@@ -142,8 +184,6 @@ begin
 		SYS_nNMI_i 							=> i_SYS_nNMI,
 		SYS_nIRQ_i 							=> i_SYS_nIRQ,
 		SYS_PHI0_i 							=> i_SYS_PHI0,
-		I2C_SCL_io 							=> open,
-		I2C_SDA_io 							=> open,
 
 		-- CPU sockets, shared lines for 6502/65102/65816/6809,Z80,68008
 		-- shared names are of the form CPUSKT_aaa[C[bbb][6ccc][9ddd][Keee][Zfff]
@@ -161,7 +201,7 @@ begin
 		CPUSKT_6EKEZnRD_i						=> i_CPU_6EKEZnRD, 
 		CPUSKT_C6nML9BUSYKnBGZnBUSACK_i	=> i_CPU_C6nML9BUSYKnBGZnBUSACK, 
 		CPUSKT_RnWZnWR_i						=> i_CPU_RnWZnWR,
-		CPUSKT_PHI16ABRT9BSKnDS_i			=> i_CPU_PHI16ABRT9BSKnDS,
+		CPUSKT_PHI16ABRT9BSKnDS_io			=> i_CPU_PHI16ABRT9BSKnDS,
 		CPUSKT_PHI26VDAKFC0ZnMREQ_i		=> i_CPU_PHI26VDAKFC0ZnMREQ,
 		CPUSKT_SYNC6VPA9LICKFC2ZnM1_i		=> i_CPU_SYNC6VPA9LICKFC2ZnM1,
 		CPUSKT_VSS6VPB9BAKnAS_i				=> i_CPU_VSS6VPB9BAKnAS, 
@@ -179,24 +219,22 @@ begin
 		-- LEDs 
 		LED_o									=> open,
 		-- CONFIG / TEST connector
-		CFG_io								=> i_CFG
+		CFG_io								=> i_CFG,
+
+      I2C_SCL_io                    => open,
+      I2C_SDA_io                    => open,
+		
+      flash_miso_i                  => '1'
 		
 	);
 
 
 
 	e_cpu: entity work.real_65816_tb 
-	--NMOS
-	--CMOS - not really, just a bit quicker...
-	--GENERIC MAP (
-	--	dly_phi0a => 1 ns,
-	--	dly_phi0b => 1 ns,
-	--	dly_phi0c => 1 ns,
-	--	dly_phi0d => 1 ns,
-	--	dly_addr  => 10 ns, -- faster than spec!
-	--	dly_dwrite=> 40 ns,	-- dwrite must be > dhold
-	--	dly_dhold => 30 ns
-	--)
+   generic map (
+      dly_dsetup => 7 ns, -- TODO: this is fake, what should it be?
+      dly_be => 10 ns -- TODO: this is fake/guess
+      )
 	PORT MAP (
 		A 			=> i_CPU_A(15 downto 0),
 		D 			=> i_CPU_D,
@@ -222,8 +260,8 @@ begin
 	generic map (
 		size 			=> 2048*1024,
 		dump_filename => "d:\\temp\\ram_dump_blit_dip40_poc-blitram.bin",
-		tco => 55 ns,
-		taa => 55 ns
+      tco => 45 ns,
+      taa => 45 ns
 	)
 	port map (
 		A				=> i_MEM_A(20 downto 0),

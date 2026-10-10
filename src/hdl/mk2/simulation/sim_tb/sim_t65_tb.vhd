@@ -200,9 +200,9 @@ e_SYS:entity work.sim_SYS_tb
       CPUSKT_nRES_o                    => i_CPU_nRES,
       CPUSKT_9nFIRQLnDTACK_o           => i_CPU_9nFIRQLnDTACK,
 
+		-- LEDs 
       LED_o                         => open,
       -- CONFIG / TEST connector
-      --CFG                         : INOUT  STD_LOGIC_VECTOR(10 DOWNTO 0)
       CFG_io                        => i_CFG,
 
       I2C_SCL_io                    => open,

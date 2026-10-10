@@ -88,7 +88,9 @@ source ../../shared/mk2pins.qsf
 
 source ../../simulation/sim_tb/sim_t65.qsf
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
+source ../../simulation/sim_tb/sim_65816.qsf
+
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_tb -section_id eda_simulation
 
 
 set_global_assignment -name SDC_FILE "mk2blit-simple-nostall.sdc"

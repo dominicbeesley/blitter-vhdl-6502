@@ -532,7 +532,7 @@ i_map0n1 <= '1';
       -- chipset control signals
       cpu_halt_i                    => '0',
 
-      boot_65816_i                  => (others => '0'),
+      boot_65816_i                  => "10",
       window_65816_i                => (others => '0'),
       window_65816_wr_en_i          => '0',
 
