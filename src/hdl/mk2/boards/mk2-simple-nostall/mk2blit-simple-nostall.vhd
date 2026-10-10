@@ -400,6 +400,7 @@ END GENERATE;
 
 		debug_mem_a_stb_o					=> open
 	);
+   
    e_fb_sys: entity work.fb_sys
    generic map (
       SIM => SIM,
