@@ -68,7 +68,7 @@ architecture rtl of fb_version is
 
    type     state_mem_t is (idle, act_rd, act_wr);
 
-   signal   state       : state_mem_t;
+   signal   r_state     : state_mem_t;
 
    signal   r_D_ack     : std_logic;
    signal   r_A         : std_logic_vector(7 downto 0);
@@ -130,7 +130,7 @@ begin
    begin
 
       if fb_syscon_i.rst = '1' then
-         state <= idle;
+         r_state <= idle;
          r_D_ack <= '0';
          r_A_ack <= '0';
          r_D_rd <= (others => '0');
@@ -138,13 +138,13 @@ begin
       elsif rising_edge(fb_syscon_i.clk) then
          r_D_ack <= '0';
          r_A_ack <= '0';
-         case state is
+         case r_state is
             when idle =>
                if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
                   if fb_c2p_i.we = '1' then
-                     state <= act_wr;
+                     r_state <= act_wr;
                   else
-                     state <= act_rd;
+                     r_state <= act_rd;
                   end if;
                   r_A <= fb_c2p_i.A(7 downto 0);
                   r_A_ack <= '1';
@@ -152,7 +152,7 @@ begin
             when act_wr =>
                if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
                   r_D_ack <= '1';
-                  state <= idle;
+                  r_state <= idle;
                end if;
             when act_rd =>
                if fb_c2p_i.cyc = '1' then
@@ -188,14 +188,14 @@ begin
                   end if;
                   r_D_ack <= '1';
                end if;
-               state <= idle;
+               r_state <= idle;
             when others =>
                -- not sure if we should blindly ack here
-               state <= idle;
+               r_state <= idle;
          end case;
 
          if fb_c2p_i.cyc = '0' then
-            state <= idle;
+            r_state <= idle;
          end if;
       end if;
 
