@@ -207,6 +207,9 @@ architecture rtl of mk2blit is
    signal i_p2c_mem           : fb_con_i_per_o_t;
 
 	-- memory control registers wrapper
+	signal i_c2p_memctl			: fb_con_o_per_i_t;
+	signal i_p2c_memctl			: fb_con_i_per_o_t;
+
 	-- version information wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
@@ -340,12 +343,14 @@ g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 END GENERATE;
 
    i_con_c2p_intcon(MAS_NO_CPU)        <= i_c2p_cpu;
+	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
    i_per_p2c_intcon(PERIPHERAL_NO_CHIPRAM)   <= i_p2c_mem;
    i_per_p2c_intcon(PERIPHERAL_NO_SYS)    <= i_p2c_sys;
 	i_per_p2c_intcon(PERIPHERAL_NO_VERSION)	<= i_p2c_version;
    i_per_p2c_intcon(PERIPHERAL_NO_CONFIG)    <= i_p2c_config;
 
    i_p2c_cpu            <= i_con_p2c_intcon(MAS_NO_CPU);
+	i_c2p_memctl			<= i_per_c2p_intcon(PERIPHERAL_NO_MEMCTL);
    i_c2p_mem            <= i_per_c2p_intcon(PERIPHERAL_NO_CHIPRAM);
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
@@ -376,6 +381,19 @@ END GENERATE;
       cfg_eco_station_id_o          => open
 
    );
+
+-- placeholder for testing
+e_memctl:entity work. fb_null
+port map (
+		-- fishbone signals
+
+		fb_syscon_i							=> i_fb_syscon,
+		fb_c2p_i								=> i_c2p_memctl,
+		fb_p2c_o								=> i_p2c_memctl
+);
+
+i_map0n1 <= '1';
+
 	e_fb_mem: entity work.fb_mem
 	generic map (
 		G_FLASH_IS_45						=> G_MEM_FLASH_IS_45,
