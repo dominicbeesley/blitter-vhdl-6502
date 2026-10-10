@@ -202,7 +202,7 @@ architecture rtl of mk2blit is
    signal i_c2p_sys           : fb_con_o_per_i_t;
    signal i_p2c_sys           : fb_con_i_per_o_t;
 
-   -- inferred memory wrapper
+	-- blitter board RAM/ROM memory wrapper
    signal i_c2p_mem           : fb_con_o_per_i_t;
    signal i_p2c_mem           : fb_con_i_per_o_t;
 
@@ -237,6 +237,18 @@ architecture rtl of mk2blit is
                                                                      -- paging register, used to select
                                                                      -- on board paged roms from flash/sram
 
+	signal i_turbo_lo_mask				: std_logic_vector(7 downto 0);	-- which blocks of 16 pages to run at full speed
+
+	signal i_swmos_shadow				: std_logic;							-- shadow mos from SWRAM slot #8	
+
+	signal i_noice_debug_nmi_n			: std_logic;							-- debugger is forcing a cpu NMI
+	signal i_noice_debug_shadow		: std_logic;							-- debugger memory MOS map is active (overrides shadow_mos)
+	signal i_noice_debug_inhibit_cpu	: std_logic;							-- during a 5C op code, inhibit address / data to avoid
+																							-- spurious memory accesses
+	signal i_noice_debug_5c				: std_logic;							-- A 5C instruction is being fetched (qualify with clken below)
+	signal i_noice_debug_cpu_clken	: std_logic;							-- clken and cpu rdy
+	signal i_noice_debug_A0_tgl		: std_logic;							-- 1 when current A0 is different to previous fetched
+	signal i_noice_debug_opfetch		: std_logic;							-- this cycle is an opcode fetch
    signal r_noice_debug_btn			: std_logic;
 
    signal i_flasher                 : std_logic_vector(3 downto 0);  -- a simple set of slow clocks for generating flashing 
@@ -258,8 +270,18 @@ architecture rtl of mk2blit is
    -- cpu control signals
    -----------------------------------------------------------------------------
    signal i_cpu_IRQ_n               : std_logic;
+	signal i_boot_65816					: std_logic_vector(1 downto 0);
+	signal i_debug_65816_boot_act		: std_logic;
+	signal i_window_65816				: std_logic_vector(12 downto 0);
+	signal i_window_65816_wr_en		: std_logic;
+
+	signal i_throttle_all     			: std_logic;
+    signal i_throttle_mos            : std_logic;
 
    signal i_cpu_2MHz_phi2_clken     : std_logic;
+
+	signal i_rom_throttle_map			: std_logic_vector(15 downto 0);
+	signal i_rom_autohazel_map			: std_logic_vector(15 downto 0);
 
    -----------------------------------------------------------------------------
    -- cpu expansion header wrapper signals
@@ -382,17 +404,59 @@ END GENERATE;
 
    );
 
--- placeholder for testing
-e_memctl:entity work. fb_null
+
+	e_memctl:entity work.fb_memctl 
+	generic map (
+		SIM									=> SIM
+	)
 port map (
+
+		-- configuration
+		do6502_debug_i						=> r_cfg_do6502_debug,
+		turbo_lo_mask_o					=> i_turbo_lo_mask,
+		swmos_shadow_o						=> i_swmos_shadow,
+		cfgbits_i							=> i_memctl_configbits,
+        map0n1_swromx_i               => r_cfg_swromx,
+        map0n1_default_i              => r_cfg_cpu_use_t65,
+        map0n1_o                      => i_map0n1,
+
+		-- noice debugger signals to cpu
+		noice_debug_nmi_n_o				=> i_noice_debug_nmi_n,
+		noice_debug_shadow_o				=> i_noice_debug_shadow,
+		noice_debug_inhibit_cpu_o		=> i_noice_debug_inhibit_cpu,
+		-- noice debugger signals from cpu
+		noice_debug_5c_i					=> i_noice_debug_5c,
+		noice_debug_cpu_clken_i			=> i_noice_debug_cpu_clken,
+		noice_debug_A0_tgl_i				=> i_noice_debug_A0_tgl,
+		noice_debug_opfetch_i			=> i_noice_debug_opfetch,
+
+		-- noice debugger button		
+		noice_debug_button_i				=> r_noice_debug_btn,
+
+      	-- pre-boot
+      preboot_o                     => i_preboot,
+
+		-- cpu throttle
+
+		throttle_all_o  				  => i_throttle_all,
+      throttle_mos_o               => i_throttle_mos,
+      rom_throttle_map_o            => i_rom_throttle_map,
+      rom_autohazel_map_o           => i_rom_autohazel_map,
+
 		-- fishbone signals
 
 		fb_syscon_i							=> i_fb_syscon,
 		fb_c2p_i								=> i_c2p_memctl,
-		fb_p2c_o								=> i_p2c_memctl
+		fb_p2c_o								=> i_p2c_memctl,
+
+		-- cpu specific
+
+		boot_65816_o						=> i_boot_65816,
+		window_65816_o						=> i_window_65816,
+		window_65816_wr_en_o				=> i_window_65816_wr_en
+
 );
 
-i_map0n1 <= '1';
 
 	e_fb_mem: entity work.fb_mem
 	generic map (
@@ -427,7 +491,7 @@ i_map0n1 <= '1';
       G_DWRITE_HOLD => G_DWRITE_HOLD
    )
    port map (
-      cfg_sys_type_i                => SYS_BBC,
+      cfg_sys_type_i                => r_cfg_sys_type,
 
       SYS_A_o                       => SYS_A_o,
       SYS_D_io                      => SYS_D_io,
@@ -488,11 +552,11 @@ i_map0n1 <= '1';
 
       -- cpu throttle
 
-      throttle_all_i                => '0',
-      throttle_mos_i                => '0',
+		throttle_all_i      				=> i_throttle_all,
+      throttle_mos_i                => i_throttle_mos,
       cpu_2MHz_phi2_clken_i         => i_cpu_2MHz_phi2_clken,
-      rom_throttle_map_i            => (others => '1'),
-      rom_autohazel_map_i           => (others => '0'),
+		rom_throttle_map_i				=> i_rom_throttle_map,
+		rom_autohazel_map_i				=> i_rom_autohazel_map,
 
       -- wrapper expansion header/socket pins
       wrap_exp_i                    => i_wrap_exp_i,
@@ -501,22 +565,22 @@ i_map0n1 <= '1';
       hard_cpu_en_o                 => open,
 
       -- memctl signals
-      swmos_shadow_i                => '0',
+		swmos_shadow_i						=> i_swmos_shadow,
 
       -- noice debugger signals to cpu
-      noice_debug_nmi_n_i           => '1',
-      noice_debug_shadow_i          => '0',
-      noice_debug_inhibit_cpu_i     => '0',
+		noice_debug_nmi_n_i				=> i_noice_debug_nmi_n,
+		noice_debug_shadow_i				=> i_noice_debug_shadow,
+		noice_debug_inhibit_cpu_i		=> i_noice_debug_inhibit_cpu,
       -- noice debugger signals from cpu
-      noice_debug_5c_o              => open,
-      noice_debug_cpu_clken_o       => open,
-      noice_debug_A0_tgl_o          => open,
-      noice_debug_opfetch_o         => open,
+		noice_debug_5c_o					=> i_noice_debug_5c,
+		noice_debug_cpu_clken_o			=> i_noice_debug_cpu_clken,
+		noice_debug_A0_tgl_o				=> i_noice_debug_A0_tgl,
+		noice_debug_opfetch_o			=> i_noice_debug_opfetch,
 
 
       -- logical mappings
       sys_ROMPG_i                   => i_sys_ROMPG,   
-      turbo_lo_mask_i               => (others => '0'),
+		turbo_lo_mask_i					=> i_turbo_lo_mask,
       JIM_en_i                      => i_JIM_en,      
       JIM_page_i                    => i_JIM_page,
 
@@ -532,9 +596,9 @@ i_map0n1 <= '1';
       -- chipset control signals
       cpu_halt_i                    => '0',
 
-      boot_65816_i                  => "10",
-      window_65816_i                => (others => '0'),
-      window_65816_wr_en_i          => '0',
+		boot_65816_i						=> i_boot_65816,
+		window_65816_i						=> i_window_65816,
+		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
       -- preboot
       preboot_i                     => '0',
@@ -720,7 +784,7 @@ LED_o(0) <= '0'          when i_fb_syscon.rst_state = reset else
             i_flasher(1);
 LED_o(1) <= '1';
 LED_o(2) <= not i_JIM_en;
-LED_o(3) <= '1';
+LED_o(3) <= i_swmos_shadow;
 
 
 end rtl;

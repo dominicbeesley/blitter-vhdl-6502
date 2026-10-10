@@ -21,20 +21,20 @@
 -- THE SOFTWARE.
 -- -----------------------------------------------------------------------------
 
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company:          Dossytronics
+-- Engineer:         Dominic Beesley
 -- 
--- Create Date:    	16/04/2019
+-- Create Date:      16/04/2019
 -- Design Name: 
--- Module Name:    	fishbone bus - Memory access and mapping control
+-- Module Name:      fb_memctl
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for the memory control registers (except 
---							the ROM paging register which is handles in fb_SYS)
---							Also includes the state machine for sepcialised 6502/65816
---							debugging using a shadow ROM and shadow RAM exclusive to
---							debugger, for use with the NoICE / BLTUTILS roms
+-- Description:      A fishbone wrapper for the memory control registers (except 
+--                   the ROM paging register which is handled in fb_SYS)
+--                   Also includes the state machine for specialised 6502/65816
+--                   debugging using a shadow ROM and shadow RAM exclusive to
+--                   debugger, for use with the NoICE / BLTUTILS roms
 -- Dependencies: 
 --
 -- Revision: 
@@ -52,396 +52,407 @@ use work.fishbone.all;
 use work.board_config_pack.all;
 
 entity fb_memctl is
-	generic (
-		SIM									: boolean := false							-- skip some stuff, i.e. slow sdram start up
-	);
-	port(
+   generic (
+      SIM                           : boolean := false                     -- skip some stuff, i.e. slow sdram start up
+   );
+   port(
 
-		-- configuration signals
-		do6502_debug_i						: in  std_logic;
-		cfgbits_i							: in  std_logic_vector(15 downto 0);
+      -- configuration signals
+      do6502_debug_i                : in  std_logic;
+      cfgbits_i                     : in  std_logic_vector(15 downto 0);
 
-		-- memory control signals
+      -- memory control signals
 
-		turbo_lo_mask_o					: out	std_logic_vector(7 downto 0);
+      turbo_lo_mask_o               : out std_logic_vector(7 downto 0);
 
-		swmos_shadow_o						: out	std_logic;		-- shadow mos from SWRAM slot #8
+      swmos_shadow_o                : out std_logic;     -- shadow mos from SWRAM slot #8
 
-		boot_65816_o						: out std_logic_vector(1 downto 0);
+      boot_65816_o                  : out std_logic_vector(1 downto 0);
 
-		window_65816_o						: out std_logic_vector(12 downto 0);
-		window_65816_wr_en_o				: out std_logic;								-- single cycle strobe when register is updated (high nybble written), invalid otherwise
+      window_65816_o                : out std_logic_vector(12 downto 0);
+      window_65816_wr_en_o          : out std_logic;                       -- single cycle strobe when register is updated (high nybble written), invalid otherwise
 
-		-- noice debugger signals to cpu
-		noice_debug_nmi_n_o				: out	std_logic;		-- debugger is forcing a cpu NMI
-		noice_debug_shadow_o				: out std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)
-		noice_debug_inhibit_cpu_o		: out	std_logic;		-- during a 5C op code, inhibit address / data to avoid
-																			-- spurious memory accesses
-		-- noice debugger signals from cpu
-		noice_debug_5c_i					: in	std_logic;		-- A 5C instruction is being fetched (qualify with clken below)
-		noice_debug_cpu_clken_i			: in	std_logic;		-- clken and cpu rdy
-		noice_debug_A0_tgl_i				: in	std_logic;		-- 1 when current A0 is different to previous fetched
-		noice_debug_opfetch_i			: in	std_logic;		-- this cycle is an opcode fetch
+      -- noice debugger signals to cpu
+      noice_debug_nmi_n_o           : out std_logic;     -- debugger is forcing a cpu NMI
+      noice_debug_shadow_o          : out std_logic;     -- debugger memory MOS map is active (overrides shadow_mos)
+      noice_debug_inhibit_cpu_o     : out std_logic;     -- during a 5C op code, inhibit address / data to avoid
+                                                         -- spurious memory accesses
+      -- noice debugger signals from cpu
+      noice_debug_5c_i              : in  std_logic;     -- A 5C instruction is being fetched (qualify with clken below)
+      noice_debug_cpu_clken_i       : in  std_logic;     -- clken and cpu rdy
+      noice_debug_A0_tgl_i          : in  std_logic;     -- 1 when current A0 is different to previous fetched
+      noice_debug_opfetch_i         : in  std_logic;     -- this cycle is an opcode fetch
 
-		-- noice debugger button		
+      -- noice debugger button      
 
-		noice_debug_button_i				: in	std_logic;
+      noice_debug_button_i          : in  std_logic;
 
-		-- cput throttle
-		throttle_all_o						: out std_logic;
-		throttle_mos_o						: out std_logic;
-		rom_throttle_map_o				: out std_logic_vector(15 downto 0);
-		rom_autohazel_map_o				: out std_logic_vector(15 downto 0);
+      -- cput throttle
+      throttle_all_o                : out std_logic;
+      throttle_mos_o                : out std_logic;
+      rom_throttle_map_o            : out std_logic_vector(15 downto 0);
+      rom_autohazel_map_o           : out std_logic_vector(15 downto 0);
 
-		-- fishbone signals
+      -- fishbone signals
 
-		fb_syscon_i							: in		fb_syscon_t;
-		fb_c2p_i								: in		fb_con_o_per_i_t;
-		fb_p2c_o								: out		fb_con_i_per_o_t;
+      fb_syscon_i                   : in     fb_syscon_t;
+      fb_c2p_i                      : in     fb_con_o_per_i_t;
+      fb_p2c_o                      : out    fb_con_i_per_o_t;
 
-		-- preboot
-		preboot_o							: out std_logic;
+      -- preboot
+      preboot_o                     : out std_logic;
 
-		-- rom map select
-		map0n1_swromx_i					: in  std_logic;
-		map0n1_default_i					: in  std_logic;
-		map0n1_o								: out std_logic
+      -- rom map select
+      map0n1_swromx_i               : in  std_logic;
+      map0n1_default_i              : in  std_logic;
+      map0n1_o                      : out std_logic
 
-	);
+   );
 end fb_memctl;
 
 architecture rtl of fb_memctl is
 
-	type 	 	fb_state_mem_t is (idle, wait_write);
-	signal	fb_state								: fb_state_mem_t;
+   type     state_mem_t is (idle, act_rd, act_wr);
 
-	type		noice_state_t is (
-			idle 				-- nothing happening
-			, startBTN		-- button press detected and nmi asserted, wait for sync followed by same address
-			, start5C		-- 5C instruction encountered, check that an IRQ is not being serviced then enter debug
-			, startREGwr	-- a 1 bit was written to SWMOS_DEBUG - switch to DEBUG map after next instruction
-			, wait65int 	-- sync just happened wait for next cycle and A0 is same for 6502 interrupt signature
-			, restore		-- a store was made to FE32 put everything back		
-		);
+   signal   r_state  : state_mem_t;
 
-	signal	r_con_ack						:	std_logic;
+   signal   r_D_ack  : std_logic;
+   signal   r_A      : std_logic_vector(3 downto 0);
+   signal   r_A_ack  : std_logic;
+   signal   r_D_rd   : std_logic_vector(7 downto 0);
 
-	signal	r_turbo_lo						:	std_logic_vector(7 downto 0);
+   signal   i_D_rd   : std_logic_vector(7 downto 0);
 
-	signal	r_swmos_shadow					:	std_logic := '0';
-	signal	r_noice_debug_shadow			:	std_logic;
-	signal	r_noice_debug_shadow_saved	:	std_logic;
-	signal	r_noice_debug_en				:	std_logic := '0';
+   type     noice_state_t is (
+         idle           -- nothing happening
+         , startBTN     -- button press detected and nmi asserted, wait for sync followed by same address
+         , start5C      -- 5C instruction encountered, check that an IRQ is not being serviced then enter debug
+         , startREGwr   -- a 1 bit was written to SWMOS_DEBUG - switch to DEBUG map after next instruction
+         , wait65int    -- sync just happened wait for next cycle and A0 is same for 6502 interrupt signature
+         , restore      -- a store was made to FE32 put everything back    
+      );
 
-	signal	r_noice_debug_act				: 	std_logic;
-	signal	r_noice_debug_5C				:  std_logic;
-	signal	r_noice_debug_nmi_n			:	std_logic;
-	signal	r_noice_debug_inhibit_cpu	:  std_logic;
+   signal   r_turbo_lo                 :  std_logic_vector(7 downto 0);
 
-	signal	r_noice_state					:	noice_state_t;
+   signal   r_swmos_shadow             :  std_logic := '0';
+   signal   r_noice_debug_shadow       :  std_logic;
+   signal   r_noice_debug_shadow_saved :  std_logic;
+   signal   r_noice_debug_en           :  std_logic := '0';
 
-	signal	r_noice_debug_written_val	: 	std_logic;
-	signal	r_swmos_debug_written_en	: 	std_logic;
-	signal	r_swmos_debug_written_ack	: 	std_logic;
+   signal   r_noice_debug_act          :  std_logic;
+   signal   r_noice_debug_5C           :  std_logic;
+   signal   r_noice_debug_nmi_n        :  std_logic;
+   signal   r_noice_debug_inhibit_cpu  :  std_logic;
+
+   signal   r_noice_state              :  noice_state_t;
+
+   signal   r_noice_debug_written_val  :  std_logic;
+   signal   r_swmos_debug_written_en   :  std_logic;
+   signal   r_swmos_debug_written_ack  :  std_logic;
 
 
-	signal	r_swmos_save_written_en		: 	std_logic;
-	signal	r_swmos_save_written_ack	: 	std_logic;
+   signal   r_swmos_save_written_en    :  std_logic;
+   signal   r_swmos_save_written_ack   :  std_logic;
 
-	signal   r_65816_boot					: 	std_logic_vector(1 downto 0);
+   signal   r_65816_boot               :  std_logic_vector(1 downto 0);
 
-	signal	r_window_65816					:	std_logic_vector(12 downto 0);
-	signal	r_window_65816_wr_en			:	std_logic;
+   signal   r_window_65816             :  std_logic_vector(12 downto 0);
+   signal   r_window_65816_wr_en       :  std_logic;
 
-	signal	r_throttle_all					: 	std_logic;
-	signal	r_throttle_mos					: 	std_logic;
-	signal	r_rom_throttle_map			: std_logic_vector(15 downto 0);
+   signal   r_throttle_all             :  std_logic;
+   signal   r_throttle_mos             :  std_logic;
+   signal   r_rom_throttle_map         : std_logic_vector(15 downto 0);
 
-	signal   r_rom_autohazel_map			: std_logic_vector(15 downto 0);
+   signal   r_rom_autohazel_map        : std_logic_vector(15 downto 0);
 
-	signal   r_preboot						: std_logic;
-	signal   r_map0n1							: std_logic;
+   signal   r_preboot                  : std_logic;
+   signal   r_map0n1                   : std_logic;
 
-	signal   r_resetfull 					: std_logic := '1'; -- bodge to get map0n1 from switches late on mk.3
+   signal   r_resetfull                : std_logic := '1'; -- bodge to get map0n1 from switches late on mk.3
 
 begin
 
-	preboot_o <= r_preboot;
-	throttle_all_o <= r_throttle_all;
-	throttle_mos_o <= r_throttle_mos;
-	rom_throttle_map_o <= r_rom_throttle_map;
-	rom_autohazel_map_o <= r_rom_autohazel_map;
-	map0n1_o <= r_map0n1;
+   preboot_o <= r_preboot;
+   throttle_all_o <= r_throttle_all;
+   throttle_mos_o <= r_throttle_mos;
+   rom_throttle_map_o <= r_rom_throttle_map;
+   rom_autohazel_map_o <= r_rom_autohazel_map;
+   map0n1_o <= r_map0n1;
 
-	boot_65816_o <= r_65816_boot;
+   boot_65816_o <= r_65816_boot;
 
-	turbo_lo_mask_o <= r_turbo_lo;
+   turbo_lo_mask_o <= r_turbo_lo;
 
-	swmos_shadow_o <= r_swmos_shadow;
+   swmos_shadow_o <= r_swmos_shadow;
 
-	window_65816_o <= r_window_65816;
-	window_65816_wr_en_o <= r_window_65816_wr_en;
+   window_65816_o <= r_window_65816;
+   window_65816_wr_en_o <= r_window_65816_wr_en;
 
-	noice_debug_nmi_n_o <= 
-		r_noice_debug_nmi_n when do6502_debug_i = '1' else
-		'0' when noice_debug_button_i = '1' else
-		'1';
-	noice_debug_shadow_o <= r_noice_debug_shadow;
-	noice_debug_inhibit_cpu_o <= r_noice_debug_inhibit_cpu;
+   noice_debug_nmi_n_o <= 
+      r_noice_debug_nmi_n when do6502_debug_i = '1' else
+      '0' when noice_debug_button_i = '1' else
+      '1';
+   noice_debug_shadow_o <= r_noice_debug_shadow;
+   noice_debug_inhibit_cpu_o <= r_noice_debug_inhibit_cpu;
 
-	fb_p2c_o.rdy <= r_con_ack and fb_c2p_i.cyc;
-	fb_p2c_o.ack <= r_con_ack and fb_c2p_i.cyc;
-	fb_p2c_o.stall <= '0' when fb_state = idle else '1';
+   fb_p2c_o.A_ack <= r_A_ack;
+   fb_p2c_o.D_rd <=  r_D_rd;
+   fb_p2c_o.rdy <= r_D_ack;
+   fb_p2c_o.D_ack <= r_D_ack;
 
-	fb_p2c_o.D_rd <= 		-- FE37 - lomem turbo map
-								r_turbo_lo 
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 7 else
-								-- FE36 - 2Mhz throttle
-								r_throttle_all 
-							&  r_throttle_mos 
-							&  r_preboot
-							&  r_map0n1
-							&  "0000" 
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 6 else
-								r_rom_throttle_map(15 downto 8)
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 5 else
-								r_rom_throttle_map(7 downto 0)
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 3 else
-								-- FE31 / swmos register
-								r_noice_debug_act
-							& 	r_noice_debug_5C
-							& 	r_65816_boot
-							&  r_noice_debug_en
-							&	r_noice_debug_shadow
-							&	'0'
-							&	r_swmos_shadow 
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 1 else		
-								-- FE32 / swmos "save" register
-								"000"													-- return to non-debug
-							&	'0'
-							&  r_noice_debug_en
-							&	r_noice_debug_shadow_saved
-							&	'0'
-							&	r_swmos_shadow
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 2 else	
-							not(cfgbits_i(7 downto 0))
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 14 else
-							not(cfgbits_i(15 downto 8))
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 15 else
-							r_rom_autohazel_map(7 downto 0)
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 8 else
-							r_rom_autohazel_map(15 downto 8)
-								when unsigned(fb_c2p_i.A(3 downto 0)) = 9 else
-							x"A5";
+   p_fb_state:process(fb_syscon_i)
+   variable v_dowrite : boolean;
+   begin
 
-	p_fb_state:process(fb_syscon_i)
-	variable v_dowrite : boolean;
-	begin
+      if fb_syscon_i.rst = '1' then
+         r_state <= idle;
+         r_turbo_lo <= (others => '0');
+         r_swmos_save_written_en <= '0';
+         r_swmos_debug_written_en <= '0';
+         r_65816_boot <= "10";   
+         r_preboot <= '1';
+         r_rom_autohazel_map <= (others => '0');
+         if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+            r_resetfull <= '1';
+            r_throttle_all <= '1';
+            r_throttle_mos <= '1';
+            r_rom_throttle_map <= (others => '0');
+            r_noice_debug_en <= '0';
+            r_swmos_shadow <= '0';
+         end if;
 
-		if rising_edge(fb_syscon_i.clk) then
-			r_con_ack <= '0';
-			if fb_syscon_i.rst = '1' then
-				fb_state <= idle;
-				r_turbo_lo <= (others => '0');
-				r_swmos_save_written_en <= '0';
-				r_swmos_debug_written_en <= '0';
-				r_65816_boot <= "10";	
-				r_preboot <= '1';
-				r_rom_autohazel_map <= (others => '0');
-				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_resetfull <= '1';
-					r_throttle_all <= '1';
-					r_throttle_mos <= '1';
-					r_rom_throttle_map <= (others => '0');
-					r_noice_debug_en <= '0';
-					r_swmos_shadow <= '0';
-				end if;
+         if r_resetfull = '1' then
+            r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
+         end if;     
+         r_window_65816_wr_en <= '0';
+         
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_rd <= (others => '0');
+         r_A <= (others => '0');
+      elsif rising_edge(fb_syscon_i.clk) then
+         r_resetfull <= '0';
+         v_dowrite := false;
+         r_window_65816_wr_en <= '0';
 
-				if r_resetfull = '1' then
-					r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
-				end if;		
-				r_window_65816_wr_en <= '0';
-			else
-				r_resetfull <= '0';
-				v_dowrite := false;
-				r_con_ack <= '0';
-				r_window_65816_wr_en <= '0';
+         r_D_ack <= '0';
+         r_A_ack <= '0';
 
-				case fb_state is
-				when idle =>
-					if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
-						if fb_c2p_i.we = '1' then
-							if fb_c2p_i.D_wr_stb = '1' then
-								v_dowrite := true;
-							else
-								fb_state <= wait_write;
-							end if;
-						else
-							fb_state <= idle;
-							r_con_ack <= '1';
-						end if;
-					end if;
-				when wait_write =>
-					if fb_c2p_i.D_wr_stb = '1' then
-						v_dowrite := true;
-					end if;
-				when others =>
-					fb_state <= idle;
-				end case;
+         case r_state is
+            when idle =>
+               if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+                  r_A <= fb_c2p_i.A(3 downto 0);
+                  if fb_c2p_i.we = '1' then
+                     r_state <= act_wr;
+                  else
+                     r_state <= act_rd;                     
+                  end if;
+               end if;
+            when act_wr =>
+               if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                  v_dowrite := true;
+               end if;
+            when act_rd =>
+               if fb_c2p_i.cyc = '1' then
+                  r_D_rd <= i_D_rd;
+                  r_D_ack <= '1';
+               end if;
+               r_state <= idle;
+            when others =>
+               r_state <= idle;
+         end case;
 
-				if fb_c2p_i.cyc = '0' then
-					fb_state <= idle;
-				elsif v_dowrite then
-					fb_state <= idle;
-					r_con_ack <= '1';
-					case to_integer(unsigned(fb_c2p_i.A(3 downto 0))) is
-						when 15 =>
-							r_window_65816(12 downto 5) <= fb_c2p_i.D_wr;
-							r_window_65816_wr_en <= '1';
-						when 14 =>
-							r_window_65816(4 downto 0) <= fb_c2p_i.D_wr(7 downto 3);
-						when 8 =>
-							r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
-						when 9 =>
-							r_rom_autohazel_map(15 downto 8) <= fb_c2p_i.D_wr;
-						when 7 =>
-							r_turbo_lo <= fb_c2p_i.D_wr;
-						when 6 =>
-							r_throttle_all <= fb_c2p_i.D_wr(7);
-							r_throttle_mos <= fb_c2p_i.D_wr(6);
-							r_preboot		<= fb_c2p_i.D_wr(5);
-							r_map0n1			<= fb_c2p_i.D_wr(4);
-						when 5 => 
-							r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
-						when 3 => 
-							r_rom_throttle_map(7 downto 0) <= fb_c2p_i.D_wr;
-						when 1 =>
-							r_swmos_shadow <= fb_c2p_i.D_wr(0);
-							r_noice_debug_en <= fb_c2p_i.D_wr(3);
-							r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
-							r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
-							r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
-						when 2 => 
-							r_swmos_save_written_en <= not r_swmos_save_written_ack;
-						when others =>
-					end case;
-				end if;
+         if fb_c2p_i.cyc = '0' then
+            r_state <= idle;
+            r_A_ack <= '0';
+            r_D_ack <= '0';
+         elsif v_dowrite then
+            r_state <= idle;
+            r_D_ack <= '1';
+            case to_integer(unsigned(r_A)) is
+               when 15 =>
+                  r_window_65816(12 downto 5) <= fb_c2p_i.D_wr;
+                  r_window_65816_wr_en <= '1';
+               when 14 =>
+                  r_window_65816(4 downto 0) <= fb_c2p_i.D_wr(7 downto 3);
+               when 8 =>
+                  r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
+               when 9 =>
+                  r_rom_autohazel_map(15 downto 8) <= fb_c2p_i.D_wr;
+               when 7 =>
+                  r_turbo_lo <= fb_c2p_i.D_wr;
+               when 6 =>
+                  r_throttle_all <= fb_c2p_i.D_wr(7);
+                  r_throttle_mos <= fb_c2p_i.D_wr(6);
+                  r_preboot      <= fb_c2p_i.D_wr(5);
+                  r_map0n1       <= fb_c2p_i.D_wr(4);
+               when 5 => 
+                  r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
+               when 3 => 
+                  r_rom_throttle_map(7 downto 0) <= fb_c2p_i.D_wr;
+               when 1 =>
+                  r_swmos_shadow <= fb_c2p_i.D_wr(0);
+                  r_noice_debug_en <= fb_c2p_i.D_wr(3);
+                  r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
+                  r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
+                  r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
+               when 2 => 
+                  r_swmos_save_written_en <= not r_swmos_save_written_ack;
+               when others =>
+            end case;
+         end if;
+      end if;
+   end process;
 
 
+   p_noice_reg: process(fb_syscon_i, noice_debug_cpu_clken_i)
+   variable v_noice_debug_button_prev : STD_LOGIC;
+   begin
+         
+      if fb_syscon_i.rst = '1' then
+         r_noice_debug_act <= '0';
+         r_noice_debug_nmi_n <= '1';
+         v_noice_debug_button_prev := '0';
+         r_noice_debug_inhibit_cpu <= '0';
+         r_noice_state <= idle;
+         r_noice_debug_inhibit_cpu <= '0';
+         r_noice_debug_shadow <= '0';  
+         r_noice_debug_5C <= '0';   
+         r_swmos_save_written_ack <= '0';
+         r_swmos_debug_written_ack <= '0';
+      elsif rising_edge(fb_syscon_i.clk) and noice_debug_cpu_clken_i = '1' then
 
-			end if;
-		end if;
+         case r_noice_state is
+            when idle => 
+               if v_noice_debug_button_prev = '0' 
+                     and noice_debug_button_i = '1' 
+                     and r_noice_debug_act = '0' 
+                     and r_noice_debug_en = '1' 
+                     and do6502_debug_i = '1'
+                     then                                                     -- debug button pressed, startBTN debug nmi (65)
+                  r_noice_state <= startBTN;
+               elsif  noice_debug_5c_i = '1'
+                     and noice_debug_opfetch_i = '1' 
+                     and r_noice_debug_act = '0' 
+                     and r_noice_debug_en = '1' 
+                     and do6502_debug_i = '1'
+                     then                                                     -- 5C instruction (65)
+                  r_noice_state <= start5C;
+                  r_noice_debug_inhibit_cpu <= '1';
+               elsif r_swmos_save_written_en /= r_swmos_save_written_ack then
+                  if r_noice_debug_en = '1' then                        -- restore state
+                     r_noice_state <= restore;
+                  end if;
+                  r_swmos_save_written_ack <= r_swmos_save_written_en;
+               elsif  r_swmos_debug_written_en /= r_swmos_debug_written_ack then
+                  if r_noice_debug_en = '1'  then                                -- write to SWMOS_DEBUG _after_ next instruction
+                     r_noice_state <= startREGwr;
+                  end if;
+                  r_swmos_debug_written_ack <= r_swmos_debug_written_en;
+               end if;
+            when start5C =>
+                  if noice_debug_A0_tgl_i = '1' then -- check for 5C but A0 didn't toggle, abandon irq being serviced
+                     r_noice_debug_nmi_n <= '0';
+                  r_noice_debug_act <= '1';
+                  r_noice_debug_5C <= '1';
+                  r_noice_debug_shadow_saved <= r_noice_debug_shadow;
+                  r_noice_debug_shadow <= '1';
+               end if;
+               r_noice_debug_inhibit_cpu <= '0';
+                  r_noice_state <= idle;
+            when startBTN =>
+               if noice_debug_opfetch_i = '1' then                
+                     r_noice_debug_nmi_n <= '0';
+                  r_noice_state <= wait65int;
+               end if;
+            when startREGwr =>
+               if noice_debug_opfetch_i = '1' then
+                  r_noice_debug_act <= r_noice_debug_written_val;
+                  r_noice_debug_5C <= '0';
+                  r_noice_debug_shadow_saved <= r_noice_debug_shadow;
+                  r_noice_debug_shadow <= r_noice_debug_written_val;
 
-	end process;
+                  r_noice_debug_inhibit_cpu <= '0';
+                  r_noice_state <= idle;
+               end if;
+            when wait65int =>                                              -- wait for a 6502 interrupt signature 
+                                                                           -- which is a SYNC followed by a fetch
+               if noice_debug_A0_tgl_i = '0' then                          -- from the same address
+                                                                           -- (or more cheaply here, not A0 toggle)
+                  r_noice_debug_act <= '1';
+                  r_noice_debug_5C <= '0';
+                  r_noice_debug_shadow_saved <= r_noice_debug_shadow;
+                  r_noice_debug_shadow <= '1';
+                  r_noice_state <= idle;
+               else
+                  -- not an interrupt fetch wait for a sync again
+                  r_noice_state <= startBTN;
+               end if;
 
+            when restore=>
+               r_noice_debug_inhibit_cpu <= '0';
+               r_noice_debug_nmi_n <= '1';
+               r_noice_debug_act <= '0';
+               r_noice_debug_5C <= '0';
+               r_noice_debug_shadow <= r_noice_debug_shadow_saved;
 
-	p_noice_reg: process(fb_syscon_i, noice_debug_cpu_clken_i)
-	variable v_noice_debug_button_prev : STD_LOGIC;
-	begin
-			
-		if fb_syscon_i.rst = '1' then
-			r_noice_debug_act <= '0';
-			r_noice_debug_nmi_n <= '1';
-			v_noice_debug_button_prev := '0';
-			r_noice_debug_inhibit_cpu <= '0';
-			r_noice_state <= idle;
-			r_noice_debug_inhibit_cpu <= '0';
-			r_noice_debug_shadow <= '0';	
-			r_noice_debug_5C <= '0';	
-			r_swmos_save_written_ack <= '0';
-			r_swmos_debug_written_ack <= '0';
-		elsif rising_edge(fb_syscon_i.clk) and noice_debug_cpu_clken_i = '1' then
+               r_noice_state <= idle;
+            when others =>
+               -- this shouldn't happen!
+               r_noice_debug_inhibit_cpu <= '0';
+               r_noice_debug_nmi_n <= '1';
+               r_noice_debug_act <= '0';
+               r_noice_debug_5C <= '0';
 
-			case r_noice_state is
-				when idle => 
-					if v_noice_debug_button_prev = '0' 
-							and noice_debug_button_i = '1' 
-							and r_noice_debug_act = '0' 
-							and r_noice_debug_en = '1' 
-							and do6502_debug_i = '1'
-							then																		-- debug button pressed, startBTN debug nmi (65)
-						r_noice_state <= startBTN;
-					elsif  noice_debug_5c_i = '1'
-							and noice_debug_opfetch_i = '1' 
-							and r_noice_debug_act = '0' 
-							and r_noice_debug_en = '1' 
-							and do6502_debug_i = '1'
-							then																		-- 5C instruction (65)
-						r_noice_state <= start5C;
-						r_noice_debug_inhibit_cpu <= '1';
-					elsif r_swmos_save_written_en /= r_swmos_save_written_ack then
-						if r_noice_debug_en = '1' then								-- restore state
-							r_noice_state <= restore;
-						end if;
-						r_swmos_save_written_ack <= r_swmos_save_written_en;
-					elsif  r_swmos_debug_written_en /= r_swmos_debug_written_ack then
-						if r_noice_debug_en = '1'  then											-- write to SWMOS_DEBUG _after_ next instruction
-							r_noice_state <= startREGwr;
-						end if;
-						r_swmos_debug_written_ack <= r_swmos_debug_written_en;
-					end if;
-				when start5C =>
-			   		if noice_debug_A0_tgl_i = '1' then -- check for 5C but A0 didn't toggle, abandon irq being serviced
-		   				r_noice_debug_nmi_n <= '0';
-						r_noice_debug_act <= '1';
-						r_noice_debug_5C <= '1';
-						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
-						r_noice_debug_shadow <= '1';
-					end if;
-					r_noice_debug_inhibit_cpu <= '0';
-		   			r_noice_state <= idle;
-				when startBTN =>
-					if noice_debug_opfetch_i = '1' then						
-		   				r_noice_debug_nmi_n <= '0';
-						r_noice_state <= wait65int;
-					end if;
-				when startREGwr =>
-					if noice_debug_opfetch_i = '1' then
-						r_noice_debug_act <= r_noice_debug_written_val;
-						r_noice_debug_5C <= '0';
-						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
-						r_noice_debug_shadow <= r_noice_debug_written_val;
+               r_noice_state <= idle;
+         end case;         
 
-						r_noice_debug_inhibit_cpu <= '0';
-						r_noice_state <= idle;
-					end if;
-				when wait65int =>																-- wait for a 6502 interrupt signature 
-																									-- which is a SYNC followed by a fetch
-					if noice_debug_A0_tgl_i = '0' then									-- from the same address
-																									-- (or more cheaply here, not A0 toggle)
-						r_noice_debug_act <= '1';
-						r_noice_debug_5C <= '0';
-						r_noice_debug_shadow_saved <= r_noice_debug_shadow;
-						r_noice_debug_shadow <= '1';
-						r_noice_state <= idle;
-					else
-						-- not an interrupt fetch wait for a sync again
-						r_noice_state <= startBTN;
-					end if;
+         v_noice_debug_button_prev := noice_debug_button_i;
 
-				when restore=>
-					r_noice_debug_inhibit_cpu <= '0';
-					r_noice_debug_nmi_n <= '1';
-					r_noice_debug_act <= '0';
-					r_noice_debug_5C <= '0';
-					r_noice_debug_shadow <= r_noice_debug_shadow_saved;
+      end if;
+   end process;
 
-					r_noice_state <= idle;
-				when others =>
-					-- this shouldn't happen!
-					r_noice_debug_inhibit_cpu <= '0';
-					r_noice_debug_nmi_n <= '1';
-					r_noice_debug_act <= '0';
-					r_noice_debug_5C <= '0';
-
-					r_noice_state <= idle;
-			end case;			
-
-			v_noice_debug_button_prev := noice_debug_button_i;
-
-		end if;
-	end process;
-
+   i_D_rd <=            
+         -- FE37 - lomem turbo map
+         r_turbo_lo 
+         when unsigned(r_A) = 7 else
+         -- FE36 - 2Mhz throttle
+         r_throttle_all 
+      &  r_throttle_mos 
+      &  r_preboot
+      &  r_map0n1
+      &  "0000" 
+         when unsigned(r_A) = 6 else
+         r_rom_throttle_map(15 downto 8)
+         when unsigned(r_A) = 5 else
+         r_rom_throttle_map(7 downto 0)
+         when unsigned(r_A) = 3 else
+         -- FE31 / swmos register
+         r_noice_debug_act
+      &  r_noice_debug_5C
+      &  r_65816_boot
+      &  r_noice_debug_en
+      &  r_noice_debug_shadow
+      &  '0'
+      &  r_swmos_shadow 
+         when unsigned(r_A) = 1 else      
+         -- FE32 / swmos "save" register
+         "000"                                     -- return to non-debug
+      &  '0'
+      &  r_noice_debug_en
+      &  r_noice_debug_shadow_saved
+      &  '0'
+      &  r_swmos_shadow
+         when unsigned(r_A) = 2 else   
+      not(cfgbits_i(7 downto 0))
+         when unsigned(r_A) = 14 else
+      not(cfgbits_i(15 downto 8))
+         when unsigned(r_A) = 15 else
+      r_rom_autohazel_map(7 downto 0)
+         when unsigned(r_A) = 8 else
+      r_rom_autohazel_map(15 downto 8)
+         when unsigned(r_A) = 9 else
+      x"A5";
 
 
 end rtl;
