@@ -275,7 +275,7 @@ it should be noted that this is not *normal* behaviour and is likely to cause
 inappropriate behaviour. For instance when accessing the fb_SYS module to 
 access memory or devices on a BBC Micro's bus a bus write will still occur but
 possibly with corrupted data if the D_wr_stb signal hasn't arrived at the 
-fb_SYS module before cyc is dropped. 
+fb_SYS or fb_MEM, etc modules before cyc is dropped. 
 
 In general controllers and interconnects should not drop cyc to abort a 
 transaction that has started (i.e. a_stb has been asserted). However, all 

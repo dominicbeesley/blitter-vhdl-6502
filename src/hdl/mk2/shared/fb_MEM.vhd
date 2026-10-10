@@ -97,7 +97,7 @@ begin
 	fb_p2c_o.D_ack 	<= r_D_ack;
 
 	p_state:process(fb_syscon_i)
-	variable v_rdy_ctdn : t_rdy_ctdn;
+	variable vr_rdy_ctdn : t_rdy_ctdn;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -109,7 +109,7 @@ begin
 			MEM_ROM_nCE_o <= '1';
 			MEM_RAM_nWE_o <= '1';
 			MEM_ROM_nWE_o <= '1';
-			v_rdy_ctdn := RDY_CTDN_MAX;
+			vr_rdy_ctdn := RDY_CTDN_MAX;
 			r_rdy_ctdn <= RDY_CTDN_MIN;
 			r_D_ack <= '0';
 			r_A_ack <= '0';
@@ -129,7 +129,7 @@ begin
 					MEM_RAM0_nCE_o <= '1';
 					MEM_ROM_nCE_o <= '1';
 					r_rdy <= '0';
-					v_rdy_ctdn := RDY_CTDN_MAX;
+					vr_rdy_ctdn := RDY_CTDN_MAX;
 
 					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and r_A_ack = '0' then
 						r_A_ack <= '1';
@@ -145,16 +145,16 @@ begin
 						if fb_c2p_i.A(23) = '1' then
 							MEM_ROM_nCE_o <= '0';
 							IF G_FLASH_IS_45 then
-								v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+								vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 							else
-								v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+								vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 							end if;
 						else -- BBRAM
 							MEM_RAM0_nCE_o <= '0';
 							if G_SLOW_IS_45 then
-								v_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+								vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
 							else
-								v_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+								vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
 							end if;
 						end if;
 
@@ -179,24 +179,24 @@ begin
 						state <= wait_wr;
 					end if;
 				when wait_rd =>
-					if v_rdy_ctdn <= r_rdy_ctdn then
+					if vr_rdy_ctdn <= r_rdy_ctdn then
 						r_rdy <= '1';
 					end if;
 
-					if v_rdy_ctdn = 0 then
+					if vr_rdy_ctdn = 0 then
 						state <= idle;
 						r_D_ack <= '1';
 						r_D_rd <= MEM_D_io;
 					else
-						v_rdy_ctdn := v_rdy_ctdn - 1;
+						vr_rdy_ctdn := vr_rdy_ctdn - 1;
 					end if;
 				when wait_wr =>
-					if v_rdy_ctdn = 0 then
+					if vr_rdy_ctdn = 0 then
 						state <= idle;
 						MEM_RAM_nWE_o <= '1';
 						MEM_ROM_nWE_o <= '1';
 					else
-						v_rdy_ctdn := v_rdy_ctdn - 1;
+						vr_rdy_ctdn := vr_rdy_ctdn - 1;
 					end if;
 				when others =>
 					state <= idle;
@@ -206,6 +206,13 @@ begin
 				r_rdy <= '0';
 			end if;
 
+			if fb_c2p_i.cyc = '0' then
+            r_D_ack <= '0';
+            r_rdy   <= '0';
+            if state /= wait_wr then   -- a D_ack'd write must complete its nWE pulse
+               state <= idle;
+            end if;
+         end if;
 
 		end if;
 
