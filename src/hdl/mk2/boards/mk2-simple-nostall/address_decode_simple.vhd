@@ -70,9 +70,15 @@ begin
       if (addr_i(23 downto 22) = "11") then                       -- "11xx xxxx"
          -- peripherals/sys
          if (addr_i(16) = '1') then                                              -- "11xx xxx1"    FF
-            -- SYS
-            peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(PERIPHERAL_COUNT));
-            peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
+				if addr_i(15 downto 4) = x"FE3" and addr_i(3 downto 0) /= x"0" and addr_i(3 downto 0) /= x"4" then
+					-- memctl
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEMCTL, numbits(PERIPHERAL_COUNT));
+					peripheral_sel_oh_o(PERIPHERAL_NO_MEMCTL) <= '1';
+				else
+               -- SYS
+               peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(PERIPHERAL_COUNT));
+               peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
+            end if;
          else
             if addr_i(14) = '1' then
                peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CONFIG, numbits(PERIPHERAL_COUNT));

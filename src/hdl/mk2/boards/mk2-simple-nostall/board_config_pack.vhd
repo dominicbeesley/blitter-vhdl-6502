@@ -87,11 +87,12 @@ package board_config_pack is
 	constant G_MEM_SLOW_IS_45			: boolean := false;
 	constant G_MEM_FLASH_IS_45			: boolean := false;
 
-   constant PERIPHERAL_COUNT        : natural := 4;
+   constant PERIPHERAL_COUNT        : natural := 5;
    constant PERIPHERAL_NO_VERSION	: natural := 0;
    constant PERIPHERAL_NO_SYS	 	: natural := 1;
    constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
-   constant PERIPHERAL_NO_CONFIG 	: natural := 3; 
+   constant PERIPHERAL_NO_MEMCTL    : natural := 3;
+   constant PERIPHERAL_NO_CONFIG 	: natural := 4; 
 
    constant CONTROLLER_COUNT        : natural := 1;
    constant MAS_NO_CPU              : natural := 0;
