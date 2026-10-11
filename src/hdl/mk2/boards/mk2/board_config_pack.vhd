@@ -95,7 +95,7 @@ package board_config_pack is
 	constant PERIPHERAL_NO_CHIPSET	: natural := 4;
 	constant PERIPHERAL_NO_HDMI		: natural := 0;	-- not on mk2 board!
 	constant PERIPHERAL_NO_XFLASH  	: natural := 5; 
-	constant PERIPHERAL_NO_PREBOOT	: natural := 6; -- not used	
+	constant PERIPHERAL_NO_PREBOOT	: natural := 6;
 	constant PERIPHERAL_NO_UART 		: natural := 0; -- not used
 	constant PERIPHERAL_NO_CONFIG 		: natural := 7; 
 	constant PERIPHERAL_NO_LED_ARR	: natural := 0; -- not used;

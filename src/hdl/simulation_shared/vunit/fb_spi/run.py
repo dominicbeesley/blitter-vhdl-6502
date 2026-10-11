@@ -11,6 +11,7 @@ lib.add_source_files("./*.vhd")
 lib.add_source_files("../../../library/fishbone/fishbone_pack.vhd")
 lib.add_source_files("../../../library/common.vhd")
 lib.add_source_files("../../../shared/fb_spi.vhd")
+lib.add_source_files("../../fb_tester_pack.vhd")
 
 # Run vunit function
 vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])

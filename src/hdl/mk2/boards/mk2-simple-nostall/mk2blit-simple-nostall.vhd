@@ -526,10 +526,85 @@ port map (
       cpu_2MHz_phi2_clken_o         => i_cpu_2MHz_phi2_clken,
 
       debug_sys_D_dir               => open
+	);
 
+ -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+   g_spi_flash:if G_INCL_XFLASH generate
+      b_spi:block
+         signal i_SPI_CS: std_logic_vector(7 downto 0);
+         -- FPGA config flash
+         signal i_c2p_xflash          : fb_con_o_per_i_t;
+         signal i_p2c_xflash          : fb_con_i_per_o_t;         
+      begin
+         e_fb_xflash:entity work.fb_spi
+         generic map (
+            SIM                           => SIM,
+            CLOCKSPEED                    => CLOCKSPEED,
+            PRESCALE                      => 1
+         )
+         port map (
+
+            -- eeprom signals
+            SPI_CS_o                      => i_SPI_CS,
+            SPI_CLK_o                     => flash_ck_o,
+            SPI_MOSI_o                    => flash_mosi_o,
+            SPI_MISO_i                    => flash_miso_i,
+            SPI_DET_i                     => '1',
+
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_xflash,
+            fb_p2c_o                      => i_p2c_xflash
+         );
+      
+         flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+         i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+         i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+      end block;
+   end generate;
+
+   g_not_spi_flash:if not G_INCL_XFLASH generate
+
+      flash_ck_o           <= '1';
+      flash_cs_o           <= '1';
+      flash_mosi_o         <= '1';
+
+   end generate;
+
+
+   -------------------------------------
+   -- PRE-BOOT ROM
+   -------------------------------------
+
+   g_pre_rom:if G_INCL_PREBOOT generate
+      b_spi:block
+         signal i_c2p_preboot          : fb_con_o_per_i_t;
+         signal i_p2c_preboot          : fb_con_i_per_o_t;         
+      begin
+
+         e_fb_mem_rom: entity work.fb_inferred_mem_altera
+         generic map (
+            G_ADDR_W => 8,   -- 256 bytes
+            G_READONLY => true,
+            INIT_FILE => PROJECT_ROOT & "../../shared/preboot1.mif" -- TODO: make this deploy from code project into here
+            )
+         port map (
+            -- fishbone signals
+
+            fb_syscon_i                   => i_fb_syscon,
+            fb_c2p_i                      => i_c2p_preboot,
+            fb_p2c_o                      => i_p2c_preboot
 
    );
 
+         i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
+         i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
+      end block;
+   end generate;
 
    e_fb_cpu: entity work.fb_cpu
    generic map (
@@ -601,7 +676,7 @@ port map (
 		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
       -- preboot
-      preboot_i                     => '0',
+		preboot_i							=> i_preboot,
 
       debug_wrap_cyc_o              => open,
 
@@ -657,10 +732,6 @@ port map (
    SND_BITS_L_aux_o <= '0';
    SND_BITS_R_aux_o <= '0';
 
-   flash_ck_o <= '0';
-   flash_cs_o <= '1';
-   flash_mosi_o <= '0';
-
    I2C_SCL_io <= 'Z';
    I2C_SDA_io <= 'Z';
 
@@ -693,7 +764,7 @@ port map (
 
 CFG_io <= (others => 'Z');
 
-
+--TODO: make the cpu swap only occur on long resets, to match fb_memctl
 p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then

@@ -56,8 +56,8 @@ package board_config_pack is
    constant G_IORB_BLOCK            : boolean := true;
 
 	constant G_INCL_HDMI					: boolean := false;
-	constant G_INCL_PREBOOT				: boolean := false;
-	constant G_INCL_XFLASH     		: boolean := false;
+	constant G_INCL_PREBOOT				: boolean := true;
+	constant G_INCL_XFLASH     		: boolean := true;
 	constant G_INCL_CHIPSET				: boolean := false;
 	constant G_INCL_CS_DMA				: boolean := false;
 	constant G_DMA_CHANNELS				: natural := 2;
@@ -87,12 +87,14 @@ package board_config_pack is
 	constant G_MEM_SLOW_IS_45			: boolean := false;
 	constant G_MEM_FLASH_IS_45			: boolean := false;
 
-   constant PERIPHERAL_COUNT        : natural := 5;
+   constant PERIPHERAL_COUNT        : natural := 7;
    constant PERIPHERAL_NO_VERSION	: natural := 0;
    constant PERIPHERAL_NO_SYS	 	: natural := 1;
    constant PERIPHERAL_NO_CHIPRAM	: natural := 2;
    constant PERIPHERAL_NO_MEMCTL    : natural := 3;
-   constant PERIPHERAL_NO_CONFIG 	: natural := 4; 
+	constant PERIPHERAL_NO_XFLASH  	: natural := 4; 
+	constant PERIPHERAL_NO_PREBOOT	: natural := 5;
+   constant PERIPHERAL_NO_CONFIG 	: natural := 6; 
 
    constant CONTROLLER_COUNT        : natural := 1;
    constant MAS_NO_CPU              : natural := 0;
