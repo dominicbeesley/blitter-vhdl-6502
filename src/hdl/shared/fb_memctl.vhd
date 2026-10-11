@@ -204,102 +204,106 @@ begin
    variable v_dowrite : boolean;
    begin
 
-      if fb_syscon_i.rst = '1' then
-         r_state <= idle;
-         r_turbo_lo <= (others => '0');
-         r_swmos_save_written_en <= '0';
-         r_swmos_debug_written_en <= '0';
-         r_65816_boot <= "10";   
-         r_preboot <= '1';
-         r_rom_autohazel_map <= (others => '0');
-         if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-            r_resetfull <= '1';
-            r_throttle_all <= '1';
-            r_throttle_mos <= '1';
-            r_rom_throttle_map <= (others => '0');
-            r_noice_debug_en <= '0';
-            r_swmos_shadow <= '0';
-         end if;
-
-         if r_resetfull = '1' then
-            r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
-         end if;     
-         r_window_65816_wr_en <= '0';
-         
-         r_D_ack <= '0';
-         r_A_ack <= '0';
-         r_D_rd <= (others => '0');
-         r_A <= (others => '0');
-      elsif rising_edge(fb_syscon_i.clk) then
-         r_resetfull <= '0';
-         v_dowrite := false;
-         r_window_65816_wr_en <= '0';
-
-         r_D_ack <= '0';
-         r_A_ack <= '0';
-
-         case r_state is
-            when idle =>
-               if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
-                  r_A <= fb_c2p_i.A(3 downto 0);
-                  if fb_c2p_i.we = '1' then
-                     r_state <= act_wr;
-                  else
-                     r_state <= act_rd;                     
-                  end if;
-               end if;
-            when act_wr =>
-               if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-                  v_dowrite := true;
-               end if;
-            when act_rd =>
-               if fb_c2p_i.cyc = '1' then
-                  r_D_rd <= i_D_rd;
-                  r_D_ack <= '1';
-               end if;
-               r_state <= idle;
-            when others =>
-               r_state <= idle;
-         end case;
-
-         if fb_c2p_i.cyc = '0' then
+      if rising_edge(fb_syscon_i.clk) then
+         if fb_syscon_i.rst = '1' then
             r_state <= idle;
-            r_A_ack <= '0';
+            r_turbo_lo <= (others => '0');
+            r_swmos_save_written_en <= '0';
+            r_swmos_debug_written_en <= '0';
+            r_65816_boot <= "10";   
+            r_preboot <= '1';
+            r_rom_autohazel_map <= (others => '0');
+            if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+               r_resetfull <= '1';
+               r_throttle_all <= '1';
+               r_throttle_mos <= '1';
+               r_rom_throttle_map <= (others => '0');
+               r_noice_debug_en <= '0';
+               r_swmos_shadow <= '0';
+            end if;
+
+            if r_resetfull = '1' then
+               r_map0n1 <= map0n1_swromx_i xor map0n1_default_i;
+            end if;     
+            r_window_65816_wr_en <= '0';
+            
             r_D_ack <= '0';
-         elsif v_dowrite then
-            r_state <= idle;
-            r_D_ack <= '1';
-            case to_integer(unsigned(r_A)) is
-               when 15 =>
-                  r_window_65816(12 downto 5) <= fb_c2p_i.D_wr;
-                  r_window_65816_wr_en <= '1';
-               when 14 =>
-                  r_window_65816(4 downto 0) <= fb_c2p_i.D_wr(7 downto 3);
-               when 8 =>
-                  r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
-               when 9 =>
-                  r_rom_autohazel_map(15 downto 8) <= fb_c2p_i.D_wr;
-               when 7 =>
-                  r_turbo_lo <= fb_c2p_i.D_wr;
-               when 6 =>
-                  r_throttle_all <= fb_c2p_i.D_wr(7);
-                  r_throttle_mos <= fb_c2p_i.D_wr(6);
-                  r_preboot      <= fb_c2p_i.D_wr(5);
-                  r_map0n1       <= fb_c2p_i.D_wr(4);
-               when 5 => 
-                  r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
-               when 3 => 
-                  r_rom_throttle_map(7 downto 0) <= fb_c2p_i.D_wr;
-               when 1 =>
-                  r_swmos_shadow <= fb_c2p_i.D_wr(0);
-                  r_noice_debug_en <= fb_c2p_i.D_wr(3);
-                  r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
-                  r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
-                  r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
-               when 2 => 
-                  r_swmos_save_written_en <= not r_swmos_save_written_ack;
+            r_A_ack <= '0';
+            r_D_rd <= (others => '0');
+            r_A <= (others => '0');
+         else
+            r_resetfull <= '0';
+            v_dowrite := false;
+            r_window_65816_wr_en <= '0';
+
+            r_D_ack <= '0';
+            r_A_ack <= '0';
+
+            case r_state is
+               when idle =>
+                  -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+                  if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+                     r_A <= fb_c2p_i.A(3 downto 0);
+                     r_A_ack <= '1';
+                     if fb_c2p_i.we = '1' then
+                        r_state <= act_wr;
+                     else
+                        r_state <= act_rd;                     
+                     end if;
+                  end if;
+               when act_wr =>
+                  if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                     v_dowrite := true;
+                  end if;
+               when act_rd =>
+                  if fb_c2p_i.cyc = '1' then
+                     r_D_rd <= i_D_rd;
+                     r_D_ack <= '1';
+                  end if;
+                  r_state <= idle;
                when others =>
+                  r_state <= idle;
             end case;
+
+            if fb_c2p_i.cyc = '0' then
+               r_state <= idle;
+               r_A_ack <= '0';
+               r_D_ack <= '0';
+            elsif v_dowrite then
+               r_state <= idle;
+               r_D_ack <= '1';
+               case to_integer(unsigned(r_A)) is
+                  when 15 =>
+                     r_window_65816(12 downto 5) <= fb_c2p_i.D_wr;
+                     r_window_65816_wr_en <= '1';
+                  when 14 =>
+                     r_window_65816(4 downto 0) <= fb_c2p_i.D_wr(7 downto 3);
+                  when 8 =>
+                     r_rom_autohazel_map(7 downto 0) <= fb_c2p_i.D_wr;
+                  when 9 =>
+                     r_rom_autohazel_map(15 downto 8) <= fb_c2p_i.D_wr;
+                  when 7 =>
+                     r_turbo_lo <= fb_c2p_i.D_wr;
+                  when 6 =>
+                     r_throttle_all <= fb_c2p_i.D_wr(7);
+                     r_throttle_mos <= fb_c2p_i.D_wr(6);
+                     r_preboot      <= fb_c2p_i.D_wr(5);
+                     r_map0n1       <= fb_c2p_i.D_wr(4);
+                  when 5 => 
+                     r_rom_throttle_map(15 downto 8) <= fb_c2p_i.D_wr;
+                  when 3 => 
+                     r_rom_throttle_map(7 downto 0) <= fb_c2p_i.D_wr;
+                  when 1 =>
+                     r_swmos_shadow <= fb_c2p_i.D_wr(0);
+                     r_noice_debug_en <= fb_c2p_i.D_wr(3);
+                     r_65816_boot <= fb_c2p_i.D_wr(5 downto 4);
+                     r_noice_debug_written_val <= fb_c2p_i.D_wr(2);
+                     r_swmos_debug_written_en <= not r_swmos_debug_written_ack;
+                  when 2 => 
+                     r_swmos_save_written_en <= not r_swmos_save_written_ack;
+                  when others =>
+               end case;
+            end if;
          end if;
       end if;
    end process;
