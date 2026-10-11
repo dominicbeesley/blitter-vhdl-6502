@@ -140,6 +140,7 @@ begin
          r_A_ack <= '0';
          case r_state is
             when idle =>
+               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
                if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
                   if fb_c2p_i.we = '1' then
                      r_state <= act_wr;

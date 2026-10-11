@@ -94,59 +94,62 @@ begin
 	p_state:process(fb_syscon_i)
 	begin
 
-		if fb_syscon_i.rst = '1' then
-			r_state <= idle;
-			r_D_ack <= '0';
-			r_A_ack <= '0';
-			r_D_rd <= (others => '0');
-			r_A <= (others => '0');
-
-			if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-				r_eco_station_id <= x"24";
-			end if;
-		elsif rising_edge(fb_syscon_i.clk) then
-
-         r_D_ack <= '0';
-         r_A_ack <= '0';
-			case r_state is
-				when idle =>
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
-                     if fb_c2p_i.we = '1' then
-                        r_state <= act_wr;
-							else
-                        r_state <= act_rd;
-							end if;
-                     r_A <= fb_c2p_i.A(7 downto 0);
-                     r_A_ack <= '1';
-						end if;
-               when act_wr =>
-                  if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-							case to_integer(unsigned(r_A(7 downto 0))) is
-								when IX_STAT_ID =>
-                           r_eco_station_id <= fb_c2p_i.D_wr;
-								when others => null;
-                     end case;                  
-                     r_D_ack <= '1';
-                     r_state <= idle;
-					end if;
-               when act_rd =>
-                  if fb_c2p_i.cyc = '1' then
-                  	r_D_rd <= x"FF";
-                     case to_integer(unsigned(r_A(7 downto 0))) is
-								when IX_STAT_ID =>
-									r_D_rd <= r_eco_station_id;
-					    		when others => null;
-					 		end case;
-                     r_D_ack <= '1';
-                  end if;
-                  r_state <= idle;					
-               when others =>
-                  -- not sure if we should blindly ack here
-                  r_state <= idle;
-				end case;
-
-			if fb_c2p_i.cyc = '0' then
+		if rising_edge(fb_syscon_i.clk) then
+			-- we need to make the reset synchronous to only reset r_eco_station_id on powerup/resetfull
+			if fb_syscon_i.rst = '1' then
 				r_state <= idle;
+				r_D_ack <= '0';
+				r_A_ack <= '0';
+				r_D_rd <= (others => '0');
+				r_A <= (others => '0');
+
+				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+					r_eco_station_id <= x"24";
+				end if;
+			else
+	         r_D_ack <= '0';
+	         r_A_ack <= '0';
+				case r_state is
+					when idle =>
+	               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+	                     if fb_c2p_i.we = '1' then
+	                        r_state <= act_wr;
+								else
+	                        r_state <= act_rd;
+								end if;
+	                     r_A <= fb_c2p_i.A(7 downto 0);
+	                     r_A_ack <= '1';
+							end if;
+	               when act_wr =>
+	                  if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+								case to_integer(unsigned(r_A(7 downto 0))) is
+									when IX_STAT_ID =>
+	                           r_eco_station_id <= fb_c2p_i.D_wr;
+									when others => null;
+	                     end case;                  
+	                     r_D_ack <= '1';
+	                     r_state <= idle;
+						end if;
+	               when act_rd =>
+	                  if fb_c2p_i.cyc = '1' then
+	                  	r_D_rd <= x"FF";
+	                     case to_integer(unsigned(r_A(7 downto 0))) is
+									when IX_STAT_ID =>
+										r_D_rd <= r_eco_station_id;
+						    		when others => null;
+						 		end case;
+	                     r_D_ack <= '1';
+	                  end if;
+	                  r_state <= idle;					
+	               when others =>
+	                  -- not sure if we should blindly ack here
+	                  r_state <= idle;
+					end case;
+
+				if fb_c2p_i.cyc = '0' then
+					r_state <= idle;
+				end if;
 			end if;
 		end if;
 
