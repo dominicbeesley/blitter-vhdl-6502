@@ -101,21 +101,20 @@ end component;
 
 component fb_intcon_many_to_one is
    generic (
-      SIM               : boolean := false;
       G_CONTROLLER_COUNT      : POSITIVE;
-      G_ARB_ROUND_ROBIN : boolean := false
+      G_ARB_ROUND_ROBIN       : boolean := false
    );
    port (
 
       fb_syscon_i          : in  fb_syscon_t;
 
       -- peripheral port connect to controllers
-      fb_con_c2p_i         : in  fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
-      fb_con_p2c_o         : out fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
+      fb_up_c2p_i          : in  fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
+      fb_up_p2c_o          : out fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
 
-      -- controller port connecto to peripherals
-      fb_per_c2p_o         : out fb_con_o_per_i_t;
-      fb_per_p2c_i         : in  fb_con_i_per_o_t
+      -- controller port connect to peripherals
+      fb_dn_c2p_o          : out fb_con_o_per_i_t;
+      fb_dn_p2c_i          : in  fb_con_i_per_o_t
 
    );
 end component;
@@ -133,7 +132,7 @@ component fb_intcon_crossbar is
       fb_con_c2p_i         : in  fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
       fb_con_p2c_o         : out fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
 
-      -- controller port connecto to peripherals
+      -- controller port connect to peripherals
       fb_per_c2p_o         : out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
       fb_per_p2c_i         : in  fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 

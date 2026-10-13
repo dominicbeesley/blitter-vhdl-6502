@@ -21,26 +21,26 @@
 -- THE SOFTWARE.
 -- ----------------------------------------------------------------------
 
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company:          Dossytronics
+-- Engineer:         Dominic Beesley
 -- 
--- Create Date:    	16/04/2019
+-- Create Date:      16/04/2019
 -- Design Name: 
--- Module Name:    	fb_chipset
+-- Module Name:      fb_chipset
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for all the chipset components grouped
---							together.
+-- Description:      A fishbone wrapper for all the chipset components grouped
+--                   together.
 -- Dependencies: 
 --
 -- Revision: 
 -- Additional Comments: 
---							This component muxes all the controllers down into a 
---							single apparent controller using a many to one interconnect
---							unless there is only one enabled in which case that 
+--                   This component muxes all the controllers down into a 
+--                   single apparent controller using a many to one interconnect
+--                   unless there is only one enabled in which case that 
 --                   controller is connected direct, if no controllers the
---							fb_unsel_c2p constant is emitted. 
+--                   fb_unsel_c2p constant is emitted. 
 ----------------------------------------------------------------------------------
 
 
@@ -57,279 +57,279 @@ use work.board_config_pack.all;
 use work.fb_chipset_pack.all;
 
 entity fb_chipset is
-	generic (
-		SIM						: boolean := false;							-- skip some stuff, i.e. slow sdram start up
- 		CLOCKSPEED				: natural										-- fast clock speed in mhz						
-	);
-	port(
+   generic (
+      SIM                  : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      CLOCKSPEED           : natural                              -- fast clock speed in mhz                
+   );
+   port(
 
-		fb_syscon_i				: in	fb_syscon_t;
+      fb_syscon_i          : in  fb_syscon_t;
 
-		-- peripheral port connecter1 to controllers
-		fb_per_c2p_i			: in	fb_con_o_per_i_t;
-		fb_per_p2c_o			: out	fb_con_i_per_o_t;
+      -- peripheral port connecter1 to controllers
+      fb_per_c2p_i         : in  fb_con_o_per_i_t;
+      fb_per_p2c_o         : out fb_con_i_per_o_t;
 
-		-- controller port connector to peripherals
-		fb_con_c2p_o			: out fb_con_o_per_i_t;
-		fb_con_p2c_i			: in 	fb_con_i_per_o_t;
+      -- controller port connector to peripherals
+      fb_con_c2p_o         : out fb_con_o_per_i_t;
+      fb_con_p2c_i         : in  fb_con_i_per_o_t;
 
-		-- request CPU halt
-		cpu_halt_o				: out std_logic;
-		cpu_int_o				: out std_logic;
+      -- request CPU halt
+      cpu_halt_o           : out std_logic;
+      cpu_int_o            : out std_logic;
 
-		-- sound clock
-		clk_snd_i				: in std_logic;
+      -- sound clock
+      clk_snd_i            : in std_logic;
 
-		-- sound output - do D->A business at top level as 1MPaula and Blitter use different DACs
-		snd_dat_o				: out		signed(15 downto 0);
-		snd_dat_l_o				: out		signed(15 downto 0);
-		snd_dat_r_o				: out		signed(15 downto 0);
+      -- sound output - do D->A business at top level as 1MPaula and Blitter use different DACs
+      snd_dat_o            : out    signed(15 downto 0);
+      snd_dat_l_o          : out    signed(15 downto 0);
+      snd_dat_r_o          : out    signed(15 downto 0);
 
-		-- 6845 signals to Aeris
-		vsync_i					: in std_logic;
-		hsync_i					: in std_logic;
+      -- 6845 signals to Aeris
+      vsync_i              : in std_logic;
+      hsync_i              : in std_logic;
 
-		-- top level ports 
-		-- TODO: should EEPROM/SDCARD  really be part of chipset? - probably due to where it sits in address map
+      -- top level ports 
+      -- TODO: should EEPROM/SDCARD  really be part of chipset? - probably due to where it sits in address map
 
-		-- i2c eeprom / rtc etc
-		I2C_SCL_io				: inout std_logic;
-		I2C_SDA_io				: inout std_logic;
+      -- i2c eeprom / rtc etc
+      I2C_SCL_io           : inout std_logic;
+      I2C_SDA_io           : inout std_logic;
 
-		-- SDCARD spi
-		SD_CS_o					: out		std_logic;
-		SD_CLK_o					: out		std_logic;
-		SD_MOSI_o				: out		std_logic;
-		SD_MISO_i				: in		std_logic;
-		SD_DET_i					: in		std_logic
+      -- SDCARD spi
+      SD_CS_o              : out    std_logic;
+      SD_CLK_o             : out    std_logic;
+      SD_MOSI_o            : out    std_logic;
+      SD_MISO_i            : in     std_logic;
+      SD_DET_i             : in     std_logic
 
 
-	);
+   );
 end fb_chipset;
 
 architecture rtl of fb_chipset is
 
-	-----------------------------------------------------------------------------
-	-- component definitions for optional components
-	-----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   -- component definitions for optional components
+   -----------------------------------------------------------------------------
 
-	component fb_dmac_aeris is
-		generic (
-			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
-			CLOCKSPEED							: natural
-		);
-	   Port (
-			-- fishbone signals		
-			fb_syscon_i							: in		fb_syscon_t;
+   component fb_dmac_aeris is
+      generic (
+         SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up 
+         CLOCKSPEED                    : natural
+      );
+      Port (
+         -- fishbone signals     
+         fb_syscon_i                   : in     fb_syscon_t;
 
-			-- peripheral interface (control registers)
-			fb_per_c2p_i						: in		fb_con_o_per_i_t;
-			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+         -- peripheral interface (control registers)
+         fb_per_c2p_i                  : in     fb_con_o_per_i_t;
+         fb_per_p2c_o                  : out    fb_con_i_per_o_t;
 
-			-- controller interface (dma)
-			fb_con_c2p_o						: out		fb_con_o_per_i_t;
-			fb_con_p2c_i						: in		fb_con_i_per_o_t;
+         -- controller interface (dma)
+         fb_con_c2p_o                  : out    fb_con_o_per_i_t;
+         fb_con_p2c_i                  : in     fb_con_i_per_o_t;
 
-			cpu_halt_o							: out		std_logic;
+         cpu_halt_o                    : out    std_logic;
 
-			hsync_i								: in		std_logic;
-			vsync_i								: in		std_logic;
+         hsync_i                       : in     std_logic;
+         vsync_i                       : in     std_logic;
 
-			dbg_state_o							: out		std_logic_vector(3 downto 0)
+         dbg_state_o                   : out    std_logic_vector(3 downto 0)
 
-		);
-	end component;
+      );
+   end component;
 
-	component fb_dmac_blit is
-		generic (
-			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
-			G_STRIDE_HIGH						: integer := 11
-		);
-	   Port (
-			-- fishbone signals		
-			fb_syscon_i							: in		fb_syscon_t;
+   component fb_dmac_blit is
+      generic (
+         SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up 
+         G_STRIDE_HIGH                 : integer := 11
+      );
+      Port (
+         -- fishbone signals     
+         fb_syscon_i                   : in     fb_syscon_t;
 
-			-- peripheral interface (control registers)
-			fb_per_c2p_i						: in		fb_con_o_per_i_t;
-			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+         -- peripheral interface (control registers)
+         fb_per_c2p_i                  : in     fb_con_o_per_i_t;
+         fb_per_p2c_o                  : out    fb_con_i_per_o_t;
 
-			-- controller interface (dma)
-			fb_con_c2p_o						: out		fb_con_o_per_i_t;
-			fb_con_p2c_i						: in		fb_con_i_per_o_t;
+         -- controller interface (dma)
+         fb_con_c2p_o                  : out    fb_con_o_per_i_t;
+         fb_con_p2c_i                  : in     fb_con_i_per_o_t;
 
-			cpu_halt_o							: out		std_logic;
-			blit_halt_i							: in		std_logic
-		);
-	end component;
+         cpu_halt_o                    : out    std_logic;
+         blit_halt_i                   : in     std_logic
+      );
+   end component;
 
-	component fb_DMAC_int_dma is
-		 generic (
-			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
-			G_CHANNELS							: natural := 2;
-			CLOCKSPEED							: natural
-		 );
-	    Port (
+   component fb_DMAC_int_dma is
+       generic (
+         SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up 
+         G_CHANNELS                    : natural := 2;
+         CLOCKSPEED                    : natural
+       );
+       Port (
 
-			-- fishbone signals		
-			fb_syscon_i							: in		fb_syscon_t;
+         -- fishbone signals     
+         fb_syscon_i                   : in     fb_syscon_t;
 
-			-- peripheral interface (control registers)
-			fb_per_c2p_i						: in		fb_con_o_per_i_t;
-			fb_per_p2c_o						: out		fb_con_i_per_o_t;
+         -- peripheral interface (control registers)
+         fb_per_c2p_i                  : in     fb_con_o_per_i_t;
+         fb_per_p2c_o                  : out    fb_con_i_per_o_t;
 
-			-- controller interface (dma)
-			fb_con_c2p_o						: out		fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
-			fb_con_p2c_i						: in		fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
+         -- controller interface (dma)
+         fb_con_c2p_o                  : out    fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
+         fb_con_p2c_i                  : in     fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
 
-			int_o									: out		STD_LOGIC;		-- interrupt active hi
-			cpu_halt_o							: out		STD_LOGIC;
-			dma_halt_i							: in		STD_LOGIC
-		 );
-	end component;
-
-
-	component fb_DMAC_int_sound is
-		generic (
-			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up	
-			G_CHANNELS							: natural := 4
-		);
-		Port (
-
-			-- fishbone signals		
-			fb_syscon_i							: in		fb_syscon_t;
-
-			-- peripheral interface (control registers)
-			fb_per_c2p_i						: in		fb_con_o_per_i_t;
-			fb_per_p2c_o						: out		fb_con_i_per_o_t;
-
-			-- controller interface (dma)
-			fb_con_c2p_o						: out		fb_con_o_per_i_t;
-			fb_con_p2c_i						: in		fb_con_i_per_o_t;
-
-			-- sound specific
-			snd_clk_i							: in		std_logic;
-			snd_dat_o							: out		signed(15 downto 0);
-			snd_dat_l_o							: out		signed(15 downto 0);
-			snd_dat_r_o							: out		signed(15 downto 0)
-		);
-	end component;
-
-	component fb_i2c is
-		generic (
-			SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-			CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-			BUS_SPEED							: natural := 400000							-- i2c bus speed in Hz
-		);
-		port(
-
-			-- eeprom signals
-			I2C_SCL_io							: inout	std_logic;
-			I2C_SDA_io							: inout	std_logic;
-
-			-- fishbone signals
-
-			fb_syscon_i							: in		fb_syscon_t;
-			fb_c2p_i								: in		fb_con_o_per_i_t;
-			fb_p2c_o								: out		fb_con_i_per_o_t
-
-		);
-	end component;
-
-	component fb_spi is
-	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		PRESCALE								: positive := 4								-- prescaler to apply before clock divider
-	);
-	port(
-
-		-- SPI signals
-
-		SPI_CS_o								: out		std_logic_vector(7 downto 0);
-		SPI_CLK_o							: out		std_logic;
-		SPI_MOSI_o							: out		std_logic;
-		SPI_MISO_i							: in		std_logic;
-		SPI_DET_i							: in		std_logic;
+         int_o                         : out    STD_LOGIC;     -- interrupt active hi
+         cpu_halt_o                    : out    STD_LOGIC;
+         dma_halt_i                    : in     STD_LOGIC
+       );
+   end component;
 
 
-		-- fishbone signals
+   component fb_DMAC_int_sound is
+      generic (
+         SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up 
+         G_CHANNELS                    : natural := 4
+      );
+      Port (
 
-		fb_syscon_i							: in		fb_syscon_t;
-		fb_c2p_i								: in		fb_con_o_per_i_t;
-		fb_p2c_o								: out		fb_con_i_per_o_t
+         -- fishbone signals     
+         fb_syscon_i                   : in     fb_syscon_t;
 
-	);
-	end component;
+         -- peripheral interface (control registers)
+         fb_per_c2p_i                  : in     fb_con_o_per_i_t;
+         fb_per_p2c_o                  : out    fb_con_i_per_o_t;
 
+         -- controller interface (dma)
+         fb_con_c2p_o                  : out    fb_con_o_per_i_t;
+         fb_con_p2c_i                  : in     fb_con_i_per_o_t;
 
-	-----------------------------------------------------------------------------
-	-- fishbone signals
-	-----------------------------------------------------------------------------
+         -- sound specific
+         snd_clk_i                     : in     std_logic;
+         snd_dat_o                     : out    signed(15 downto 0);
+         snd_dat_l_o                   : out    signed(15 downto 0);
+         snd_dat_r_o                   : out    signed(15 downto 0)
+      );
+   end component;
 
-	-- blit controller
-	signal i_c2p_blit_con		: fb_con_o_per_i_t;
-	signal i_p2c_blit_con		: fb_con_i_per_o_t;
-	-- blit peripheral interface control registers
-	signal i_c2p_blit_per		: fb_con_o_per_i_t;
-	signal i_p2c_blit_per		: fb_con_i_per_o_t;
+   component fb_i2c is
+      generic (
+         SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+         CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
+         BUS_SPEED                     : natural := 400000                    -- i2c bus speed in Hz
+      );
+      port(
 
-	-- aeris controller
-	signal i_c2p_aeris_con		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_con		: fb_con_i_per_o_t;
-	-- aeris peripheral interface control registers
-	signal i_c2p_aeris_per		: fb_con_o_per_i_t;
-	signal i_p2c_aeris_per		: fb_con_i_per_o_t;
+         -- eeprom signals
+         I2C_SCL_io                    : inout  std_logic;
+         I2C_SDA_io                    : inout  std_logic;
 
-	-- dma controller
-	signal i_c2p_dma_con			: fb_con_o_per_i_arr(G_DMA_CHANNELS-1 downto 0);
-	signal i_p2c_dma_con			: fb_con_i_per_o_arr(G_DMA_CHANNELS-1 downto 0);
-	-- dma peripheral interface control registers
-	signal i_c2p_dma_per			: fb_con_o_per_i_t;
-	signal i_p2c_dma_per			: fb_con_i_per_o_t;
+         -- fishbone signals
 
-	-- sound controller
-	signal i_c2p_snd_con			: fb_con_o_per_i_t;
-	signal i_p2c_snd_con			: fb_con_i_per_o_t;
-	-- sound peripheral interface control registers
-	signal i_c2p_snd_per			: fb_con_o_per_i_t;
-	signal i_p2c_snd_per			: fb_con_i_per_o_t;
+         fb_syscon_i                   : in     fb_syscon_t;
+         fb_c2p_i                      : in     fb_con_o_per_i_t;
+         fb_p2c_o                      : out    fb_con_i_per_o_t
 
-	-- i2c eeprom control registers wrapper
-	signal i_c2p_eeprom_per		: fb_con_o_per_i_t;
-	signal i_p2c_eeprom_per		: fb_con_i_per_o_t;
+      );
+   end component;
 
-	-- SD/SPI control registers wrapper
-	signal i_c2p_sdcard_per		: fb_con_o_per_i_t;
-	signal i_p2c_sdcard_per		: fb_con_i_per_o_t;
+   component fb_spi is
+   generic (
+      SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
+      PRESCALE                      : positive := 4                        -- prescaler to apply before clock divider
+   );
+   port(
 
+      -- SPI signals
 
-	-- null peripheral for out-of range addresses
-	signal i_c2p_null_per		: fb_con_o_per_i_t;
-	signal i_p2c_null_per		: fb_con_i_per_o_t;
-
-	-- chipset controller->peripheral
-	signal i_con_c2p_chipset	: fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	signal i_con_p2c_chipset	: fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
-	-- chipset peripheral->controller - note+1 for unsel
-	signal i_per_c2p_chipset	: fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
-	signal i_per_p2c_chipset	: fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
-
-
-	-----------------------------------------------------------------------------
-	-- inter component (non-fishbone) signals
-	-----------------------------------------------------------------------------
-
-	-- chipset c2p intcon to peripheral sel
-	signal i_chipset_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);
-		-- NOTE: plus 1 for dummy channel for "no peripheral"
-	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);  -- address decoded selected peripheral
-	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET downto 0);	-- address decoded selected peripherals as one-hot		
+      SPI_CS_o                      : out    std_logic_vector(7 downto 0);
+      SPI_CLK_o                     : out    std_logic;
+      SPI_MOSI_o                    : out    std_logic;
+      SPI_MISO_i                    : in     std_logic;
+      SPI_DET_i                     : in     std_logic;
 
 
-	signal i_dma_cpu_int					: std_logic;							-- interrupt out from dma
-	signal i_dma_cpu_halt				: std_logic;							-- cpu halt request out from dma
-	signal i_blit_cpu_halt				: std_logic;							-- cpu halt request out from blit
-	signal i_aeris_cpu_halt				: std_logic;							-- cpu halt request out from aeris
+      -- fishbone signals
+
+      fb_syscon_i                   : in     fb_syscon_t;
+      fb_c2p_i                      : in     fb_con_o_per_i_t;
+      fb_p2c_o                      : out    fb_con_i_per_o_t
+
+   );
+   end component;
+
+
+   -----------------------------------------------------------------------------
+   -- fishbone signals
+   -----------------------------------------------------------------------------
+
+   -- blit controller
+   signal i_c2p_blit_con      : fb_con_o_per_i_t;
+   signal i_p2c_blit_con      : fb_con_i_per_o_t;
+   -- blit peripheral interface control registers
+   signal i_c2p_blit_per      : fb_con_o_per_i_t;
+   signal i_p2c_blit_per      : fb_con_i_per_o_t;
+
+   -- aeris controller
+   signal i_c2p_aeris_con     : fb_con_o_per_i_t;
+   signal i_p2c_aeris_con     : fb_con_i_per_o_t;
+   -- aeris peripheral interface control registers
+   signal i_c2p_aeris_per     : fb_con_o_per_i_t;
+   signal i_p2c_aeris_per     : fb_con_i_per_o_t;
+
+   -- dma controller
+   signal i_c2p_dma_con       : fb_con_o_per_i_arr(G_DMA_CHANNELS-1 downto 0);
+   signal i_p2c_dma_con       : fb_con_i_per_o_arr(G_DMA_CHANNELS-1 downto 0);
+   -- dma peripheral interface control registers
+   signal i_c2p_dma_per       : fb_con_o_per_i_t;
+   signal i_p2c_dma_per       : fb_con_i_per_o_t;
+
+   -- sound controller
+   signal i_c2p_snd_con       : fb_con_o_per_i_t;
+   signal i_p2c_snd_con       : fb_con_i_per_o_t;
+   -- sound peripheral interface control registers
+   signal i_c2p_snd_per       : fb_con_o_per_i_t;
+   signal i_p2c_snd_per       : fb_con_i_per_o_t;
+
+   -- i2c eeprom control registers wrapper
+   signal i_c2p_eeprom_per    : fb_con_o_per_i_t;
+   signal i_p2c_eeprom_per    : fb_con_i_per_o_t;
+
+   -- SD/SPI control registers wrapper
+   signal i_c2p_sdcard_per    : fb_con_o_per_i_t;
+   signal i_p2c_sdcard_per    : fb_con_i_per_o_t;
+
+
+   -- null peripheral for out-of range addresses
+   signal i_c2p_null_per      : fb_con_o_per_i_t;
+   signal i_p2c_null_per      : fb_con_i_per_o_t;
+
+   -- chipset controller->peripheral
+   signal i_con_c2p_chipset   : fb_con_o_per_i_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
+   signal i_con_p2c_chipset   : fb_con_i_per_o_arr(CONTROLLER_COUNT_CHIPSET-1 downto 0);
+   -- chipset peripheral->controller - note+1 for unsel
+   signal i_per_c2p_chipset   : fb_con_o_per_i_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
+   signal i_per_p2c_chipset   : fb_con_i_per_o_arr(PERIPHERAL_COUNT_CHIPSET downto 0);
+
+
+   -----------------------------------------------------------------------------
+   -- inter component (non-fishbone) signals
+   -----------------------------------------------------------------------------
+
+   -- chipset c2p intcon to peripheral sel
+   signal i_chipset_intcon_peripheral_sel_addr  : std_logic_vector(23 downto 0);
+      -- NOTE: plus 1 for dummy channel for "no peripheral"
+   signal i_chipset_intcon_peripheral_sel       : unsigned(numbits(PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);  -- address decoded selected peripheral
+   signal i_chipset_intcon_peripheral_sel_oh    : std_logic_vector(PERIPHERAL_COUNT_CHIPSET downto 0);   -- address decoded selected peripherals as one-hot    
+
+
+   signal i_dma_cpu_int             : std_logic;                     -- interrupt out from dma
+   signal i_dma_cpu_halt            : std_logic;                     -- cpu halt request out from dma
+   signal i_blit_cpu_halt           : std_logic;                     -- cpu halt request out from blit
+   signal i_aeris_cpu_halt          : std_logic;                     -- cpu halt request out from aeris
 
 
 begin
@@ -349,7 +349,7 @@ begin
 --                      |         |<-i_*_snd_per---->| SOUND    |<-i_*_snd_con---->| chipset | <->controller port
 --                      |  intcon |                  +----------+                  | con     |    [fb_con_*]
 --  peripheral port <-> |  chipset|<-i_*_blit_per--->| BLIT     |<-i_*_blit_con--->|         |
---	    [fb_per_*]       |         |                  +----------+                  |        /
+--     [fb_per_*]       |         |                  +----------+                  |        /
 --                       \        |<-i_*_aeris_per-->| AERIS    |<-i_*_aeris_con-->|       /
 --                        \       |                  +----------+                   -------
 --                         ------- <-i_*_eeprom_per->| EEPROM   |
@@ -358,311 +358,310 @@ begin
 --                                 
 
 
-	G_NO_CONTROLLERS:IF CONTROLLER_COUNT_CHIPSET = 0 GENERATE
-		fb_con_c2p_o <= fb_c2p_unsel;
-	END GENERATE;
-	G_ONE_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET = 1 GENERATE
-		fb_con_c2p_o <= i_con_c2p_chipset(0);
-		i_con_p2c_chipset(0) <= fb_con_p2c_i;
-	END GENERATE;
-	G_MANY_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET >1 GENERATE
+   G_NO_CONTROLLERS:IF CONTROLLER_COUNT_CHIPSET = 0 GENERATE
+      fb_con_c2p_o <= fb_c2p_unsel;
+   END GENERATE;
+   G_ONE_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET = 1 GENERATE
+      fb_con_c2p_o <= i_con_c2p_chipset(0);
+      i_con_p2c_chipset(0) <= fb_con_p2c_i;
+   END GENERATE;
+   G_MANY_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET >1 GENERATE
 
-		-- multiplex all the chipset controller ports down to a single 
-		-- controller out to the top level resources
-		e_chipset_con:fb_intcon_many_to_one
-		generic map (
-			SIM => SIM,
-			G_CONTROLLER_COUNT	=> CONTROLLER_COUNT_CHIPSET
-		)
-		port map (
+      -- multiplex all the chipset controller ports down to a single 
+      -- controller out to the top level resources
+      e_chipset_con:fb_intcon_many_to_one
+      generic map (
+         G_CONTROLLER_COUNT   => CONTROLLER_COUNT_CHIPSET
+      )
+      port map (
 
-			fb_syscon_i						=> fb_syscon_i,
+         fb_syscon_i                => fb_syscon_i,
 
-			-- peripheral port connect to controllers
-			fb_con_c2p_i => i_con_c2p_chipset,
-			fb_con_p2c_o => i_con_p2c_chipset,
+         -- peripheral port connect to controllers
+         fb_up_c2p_i                => i_con_c2p_chipset,
+         fb_up_p2c_o                => i_con_p2c_chipset,
 
-			-- controller port connect to peripherals
-			fb_per_c2p_o					=> fb_con_c2p_o,
-			fb_per_p2c_i					=> fb_con_p2c_i
+         -- controller port connect to peripherals
+         fb_dn_c2p_o                => fb_con_c2p_o,
+         fb_dn_p2c_i                => fb_con_p2c_i
 
-		);
-	END GENERATE;
+      );
+   END GENERATE;
 
-	--TODO: have a default chipset peripheral that returns FF?
+   --TODO: have a default chipset peripheral that returns FF?
 
-	-- address decode to select peripheral
-	e_addr2s_chipset:entity work.address_decode_chipset
-	generic map (
-		G_PERIPHERAL_NO_CHIPSET_DMA		=> PERIPHERAL_NO_CHIPSET_DMA,
-		G_PERIPHERAL_NO_CHIPSET_SOUND		=> PERIPHERAL_NO_CHIPSET_SOUND,
-		G_PERIPHERAL_NO_CHIPSET_BLIT		=> PERIPHERAL_NO_CHIPSET_BLIT,
-		G_PERIPHERAL_NO_CHIPSET_AERIS		=> PERIPHERAL_NO_CHIPSET_AERIS,
-		G_PERIPHERAL_NO_CHIPSET_EEPROM 	=> PERIPHERAL_NO_CHIPSET_EEPROM,
-		G_PERIPHERAL_NO_CHIPSET_SDCARD 	=> PERIPHERAL_NO_CHIPSET_SDCARD,
-		G_PERIPHERAL_COUNT_CHIPSET 		=> PERIPHERAL_COUNT_CHIPSET
-	)
-	port map (
-		addr_i						=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_o			=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_o		=> i_chipset_intcon_peripheral_sel_oh
-	);
+   -- address decode to select peripheral
+   e_addr2s_chipset:entity work.address_decode_chipset
+   generic map (
+      G_PERIPHERAL_NO_CHIPSET_DMA      => PERIPHERAL_NO_CHIPSET_DMA,
+      G_PERIPHERAL_NO_CHIPSET_SOUND    => PERIPHERAL_NO_CHIPSET_SOUND,
+      G_PERIPHERAL_NO_CHIPSET_BLIT     => PERIPHERAL_NO_CHIPSET_BLIT,
+      G_PERIPHERAL_NO_CHIPSET_AERIS    => PERIPHERAL_NO_CHIPSET_AERIS,
+      G_PERIPHERAL_NO_CHIPSET_EEPROM   => PERIPHERAL_NO_CHIPSET_EEPROM,
+      G_PERIPHERAL_NO_CHIPSET_SDCARD   => PERIPHERAL_NO_CHIPSET_SDCARD,
+      G_PERIPHERAL_COUNT_CHIPSET       => PERIPHERAL_COUNT_CHIPSET
+   )
+   port map (
+      addr_i                  => i_chipset_intcon_peripheral_sel_addr,
+      peripheral_sel_o        => i_chipset_intcon_peripheral_sel,
+      peripheral_sel_oh_o     => i_chipset_intcon_peripheral_sel_oh
+   );
 
-	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
-	generic map (
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
-	)
-	port map (
-		fb_syscon_i 		=> fb_syscon_i,
+   e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
+   generic map (
+      G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
+   )
+   port map (
+      fb_syscon_i       => fb_syscon_i,
 
-		fb_up_c2p_i			=>	fb_per_c2p_i,
-		fb_up_p2c_o			=> fb_per_p2c_o,
+      fb_up_c2p_i       => fb_per_c2p_i,
+      fb_up_p2c_o       => fb_per_p2c_o,
 
-		fb_dn_c2p_o			=> i_per_c2p_chipset,
-		fb_dn_p2c_i			=> i_per_p2c_chipset,		
+      fb_dn_c2p_o       => i_per_c2p_chipset,
+      fb_dn_p2c_i       => i_per_p2c_chipset,      
 
-		peripheral_sel_addr_o					=> i_chipset_intcon_peripheral_sel_addr,
-		peripheral_sel_i							=> i_chipset_intcon_peripheral_sel,
-		peripheral_sel_oh_i						=> i_chipset_intcon_peripheral_sel_oh
+      peripheral_sel_addr_o               => i_chipset_intcon_peripheral_sel_addr,
+      peripheral_sel_i                    => i_chipset_intcon_peripheral_sel,
+      peripheral_sel_oh_i                 => i_chipset_intcon_peripheral_sel_oh
 
-	);
+   );
 
 
-	e_fb_null:entity work.fb_null
-	 generic map (
-		G_READ_VAL							=> x"FF"
-	 )
+   e_fb_null:entity work.fb_null
+    generic map (
+      G_READ_VAL                    => x"FF"
+    )
     Port map (
 
-		-- fishbone signals		
-		fb_syscon_i							=> fb_syscon_i,
+      -- fishbone signals     
+      fb_syscon_i                   => fb_syscon_i,
 
-		-- peripheral interface (control registers)
-		fb_c2p_i								=> i_c2p_null_per,
-		fb_p2c_o								=> i_p2c_null_per
-	);
+      -- peripheral interface (control registers)
+      fb_c2p_i                      => i_c2p_null_per,
+      fb_p2c_o                      => i_p2c_null_per
+   );
 
-	i_per_p2c_chipset(PERIPHERAL_COUNT_CHIPSET)	<=	i_p2c_null_per;
-	i_c2p_null_per 		<= i_per_c2p_chipset(PERIPHERAL_COUNT_CHIPSET);
+   i_per_p2c_chipset(PERIPHERAL_COUNT_CHIPSET)  <= i_p2c_null_per;
+   i_c2p_null_per       <= i_per_c2p_chipset(PERIPHERAL_COUNT_CHIPSET);
 
 
 GDMA:IF G_INCL_CS_DMA GENERATE
 
-	G_DMA_C:FOR I in 0 TO G_DMA_CHANNELS-1 GENERATE
-		
-		i_con_c2p_chipset(MAS_NO_CHIPSET_DMA_0 + I)	<= i_c2p_dma_con(I);
-		i_p2c_dma_con(i) 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_DMA_0 + I);
-	END GENERATE;
-	
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA)	<=	i_p2c_dma_per;
-	i_c2p_dma_per 		<= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
+   G_DMA_C:FOR I in 0 TO G_DMA_CHANNELS-1 GENERATE
+      
+      i_con_c2p_chipset(MAS_NO_CHIPSET_DMA_0 + I)  <= i_c2p_dma_con(I);
+      i_p2c_dma_con(i)  <= i_con_p2c_chipset(MAS_NO_CHIPSET_DMA_0 + I);
+   END GENERATE;
+   
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_DMA) <= i_p2c_dma_per;
+   i_c2p_dma_per     <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_DMA);
 
-	e_fb_dma:fb_DMAC_int_dma
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_DMA_CHANNELS,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
+   e_fb_dma:fb_DMAC_int_dma
+    generic map (
+      SIM                           => SIM,
+      G_CHANNELS                    => G_DMA_CHANNELS,
+      CLOCKSPEED                    => CLOCKSPEED
+    )
     Port map (
 
-		-- fishbone signals		
-		fb_syscon_i							=> fb_syscon_i,
+      -- fishbone signals     
+      fb_syscon_i                   => fb_syscon_i,
 
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_dma_per,
-		fb_per_p2c_o						=> i_p2c_dma_per,
+      -- peripheral interface (control registers)
+      fb_per_c2p_i                  => i_c2p_dma_per,
+      fb_per_p2c_o                  => i_p2c_dma_per,
 
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_dma_con,
-		fb_con_p2c_i						=> i_p2c_dma_con,
+      -- controller interface (dma)
+      fb_con_c2p_o                  => i_c2p_dma_con,
+      fb_con_p2c_i                  => i_p2c_dma_con,
 
-		int_o									=> i_dma_cpu_int,
-		cpu_halt_o							=> i_dma_cpu_halt,
-		dma_halt_i							=> i_aeris_cpu_halt
-	 );
+      int_o                         => i_dma_cpu_int,
+      cpu_halt_o                    => i_dma_cpu_halt,
+      dma_halt_i                    => i_aeris_cpu_halt
+    );
 END GENERATE;
 GNODMA:IF NOT G_INCL_CS_DMA GENERATE
-	i_dma_cpu_halt <= i_aeris_cpu_halt;
-	i_dma_cpu_int <= '0';
+   i_dma_cpu_halt <= i_aeris_cpu_halt;
+   i_dma_cpu_int <= '0';
 END GENERATE;
 
 GBLIT:IF G_INCL_CS_BLIT GENERATE
 
-	i_con_c2p_chipset(MAS_NO_CHIPSET_BLIT)		<= i_c2p_blit_con;
-	i_p2c_blit_con 	<= i_con_p2c_chipset(MAS_NO_CHIPSET_BLIT);
-	i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
+   i_con_c2p_chipset(MAS_NO_CHIPSET_BLIT)    <= i_c2p_blit_con;
+   i_p2c_blit_con    <= i_con_p2c_chipset(MAS_NO_CHIPSET_BLIT);
+   i_c2p_blit_per    <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_BLIT);
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_BLIT)  <= i_p2c_blit_per;
 
-	e_fb_blit:fb_dmac_blit
-	 generic map (
-		SIM									=> SIM
-	 )
+   e_fb_blit:fb_dmac_blit
+    generic map (
+      SIM                           => SIM
+    )
     Port map (
 
-		-- fishbone signals		
-		fb_syscon_i							=> fb_syscon_i,
+      -- fishbone signals     
+      fb_syscon_i                   => fb_syscon_i,
 
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_blit_per,
-		fb_per_p2c_o						=> i_p2c_blit_per,
+      -- peripheral interface (control registers)
+      fb_per_c2p_i                  => i_c2p_blit_per,
+      fb_per_p2c_o                  => i_p2c_blit_per,
 
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_blit_con,
-		fb_con_p2c_i						=> i_p2c_blit_con,
+      -- controller interface (dma)
+      fb_con_c2p_o                  => i_c2p_blit_con,
+      fb_con_p2c_i                  => i_p2c_blit_con,
 
-		cpu_halt_o							=> i_blit_cpu_halt,
-		blit_halt_i							=> i_aeris_cpu_halt
+      cpu_halt_o                    => i_blit_cpu_halt,
+      blit_halt_i                   => i_aeris_cpu_halt
 
-	 );
+    );
 END GENERATE;
 GNOTBLIT:IF NOT G_INCL_CS_BLIT GENERATE
-	i_blit_cpu_halt <= i_aeris_cpu_halt;
+   i_blit_cpu_halt <= i_aeris_cpu_halt;
 END GENERATE;
 
 GAERIS: IF G_INCL_CS_AERIS GENERATE
 
-	i_con_c2p_chipset(MAS_NO_CHIPSET_AERIS)	<= i_c2p_aeris_con;
-	i_p2c_aeris_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_AERIS);
-	
-	i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
+   i_con_c2p_chipset(MAS_NO_CHIPSET_AERIS)   <= i_c2p_aeris_con;
+   i_p2c_aeris_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_AERIS);
+   
+   i_c2p_aeris_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_AERIS);
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_AERIS) <= i_p2c_aeris_per;
 
-	e_fb_aeris:fb_dmac_aeris
-	 generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	 )
+   e_fb_aeris:fb_dmac_aeris
+    generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED
+    )
     Port map (
 
-		-- fishbone signals		
-		fb_syscon_i							=> fb_syscon_i,
+      -- fishbone signals     
+      fb_syscon_i                   => fb_syscon_i,
 
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_aeris_per,
-		fb_per_p2c_o						=> i_p2c_aeris_per,
+      -- peripheral interface (control registers)
+      fb_per_c2p_i                  => i_c2p_aeris_per,
+      fb_per_p2c_o                  => i_p2c_aeris_per,
 
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_aeris_con,
-		fb_con_p2c_i						=> i_p2c_aeris_con,
+      -- controller interface (dma)
+      fb_con_c2p_o                  => i_c2p_aeris_con,
+      fb_con_p2c_i                  => i_p2c_aeris_con,
 
-		cpu_halt_o							=> i_aeris_cpu_halt,
+      cpu_halt_o                    => i_aeris_cpu_halt,
 
-		vsync_i								=> vsync_i,
-		hsync_i								=> hsync_i,
+      vsync_i                       => vsync_i,
+      hsync_i                       => hsync_i,
 
-		dbg_state_o							=> open
+      dbg_state_o                   => open
 
-	 );
+    );
 END GENERATE;
 GNOTAERIS: IF NOT G_INCL_CS_AERIS GENERATE
-	i_aeris_cpu_halt <= '0';
+   i_aeris_cpu_halt <= '0';
 END GENERATE;
 
 
 GSND:IF G_INCL_CS_SND GENERATE
-	i_con_c2p_chipset(MAS_NO_CHIPSET_SND)			<= i_c2p_snd_con;
-	i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
-	
-	i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)	<= i_p2c_snd_per;
+   i_con_c2p_chipset(MAS_NO_CHIPSET_SND)        <= i_c2p_snd_con;
+   i_p2c_snd_con <= i_con_p2c_chipset(MAS_NO_CHIPSET_SND);
+   
+   i_c2p_snd_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SOUND);
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SOUND)  <= i_p2c_snd_per;
 
-	e_fb_snd:fb_DMAC_int_sound
-	 generic map (
-		SIM									=> SIM,
-		G_CHANNELS							=> G_SND_CHANNELS
-	 )
+   e_fb_snd:fb_DMAC_int_sound
+    generic map (
+      SIM                           => SIM,
+      G_CHANNELS                    => G_SND_CHANNELS
+    )
     Port map (
 
-		-- fishbone signals		
-		fb_syscon_i							=> fb_syscon_i,
+      -- fishbone signals     
+      fb_syscon_i                   => fb_syscon_i,
 
-		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_c2p_snd_per,
-		fb_per_p2c_o						=> i_p2c_snd_per,
+      -- peripheral interface (control registers)
+      fb_per_c2p_i                  => i_c2p_snd_per,
+      fb_per_p2c_o                  => i_p2c_snd_per,
 
-		-- controller interface (dma)
-		fb_con_c2p_o						=> i_c2p_snd_con,
-		fb_con_p2c_i						=> i_p2c_snd_con,
+      -- controller interface (dma)
+      fb_con_c2p_o                  => i_c2p_snd_con,
+      fb_con_p2c_i                  => i_p2c_snd_con,
 
-		snd_clk_i							=> clk_snd_i,
-		snd_dat_o							=> snd_dat_o,
-		snd_dat_l_o							=> snd_dat_l_o,
-		snd_dat_r_o							=> snd_dat_r_o
-	 );
+      snd_clk_i                     => clk_snd_i,
+      snd_dat_o                     => snd_dat_o,
+      snd_dat_l_o                   => snd_dat_l_o,
+      snd_dat_r_o                   => snd_dat_r_o
+    );
 
 END GENERATE;
 
 
 GEEPROM: IF G_INCL_CS_EEPROM GENERATE
-	i_c2p_eeprom_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM)	<=	i_p2c_eeprom_per;
+   i_c2p_eeprom_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_EEPROM);
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_EEPROM) <= i_p2c_eeprom_per;
 
-	e_fb_eeprom:fb_i2c
-	generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED
-	)
-	port map (
+   e_fb_eeprom:fb_i2c
+   generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED
+   )
+   port map (
 
-		-- eeprom signals
-		I2C_SCL_io							=> I2C_SCL_io,
-		I2C_SDA_io							=> I2C_SDA_io,
+      -- eeprom signals
+      I2C_SCL_io                    => I2C_SCL_io,
+      I2C_SDA_io                    => I2C_SDA_io,
 
-		-- fishbone signals
+      -- fishbone signals
 
-		fb_syscon_i							=> fb_syscon_i,
-		fb_c2p_i								=> i_c2p_eeprom_per,
-		fb_p2c_o								=> i_p2c_eeprom_per
-	);
+      fb_syscon_i                   => fb_syscon_i,
+      fb_c2p_i                      => i_c2p_eeprom_per,
+      fb_p2c_o                      => i_p2c_eeprom_per
+   );
 
 END GENERATE;
 GNOSDCARD: IF NOT G_INCL_CS_SDCARD GENERATE
-	SD_CS_o <= 'Z';
-	SD_CLK_o <= 'Z';
-	SD_MOSI_o <= 'Z';
+   SD_CS_o <= 'Z';
+   SD_CLK_o <= 'Z';
+   SD_MOSI_o <= 'Z';
 END GENERATE;
 
 GSDCARD: IF G_INCL_CS_SDCARD GENERATE
 b_sdcard:block
-	signal	i_SPI_CS : std_logic_vector(7 downto 0);
+   signal   i_SPI_CS : std_logic_vector(7 downto 0);
 begin
 
-	SD_CS_o <= i_SPI_CS(0);
+   SD_CS_o <= i_SPI_CS(0);
 
-	i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
-	i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD)	<=	i_p2c_sdcard_per;
+   i_c2p_sdcard_per <= i_per_c2p_chipset(PERIPHERAL_NO_CHIPSET_SDCARD);
+   i_per_p2c_chipset(PERIPHERAL_NO_CHIPSET_SDCARD) <= i_p2c_sdcard_per;
 
-	e_fb_sdcard:fb_spi
-	generic map (
-		SIM									=> SIM,
-		CLOCKSPEED							=> CLOCKSPEED,
-		PRESCALE								=> 4
-	)
-	port map (
+   e_fb_sdcard:fb_spi
+   generic map (
+      SIM                           => SIM,
+      CLOCKSPEED                    => CLOCKSPEED,
+      PRESCALE                      => 4
+   )
+   port map (
 
-		-- eeprom signals
-		SPI_CS_o								=> i_SPI_CS,
-		SPI_CLK_o							=> SD_CLK_o,
-		SPI_MOSI_o							=> SD_MOSI_o,
-		SPI_MISO_i							=> SD_MISO_i,
-		SPI_DET_i							=> SD_DET_i,
+      -- eeprom signals
+      SPI_CS_o                      => i_SPI_CS,
+      SPI_CLK_o                     => SD_CLK_o,
+      SPI_MOSI_o                    => SD_MOSI_o,
+      SPI_MISO_i                    => SD_MISO_i,
+      SPI_DET_i                     => SD_DET_i,
 
-		-- fishbone signals
+      -- fishbone signals
 
-		fb_syscon_i							=> fb_syscon_i,
-		fb_c2p_i								=> i_c2p_sdcard_per,
-		fb_p2c_o								=> i_p2c_sdcard_per
-	);
+      fb_syscon_i                   => fb_syscon_i,
+      fb_c2p_i                      => i_c2p_sdcard_per,
+      fb_p2c_o                      => i_p2c_sdcard_per
+   );
 end block;
 
 END GENERATE;
 GNOEEPROM: IF NOT G_INCL_CS_EEPROM GENERATE
-	I2C_SDA_io <= 'Z';
-	I2C_SCL_io <= 'Z';
+   I2C_SDA_io <= 'Z';
+   I2C_SCL_io <= 'Z';
 END GENERATE;
 
 
-	cpu_halt_o <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;
-	cpu_int_o <= i_dma_cpu_int;
+   cpu_halt_o <= i_dma_cpu_halt or i_blit_cpu_halt or i_aeris_cpu_halt;
+   cpu_int_o <= i_dma_cpu_int;
 
 end rtl;

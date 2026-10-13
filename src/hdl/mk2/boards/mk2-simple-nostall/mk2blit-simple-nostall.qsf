@@ -101,8 +101,11 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fishbone_pack.vh
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_syscon.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../library/common.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_many_to_one.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to_many.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_buffer.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_null.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_inferred_mem_altera.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd
@@ -138,7 +141,6 @@ set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode.vhd
 set_global_assignment -name VHDL_FILE ../../shared/clocks_pll.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_i2c.vhd
-set_global_assignment -name VHDL_FILE "mk2blit-simple-nostall.vhd"
 set_global_assignment -name VHDL_FILE ../../../shared/fb_spi.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_MEM.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_memctl.vhd

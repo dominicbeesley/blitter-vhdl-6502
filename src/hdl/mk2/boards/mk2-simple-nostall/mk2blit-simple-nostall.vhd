@@ -360,6 +360,55 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    );
 end generate;
 
+g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
+   signal   i_fb_mc2mp_c2p    : fb_con_o_per_i_t;
+   signal   i_fb_mc2mp_p2c    : fb_con_i_per_o_t;
+
+begin
+
+   e_fb_intcon2:entity work.fb_intcon_many_to_one
+   generic map (
+      G_CONTROLLER_COUNT      => CONTROLLER_COUNT,
+      G_ARB_ROUND_ROBIN       => true
+   )
+   port map (
+
+      fb_syscon_i                   => i_fb_syscon,
+
+      -- peripheral port connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
+
+      -- controller port connect to peripherals
+      fb_dn_c2p_o                   => i_fb_mc2mp_c2p,
+      fb_dn_p2c_i                   => i_fb_mc2mp_p2c
+
+   );
+
+   e_fb_intcon: fb_intcon_one_to_many
+   generic map (
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
+      )
+   port map (
+      fb_syscon_i                   => i_fb_syscon,
+
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_fb_mc2mp_c2p,
+      fb_up_p2c_o                   => i_fb_mc2mp_p2c,
+
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
+
+      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
+      peripheral_sel_we_o           => i_intcon_peripheral_sel_we(0),
+      peripheral_sel_i              => i_intcon_peripheral_sel(0),
+      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
+   );
+
+
+
+END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
    e_fb_intcon: fb_intcon_one_to_many
    generic map (
