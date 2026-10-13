@@ -52,6 +52,7 @@ use work.board_config_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
 use work.fb_CPU_exp_pack.all;
+use work.fb_chipset_pack.all;
 use work.fb_intcon_pack.all;
 
 entity mk2blit is
@@ -217,6 +218,14 @@ architecture rtl of mk2blit is
    -- config wrapper
    signal i_c2p_config        : fb_con_o_per_i_t;
    signal i_p2c_config        : fb_con_i_per_o_t;
+	--chipset peripheral
+	signal i_c2p_chipset_per	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_per	: fb_con_i_per_o_t;
+
+	-- chipset controller
+	signal i_c2p_chipset_con	: fb_con_o_per_i_t;
+	signal i_p2c_chipset_con	: fb_con_i_per_o_t;
+
    -- intcon controller->peripheral
    signal i_con_c2p_intcon    : fb_con_o_per_i_arr(CONTROLLER_COUNT-1 downto 0);
    signal i_con_p2c_intcon    : fb_con_i_per_o_arr(CONTROLLER_COUNT-1 downto 0);
@@ -267,9 +276,21 @@ architecture rtl of mk2blit is
    signal i_intcon_peripheral_sel_oh      : fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(PERIPHERAL_COUNT-1 downto 0);   -- address decoded selected peripherals as one-hot    
 
    -----------------------------------------------------------------------------
+	-----------------------------------------------------------------------------
+	-- sound signals
+	-----------------------------------------------------------------------------
+
+	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
+	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
+	signal i_dac_sample					: signed(15 downto 0);				-- sample playing
+
+	-----------------------------------------------------------------------------
    -- cpu control signals
    -----------------------------------------------------------------------------
    signal i_cpu_IRQ_n               : std_logic;
+	signal i_chipset_cpu_halt			: std_logic;
+	signal i_chipset_cpu_int			: std_logic;
+
 	signal i_boot_65816					: std_logic_vector(1 downto 0);
 	signal i_debug_65816_boot_act		: std_logic;
 	signal i_window_65816				: std_logic_vector(12 downto 0);
@@ -302,7 +323,7 @@ begin
       EXT_CLK_50M_i                 => CLK_50M_i,
 
       clk_fish_o                    => i_clk_fish_128M,
-      clk_snd_o                     => open,
+		clk_snd_o							=> i_clk_snd,
 
       clk_lock_o                    => i_clk_lock,
 
@@ -330,7 +351,7 @@ begin
 
 g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    -- address decode to select peripheral
-   e_addr2s:entity work.address_decode_simple
+	e_addr2s:entity work.address_decode
    port map (
       addr_i                  => i_intcon_peripheral_sel_addr(I),
       we_i                    => i_intcon_peripheral_sel_we(I),
@@ -377,6 +398,86 @@ END GENERATE;
    i_c2p_sys            <= i_per_c2p_intcon(PERIPHERAL_NO_SYS);
 	i_c2p_version			<= i_per_c2p_intcon(PERIPHERAL_NO_VERSION);
    i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
+
+GCHIPSET: IF G_INCL_CHIPSET GENERATE
+   GCHIPSET_MASTER:if CONTROLLER_COUNT_CHIPSET > 0 GENERATE
+      i_con_c2p_intcon(MAS_NO_CHIPSET)    <= i_c2p_chipset_con;
+      i_p2c_chipset_con    <= i_con_p2c_intcon(MAS_NO_CHIPSET);
+   end generate;
+
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
+
+	e_chipset:fb_chipset
+	generic map (
+		SIM => SIM,
+		CLOCKSPEED => CLOCKSPEED
+	)
+	port map (
+		fb_syscon_i		=> i_fb_syscon,
+
+		-- peripheral port connect to controllers
+		fb_per_c2p_i 	=> i_c2p_chipset_per,
+		fb_per_p2c_o 	=> i_p2c_chipset_per,
+
+		-- controller port connecto to peripherals
+		fb_con_c2p_o	=> i_c2p_chipset_con,
+		fb_con_p2c_i	=> i_p2c_chipset_con,
+
+		clk_snd_i		=> i_clk_snd,
+
+		cpu_halt_o		=> i_chipset_cpu_halt,
+		cpu_int_o		=> i_chipset_cpu_int,
+
+		vsync_i			=> i_vsync,
+		hsync_i			=> i_hsync,
+
+		I2C_SDA_io		=> I2C_SDA_io,
+		I2C_SCL_io		=> I2C_SCL_io,
+
+      SD_CS_o        => open,
+      SD_CLK_o       => open,
+      SD_MOSI_o      => open,
+      SD_MISO_i      => '1',
+      SD_DET_i       => '1',
+		snd_dat_o		=> i_dac_sample
+
+	);
+
+	G_SND_DAC:IF G_INCL_CS_SND GENERATE
+
+		e_dac_snd: entity work.dac_1bit 
+		generic map (
+			G_SAMPLE_SIZE		=> 10,
+			G_SYNC_DEPTH		=> 0
+		)
+   	port map (
+			rst_i					=> i_fb_syscon.rst,
+			clk_dac				=> i_fb_syscon.clk,
+
+			sample				=> i_dac_sample(15 downto 6),
+		
+			bitstream			=> i_dac_snd_pwm
+		);
+	END GENERATE;
+	G_NO_SND_DAC:IF not G_INCL_CS_SND GENERATE
+		i_dac_snd_pwm <= '0';
+	END GENERATE;
+
+
+END GENERATE;
+GNOTCHIPSET:IF NOT G_INCL_CHIPSET GENERATE
+	i_chipset_cpu_halt <= '0';
+	i_chipset_cpu_int <= '0';
+	i_dac_snd_pwm <= '0';
+	I2C_SDA_io <= 'Z';
+	I2C_SCL_io <= 'Z';
+END GENERATE;
+
+	SND_BITS_L_o		<= i_dac_snd_pwm;
+	SND_BITS_L_AUX_o	<= i_dac_snd_pwm;
+	SND_BITS_R_o		<= i_dac_snd_pwm;
+	SND_BITS_R_AUX_o	<= i_dac_snd_pwm;
 
 
    
@@ -599,7 +700,7 @@ port map (
             fb_c2p_i                      => i_c2p_preboot,
             fb_p2c_o                      => i_p2c_preboot
 
-   );
+         );
 
          i_per_p2c_intcon(PERIPHERAL_NO_PREBOOT) <= i_p2c_preboot;
          i_c2p_preboot         <= i_per_c2p_intcon(PERIPHERAL_NO_PREBOOT);
@@ -669,7 +770,7 @@ port map (
       fb_p2c_i                      => i_p2c_cpu,
 
       -- chipset control signals
-      cpu_halt_i                    => '0',
+		cpu_halt_i							=> i_chipset_cpu_halt,
 
 		boot_65816_i						=> i_boot_65816,
 		window_65816_i						=> i_window_65816,
@@ -684,7 +785,7 @@ port map (
 
    );
 
-   i_cpu_IRQ_n <= SYS_nIRQ_i; 
+	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
 
    --===========================================================
    -- CPU wrap external pins to/from typed objects to allow same
@@ -723,17 +824,6 @@ port map (
 
 
 
---------------------------------------------------------------------------------
--- Default signals
---------------------------------------------------------------------------------
-   
-   SND_BITS_L_o <= '0';
-   SND_BITS_R_o <= '0';
-   SND_BITS_L_aux_o <= '0';
-   SND_BITS_R_aux_o <= '0';
-
-   I2C_SCL_io <= 'Z';
-   I2C_SDA_io <= 'Z';
 
 
 
@@ -847,13 +937,16 @@ i_memctl_configbits <=
 	not r_cfg_cpu_use_t65;
 
 i_cfg_debug_button <= CFG_io(7);
+
+i_hsync <= CFG_io(15);
+i_vsync <= CFG_io(14);
 LED_o(0) <= '0'          when i_fb_syscon.rst_state = reset else
             i_flasher(3) when i_fb_syscon.rst_state = powerup else
             i_flasher(2) when i_fb_syscon.rst_state = resetfull else
             i_flasher(0) when i_fb_syscon.rst_state = lockloss else
             '1'          when i_fb_syscon.rst_state = run else
             i_flasher(1);
-LED_o(1) <= '1';
+LED_o(1) <= not i_chipset_cpu_halt;
 LED_o(2) <= not i_JIM_en;
 LED_o(3) <= i_swmos_shadow;
 

@@ -45,6 +45,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
+use work.common.all;
+use work.board_config_pack.all;
 use work.fishbone.all;
 
 package fb_chipset_pack is
@@ -99,5 +101,30 @@ component fb_chipset
 
 	);
 	end component;
+
+	-----------------------------------------------------------------------------
+	-- work out number / order of controllers 
+	-----------------------------------------------------------------------------
+
+	constant MAS_NO_CHIPSET_AERIS			: natural := 0;
+	constant MAS_NO_CHIPSET_SND			: natural := MAS_NO_CHIPSET_AERIS + b2n(G_INCL_CS_AERIS);
+	constant MAS_NO_CHIPSET_DMA_0			: natural := MAS_NO_CHIPSET_SND + b2n(G_INCL_CS_SND);
+	constant MAS_NO_CHIPSET_DMA_1			: natural := MAS_NO_CHIPSET_DMA_0 + b2n(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 1);
+	constant MAS_NO_CHIPSET_BLIT 			: natural := MAS_NO_CHIPSET_DMA_1 + b2n(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 2);
+	constant CONTROLLER_COUNT_CHIPSET	: natural := MAS_NO_CHIPSET_BLIT + b2n(G_INCL_CS_BLIT);
+
+	-----------------------------------------------------------------------------
+	-- work out number / order of peripherals 
+	-----------------------------------------------------------------------------
+
+
+	constant PERIPHERAL_NO_CHIPSET_DMA		: natural := 0;
+	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := PERIPHERAL_NO_CHIPSET_DMA + b2n(G_INCL_CS_DMA);
+	constant PERIPHERAL_NO_CHIPSET_BLIT		: natural := PERIPHERAL_NO_CHIPSET_SOUND + b2n(G_INCL_CS_SND);
+	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := PERIPHERAL_NO_CHIPSET_BLIT + b2n(G_INCL_CS_BLIT);
+	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := PERIPHERAL_NO_CHIPSET_AERIS + b2n(G_INCL_CS_AERIS);
+	constant PERIPHERAL_NO_CHIPSET_SDCARD	: natural := PERIPHERAL_NO_CHIPSET_EEPROM + b2n(G_INCL_CS_EEPROM);
+	constant PERIPHERAL_COUNT_CHIPSET		: natural := PERIPHERAL_NO_CHIPSET_SDCARD + b2n(G_INCL_CS_SDCARD);
+
 
 end fb_chipset_pack;

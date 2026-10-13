@@ -26,16 +26,21 @@
 -- 
 -- Create Date:    	16/04/2019
 -- Design Name: 
--- Module Name:    	fishbone bus - Blitter/Paula chipset wrapper
+-- Module Name:    	fb_chipset
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A fishbone wrapper for all the chipset components
+-- Description: 		A fishbone wrapper for all the chipset components grouped
+--							together.
 -- Dependencies: 
 --
 -- Revision: 
 -- Additional Comments: 
---
+--							This component muxes all the controllers down into a 
+--							single apparent controller using a many to one interconnect
+--							unless there is only one enabled in which case that 
+--                   controller is connected direct, if no controllers the
+--							fb_unsel_c2p constant is emitted. 
 ----------------------------------------------------------------------------------
 
 
@@ -49,6 +54,7 @@ use work.fishbone.all;
 use work.fb_intcon_pack.all;
 use work.common.all;
 use work.board_config_pack.all;
+use work.fb_chipset_pack.all;
 
 entity fb_chipset is
 	generic (
@@ -102,40 +108,6 @@ entity fb_chipset is
 end fb_chipset;
 
 architecture rtl of fb_chipset is
-
-	function B2OZ(b:boolean) return natural is 
-	begin
-		if b then
-			return 1;
-		else
-			return 0;
-		end if;
-	end function;
-
-	-----------------------------------------------------------------------------
-	-- work out number / order of controllers 
-	-----------------------------------------------------------------------------
-
-	constant MAS_NO_CHIPSET_AERIS			: natural := 0;
-	constant MAS_NO_CHIPSET_SND			: natural := MAS_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
-	constant MAS_NO_CHIPSET_DMA_0			: natural := MAS_NO_CHIPSET_SND + B2OZ(G_INCL_CS_SND);
-	constant MAS_NO_CHIPSET_DMA_1			: natural := MAS_NO_CHIPSET_DMA_0 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 1);
-	constant MAS_NO_CHIPSET_BLIT 			: natural := MAS_NO_CHIPSET_DMA_1 + B2OZ(G_INCL_CS_DMA AND G_DMA_CHANNELS >= 2);
-	constant CONTROLLER_COUNT_CHIPSET	: natural := MAS_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
-
-	-----------------------------------------------------------------------------
-	-- work out number / order of peripherals 
-	-----------------------------------------------------------------------------
-
-
-	constant PERIPHERAL_NO_CHIPSET_DMA		: natural := 0;
-	constant PERIPHERAL_NO_CHIPSET_SOUND	: natural := PERIPHERAL_NO_CHIPSET_DMA + B2OZ(G_INCL_CS_DMA);
-	constant PERIPHERAL_NO_CHIPSET_BLIT		: natural := PERIPHERAL_NO_CHIPSET_SOUND + B2OZ(G_INCL_CS_SND);
-	constant PERIPHERAL_NO_CHIPSET_AERIS	: natural := PERIPHERAL_NO_CHIPSET_BLIT + B2OZ(G_INCL_CS_BLIT);
-	constant PERIPHERAL_NO_CHIPSET_EEPROM	: natural := PERIPHERAL_NO_CHIPSET_AERIS + B2OZ(G_INCL_CS_AERIS);
-	constant PERIPHERAL_NO_CHIPSET_SDCARD	: natural := PERIPHERAL_NO_CHIPSET_EEPROM + B2OZ(G_INCL_CS_EEPROM);
-	constant PERIPHERAL_COUNT_CHIPSET		: natural := PERIPHERAL_NO_CHIPSET_SDCARD + B2OZ(G_INCL_CS_SDCARD);
-
 
 	-----------------------------------------------------------------------------
 	-- component definitions for optional components
@@ -348,7 +320,7 @@ architecture rtl of fb_chipset is
 	-----------------------------------------------------------------------------
 
 	-- chipset c2p intcon to peripheral sel
-	signal i_chipset_intcon_peripheral_sel_addr		: std_logic_vector(9 downto 0);
+	signal i_chipset_intcon_peripheral_sel_addr	: std_logic_vector(23 downto 0);
 		-- NOTE: plus 1 for dummy channel for "no peripheral"
 	signal i_chipset_intcon_peripheral_sel			: unsigned(numbits(PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);  -- address decoded selected peripheral
 	signal i_chipset_intcon_peripheral_sel_oh		: std_logic_vector(PERIPHERAL_COUNT_CHIPSET downto 0);	-- address decoded selected peripherals as one-hot		
@@ -422,7 +394,6 @@ begin
 	-- address decode to select peripheral
 	e_addr2s_chipset:entity work.address_decode_chipset
 	generic map (
-		SIM							=> SIM,
 		G_PERIPHERAL_NO_CHIPSET_DMA		=> PERIPHERAL_NO_CHIPSET_DMA,
 		G_PERIPHERAL_NO_CHIPSET_SOUND		=> PERIPHERAL_NO_CHIPSET_SOUND,
 		G_PERIPHERAL_NO_CHIPSET_BLIT		=> PERIPHERAL_NO_CHIPSET_BLIT,
@@ -439,19 +410,16 @@ begin
 
 	e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
 	generic map (
-		SIM => SIM,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1, -- NOTE: +1 for unsel
-		G_ADDRESS_WIDTH => 10,
-		G_REGISTER_CON_READS => true
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
 	)
 	port map (
 		fb_syscon_i 		=> fb_syscon_i,
 
-		fb_con_c2p_i		=>	fb_per_c2p_i,
-		fb_con_p2c_o		=> fb_per_p2c_o,
+		fb_up_c2p_i			=>	fb_per_c2p_i,
+		fb_up_p2c_o			=> fb_per_p2c_o,
 
-		fb_per_c2p_o => i_per_c2p_chipset,
-		fb_per_p2c_i => i_per_p2c_chipset,		
+		fb_dn_c2p_o			=> i_per_c2p_chipset,
+		fb_dn_p2c_i			=> i_per_p2c_chipset,		
 
 		peripheral_sel_addr_o					=> i_chipset_intcon_peripheral_sel_addr,
 		peripheral_sel_i							=> i_chipset_intcon_peripheral_sel,
@@ -462,7 +430,6 @@ begin
 
 	e_fb_null:entity work.fb_null
 	 generic map (
-		SIM									=> SIM,
 		G_READ_VAL							=> x"FF"
 	 )
     Port map (

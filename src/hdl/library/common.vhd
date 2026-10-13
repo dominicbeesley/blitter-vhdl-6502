@@ -53,6 +53,7 @@ package common is
   function my_or_reduce(s:std_logic_vector) return std_logic;
   function my_and_reduce(s:std_logic_vector) return std_logic;
  	function resize2(V:signed; N:natural) return signed;
+	function b2n(b:boolean) return natural;
 
 end package;
 
@@ -138,5 +139,16 @@ package body common is
 			return '0';
 		end if;
 	end function;
+
+	function b2n(b:boolean) return natural is 
+	begin
+		if b then
+			return 1;
+		else
+			return 0;
+		end if;
+	end function;
+
+
 
 end package body;
