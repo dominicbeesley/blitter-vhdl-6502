@@ -48,10 +48,12 @@
 --          |              |  Bit 7 : BUSY   flag, when set a shift is in operation
 --          |              |  Bit 6 : ACK    0 if previous operation was ack'd either by controller or peripheral
 --          |              |  
--- CTL=0    |  Write       |  Bit 7 : BUSY   1 start a new operation when the current one completes
---          |              |                 if 0 cancel a stop condition
---          |              |                 will be generated as soon as the clock is released by 
---          |              |                 the peripheral, any pending operation will be terminated
+-- CTL=0    |  Write       |  Bit 7 : BUSY   1 start: start a new operation
+--          |              |                 0 cancel: a stop condition will be generated as soon as 
+--          |              |                 the clock is released by the peripheral, any pending 
+--          |              |                 operation will be terminated.
+--          |              |                 Note: writing BUSY=1 will immediately cancel and start
+--          |              |                 a new operation, poll BUSY=0 before starting a new op.
 --          |              |  Bit 6 : ACK    if 0 and operation is a read acknowledge it afterwards
 --          |              |  Bit 2 : STOP   send a stop condition after this operation
 --          |              |  Bit 1 : START  send a start condition before this operation
@@ -60,28 +62,28 @@
 -- DAT=1    |  Read        |  Read received data
 --          |  Write       |  Write data latch 
 
--- probe address exists:
--- DAT = <addr><<1 & "1"
--- STAT = "10000110"          ; BUSY+START+STOP+WRITE
--- WHILE STAT(BUSY) = "0":WEND
--- RETURN (STAT(ACK) = "0")
+-- probe i2c address exists:
+--    DAT = <addr><<1 & "1"
+--    CTL = "10000110"          ; BUSY+START+STOP+WRITE
+--    WHILE STAT(BUSY) = "1":WEND
+--    RETURN (STAT(ACK) = "0")
 --
--- write 1,2,3 to addres 0x23
--- DAT = x"46"
--- CTL = "10000010"
--- WHILE STAT(BUSY) = "1":WEND
--- IF STAT(ACK) = "1" RETURN
--- DAT = x"01"
--- CTL = "10000000"
--- WHILE STAT(BUSY) = "0":WEND
--- IF STAT(ACK) = "1" RETURN
--- DAT = x"01"
--- CTL = "10000000"
--- WHILE STAT(BUSY) = "0":WEND
--- IF STAT(ACK) = "1" RETURN
--- DAT = x"03"
--- CTL = "10000100"
--- WHILE STAT(BUSY) = "0":WEND
+-- write 1,2,3 to i2c address 0x23
+--    DAT = x"46"
+--    CTL = "10000010"
+--    WHILE STAT(BUSY) = "1":WEND
+--    IF STAT(ACK) = "1" RETURN
+--    DAT = x"01"
+--    CTL = "10000000"
+--    WHILE STAT(BUSY) = "1":WEND
+--    IF STAT(ACK) = "1" RETURN
+--    DAT = x"02"
+--    CTL = "10000000"
+--    WHILE STAT(BUSY) = "1":WEND
+--    IF STAT(ACK) = "1" RETURN
+--    DAT = x"03"
+--    CTL = "10000100"
+--    WHILE STAT(BUSY) = "1":WEND
 
 
 
@@ -122,18 +124,18 @@ architecture rtl of fb_i2c is
    constant C_FAST_CLKDIV4    : natural := natural(ceil(real(CLOCKSPEED*1000000)/real(BUS_SPEED*4))); -- divider for 4 phase clock
    signal   r_4ph_ctr         : unsigned(numbits(C_FAST_CLKDIV4)-1 downto 0) := (others => '0');
    signal   r_4ph_clken       : std_logic;
-   signal   r_4ph_phase       : std_logic_vector(3 downto 0) := "0100";
+   signal   r_4ph_phase       : std_logic_vector(3 downto 0) := "0010";
    signal   r_4ph_run         : std_logic;
 
-    -- fishbone peripheral handler
+   -- fishbone peripheral handler
    type     state_mem_t is (idle, act_rd, act_wr);
 
-   signal   r_state  : state_mem_t;
+   signal   r_state           : state_mem_t;
 
-   signal   r_D_ack  : std_logic;
-   signal   r_A      : std_logic_vector(0 downto 0);
-   signal   r_A_ack  : std_logic;
-   signal   r_D_rd   : std_logic_vector(7 downto 0);
+   signal   r_D_ack           : std_logic;
+   signal   r_A               : std_logic_vector(0 downto 0);
+   signal   r_A_ack           : std_logic;
+   signal   r_D_rd            : std_logic_vector(7 downto 0);
    
    type     state_i2c_t       is (idle, start, shift, reg, stop);
 
@@ -151,7 +153,7 @@ architecture rtl of fb_i2c is
    signal   r_shift_occup     :  std_logic_vector(8 downto 0);    
 
    signal   r_ctl_written_ack :  std_logic;
-   signal   r_dat_rd          :  std_logic_vector(7 downto 0);    -- write data latch
+   signal   r_dat_rd          :  std_logic_vector(7 downto 0);    -- read data latched from shift register
    signal   r_stat_ack        :  std_logic;                       -- ack flag from last operation used for writes
 
    signal   r_i2c_sda         :  std_logic;
@@ -193,7 +195,7 @@ begin
    end process;
 
    -- i2c state machine
-   p_state_i2c:process(fb_syscon_i, r_4ph_clken)
+   p_state_i2c:process(fb_syscon_i)
    begin
 
       if fb_syscon_i.rst = '1' then
@@ -205,78 +207,77 @@ begin
          r_shift_occup <= (others => '0');
          r_i2c_sda <= '1';
          r_4ph_run <= '0';
-      elsif rising_edge(fb_syscon_i.clk) and r_4ph_clken = '1' then
+      elsif rising_edge(fb_syscon_i.clk) then
+         if r_4ph_clken = '1' then
 
-         -- check for register write (and synchronise)
-         if r_ctl_written /= r_ctl_written_ack then
-            -- register was written set state machine start
-            -- always set shift register (even if not used)
-            r_shift_occup <= (others => '1');
-            if r_ctl_rnw = '1' then
-               r_shift(8 downto 1) <= (others => '1');
-            else
-               r_shift(8 downto 1) <= r_i2c_dat_wr;
-            end if;
-            r_shift(0) <= r_ctl_ack or not r_ctl_rnw;    -- set ack in shift register to 1 for writes (to read ack from peripheral)
-            r_4ph_run <= '1';
-            if r_ctl_busy = '0' then
-               -- go straight to do a stop bit
-               r_i2c_sda <= '0';
-               r_state_i2c <= stop;
-            else
-               if r_ctl_start = '1' then
-                  r_state_i2c <= start;
-                  r_i2c_sda <= '1';
+            -- check for register write (and synchronise)
+            if r_ctl_written /= r_ctl_written_ack then
+               -- register was written set state machine start
+               -- always set shift register (even if not used)
+               r_shift_occup <= (others => '1');
+               if r_ctl_rnw = '1' then
+                  r_shift(8 downto 1) <= (others => '1');
                else
-                  r_state_i2c <= shift;
+                  r_shift(8 downto 1) <= r_i2c_dat_wr;
                end if;
-            end if;
-            r_ctl_written_ack <= r_ctl_written;
-         else
-            
-            case r_state_i2c is 
-               when idle => 
-                  r_state_i2c <= idle;
-               when start =>
-                  if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '1' then
-                     r_i2c_sda <= '0';
+               r_shift(0) <= r_ctl_ack or not r_ctl_rnw;    -- set ack in shift register to 1 for writes (to read ack from peripheral)
+               r_4ph_run <= '1';
+               if r_ctl_busy = '0' then
+                  -- go straight to do a stop bit
+                  r_i2c_sda <= '0';
+                  r_state_i2c <= stop;
+               else
+                  if r_ctl_start = '1' then
+                     r_state_i2c <= start;
+                     r_i2c_sda <= '1';
+                  else
                      r_state_i2c <= shift;
                   end if;
-               when shift =>
-                  if r_4ph_phase(3) = '1' then
-                     r_i2c_sda <= r_shift(r_shift'high);
-                     r_shift_occup <= r_shift_occup(r_shift_occup'high-1 downto 0) & "0";
-                  elsif r_4ph_phase(1) = '1' then
-                        r_shift <= r_shift(r_shift'high-1 downto 0) & to_X01(I2C_SDA_io); 
-                     if r_shift_occup(r_shift_occup'high) = '0' then
-                        r_state_i2c <= reg;
+               end if;
+               r_ctl_written_ack <= r_ctl_written;
+            else
+               
+               case r_state_i2c is 
+                  when idle => 
+                     r_state_i2c <= idle;
+                  when start =>
+                     if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '1' then
+                        r_i2c_sda <= '0';
+                        r_state_i2c <= shift;
                      end if;
-                  end if;
-               when reg =>
-                  r_dat_rd <= r_shift(8 downto 1);
-                  r_stat_ack <= r_shift(0);
+                  when shift =>
+                     if r_4ph_phase(3) = '1' then
+                        r_i2c_sda <= r_shift(r_shift'high);
+                        r_shift_occup <= r_shift_occup(r_shift_occup'high-1 downto 0) & "0";
+                     elsif r_4ph_phase(1) = '1' then
+                        r_shift <= r_shift(r_shift'high-1 downto 0) & to_X01(I2C_SDA_io); 
+                        if r_shift_occup(r_shift_occup'high) = '0' then
+                           r_state_i2c <= reg;
+                        end if;
+                     end if;
+                  when reg =>
+                     r_dat_rd <= r_shift(8 downto 1);
+                     r_stat_ack <= r_shift(0);
 
-                  if r_ctl_stop = '1' then
-                     r_i2c_sda <= '0';
-                     r_state_i2c <= stop;
-                  else
-                     r_4ph_run <= '0';
+                     if r_ctl_stop = '1' then
+                        r_i2c_sda <= '0';
+                        r_state_i2c <= stop;
+                     else
+                        r_4ph_run <= '0';
+                        r_state_i2c <= idle;
+                     end if;
+
+                  when stop =>
+                     if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '0' then
+                        r_i2c_sda <= '1';
+                        r_state_i2c <= idle;
+                        r_4ph_run <= '0';
+                     end if;
+
+                  when others =>
                      r_state_i2c <= idle;
-                  end if;
-
-               when stop =>
-                  if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '0' then
-                     r_i2c_sda <= '1';
-                     r_state_i2c <= idle;
-                     r_4ph_run <= '0';
-                  end if;
-
-               when others =>
-                  r_state_i2c <= idle;
-            end case;
-
-
-
+               end case;
+            end if;
          end if;
       end if;
    end process;
@@ -301,7 +302,6 @@ begin
          r_ctl_stop <= '0';
          r_ctl_start <= '0';
          r_ctl_rnw <= '0';
-         r_ctl_written <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
          
          v_dowrite := false;
@@ -365,8 +365,5 @@ begin
             end if;
          end if;
       end if;
-
    end process;
-
-
 end rtl;
