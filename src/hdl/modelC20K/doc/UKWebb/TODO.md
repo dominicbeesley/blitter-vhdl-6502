@@ -1,7 +1,4 @@
 
-* refresh MMB/disc images, write to SDCARD
-* Tricky test rom crashes when run from MOSRAM
-
 DONE:
 
 * SIDs on MMC, in notes
@@ -16,4 +13,6 @@ DONE:
 * make a 65816 romset?
 * update instructions for preboot
 * Explain extra buttons
+* refresh MMB/disc images, write to SDCARD
+* Tricky test rom crashes when run from MOSRAM
 

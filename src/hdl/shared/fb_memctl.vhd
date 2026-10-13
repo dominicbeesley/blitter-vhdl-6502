@@ -205,6 +205,8 @@ begin
    begin
 
       if rising_edge(fb_syscon_i.clk) then
+         -- synchronous reset: r_map0n1 and the resetfull-only registers are loaded
+         -- during reset from rst_state / the switches, so must be clocked
          if fb_syscon_i.rst = '1' then
             r_state <= idle;
             r_turbo_lo <= (others => '0');
