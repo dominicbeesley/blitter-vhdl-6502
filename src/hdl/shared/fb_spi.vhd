@@ -1,6 +1,6 @@
 -- MIT License
 -- -----------------------------------------------------------------------------
--- Copyright (c) 2020 Dominic Beesley https://github.com/dominicbeesley
+-- Copyright (c) 2026 Dominic Beesley https://github.com/dominicbeesley
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 -- 
 -- Create Date:      14/02/2024
 -- Design Name: 
--- Module Name:      fishbone bus - spi
+-- Module Name:      fb_spi
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
