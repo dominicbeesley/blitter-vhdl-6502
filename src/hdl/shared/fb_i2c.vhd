@@ -69,18 +69,18 @@
 -- write 1,2,3 to addres 0x23
 -- DAT = x"46"
 -- CTL = "10000010"
+-- WHILE STAT(BUSY) = "1":WEND
+-- IF STAT(ACK) = "1" RETURN
+-- DAT = x"01"
+-- CTL = "10000000"
 -- WHILE STAT(BUSY) = "0":WEND
 -- IF STAT(ACK) = "1" RETURN
 -- DAT = x"01"
--- STAT = "10000000"
--- WHILE STAT(BUSY) = "0":WEND
--- IF STAT(ACK) = "1" RETURN
--- DAT = x"01"
--- STAT = "10000000"
+-- CTL = "10000000"
 -- WHILE STAT(BUSY) = "0":WEND
 -- IF STAT(ACK) = "1" RETURN
 -- DAT = x"03"
--- STAT = "10000100"
+-- CTL = "10000100"
 -- WHILE STAT(BUSY) = "0":WEND
 
 
@@ -181,7 +181,7 @@ begin
          if r_4ph_ctr = C_FAST_CLKDIV4 - 1 then
             r_4ph_clken <= '1';
             r_4ph_ctr <= (others => '0');
-            if not (r_4ph_phase(0) = '1' and to_bit(I2C_SCL_io) /= '1') -- clock stretch
+            if not (r_4ph_phase(0) = '1' and to_X01(I2C_SCL_io) /= '1') -- clock stretch
                and r_4ph_run = '1'
                   then 
                r_4ph_phase <= r_4ph_phase(2 downto 0) & r_4ph_phase(3);
@@ -238,7 +238,7 @@ begin
                when idle => 
                   r_state_i2c <= idle;
                when start =>
-                  if r_4ph_phase(1) = '1' and to_bit(I2C_SDA_io) = '1' then
+                  if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '1' then
                      r_i2c_sda <= '0';
                      r_state_i2c <= shift;
                   end if;
@@ -247,7 +247,7 @@ begin
                      r_i2c_sda <= r_shift(r_shift'high);
                      r_shift_occup <= r_shift_occup(r_shift_occup'high-1 downto 0) & "0";
                   elsif r_4ph_phase(1) = '1' then
-                        r_shift <= r_shift(r_shift'high-1 downto 0) & I2C_SDA_io; 
+                        r_shift <= r_shift(r_shift'high-1 downto 0) & to_X01(I2C_SDA_io); 
                      if r_shift_occup(r_shift_occup'high) = '0' then
                         r_state_i2c <= reg;
                      end if;
@@ -265,7 +265,7 @@ begin
                   end if;
 
                when stop =>
-                  if r_4ph_phase(1) = '1' and to_bit(I2C_SDA_io) = '0' then
+                  if r_4ph_phase(1) = '1' and to_X01(I2C_SDA_io) = '0' then
                      r_i2c_sda <= '1';
                      r_state_i2c <= idle;
                      r_4ph_run <= '0';
