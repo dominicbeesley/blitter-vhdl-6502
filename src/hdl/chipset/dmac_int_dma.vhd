@@ -120,7 +120,7 @@ begin
  	e_buf_per:fb_intcon_buffer
    generic map (
       G_REG_C2P            => true,
-      G_REG_P2C            => false
+      G_REG_P2C            => true
    ) 
    port map (
 

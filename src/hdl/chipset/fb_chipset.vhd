@@ -370,6 +370,10 @@ begin
    END GENERATE;
    G_MANY_CONTROLLER:IF CONTROLLER_COUNT_CHIPSET >1 GENERATE
 
+      signal   i_con_c2p_2    : fb_con_o_per_i_t;
+      signal   i_con_p2c_2    : fb_con_i_per_o_t;
+   BEGIN
+
       -- multiplex all the chipset controller ports down to a single 
       -- controller out to the top level resources
       e_chipset_con:fb_intcon_many_to_one
@@ -385,10 +389,31 @@ begin
          fb_up_p2c_o                => i_con_p2c_chipset,
 
          -- controller port connect to peripherals
-         fb_dn_c2p_o                => fb_con_c2p_o,
-         fb_dn_p2c_i                => fb_con_p2c_i
+         fb_dn_c2p_o                => i_con_c2p_2,
+         fb_dn_p2c_i                => i_con_p2c_2
 
       );
+
+      -- add a buffer here for timing closure
+      e_buf_con:fb_intcon_buffer
+      generic map (
+         G_REG_C2P            => true,
+         G_REG_P2C            => true
+      ) 
+      port map (
+
+         fb_syscon_i          => fb_syscon_i,
+
+         -- upstream peripheral port connect to controller
+         fb_up_c2p_i          => i_con_c2p_2,
+         fb_up_p2c_o          => i_con_p2c_2,
+
+         -- downstream controller port connect to peripheral
+         fb_dn_c2p_o          => fb_con_c2p_o,
+         fb_dn_p2c_i          => fb_con_p2c_i
+
+      );
+
    END GENERATE;
 
    --TODO: have a default chipset peripheral that returns FF?

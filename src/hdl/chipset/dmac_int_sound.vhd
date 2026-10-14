@@ -47,7 +47,7 @@ use IEEE.NUMERIC_STD.ALL;
 library work;
 use work.fishbone.all;
 use work.common.all;
-
+use work.fb_intcon_pack.all;
 
 entity fb_DMAC_int_sound is
 	 generic (
@@ -80,6 +80,11 @@ entity fb_DMAC_int_sound is
 end fb_DMAC_int_sound;
 
 architecture Behavioral of fb_DMAC_int_sound is
+
+	-- buffer peripheral port
+	signal	i_per_buf_c2p		: fb_con_o_per_i_t;
+	signal	i_per_buf_p2c		: fb_con_i_per_o_t;
+
 
 	type		snd_dat_arr is array(natural range <>) of signed(7 downto 0);
 
@@ -154,14 +159,6 @@ begin
 	snd_dat_l_o <= r_tot_snd_dat_l;
 	snd_dat_r_o <= r_tot_snd_dat_r;
 
-	p_be_le:process(all)
-	begin
-		i_per_c2p_bele <= fb_per_c2p_i;
-		if fb_per_c2p_i.A(9) = '1' then
-			i_per_c2p_bele.A(3 downto 0) <= not fb_per_c2p_i.A(3 downto 0);
-		end if;
-	end process;
-
 	p_snd_tgl:process(snd_clk_i)
 	begin
 
@@ -212,6 +209,34 @@ begin
 		end if;
 	end process;
 
+	e_buf_per:fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => true,
+      G_REG_P2C            => true
+   ) 
+   port map (
+
+      fb_syscon_i          => fb_syscon_i,
+
+      -- upstream peripheral port connect to controller
+      fb_up_c2p_i          => fb_per_c2p_i,
+      fb_up_p2c_o          => fb_per_p2c_o,
+
+      -- downstream controller port connect to peripheral
+      fb_dn_c2p_o          => i_per_buf_c2p,
+      fb_dn_p2c_i          => i_per_buf_p2c
+
+   );
+
+	p_be_le:process(all)
+	begin
+		i_per_c2p_bele <= i_per_buf_c2p;
+		if i_per_buf_c2p.A(9) = '1' then
+			i_per_c2p_bele.A(3 downto 0) <= not i_per_buf_c2p.A(3 downto 0);
+		end if;
+	end process;
+
+
 	e_per_mux:entity work.fb_intcon_one_to_many
 	generic map (
       G_PERIPHERAL_COUNT   => G_CHANNELS + 1,
@@ -223,7 +248,7 @@ begin
 
       -- peripheral port connect to controller
       fb_up_c2p_i          => i_per_c2p_bele,
-      fb_up_p2c_o          => fb_per_p2c_o,
+      fb_up_p2c_o          => i_per_buf_p2c,
 
       -- controller port connect to peripherals
       fb_dn_c2p_o          => i_o2m_fb_per_c2p,
