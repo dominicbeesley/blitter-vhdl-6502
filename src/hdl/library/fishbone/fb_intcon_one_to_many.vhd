@@ -42,23 +42,33 @@
 --                   15/10/2026 cyc and D_wr_stb broadcast to all peripherals
 --                   (only A_stb is steered), taking the decoder out of the
 --                   peripherals' write data paths for timing closure
+--                   15/10/2026 A_ack also steered by r_src_oh, and r_src_oh /
+--                   r_peripheral_sel_ix loaded whenever r_cnt = 0, so the
+--                   decoder only feeds A_stb out and register D inputs
 -- Additional Comments:
 --
---   * A_stb is forwarded only to the addressed peripheral, and that
---     peripheral's A_ack is passed back. There is no stall: holding off
---     A_stb (and therefore A_ack) is the back-pressure.
+--   * A_stb is forwarded only to the addressed peripheral. There is no
+--     stall: holding off A_stb (and therefore A_ack) is the back-pressure.
 --   * r_cnt counts transactions that have been A_ack'd but not yet D_ack'd,
 --     and r_peripheral_sel_ix records which peripheral owes those D_acks.
 --   * An A_stb for a different peripheral is not forwarded until r_cnt
 --     reaches zero, so D_acks always return in order, from one peripheral at
 --     a time. At most G_MAXOUT transactions may be outstanding.
---   * D_ack, D_rd and rdy come from the peripheral last sent an A_stb
---     (r_src_oh, loaded whenever A_stb is forwarded). Acks are registered,
---     so a peripheral can't answer before the clock after it first sees
---     A_stb, by which time r_src_oh is set; this covers D_ack coincident
---     with A_ack without putting the address decoder in the return path.
---     r_dvld says a D_ack may be due (something outstanding, or A_stb
---     forwarded last clock).
+--   * All returns (A_ack, D_ack, D_rd and rdy) are steered by registers
+--     only. r_src_oh and r_peripheral_sel_ix follow the decoder whenever
+--     r_cnt = 0 and hold while anything is outstanding:
+--       - while r_cnt = 0 the controller has at most one A_stb up, and holds
+--         it and A until A_ack, so the decode is steady until the A_ack
+--         clock and is captured at the edge where r_cnt leaves zero;
+--       - while r_cnt /= 0 only the same peripheral is strobed.
+--     Acks are registered, so a peripheral can't answer before the clock
+--     after it first sees A_stb, by which time r_src_oh holds it; this covers
+--     D_ack coincident with A_ack. So the decoder is not in any return path,
+--     nor in any register enable.
+--   * r_dvld says a D_ack may be due: something is still outstanding, or
+--     A_stb was up last clock. It may be set when nothing is due (A_stb
+--     held for a different peripheral); r_src_oh's peripheral then owes
+--     nothing, so it won't D_ack.
 --   * cyc and D_wr_stb are broadcast to every peripheral; only A_stb is
 --     steered. The spec requires a peripheral to ignore D_wr_stb unless it
 --     has accepted a write still waiting for data, and to use cyc only with
@@ -72,7 +82,9 @@
 --   * Dropping cyc aborts the cycle and clears r_cnt.
 --
 -- A_ack and D_ack stay registered at the peripheral; this block only muxes
--- them, so it adds no latency but does add decode/mux delay to those paths.
+-- them with registered selects, so it adds no latency and only mux delay to
+-- those paths. The remaining decoder path is controller A -> decoder ->
+-- i_hold -> A_stb out to the peripherals.
 --
 ----------------------------------------------------------------------------------
 
@@ -115,15 +127,14 @@ architecture rtl of fb_intcon_one_to_many is
    signal r_peripheral_sel_ix : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0)
                                               := (others => '0');               -- peripheral owing them
    signal r_src_oh            : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)
-                                              := (others => '0');               -- last peripheral sent A_stb (one-hot)
+                                              := (others => '0');               -- peripheral owing/next owing acks (one-hot)
    signal r_dvld              : std_logic := '0';                               -- a D_ack may be due this clock
 
    -- combinatorial
    signal i_hold     : std_logic;    -- don't forward A_stb yet
    signal i_fwd      : std_logic;    -- A_stb forwarded to the selected peripheral
-   signal i_src_oh   : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);  -- data phase peripheral (registered)
-   signal i_dvld     : std_logic;    -- i_src_oh may respond
-   signal i_sel_a_ack: std_logic;    -- A_ack from the selected peripheral
+   signal i_dvld     : std_logic;    -- r_src_oh may respond
+   signal i_src_a_ack: std_logic;    -- A_ack from the returning peripheral
    signal i_src_d_ack: std_logic;    -- D_ack from the data phase peripheral
    signal i_src_rdy  : std_logic;    -- rdy from the data phase peripheral
    signal i_src_d_rd : std_logic_vector(7 downto 0);  -- D_rd from the data phase peripheral
@@ -147,15 +158,15 @@ begin
                   else '0';
 
    i_fwd  <= fb_up_c2p_i.cyc and fb_up_c2p_i.A_stb and not i_hold;
-   i_aack <= i_fwd and i_sel_a_ack;
+
+   -- --------------------------------------------------------------------------
+   -- Returns: steered by registers only (see header). An A_ack can only come
+   -- from r_src_oh's peripheral, for the A_stb the controller is still holding
+   -- --------------------------------------------------------------------------
+   i_aack   <= fb_up_c2p_i.cyc and i_src_a_ack;
+   i_dvld   <= fb_up_c2p_i.cyc and r_dvld;
 
    fb_up_p2c_o.A_ack <= i_aack;
-
-   -- --------------------------------------------------------------------------
-   -- Data phase: the return path is steered by registers only (see header).
-   -- --------------------------------------------------------------------------
-   i_src_oh <= r_src_oh;
-   i_dvld   <= fb_up_c2p_i.cyc and r_dvld;
 
    i_dack <= i_dvld and i_src_d_ack;
 
@@ -177,12 +188,12 @@ begin
       v_rdy   := '0';
       v_d_rd  := (others => '0');
       for k in 0 to G_PERIPHERAL_COUNT-1 loop
-         v_a_ack := v_a_ack or (peripheral_sel_oh_i(k) and fb_dn_p2c_i(k).A_ack);
-         v_d_ack := v_d_ack or (i_src_oh(k) and fb_dn_p2c_i(k).D_ack);
-         v_rdy   := v_rdy   or (i_src_oh(k) and fb_dn_p2c_i(k).rdy);
-         v_d_rd  := v_d_rd  or (fb_dn_p2c_i(k).D_rd and (v_d_rd'range => i_src_oh(k)));
+         v_a_ack := v_a_ack or (r_src_oh(k) and fb_dn_p2c_i(k).A_ack);
+         v_d_ack := v_d_ack or (r_src_oh(k) and fb_dn_p2c_i(k).D_ack);
+         v_rdy   := v_rdy   or (r_src_oh(k) and fb_dn_p2c_i(k).rdy);
+         v_d_rd  := v_d_rd  or (fb_dn_p2c_i(k).D_rd and (v_d_rd'range => r_src_oh(k)));
       end loop;
-      i_sel_a_ack <= v_a_ack;
+      i_src_a_ack <= v_a_ack;
       i_src_d_ack <= v_d_ack;
       i_src_rdy   <= v_rdy;
       i_src_d_rd  <= v_d_rd;
@@ -213,6 +224,13 @@ begin
          r_cnt <= 0;
          r_dvld <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
+         -- follow the decoder while nothing is outstanding (see header); the
+         -- enable is r_cnt only, so the decoder just feeds the D inputs
+         if r_cnt = 0 then
+            r_src_oh <= peripheral_sel_oh_i;
+            r_peripheral_sel_ix <= peripheral_sel_i;
+         end if;
+
          if fb_up_c2p_i.cyc = '0' then
             r_cnt <= 0;
             r_dvld <= '0';
@@ -225,17 +243,10 @@ begin
             end if;
             r_cnt <= v_cnt;
 
-            if i_aack = '1' then
-               r_peripheral_sel_ix <= peripheral_sel_i;
-            end if;
-
-            -- a new peripheral is only strobed when nothing is outstanding,
-            -- so nothing is still owed by the previous r_src_oh
-            if i_fwd = '1' then
-               r_src_oh <= peripheral_sel_oh_i;
-            end if;
-
-            if v_cnt /= 0 or i_fwd = '1' then
+            -- A_stb rather than i_fwd keeps the decoder out of r_dvld: when
+            -- r_cnt = 0 an A_stb is always forwarded, and when it is held
+            -- r_src_oh's peripheral owes nothing more (see header)
+            if v_cnt /= 0 or fb_up_c2p_i.A_stb = '1' then
                r_dvld <= '1';
             else
                r_dvld <= '0';
