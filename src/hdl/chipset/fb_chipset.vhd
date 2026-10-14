@@ -332,6 +332,9 @@ architecture rtl of fb_chipset is
    signal i_aeris_cpu_halt          : std_logic;                     -- cpu halt request out from aeris
 
 
+   signal i_fb_per_buf_c2p          : fb_con_o_per_i_t;
+   signal i_fb_per_buf_p2c          : fb_con_i_per_o_t;
+
 begin
 
 -- TODO: intercept case where a chipset controller connects direct to a chipset peripheral 
@@ -407,15 +410,34 @@ begin
       peripheral_sel_oh_o     => i_chipset_intcon_peripheral_sel_oh
    );
 
-   e_fb_intcon_chipset:entity work.fb_intcon_one_to_many
+   e_buf_per:fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => true,
+      G_REG_P2C            => true
+   ) 
+   port map (
+
+      fb_syscon_i          => fb_syscon_i,
+
+      -- upstream peripheral port connect to controller
+      fb_up_c2p_i          => fb_per_c2p_i,
+      fb_up_p2c_o          => fb_per_p2c_o,
+
+      -- downstream controller port connect to peripheral
+      fb_dn_c2p_o          => i_fb_per_buf_c2p,
+      fb_dn_p2c_i          => i_fb_per_buf_p2c
+
+   );
+
+   e_fb_intcon_chipset:fb_intcon_one_to_many
    generic map (
       G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
    )
    port map (
       fb_syscon_i       => fb_syscon_i,
 
-      fb_up_c2p_i       => fb_per_c2p_i,
-      fb_up_p2c_o       => fb_per_p2c_o,
+      fb_up_c2p_i       => i_fb_per_buf_c2p,
+      fb_up_p2c_o       => i_fb_per_buf_p2c,
 
       fb_dn_c2p_o       => i_per_c2p_chipset,
       fb_dn_p2c_i       => i_per_p2c_chipset,      

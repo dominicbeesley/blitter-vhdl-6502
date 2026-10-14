@@ -74,6 +74,7 @@ architecture rtl of fb_cpu_t65 is
 	signal i_t65_D_in			: std_logic_vector(7 downto 0);
 	signal i_t65_D_out		: std_logic_vector(7 downto 0);
 	signal r_t65_res_n		: std_logic;
+	signal r_d_wr_stb			: std_logic;
 
 
 	signal i_cpu65_nmi_n		: std_logic;
@@ -128,10 +129,23 @@ begin
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;
-	wrap_o.D_WR_stb 		<= (0 => r_clken_dly(2), others => '0');								-- TEST late Data strobe TODOPIPE: put this back to (0)
+	wrap_o.D_WR_stb 		<= (0 => r_d_wr_stb, others => '0');								-- TEST late Data strobe TODOPIPE: put this back to (0)
 	wrap_o.instr_fetch  	<= i_t65_SYNC;
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
+
+	p_d_wr_stb:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_d_wr_stb <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         if r_t65_clken = '1' then
+            r_d_wr_stb <= '0';                        -- end of cpu cycle
+         elsif r_clken_dly(1) = '1' and i_t65_RnW = '0' then
+            r_d_wr_stb <= '1';
+         end if;
+      end if;
+   end process;
 
 	p_reg_cken:process(fb_syscon_i)
 	begin

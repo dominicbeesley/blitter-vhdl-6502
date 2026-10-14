@@ -81,32 +81,39 @@ end fb_DMAC_int_sound;
 
 architecture Behavioral of fb_DMAC_int_sound is
 
-	constant PADBITS						: std_logic_vector(8-CEIL_LOG2(G_CHANNELS-1)-1 downto 0) := (others => '0');
-
-	type		per_state_t	is (idle, child_act, sel_wr_wait, vol_wr_wait);
-
 	type		snd_dat_arr is array(natural range <>) of signed(7 downto 0);
 
 	type		cha_addr_arr is array(natural range <>) of unsigned(23 downto 0);
 	type		cha_addr_offs_arr is array(natural range <>) of unsigned(15 downto 0);
 
+	-- local registers state machine
+	type		per_state_t	is (idle, act_rd, act_wr);
 	signal	r_per_state 				: per_state_t;
+   signal   r_D_ack  : std_logic;
+   signal   r_A      : std_logic_vector(3 downto 0);
+   signal   r_A_ack  : std_logic;
+   signal   r_D_rd   : std_logic_vector(7 downto 0);
 
+	-- note one more item in each of these array than channels for the local vol/sel regs
+	signal	i_o2m_fb_per_c2p			: fb_con_o_per_i_arr(G_CHANNELS downto 0);
+	signal	i_o2m_fb_per_p2c			: fb_con_i_per_o_arr(G_CHANNELS downto 0);
 
+	signal	i_local_c2p					: fb_con_o_per_i_t;
+	signal	i_local_p2c					: fb_con_i_per_o_t;
 
-	signal	i_cha_fb_per_c2p			: fb_con_o_per_i_arr(G_CHANNELS-1 downto 0);
-	signal	i_cha_fb_per_p2c			: fb_con_i_per_o_arr(G_CHANNELS-1 downto 0);
-
-	signal	r_cha_sel					: unsigned(CEIL_LOG2(G_CHANNELS-1)-1 downto 0);
+	-- local registers
+	signal	r_cha_sel					: unsigned(numbits(G_CHANNELS)-1 downto 0);
+	signal   r_cha_sel_oh				: std_logic_vector(G_CHANNELS-1 downto 0);
 	signal	r_ovr_vol					: unsigned(5 downto 0);
 
-	signal	i_reg_sel_sel		: std_logic;											-- 1 when current register access is for "F"
-	signal	i_reg_vol_sel		: std_logic;											-- 1 when current register access is for "F"
-	signal   i_reg_ack			: std_logic; -- 1 when cha_sel is being ack'd
-	signal   i_cyc_start			: std_logic;
-	signal   i_sel_per_p2c		: fb_con_i_per_o_t;
-	signal	i_reg_rd				: std_logic_vector(7 downto 0);
+	-- munged addresses
+	signal 	i_per_c2p_bele				: fb_con_o_per_i_t; -- adddresses adjusted for little/big-endian maps
 
+	-- select between channels/local registers
+	signal   i_addr_addr					: std_logic_vector(23 downto 0);
+	signal   i_addr_dec_ix				: unsigned(numbits(G_CHANNELS+1)-1 downto 0);
+	signal   i_addr_dec_oh				: std_logic_vector(G_CHANNELS downto 0);
+	constant C_LOCAL_OH : std_logic_vector(G_CHANNELS downto 0) := (G_CHANNELS => '1', others => '0');
 
 	signal	i_child_snd_dat			: snd_dat_arr(G_CHANNELS-1 downto 0);
 	signal	i_child_snd_dat_clken	: std_logic_vector(G_CHANNELS-1 downto 0);
@@ -121,7 +128,7 @@ architecture Behavioral of fb_DMAC_int_sound is
 
 	signal	r_reg_snd_clk				: std_logic_vector(5 downto 0);
 
-	type		con_state_t	is (idle, start, startcy, start2, act);
+	type		con_state_t	is (idle, start, startcy, act);
 	-- controller interface signals from channels
 	signal	r_con_state					: con_state_t;
 
@@ -141,13 +148,19 @@ architecture Behavioral of fb_DMAC_int_sound is
 	signal	i_cur_cha_addr				: unsigned(23 downto 0);
 	signal	i_cur_cha_addr_offs		: unsigned(15 downto 0);
 
-	signal	i_A							: std_logic_vector(23 downto 0); -- little/big endian flipped address
 begin
 
-	-- little endian address order swap
-	i_A(23 downto 4) <= (others => '0');
-	i_A(3 downto 0)  <= fb_per_c2p_i.A(3 downto 0) when fb_per_c2p_i.A(9) = '0' else -- big endian
-			 not fb_per_c2p_i.A(3 downto 0);
+	snd_dat_o <= r_tot_snd_dat;
+	snd_dat_l_o <= r_tot_snd_dat_l;
+	snd_dat_r_o <= r_tot_snd_dat_r;
+
+	p_be_le:process(all)
+	begin
+		i_per_c2p_bele <= fb_per_c2p_i;
+		if fb_per_c2p_i.A(9) = '1' then
+			i_per_c2p_bele.A(3 downto 0) <= not fb_per_c2p_i.A(3 downto 0);
+		end if;
+	end process;
 
 	p_snd_tgl:process(snd_clk_i)
 	begin
@@ -174,25 +187,6 @@ begin
 		end if;
 	end process;
 
---	snd_clken_sndclk_o <= i_snd_clken_sndclk;
----- generate a 3.5ish Mhz clock en from sound clock in 
---	-- the fbsyscon clock domain
---	e_flanc_snd2fb : entity work.flancter
---	generic map (
---		REGISTER_OUT => TRUE
---	)
---	port map (
---		rst_i_async	=> fb_syscon_i.rst,
---		
---		set_i_ck		=> snd_clk_i,
---		set_i			=> '1',
---		
---		rst_i_ck		=> fb_syscon_i.clk,
---		rst_i			=> '1',
---		
---		flag_out		=> i_snd_clken_sndclk
---	);
-
 	p_snd_add:process(fb_syscon_i)
 	variable v_snd_tot : signed(CEIL_LOG2(G_CHANNELS-1)+7 downto 0);
 	variable v_snd_tot_l : signed(CEIL_LOG2(G_CHANNELS-1)+7 downto 0);
@@ -218,98 +212,113 @@ begin
 		end if;
 	end process;
 
-	snd_dat_o <= r_tot_snd_dat;
-	snd_dat_l_o <= r_tot_snd_dat_l;
-	snd_dat_r_o <= r_tot_snd_dat_r;
+	e_per_mux:entity work.fb_intcon_one_to_many
+	generic map (
+      G_PERIPHERAL_COUNT   => G_CHANNELS + 1,
+      G_MAXOUT             => 1     -- no pipelining here
+   )
+   port map (
 
-	i_cyc_start <= '1' when fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' else '0';
+      fb_syscon_i          => fb_syscon_i,
 
-	i_reg_sel_sel <= '1' when i_A(3 downto 0) = A_CHA_SEL
-					else '0';
-	i_reg_vol_sel <= '1' when i_A(3 downto 0) = A_OVR_VOL
-					else '0';
-	i_reg_ack	 <= '1' when (
-											r_per_state = idle and 
-											i_cyc_start = '1' and 
-											(i_reg_sel_sel = '1' or i_reg_vol_sel = '1') and 
-											(fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1')
-									) -- can ack on idle
-								  or (
-								  			(r_per_state = sel_wr_wait or r_per_state = vol_wr_wait) and 
-								  			fb_per_c2p_i.D_wr_stb = '1'
-								  		) 
-					else '0';
+      -- peripheral port connect to controller
+      fb_up_c2p_i          => i_per_c2p_bele,
+      fb_up_p2c_o          => fb_per_p2c_o,
+
+      -- controller port connect to peripherals
+      fb_dn_c2p_o          => i_o2m_fb_per_c2p,
+      fb_dn_p2c_i          => i_o2m_fb_per_p2c,
+
+      -- peripheral select interface (see above)
+      peripheral_sel_addr_o   => i_addr_addr,
+      peripheral_sel_we_o     => open,
+      peripheral_sel_i        => i_addr_dec_ix,
+      peripheral_sel_oh_i     => i_addr_dec_oh
+   );
+
+	i_addr_dec_ix <= 	to_unsigned(G_CHANNELS, i_addr_dec_ix'length) 
+									when i_addr_addr(3 downto 0) = A_CHA_SEL or i_addr_addr(3 downto 0) = A_OVR_VOL else
+							resize(r_cha_sel, i_addr_dec_ix'length);
+	i_addr_dec_oh <=  C_LOCAL_OH when i_addr_addr(3 downto 0) = A_CHA_SEL or i_addr_addr(3 downto 0) = A_OVR_VOL else
+							"0" & r_cha_sel_oh;
 
 
-	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
-	variable v_do_write_sel_reg : boolean;
-	variable v_do_write_vol_reg : boolean;
+	i_o2m_fb_per_p2c(G_CHANNELS) <= i_local_p2c;
+	i_local_c2p <= i_o2m_fb_per_c2p(G_CHANNELS);
+
+   i_local_p2c.A_ack    <= r_A_ack;
+   i_local_p2c.D_rd     <= r_D_rd;
+   i_local_p2c.rdy      <= r_D_ack;
+   i_local_p2c.D_ack    <= r_D_ack;
+
+
+	p_per_state:process(fb_syscon_i)
+   variable v_dowrite: boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_rd <= (others => '0');
+         r_A <= (others => '0');
+
 			r_cha_sel <= (others => '0');
+			r_cha_sel_oh <= (0 => '1', others => '0');
 			r_ovr_vol <= (others => '1');
 		elsif rising_edge(fb_syscon_i.clk) then
-
-			v_do_write_sel_reg := false;
-			v_do_write_vol_reg := false;
+         v_dowrite := false;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
 
 			case r_per_state is
-				when idle =>
-					if i_cyc_start = '1' then
-						if i_reg_sel_sel = '1' then
-							if fb_per_c2p_i.we = '1' then
-								if fb_per_c2p_i.D_wr_stb = '1' then
-									v_do_write_sel_reg := true;
-								else
-									r_per_state <= sel_wr_wait;
-								end if;
-							end if;
-						elsif i_reg_vol_sel = '1' then
-							if fb_per_c2p_i.we = '1' then
-								if fb_per_c2p_i.D_wr_stb = '1' then
-									v_do_write_vol_reg := true;
-								else
-									r_per_state <= vol_wr_wait;
-								end if;
-							end if;
-						else
-							r_per_state <= child_act;
-						end if;					
-					end if;
-				when sel_wr_wait => 
-					if fb_per_c2p_i.D_wr_stb = '1' then
-						v_do_write_sel_reg := true;
-					end if;
-				when vol_wr_wait => 
-					if fb_per_c2p_i.D_wr_stb = '1' then
-						v_do_write_vol_reg := true;
-					end if;
-				when child_act =>
-					if i_sel_per_p2c.ack = '1' then
-						r_per_state <= idle;
-					end if;
-				when others =>
-					r_per_state <= idle;
+            when idle =>
+               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+               if (i_local_c2p.cyc = '1' and i_local_c2p.A_stb = '1') then
+                  r_A <= i_local_c2p.A(3 downto 0);
+                  r_A_ack <= '1';
+                  if i_local_c2p.we = '1' then
+                     r_per_state <= act_wr;
+                  else
+                     r_per_state <= act_rd;                     
+                  end if;
+               end if;              
+            when act_wr =>
+               if i_local_c2p.D_wr_stb = '1' and r_D_ack = '0' then
+                  v_dowrite := true;
+               end if;
+            when act_rd => 
+               if i_local_c2p.cyc = '1' then
+                  r_D_ack <= '1';                
+                  if r_A = A_CHA_SEL then
+                     r_D_rd <= std_logic_vector(resize(r_cha_sel, 8));
+                  else
+                     r_D_rd <= std_logic_vector(r_ovr_vol) & "00";
+                  end if;
+               end if;
+               r_per_state <= idle;
+            when others =>
+               r_per_state <= idle;
 			end case;
 
-			if v_do_write_sel_reg then
-				if G_CHANNELS > 1 then
-					r_cha_sel <= unsigned(fb_per_c2p_i.D_wr(numbits(G_CHANNELS)-1 downto 0));
-				end if;
-				r_per_state <= idle;				
-			end if;
-
-			if v_do_write_vol_reg then
-				r_ovr_vol <= unsigned(fb_per_c2p_i.D_wr(7 downto 2));
-				r_per_state <= idle;				
-			end if;
-
-
-			if fb_per_c2p_i.cyc = '0' then
-				r_per_state <= idle;
-			end if;
-
+			if i_local_c2p.cyc = '0' then
+            r_per_state <= idle;
+            r_A_ack <= '0';
+            r_D_ack <= '0';
+         elsif v_dowrite then
+            r_per_state <= idle;
+            r_D_ack <= '1';
+            if r_A = A_CHA_SEL then
+					if G_CHANNELS > 1 then
+						r_cha_sel <= unsigned(i_local_c2p.D_wr(numbits(G_CHANNELS)-1 downto 0));
+						r_cha_sel_oh <= (others => '0');
+						r_cha_sel_oh(to_integer(unsigned(i_local_c2p.D_wr(numbits(G_CHANNELS)-1 downto 0)))) <= '1';
+					else
+						r_cha_sel_oh <= "1";
+					end if;
+				elsif r_A = A_OVR_VOL then
+					r_ovr_vol <= unsigned(i_local_c2p.D_wr(7 downto 2));
+            end if;
+         end if;
 		end if;
 	end process;
 
@@ -325,8 +334,8 @@ begin
 		fb_syscon_i							=> fb_syscon_i,
 
 		-- peripheral interface (control registers)
-		fb_per_c2p_i						=> i_cha_fb_per_c2p(I),
-		fb_per_p2c_o						=> i_cha_fb_per_p2c(I),
+		fb_per_c2p_i						=> i_o2m_fb_per_c2p(I),
+		fb_per_p2c_o						=> i_o2m_fb_per_p2c(I),
 
 		-- controller interface (dma)
 		data_req_o							=> i_cha_data_req(I),
@@ -343,56 +352,12 @@ begin
 
 	end generate;
 
-	p_child_p2c:process(i_cha_fb_per_p2c, r_cha_sel)
-	begin
-			if G_CHANNELS = 1 then
-				i_sel_per_p2c <= i_cha_fb_per_p2c(0);
-			else
-				i_sel_per_p2c <= (
-					D_rd => (others => '1'),
-					ack => '1',
-					rdy => '1',
-					stall => '0'
-					);
-				for I in 0 to G_CHANNELS-1 loop
-					if r_cha_sel = I then
-						i_sel_per_p2c <= i_cha_fb_per_p2c(I);
-					end if;
-				end loop;
-			end if;
-	end process;
 
-	i_reg_rd <= std_logic_vector(r_ovr_vol) & "00" 		when fb_per_c2p_i.A(3 downto 0) = A_OVR_VOL else
-					PADBITS & std_logic_vector(r_cha_sel) 	when G_CHANNELS > 1 else 
-					(others => '0');
 
-	fb_per_p2c_o.D_rd <= i_reg_rd when r_per_state = idle else i_sel_per_p2c.D_rd;
-	fb_per_p2c_o.rdy <= i_reg_ack	 when r_per_state = idle or r_per_state = sel_wr_wait or r_per_state = vol_wr_wait else i_sel_per_p2c.rdy;
-	fb_per_p2c_o.ack <= i_reg_ack	 when r_per_state = idle or r_per_state = sel_wr_wait or r_per_state = vol_wr_wait else i_sel_per_p2c.ack;
-	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
-					
-	p_per_cha_sel_i:process(all)
-	begin
-		if G_CHANNELS = 1 then
-			i_cha_fb_per_c2p(0) <= fb_per_c2p_i;
-		else
-			for I in 0 to G_CHANNELS-1 loop
-				i_cha_fb_per_c2p(I) <= (
-					cyc => 		fb_per_c2p_i.cyc and b2s(I = r_cha_sel),
-					we => 		fb_per_c2p_i.we,
-					A => 			i_A,
-					A_stb => 	fb_per_c2p_i.A_stb,
-					D_wr => 		fb_per_c2p_i.D_wr,
-					D_wr_stb => fb_per_c2p_i.D_wr_stb,
-					rdy_ctdn => fb_per_c2p_i.rdy_ctdn
-				);
-			end loop;		
-		end if;
-	end process;
 
 					
 
-	i_cha_data_ack <= r_cha_data_cur_oh when r_con_state = act and fb_con_p2c_i.ack = '1' else
+	i_cha_data_ack <= r_cha_data_cur_oh when r_con_state = act and fb_con_p2c_i.D_ack = '1' else
 							(others => '0');
 
 	i_cha_data_data <= signed(fb_con_p2c_i.D_rd);
@@ -409,7 +374,6 @@ begin
 	fb_con_c2p_o.rdy_ctdn <= RDY_CTDN_MIN;
 
 	p_con_state: process(fb_syscon_i)
-	variable v_ix: unsigned(numbits(G_CHANNELS)-1 downto 0);
 	variable v_add16 : unsigned(16 downto 0);
 	begin
 		if fb_syscon_i.rst = '1' then
@@ -456,7 +420,7 @@ begin
 					r_con_state <= act;						
 				when act =>
 
-					if fb_con_p2c_i.stall = '0' then
+					if fb_con_p2c_i.A_ack = '1' then
 						r_con_a_stb <= '0';
 					end if;
 

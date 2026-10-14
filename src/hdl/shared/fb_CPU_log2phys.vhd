@@ -109,7 +109,7 @@ end fb_cpu_log2phys;
 
 architecture rtl of fb_cpu_log2phys is 
 
-	type state_t is (idle, wait_a_ack, wait_d_stb);
+	type state_t is (idle, wait_a_ack);
 
 	signal r_state 		: state_t;
 
@@ -124,8 +124,6 @@ architecture rtl of fb_cpu_log2phys is
 	signal r_D_wr						: std_logic_vector(7 downto 0);
 	signal r_rdy_ctdn					: t_rdy_ctdn;
 
-	signal r_done_r_d_wr_stb		: std_logic;
-
 	signal i_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 	signal r_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 
@@ -133,9 +131,11 @@ begin
 
 
 	fb_con_p2c_o.A_ack <= r_A_ack_host;
-	fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack;
-	fb_con_p2c_o.rdy <= fb_per_p2c_i.rdy;
 	fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
+ 	-- gate with r_cyc: our cyc to the peripheral drops a clock after the host's,
+   -- so a D_ack from the aborted cycle could otherwise reach the host
+   fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack and r_cyc;
+   fb_con_p2c_o.rdy   <= fb_per_p2c_i.rdy and r_cyc;
 
 	fb_per_c2p_o.cyc			<=	r_cyc;
 	fb_per_c2p_o.we			<=	r_we;
@@ -156,7 +156,6 @@ begin
 
 
 	p_state:process(fb_syscon_i)
-	variable v_accept_wr_stb:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -167,7 +166,6 @@ begin
 			r_D_wr <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MAX;
 			r_a_stb_client <= '0';
-			r_done_r_d_wr_stb <= '0';
 			r_A_ack_host <= '0';
 			r_throttle_act <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
@@ -175,14 +173,15 @@ begin
 			r_a_stb_client <= '0';
 			r_A_ack_host <= '0';
 
-			v_accept_wr_stb := false;
+			-- write data: registered copy of the host's, which it holds until
+         -- D_ack. Masked in the clock after the peripheral's D_ack (the host
+         -- hasn't seen it yet); the peripheral's guard covers the clock after.
+         r_D_wr_stb <= fb_con_c2p_i.D_wr_stb and not fb_per_p2c_i.D_ack;
+         r_D_wr     <= fb_con_c2p_i.D_wr;
 
 			case r_state is
 				when idle =>
-					r_done_r_d_wr_stb <= '0';
-					r_D_wr_stb <= '0';
 					if i_A_stb_host then
-						v_accept_wr_stb := true;
 						r_phys_A <= i_phys_A;
 						r_throttle_act <= i_throttle_act;
 						r_we <= fb_con_c2p_i.we;
@@ -193,49 +192,21 @@ begin
 						r_a_ack_host <= '1';
 					end if;
 				when wait_a_ack =>
-					v_accept_wr_stb := true;
 					if fb_per_p2c_i.A_ack = '0' then
 						r_a_stb_client <= '1';
 						r_State <= wait_a_ack;
 					else
-						if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
-							r_state <= idle;
-							r_done_r_d_wr_stb <= '0';
-							r_D_wr_stb <= '0';
-						else
-							r_state <= wait_d_stb;
-						end if;
-						r_D_wr_stb <= '0';
-					end if;
-				when wait_d_stb =>
-					v_accept_wr_stb := true;
-					r_D_wr_stb <= '0';
-					-- this gets cancelled in if below
-					if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
 						r_state <= idle;
-						r_done_r_d_wr_stb <= '0';
-						r_D_wr_stb <= '0';
 					end if;
 				when others =>
 					r_state <= idle;
 			end case;
-
-			if v_accept_wr_stb then
-				if r_done_r_d_wr_stb = '0' or r_state = idle then
-					if (r_D_wr_stb = '0' or r_state = idle) and fb_con_c2p_i.D_wr_stb = '1' then
-						r_D_wr_stb <= '1';
-						r_D_wr <= fb_con_c2p_i.D_WR;
-						r_done_r_d_wr_stb <= '1';
-					end if;
-				end if;
-			end if;
 
 			if fb_con_c2p_i.cyc = '0' then
 				r_A_stb_client <= '0';
 				r_cyc <= '0';
 				r_state <= idle;
 				r_D_wr_stb <= '0';
-				r_done_r_d_wr_stb <= '0';
 			end if;
 
 		end if;
