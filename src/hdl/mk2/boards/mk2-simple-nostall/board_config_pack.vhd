@@ -61,7 +61,7 @@ package board_config_pack is
 	constant G_INCL_CHIPSET				: boolean := true;
 	constant G_INCL_CS_DMA				: boolean := true;
 	constant G_DMA_CHANNELS				: natural := 2;
-	constant G_INCL_CS_BLIT				: boolean := false;
+	constant G_INCL_CS_BLIT				: boolean := true;
 	constant G_INCL_CS_SND				: boolean := true;
 	constant G_SND_CHANNELS				: natural := 4;
 	constant G_INCL_CS_AERIS			: boolean := false;

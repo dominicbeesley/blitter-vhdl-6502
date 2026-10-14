@@ -127,8 +127,8 @@ set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
 set blitpaths2 [ get_registers "$blit|*" ]
 
-set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
-set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
+#set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
+#set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
 
 
 #aeris - not thoroughly checked!

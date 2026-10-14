@@ -148,6 +148,9 @@ set_global_assignment -name VHDL_FILE "mk2blit-simple-nostall.vhd"
 set_global_assignment -name VHDL_FILE ../../../shared/address_decode_chipset.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset_pack.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/fb_chipset.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/blit_types.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/blit_int.vhd
+set_global_assignment -name VHDL_FILE ../../../chipset/blit_addr.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_sound_cha.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd

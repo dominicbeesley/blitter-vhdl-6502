@@ -39,6 +39,7 @@
 -- Revision: 
 -- Revision 0.01 - File Created
 -- Revision 0.02 - line mode 
+--          Oct 2026 Fishbone: A_ack/D_ack replace stall/ack on both interfaces
 -- Additional Comments: 
 -- 
 ----------------------------------------------------------------------------------
@@ -193,14 +194,16 @@ architecture Behavioral of fb_dmac_blit is
 	TYPE 		state_cha_A 		IS (sMemAccA, sShiftA1, sShiftA2, sShiftA3, sShiftA4, sShiftA5, sShiftA6, sShiftA7);
 
 	-- peripheral interface sigs
-	type		per_state_t			is (idle, wait_d_stb, rd, rd0);
+	type		per_state_t			is (idle, act_wr, act_rd0, act_rd);
 
 	signal	r_per_state				: per_state_t;
 	signal	r_per_addr				: std_logic_vector(9 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
-	signal	r_per_D_wr_stb			: std_logic;
-	signal 	r_per_ack				: std_logic;
+	signal	r_per_D_wr_stb			: std_logic;							-- one clock pulse: commit r_per_D_wr to r_per_addr
+	signal	r_per_A_ack				: std_logic;
+	signal 	r_per_D_ack				: std_logic;
+	signal	r_per_D_rd				: std_logic_vector(7 downto 0);
 
 	-- controller cycle sigs
 	type		con_state_type is (idle, waitack);
@@ -608,7 +611,7 @@ begin
 			case r_blit_state is
 				when sMemAccA|sMemAccB|sMemAccC|sMemAccE|sMemAccD => --|sMemAccD_min|sMemAccC_min =>
 					-- memory access states - wait for controller ack, special case for memaccd when not actually execing
-					if (r_con_state = waitack and fb_con_p2c_i.ack = '1') or (r_blit_state = sMemAccD and r_BLTCON_execD = '0') then 
+					if (r_con_state = waitack and fb_con_p2c_i.D_ack = '1') or (r_blit_state = sMemAccD and r_BLTCON_execD = '0') then 
 						r_accA_state_cur <= i_accA_state_next;
 						r_blit_state <= i_state_next;
 						r_clken_addr_calc_start <= '1';
@@ -798,7 +801,7 @@ begin
 				r_y_count <= unsigned(r_height);
 				r_cha_A_first <= true;
 				cpu_halt_o <= '1';
-			elsif (fb_con_p2c_i.ack = '1' or r_BLTCON_execD = '0') and r_blit_state = sMemAccD then
+			elsif (fb_con_p2c_i.D_ack = '1' or r_BLTCON_execD = '0') and r_blit_state = sMemAccD then
 				if r_row_countdn = 0 then
 					r_row_countdn <= unsigned(r_width);
 					r_cha_A_first <= true;
@@ -811,7 +814,7 @@ begin
 				end if;
 			elsif r_blit_state = sFinish then
 				cpu_halt_o <= '0';		
-			elsif (fb_con_p2c_i.ack = '1' and r_blit_state = sMemAccA) or (i_accA_state_next = sMemAccA and r_BLTCON_execA = '0') then
+			elsif (fb_con_p2c_i.D_ack = '1' and r_blit_state = sMemAccA) or (i_accA_state_next = sMemAccA and r_BLTCON_execA = '0') then
 				i_cha_A_last_mask <= i_cha_A_last;	
 			end if;
 		end if;
@@ -892,7 +895,7 @@ begin
 
 
 			--TODO: 8MHz
-			if (r_con_state = waitack and fb_con_p2c_i.ack = '1') 
+			if (r_con_state = waitack and fb_con_p2c_i.D_ack = '1') 
 			or ((r_blit_state = sMemAccC_min or r_blit_state = sMemAccD_min) and
 				 i_next_addr_ready = '1'
 				) then
@@ -1254,9 +1257,9 @@ begin
 							end case;
 						end if;
 					when waitack =>
-						if fb_con_p2c_i.stall = '0' then
-							fb_con_c2p_o.a_stb <= '0';
-							fb_con_c2p_o.d_wr_stb <= '0';
+						-- A_stb is held until A_ack; D_wr_stb (writes) until D_ack below
+						if fb_con_p2c_i.A_ack = '1' then
+							fb_con_c2p_o.A_stb <= '0';
 						end if;
 					when others => 
 						r_con_state <= idle;
@@ -1271,9 +1274,12 @@ begin
 							);
 				end case;
 
-				if fb_con_p2c_i.ack = '1' then
+				-- one transaction per cycle: D_ack ends it
+				if r_con_state = waitack and fb_con_p2c_i.D_ack = '1' then
 					r_con_state <= idle;
 					fb_con_c2p_o.cyc <= '0';
+					fb_con_c2p_o.A_stb <= '0';
+					fb_con_c2p_o.D_wr_stb <= '0';
 				end if;
 
 
@@ -1282,63 +1288,73 @@ begin
 	end process;
 
 
-	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
-	variable v_write:boolean;
+	-- peripheral (register) interface: write data is captured with its D_ack and
+	-- committed to the registers by p_regs_wr in the next clock (r_per_D_wr_stb),
+	-- whatever cyc does. Reads take an extra clock (act_rd0) to give the large
+	-- register read mux (p_regs_rd) a clock to settle from r_per_addr.
+	p_per_state:process(fb_syscon_i)
+	variable v_dowrite:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_ack <= '0';
+			r_per_A_ack <= '0';
+			r_per_D_ack <= '0';
 			r_per_addr <= (others => '0');
 			r_per_D_wr <= (others => '0');
 			r_per_D_wr_stb <= '0';
+			r_per_D_rd <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			r_per_ack <= '0';
+			v_dowrite := false;
+			r_per_A_ack <= '0';
+			r_per_D_ack <= '0';
 			r_per_D_wr_stb <= '0';
-			v_write := false;
+
 			case r_per_state is
 				when idle =>
-					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
+					-- no need to check for previous r_per_A_ack cycle here as we can only go to act_wr, act_rd0 so no double ack
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
 						r_per_addr <= fb_per_c2p_i.A(9) & '0' & fb_per_c2p_i.A(7 downto 0);
-						if fb_per_c2p_i.we = '0' then
-							r_per_state <= rd0;
+						r_per_A_ack <= '1';
+						if fb_per_c2p_i.we = '1' then
+							r_per_state <= act_wr;
 						else
-							v_write := true;
+							r_per_state <= act_rd0;
 						end if;
 					end if;
-				when wait_d_stb =>
-					v_write := true;
-				when rd0 =>
-					r_per_state <= rd;
-				when rd =>
-					fb_per_p2c_o.D_rd <= i_per_D_rd;
-					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-						r_per_state <= idle;
-						r_per_ack <= '1';
+				when act_wr =>
+					if fb_per_c2p_i.D_wr_stb = '1' and r_per_D_ack = '0' then
+						v_dowrite := true;
 					end if;
-				when others => null;
-			end case;
-
-			if v_write then
-				if fb_per_c2p_i.D_wr_stb = '1' then
-					r_per_D_wr <= fb_per_c2p_i.D_wr;
-					r_per_D_wr_stb <= '1';
+				when act_rd0 =>
+					r_per_state <= act_rd;
+				when act_rd =>
+					if fb_per_c2p_i.cyc = '1' then
+						r_per_D_ack <= '1';
+						r_per_D_rd <= i_per_D_rd;
+					end if;
+						r_per_state <= idle;
+				when others =>
 					r_per_state <= idle;
-					r_per_ack <= '1';
-				else
-					r_per_state <= wait_d_stb;
-				end if;
-			end if;
+			end case;
 
 			if fb_per_c2p_i.cyc = '0' then
 				r_per_state <= idle;
+				r_per_A_ack <= '0';
+				r_per_D_ack <= '0';
+			elsif v_dowrite then
+				r_per_state <= idle;
+				r_per_D_ack <= '1';
+				r_per_D_wr <= fb_per_c2p_i.D_wr;
+				r_per_D_wr_stb <= '1';
 			end if;
 
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy <= r_per_ack;
-	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
+	fb_per_p2c_o.A_ack <= r_per_A_ack;
+	fb_per_p2c_o.D_rd <= r_per_D_rd;
+	fb_per_p2c_o.rdy <= r_per_D_ack;
+	fb_per_p2c_o.D_ack <= r_per_D_ack;
 
 end Behavioral;
 
