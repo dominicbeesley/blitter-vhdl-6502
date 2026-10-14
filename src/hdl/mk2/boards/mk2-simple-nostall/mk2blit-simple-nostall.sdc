@@ -141,24 +141,8 @@ set blit_addr_out [get_registers "$blit|blit_addr:addr_gen|r_addr_out*"]
 set_multicycle_path -setup -end -from $blit_addr_src -to $blit_addr_out 2
 set_multicycle_path -hold  -end -from $blit_addr_src -to $blit_addr_out 1
 
-#aeris - not thoroughly checked!
 
-set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
-set aeris_src_regs [get_registers "$aeris|r_op*"] 
-set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
-set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 1
+# NOTE: the Aeries no longer needs multi_cycle_paths!
 
 
 #**************************************************************

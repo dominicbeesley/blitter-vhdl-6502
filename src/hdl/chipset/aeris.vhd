@@ -34,7 +34,7 @@
 -- 
 -- Create Date:    	25/8/2019 
 -- Design Name: 
--- Module Name:    	aeris - Behavioral 
+-- Module Name:     fb_dmac_aeris
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -43,6 +43,8 @@
 -- Dependencies: 
 --
 -- Revision: 
+--				Oct 2026 Fishbone: A_ack/D_ack replace stall/ack on both the
+--				peripheral (registers) and controller (program fetch/move) ports
 -- Additional Comments: 
 -- 
 library IEEE;
@@ -94,12 +96,14 @@ architecture Behavioral of fb_dmac_aeris is
    attribute syn_preserve : integer;
 
 	-- peripheral interface sigs
-	type		per_strate_t		is (idle, wait_d_stb, rd);
+	type		per_state_t			is (idle, act_wr, act_rd);
 
-	signal	r_per_state				: per_strate_t;
+	signal	r_per_state				: per_state_t;
 	signal	r_per_addr				: std_logic_vector(4 downto 0);
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
-	signal 	r_per_ack				: std_logic;
+	signal 	r_per_D_rd				: std_logic_vector(7 downto 0);
+	signal 	r_per_A_ack				: std_logic;
+	signal 	r_per_D_ack				: std_logic;
 	signal 	r_per_D_wr				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr_stb			: std_logic;
 
@@ -170,8 +174,6 @@ architecture Behavioral of fb_dmac_aeris is
 	signal	tgl_vs_edge_pgm: bit := '0';
 	signal	ack_vs_edge_pgm: bit := '0';
 	signal	r_ack_hs_waith	: bit := '0';
-
-	signal	r_con_cyc_ack	: std_logic;
 
 	signal	i_ctr_match		: std_logic;		-- '1' when ctrs are >= wait/skip spec
 
@@ -272,15 +274,20 @@ begin
 --==============================================================================
 
 	b_cop_match_next:block
-		signal r_ctr_wr_ack : std_logic := '0';
-		signal r_ctr_wr_req : std_logic := '0';
-		signal r_ctr_wr_ix  : unsigned(numbits(N_COUNTERS)-1 downto 0) := (others => '0');
-		signal r_ctr_wr_val : std_logic_vector(7 downto 0) := (others => '0');
+		signal r_ctr_wr_ack 	: std_logic := '0';
+		signal r_ctr_wr_req 	: std_logic := '0';
+		signal r_ctr_wr_ix  	: unsigned(numbits(N_COUNTERS)-1 downto 0) := (others => '0');
+		signal r_ctr_wr_val 	: std_logic_vector(7 downto 0) := (others => '0');
 
-		signal r_ptr_wr_ack : std_logic := '0';
-		signal r_ptr_wr_req : std_logic := '0';
-		signal r_ptr_wr_ix  : unsigned(numbits(N_POINTERS)-1 downto 0) := (others => '0');
-		signal r_ptr_wr_val : std_logic_vector(15 downto 0) := (others => '0');
+		signal r_ptr_wr_ack 	: std_logic := '0';
+		signal r_ptr_wr_req 	: std_logic := '0';
+		signal r_ptr_wr_ix  	: unsigned(numbits(N_POINTERS)-1 downto 0) := (others => '0');
+		signal r_ptr_wr_val 	: std_logic_vector(15 downto 0) := (others => '0');
+
+		-- new read early pointers to avoid indexing in PLAY, RET, ADDx, DSz
+		signal  r_ptr_rd	  	: std_logic_vector(15 downto 0);        -- r_pointers(r_op(2:0)), read in decode
+		signal  r_ctr_rd	  	: std_logic_vector(7 downto 0);         -- r_counters(r_op(2:0)), read in decode
+
 	begin
 	
 		p_cop_mach_next:process(fb_syscon_i)
@@ -326,10 +333,10 @@ begin
 
 --				r_pointers <= (others => (others => '0')); -- allow these to initialise on release cycle
 --				r_counters <= (others => (others => '0')); -- allow these to initialise on release cycle
-
+				r_ptr_rd <= (others => '0');
+				r_ctr_rd <= (others => '0');
 
 			elsif rising_edge(fb_syscon_i.clk) then 
-				r_con_cyc_ack <= '0';
 
 				if r_ctr_wr_ack /= r_ctr_wr_req then
 					r_ctr_wr_ack <= r_ctr_wr_req;
@@ -349,8 +356,12 @@ begin
 					r_play_started <= '0';
 					r_cpu_halt<= '0';	
 				elsif 
-						(	r_state = idle 
-							or (r_state = op_fetch and fb_con_p2c_i.ack = '1') 
+						-- restart only between bus transactions: from idle once p_con_state
+						-- has finished any transaction started before the program was
+						-- stopped, or with the D_ack that ends an op fetch (p_con_state ends
+						-- that cycle on the same D_ack)
+						(	(r_state = idle and r_con_state = idle)
+							or (r_state = op_fetch and fb_con_p2c_i.D_ack = '1') 
 							or (r_state = exec and r_op(7 downto 4) = x"0") -- wait
 							or (r_state = exec and r_op(7 downto 4) = x"F") -- waith
 						)
@@ -361,7 +372,6 @@ begin
 					r_op_skip <= '0';
 					r_play_started <= '0';
 					r_cpu_halt<= '0';	
-					r_con_cyc_ack <= '1'; -- force a finish of any controller cycle
 				else
 					case r_state is
 						when idle =>
@@ -369,7 +379,7 @@ begin
 							r_state <= idle;
 						when op_fetch | play_op_fetch =>
 							-- wait for opcode fetch to complete then go to decode
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								if r_state = play_op_fetch then
 									if r_play_16 = '1' then
 										r_state <= arg_0_fetch; -- always a move16!
@@ -382,11 +392,13 @@ begin
 									r_op <= fb_con_p2c_i.D_rd;
 								end if;
 								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-								r_con_cyc_ack <= '1';
 								r_ack_hs_waith <= tgl_hs_edge;
 							end if;
 						when decode => 
 							r_play_started <= '0';
+							-- read the op's pointer/counter here so exec starts from registers
+        					r_ptr_rd <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
+        					r_ctr_rd <= r_counters(to_integer(unsigned(r_op(2 downto 0))));
 							if r_op(7 downto 6) = "00" then
 								-- WAIT, SKIP, MOVE16, get all args
 								r_state <= arg_0_fetch;
@@ -401,25 +413,22 @@ begin
 								r_state <= exec;
 							end if;
 						when arg_0_fetch =>
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								r_arg_0 <= fb_con_p2c_i.D_rd;
 								r_state <= arg_1_fetch;
 								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-								r_con_cyc_ack <= '1';
 							end if;
 						when arg_1_fetch =>
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								r_arg_1 <= fb_con_p2c_i.D_rd;
 								r_state <= arg_2_fetch;
 								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-								r_con_cyc_ack <= '1';
 							end if;
 						when arg_2_fetch =>
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								r_arg_2 <= fb_con_p2c_i.D_rd;
 								r_state <= exec;
 								r_pc <= std_logic_vector(unsigned(r_pc) + 1);
-								r_con_cyc_ack <= '1';
 							end if;
 						when exec =>
 							if r_op_skip = '1' then
@@ -473,7 +482,7 @@ begin
 									r_state <= play_op_fetch;		
 									--swap PC and pointer for duration of the play
 									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))), r_pc);
-									r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
+									r_pc <= r_ptr_rd;
 								else
 									if r_play_16 = '1' then
 										r_state <= exec_move16_0;
@@ -481,24 +490,26 @@ begin
 										r_state <= exec_move;
 									end if;
 								end if;
-							elsif r_op(7 downto 4) = x"A" then -- ADDx
+							elsif r_op(7 downto 4) = x"A" then 
+								-- ADDx
 								if r_op(3) = '0' then
 									COUNTER_WRITE(to_integer(unsigned(r_op(2 downto 0))),
 										std_logic_vector(
-											unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) 
+											unsigned(r_ctr_rd) 
 											+ unsigned(r_arg_2)
 										)
 									);
 								else
 									POINTER_WRITE(to_integer(unsigned(r_op(2 downto 0))),
 										std_logic_vector(
-												unsigned(r_pointers(to_integer(unsigned(r_op(2 downto 0))))) 
+												unsigned(r_ptr_rd) 
 												+ unsigned(resize(signed(r_arg_2),16))
 											)
 									);
 								end if;
 								r_state <= op_fetch;
-							elsif r_op(7 downto 3) = "10110" then -- MOVECC/MOVEPP
+							elsif r_op(7 downto 3) = "10110" then
+								-- MOVECC/MOVEPP
 								if r_op(0) = '0' then
 									COUNTER_WRITE(
 										to_integer(unsigned(r_arg_2(6 downto 4))),
@@ -511,25 +522,29 @@ begin
 									);
 								end if;
 								r_state <= op_fetch;
-							elsif r_op(7 downto 3) = "11000" then -- SYNC/UNSYNC
+							elsif r_op(7 downto 3) = "11000" then 
+								-- SYNC/UNSYNC
 								r_cpu_halt <= r_op(0);
 								r_state <= op_fetch;
-							elsif r_op(7 downto 4) = x"D" then -- RET
-								r_pc <= r_pointers(to_integer(unsigned(r_op(2 downto 0))));
+							elsif r_op(7 downto 4) = x"D" then
+								-- RET
+								r_pc <= r_ptr_rd;
 								r_state <= op_fetch;
-							elsif r_op(7 downto 4) = x"E" then -- DSZ
-								if unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) = 1 then
+							elsif r_op(7 downto 4) = x"E" then 
+								-- DSZ
+								if unsigned(r_ctr_rd) = 1 then
 									r_op_skip <= '1';
 								end if;
 								COUNTER_WRITE(
 										to_integer(unsigned(r_op(2 downto 0))),
 										std_logic_vector(
-											unsigned(r_counters(to_integer(unsigned(r_op(2 downto 0))))) 
+											unsigned(r_ctr_rd) 
 											- 1
 										)
 									);
 								r_state <= op_fetch;
-							elsif r_op(7 downto 0) = x"F0" then -- WAITH
+							elsif r_op(7 downto 0) = x"F0" then 
+								-- WAITH
 								if r_ack_hs_waith /= tgl_hs_edge then
 									r_state <= op_fetch;
 								end if;
@@ -539,32 +554,29 @@ begin
 							end if;
 						when exec_move =>
 							-- MOVE
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								if r_play_started = '1' then
 									r_state <= play_next;
 								else
 									r_state <= op_fetch;
 								end if;
-								r_con_cyc_ack <= '1';
 							end if;
 						when exec_move16_0 =>
 							-- MOVE16
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								r_state <= exec_move16_1;
-								r_con_cyc_ack <= '1';
 								if r_op(4) = '0' then
 									r_arg_1 <= std_logic_vector(unsigned(r_arg_1) + 1);
 								end if;
 							end if;
 						when exec_move16_1 =>
 							-- MOVE
-							if fb_con_p2c_i.ack = '1' then
+							if fb_con_p2c_i.D_ack = '1' then
 								if r_play_started = '1' then
 									r_state <= play_next;
 								else
 									r_state <= op_fetch;
 								end if;
-								r_con_cyc_ack <= '1';
 							end if;
 						when play_next =>
 							r_play_ctr <= std_logic_vector(unsigned(r_play_ctr) - 1);
@@ -615,6 +627,7 @@ begin
 					when idle => 
 						case r_state is 
 							when op_fetch | play_op_fetch | arg_0_fetch | arg_1_fetch | arg_2_fetch =>
+								r_con_state <= waitack;
 								fb_con_c2p_o <= (
 									cyc => '1',
 									we => '0',
@@ -625,6 +638,7 @@ begin
 									rdy_ctdn => RDY_CTDN_MIN
 									);
 							when exec_move | exec_move16_0 | exec_move16_1 =>
+								r_con_state <= waitack;
 								fb_con_c2p_o <= (
 									cyc => '1',
 									we => '1',
@@ -646,9 +660,9 @@ begin
 									);
 						end case;	
 					when waitack =>
-						if fb_con_p2c_i.stall = '0' then
-							fb_con_c2p_o.a_stb <= '0';
-							fb_con_c2p_o.d_wr_stb <= '0';
+						-- A_stb is held until A_ack; D_wr_stb (writes) until D_ack below
+						if fb_con_p2c_i.A_ack = '1' then
+							fb_con_c2p_o.A_stb <= '0';
 						end if;
 					when others => 
 						r_con_state <= idle;
@@ -663,9 +677,14 @@ begin
 							);
 				end case;
 
-				if r_con_cyc_ack = '1' then
+				-- one transaction per cycle: D_ack ends it. p_cop_mach_next moves
+				-- r_state on with the same D_ack, so the next transaction (if any)
+				-- starts from idle in the next clock
+				if r_con_state = waitack and fb_con_p2c_i.D_ack = '1' then
 					r_con_state <= idle;
 					fb_con_c2p_o.cyc <= '0';
+					fb_con_c2p_o.A_stb <= '0';
+					fb_con_c2p_o.D_wr_stb <= '0';
 				end if;
 
 			end if;
@@ -725,61 +744,70 @@ begin
 		end case;
 	end process;
 
-	p_per_state:process(fb_syscon_i, fb_per_c2p_i)
-	variable v_write:boolean;
+	-- peripheral (register) interface: write data is captured with its D_ack and
+	-- committed to the registers by p_regs_wr in the next clock (r_per_D_wr_stb),
+	-- whatever cyc does
+	p_per_state:process(fb_syscon_i)
+	variable v_dowrite:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_per_state <= idle;
-			r_per_ack <= '0';
+			r_per_A_ack <= '0';
+			r_per_D_ack <= '0';
 			r_per_addr <= (others => '0');
 			r_per_D_wr <= (others => '0');
 			r_per_D_wr_stb <= '0';
+			r_per_D_rd <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			r_per_ack <= '0';
+			v_dowrite := false;
+			r_per_A_ack <= '0';
+			r_per_D_ack <= '0';
 			r_per_D_wr_stb <= '0';
-			v_write := false;
+
 			case r_per_state is
 				when idle =>
-					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.a_stb = '1' then
-						r_per_addr <= fb_per_c2p_i.A(9) & '0' & fb_per_c2p_i.A(2 downto 0);
-						if fb_per_c2p_i.we = '0' then
-							r_per_state <= rd;
+					-- no need to check for previous r_per_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
+						r_per_addr <= fb_per_c2p_i.A(9) & fb_per_c2p_i.A(3 downto 0);
+						r_per_A_ack <= '1';
+						if fb_per_c2p_i.we = '1' then
+							r_per_state <= act_wr;
 						else
-							v_write := true;
+							r_per_state <= act_rd;
 						end if;
 					end if;
-				when wait_d_stb =>
-					v_write := true;
-				when rd =>
-					fb_per_p2c_o.D_rd <= i_per_D_rd;
-					if fb_per_c2p_i.we = '0' or fb_per_c2p_i.D_wr_stb = '1' then
-						r_per_state <= idle;
-						r_per_ack <= '1';
+				when act_wr =>
+					if fb_per_c2p_i.D_wr_stb = '1' and r_per_D_ack = '0' then
+						v_dowrite := true;
 					end if;
-				when others => null;
-			end case;
-
-			if v_write then
-				if fb_per_c2p_i.D_wr_stb = '1' then
-					r_per_D_wr <= fb_per_c2p_i.D_wr;
-					r_per_D_wr_stb <= '1';
+				when act_rd =>
+					if fb_per_c2p_i.cyc = '1' then
+						r_per_D_ack <= '1';
+						r_per_D_rd <= i_per_D_rd;
+					end if;
+						r_per_state <= idle;
+				when others =>
 					r_per_state <= idle;
-					r_per_ack <= '1';
-				else
-					r_per_state <= wait_d_stb;
-				end if;
-			end if;
+			end case;
 
 			if fb_per_c2p_i.cyc = '0' then
 				r_per_state <= idle;
+				r_per_A_ack <= '0';
+				r_per_D_ack <= '0';
+			elsif v_dowrite then
+				r_per_state <= idle;
+				r_per_D_ack <= '1';
+				r_per_D_wr <= fb_per_c2p_i.D_wr;
+				r_per_D_wr_stb <= '1';
 			end if;
 
 		end if;
 	end process;
 
-	fb_per_p2c_o.rdy <= r_per_ack;
-	fb_per_p2c_o.ack <= r_per_ack;
-	fb_per_p2c_o.stall <= '0' when r_per_state = idle else '1';
+	fb_per_p2c_o.A_ack <= r_per_A_ack;
+	fb_per_p2c_o.D_rd <= r_per_D_rd;
+	fb_per_p2c_o.rdy <= r_per_D_ack;
+	fb_per_p2c_o.D_ack <= r_per_D_ack;
 
 	dbg_state_o <= "0000" when r_state = idle else
 		"0001" when r_state = op_fetch else

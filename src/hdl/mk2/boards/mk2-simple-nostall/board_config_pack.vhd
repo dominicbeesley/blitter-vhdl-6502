@@ -64,7 +64,7 @@ package board_config_pack is
 	constant G_INCL_CS_BLIT				: boolean := true;
 	constant G_INCL_CS_SND				: boolean := true;
 	constant G_SND_CHANNELS				: natural := 4;
-	constant G_INCL_CS_AERIS			: boolean := false;
+	constant G_INCL_CS_AERIS			: boolean := true;
 	constant G_INCL_CS_EEPROM			: boolean := true;
 	constant G_INCL_CS_SDCARD			: boolean := false;		-- TODO: figure out if there are pins available?
 	constant G_INCL_LED_ARR						: boolean := false;
@@ -102,8 +102,8 @@ package board_config_pack is
 
 	constant CONTROLLER_COUNT			: natural := 2;
 	-- note 0 is highest priority!
-	constant MAS_NO_CPU					: natural := 0;
-	constant MAS_NO_CHIPSET				: natural := 1; -- not used 
+	constant MAS_NO_CPU					: natural := 1;
+	constant MAS_NO_CHIPSET				: natural := 0; 
 
 end board_config_pack;
 
