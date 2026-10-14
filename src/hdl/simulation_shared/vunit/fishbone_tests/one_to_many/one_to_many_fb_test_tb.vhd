@@ -371,10 +371,19 @@ begin
    -- Passive protocol checks on both sides of the interconnect
    -- --------------------------------------------------------------------------
    p_check:process(i_fb_syscon)
+   type t_nat_arr is array (natural range <>) of natural;
+
    variable v_n_a_stb   : natural;
    variable v_n_d_wr_stb: natural;
    variable vr_a_acks   : natural := 0;   -- A_acks passed up this cycle
    variable vr_d_acks   : natural := 0;   -- D_acks passed up this cycle
+
+    -- per-peripheral: D_acks never exceed A_acks in a cycle (a peripheral
+   -- that took a D_wr_stb for a write it hadn't accepted would D_ack without
+   -- a matching A_ack), and at most one peripheral D_acks in any clock
+   variable vr_per_a_acks : t_nat_arr(0 to PERIPHERAL_COUNT-1) := (others => 0);
+   variable vr_per_d_acks : t_nat_arr(0 to PERIPHERAL_COUNT-1) := (others => 0);
+   variable v_n_d_ack     : natural;
    begin
       if rising_edge(i_fb_syscon.clk) and i_fb_syscon.rst = '0' then
 
@@ -392,7 +401,28 @@ begin
             end if;
          end loop;
          assert v_n_a_stb <= 1 report "A_stb to more than one peripheral" severity error;
-         assert v_n_d_wr_stb <= 1 report "D_wr_stb to more than one peripheral" severity error;
+-- The following assert removed as we now deliberately broadcast this!
+--         assert v_n_d_wr_stb <= 1 report "D_wr_stb to more than one peripheral" severity error;
+
+         v_n_d_ack := 0;
+         for k in 0 to PERIPHERAL_COUNT-1 loop
+            if i_fb_per_c2p(k).cyc = '1' then
+               if i_fb_per_p2c(k).A_ack = '1' then
+                  vr_per_a_acks(k) := vr_per_a_acks(k) + 1;
+               end if;
+               if i_fb_per_p2c(k).D_ack = '1' then
+                  vr_per_d_acks(k) := vr_per_d_acks(k) + 1;
+                  v_n_d_ack := v_n_d_ack + 1;
+               end if;
+               assert vr_per_d_acks(k) <= vr_per_a_acks(k)
+                  report "peripheral " & integer'image(k) & " D_ack without a matching A_ack" severity error;
+            else
+               vr_per_a_acks(k) := 0;
+               vr_per_d_acks(k) := 0;
+            end if;
+         end loop;
+         assert v_n_d_ack <= 1 report "D_ack from more than one peripheral" severity error;
+
 
          -- controller side
          if i_fb_con_c2p.cyc = '1' then

@@ -39,6 +39,9 @@
 --                   15/10/2026 return path (D_ack, D_rd, rdy) steered only by
 --                   registers (r_src_oh, r_dvld), taking the address decoder
 --                   and the r_cnt compare out of it for timing closure
+--                   15/10/2026 cyc and D_wr_stb broadcast to all peripherals
+--                   (only A_stb is steered), taking the decoder out of the
+--                   peripherals' write data paths for timing closure
 -- Additional Comments:
 --
 --   * A_stb is forwarded only to the addressed peripheral, and that
@@ -56,13 +59,16 @@
 --     with A_ack without putting the address decoder in the return path.
 --     r_dvld says a D_ack may be due (something outstanding, or A_stb
 --     forwarded last clock).
---   * D_wr_stb goes to the peripheral being strobed (live select, so data
---     coincident with A_stb isn't delayed) and to r_src_oh while a D_ack
---     may be due. A peripheral ignores D_wr_stb unless it has a write
---     waiting for data, so the extra copy is harmless.
+--   * cyc and D_wr_stb are broadcast to every peripheral; only A_stb is
+--     steered. The spec requires a peripheral to ignore D_wr_stb unless it
+--     has accepted a write still waiting for data, and to use cyc only with
+--     A_stb or to see an abort. A different peripheral is only strobed once
+--     r_cnt is zero, at least a clock after the previous owner's last D_ack,
+--     so it can't take a stale strobe meant for the previous owner.
 --   * The one-hot select steers the strobes and muxes the returned signals;
 --     the index is only used for the "different peripheral" compare.
---   * A, we, D_wr and rdy_ctdn are broadcast to every peripheral.
+--   * A, we, D_wr, rdy_ctdn (and cyc, D_wr_stb, above) are broadcast to
+--     every peripheral.
 --   * Dropping cyc aborts the cycle and clears r_cnt.
 --
 -- A_ack and D_ack stay registered at the peripheral; this block only muxes
@@ -116,7 +122,6 @@ architecture rtl of fb_intcon_one_to_many is
    signal i_hold     : std_logic;    -- don't forward A_stb yet
    signal i_fwd      : std_logic;    -- A_stb forwarded to the selected peripheral
    signal i_src_oh   : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);  -- data phase peripheral (registered)
-   signal i_dst_oh   : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);  -- cyc/D_wr_stb steering (live + registered)
    signal i_dvld     : std_logic;    -- i_src_oh may respond
    signal i_sel_a_ack: std_logic;    -- A_ack from the selected peripheral
    signal i_src_d_ack: std_logic;    -- D_ack from the data phase peripheral
@@ -148,15 +153,9 @@ begin
 
    -- --------------------------------------------------------------------------
    -- Data phase: the return path is steered by registers only (see header).
-   -- The forward steering of cyc and D_wr_stb also uses the live select, so
-   -- that D_wr_stb coincident with A_stb reaches the peripheral at once.
    -- --------------------------------------------------------------------------
    i_src_oh <= r_src_oh;
    i_dvld   <= fb_up_c2p_i.cyc and r_dvld;
-
-   g_dst : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
-      i_dst_oh(k) <= (i_fwd and peripheral_sel_oh_i(k)) or (i_dvld and r_src_oh(k));
-   end generate;
 
    i_dack <= i_dvld and i_src_d_ack;
 
@@ -190,14 +189,14 @@ begin
    end process;
 
    -- --------------------------------------------------------------------------
-   -- Per-peripheral signals. cyc goes to the peripheral being strobed and to
-   -- the owner of outstanding transactions; A, we, D_wr and rdy_ctdn are
-   -- broadcast.
+   -- Per-peripheral signals. Only A_stb is steered, to the addressed
+   -- peripheral; cyc, A, we, D_wr, D_wr_stb and rdy_ctdn are broadcast (see
+   -- header).
    -- --------------------------------------------------------------------------
    g_c2p : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
-      fb_dn_c2p_o(k).cyc      <= i_dst_oh(k);
+      fb_dn_c2p_o(k).cyc      <= fb_up_c2p_i.cyc;
       fb_dn_c2p_o(k).A_stb    <= i_fwd and peripheral_sel_oh_i(k);
-      fb_dn_c2p_o(k).D_wr_stb <= i_dst_oh(k) and fb_up_c2p_i.D_wr_stb;
+      fb_dn_c2p_o(k).D_wr_stb <= fb_up_c2p_i.cyc and fb_up_c2p_i.D_wr_stb;
       fb_dn_c2p_o(k).A        <= fb_up_c2p_i.A;
       fb_dn_c2p_o(k).we       <= fb_up_c2p_i.we;
       fb_dn_c2p_o(k).D_wr     <= fb_up_c2p_i.D_wr;
