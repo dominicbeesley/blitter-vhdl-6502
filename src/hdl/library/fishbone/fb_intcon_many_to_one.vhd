@@ -186,10 +186,15 @@ end generate;
 					if fb_dn_p2c_i.A_ack = '1' then
 						r_a_stb_per <= '0';
 					end if;
-					if v_free and fb_up_c2p_i(to_integer(r_cyc_grant_ix)).A_stb = '1' and r_A_ack = '0' then
-						r_a_stb_per <= '1';
+					-- A and we are loaded whenever the slot is free, not just with
+					-- A_stb, keeping A_stb out of their enable (as fb_intcon_buffer).
+					-- Safe: downstream A_stb is low, or its A_ack is arriving.
+					if v_free then
 						r_c2p_A <= fb_up_c2p_i(to_integer(r_cyc_grant_ix)).A;
 						r_c2p_we <= fb_up_c2p_i(to_integer(r_cyc_grant_ix)).we;
+					end if;
+					if v_free and fb_up_c2p_i(to_integer(r_cyc_grant_ix)).A_stb = '1' and r_A_ack = '0' then
+						r_a_stb_per <= '1';
 						r_A_ack <= '1';
 					end if;
 					-- write data: registered copy, mask the strobe in the clock after

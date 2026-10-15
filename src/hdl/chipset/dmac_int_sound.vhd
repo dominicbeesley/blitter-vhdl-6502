@@ -297,9 +297,10 @@ begin
 
 			case r_per_state is
             when idle =>
+            	-- capture early for less muxing
+               r_A <= i_local_c2p.A(3 downto 0);
                -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
                if (i_local_c2p.cyc = '1' and i_local_c2p.A_stb = '1') then
-                  r_A <= i_local_c2p.A(3 downto 0);
                   r_A_ack <= '1';
                   if i_local_c2p.we = '1' then
                      r_per_state <= act_wr;

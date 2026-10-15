@@ -178,14 +178,23 @@ begin
          -- hasn't seen it yet); the peripheral's guard covers the clock after.
          r_D_wr_stb <= fb_con_c2p_i.D_wr_stb and not fb_per_p2c_i.D_ack;
          r_D_wr     <= fb_con_c2p_i.D_wr;
+         -- rdy_ctdn is constant for the host's whole cyc, and r_cyc drops at
+         -- the same edge the host's cyc is first seen low, so copying it every
+         -- clock keeps it constant for our cyc too, with no enable needed
+         -- (as fb_intcon_buffer)
+         r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
 			case r_state is
 				when idle =>
+					-- address and we follow the host every idle clock, so the host
+					-- A_stb doesn't drive their enable; only the value at the
+					-- accepting edge is used, and A_stb to the peripheral is low here.
+					-- r_throttle_act stays on the strobe: throttle_act_o is used by
+					-- the CPU wrapper after this transaction is accepted.
+					r_phys_A <= i_phys_A;
+					r_we <= fb_con_c2p_i.we;
 					if i_A_stb_host then
-						r_phys_A <= i_phys_A;
 						r_throttle_act <= i_throttle_act;
-						r_we <= fb_con_c2p_i.we;
-						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 						r_cyc <= '1';
 						r_state <= wait_a_ack;
 						r_a_stb_client <= '1';

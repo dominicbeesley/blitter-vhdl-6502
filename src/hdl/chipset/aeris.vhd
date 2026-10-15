@@ -766,9 +766,10 @@ begin
 
 			case r_per_state is
 				when idle =>
+            	-- capture early for less muxing
+					r_per_addr <= fb_per_c2p_i.A(9) & fb_per_c2p_i.A(3 downto 0);
 					-- no need to check for previous r_per_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
 					if fb_per_c2p_i.cyc = '1' and fb_per_c2p_i.A_stb = '1' then
-						r_per_addr <= fb_per_c2p_i.A(9) & fb_per_c2p_i.A(3 downto 0);
 						r_per_A_ack <= '1';
 						if fb_per_c2p_i.we = '1' then
 							r_per_state <= act_wr;

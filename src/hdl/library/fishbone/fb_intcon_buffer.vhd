@@ -130,10 +130,16 @@ begin
             if fb_dn_p2c_i.A_ack = '1' then
                r_full <= '0';
             end if;
+            -- A and we are loaded whenever the slot is free, not just with
+            -- A_stb, so A_stb (often from an upstream decoder) doesn't drive
+            -- their enable. Safe: downstream A_stb is low, or its A_ack is
+            -- arriving, so the downstream peripheral no longer needs them.
+            if v_free then
+               r_dn_A <= fb_up_c2p_i.A;
+               r_dn_we <= fb_up_c2p_i.we;
+            end if;
             if v_free and fb_up_c2p_i.A_stb = '1' and r_up_A_ack = '0' then
                r_full <= '1'; 
-               r_dn_A <= fb_up_c2p_i.A; 
-               r_dn_we <= fb_up_c2p_i.we;
                r_up_A_ack <= '1';
             end if;
             -- write data: registered copy, both stale clocks masked
