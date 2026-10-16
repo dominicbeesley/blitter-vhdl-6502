@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    	16/04/2019
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component
+-- Module Name:    	fb_CPU
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -481,9 +481,13 @@ architecture rtl of fb_cpu is
 	signal r_cpu_run_ix_act		: natural range 0 to C_IX_CPU_COUNT-1;				-- index of currently selected hard OR soft cpu
 
 
-	signal i_fb_c2p_log			: fb_con_o_per_i_t;
-	signal i_fb_p2c_log			: fb_con_i_per_o_t;
-	signal i_fb_c2p_extra_instr_fetch : std_logic;		-- extra signal to qualify a cycle as an instruction fetch
+	-- logical to physical address mapping, between e_burst and e_log2phys
+	signal i_log2phys_A_log			: std_logic_vector(23 downto 0);		-- logical address to map
+	signal i_log2phys_A_phys		: std_logic_vector(23 downto 0);		-- mapped address
+	signal i_log2phys_instr_fetch	: std_logic;								-- the address to map is an instruction fetch
+	signal i_log2phys_A_stb			: std_logic;								-- the mapped address starts a transaction at the next edge
+	signal i_log2phys_throttle_act: std_logic;								-- throttle for the address being mapped
+	signal r_throttle_act			: std_logic;								-- throttle for the current transaction
 
 	-----------------------------------------------------------------------------
 	-- cpu mapping signals
@@ -514,8 +518,6 @@ architecture rtl of fb_cpu is
 
 	signal r_nmi_meta					: std_logic_vector(G_NMI_META_LEVELS-1 downto 0);
 
-
-	signal i_throttle_act			: std_logic;
 
 	signal r_do_sys_via_block		: std_logic;		-- per cpu enable
 
@@ -679,7 +681,8 @@ begin
 	e_burst:entity work.fb_cpu_con_burst
 	generic map (
 		SIM 				=> SIM,
-		G_BYTELANES 	=> C_CPU_BYTELANES
+		G_BYTELANES 	=> C_CPU_BYTELANES,
+		G_MAP_ADDRESS	=> true
 		)
 	port map (
 		
@@ -705,76 +708,89 @@ begin
 	
 		fb_syscon_i			=> fb_syscon_i,
 	
-		fb_con_c2p_o		=> i_fb_c2p_log,
-		fb_con_p2c_i		=> i_fb_p2c_log,
+		fb_con_c2p_o		=> fb_c2p_o,
+		fb_con_p2c_i		=> fb_p2c_i,
 
-		fb_con_c2pinstr_fetch_o		=> i_fb_c2p_extra_instr_fetch
+		fb_con_c2pinstr_fetch_o		=> open,
+
+		-- logical to physical address mapping (e_log2phys)
+		map_A_logical_o	=> i_log2phys_A_log,
+		map_instr_fetch_o	=> i_log2phys_instr_fetch,
+		map_A_stb_o			=> i_log2phys_A_stb,
+		map_A_physical_i	=> i_log2phys_A_phys
 	
 	);
 	
 
 	-- ================================================================================================ --
-	-- log2phys and VIA throttle stage
+	-- logical to physical address mapping and VIA throttle, done in e_burst's
+	-- address register (was a separate registered stage, fb_cpu_log2phys)
 	-- ================================================================================================ --
 
-	e_log:entity work.fb_cpu_log2phys
+	e_log2phys:entity work.log2phys
 	generic map (
 		SIM			=> SIM,
-		CLOCKSPEED	=> CLOCKSPEED,
 		G_MK3			=> G_MK3,
 		G_C20K		=> false
 	)
 	port map(
-
 		fb_syscon_i								=> fb_syscon_i,
 
-		-- controller interface from the cpu
-		fb_con_c2p_i							=> i_fb_c2p_log,
-		fb_con_p2c_o							=> i_fb_p2c_log,
-		fb_con_extra_instr_fetch_i			=> i_fb_c2p_extra_instr_fetch,
-
-		fb_per_c2p_o							=> fb_c2p_o,
-		fb_per_p2c_i							=> fb_p2c_i,
-
-		-- per cpu config
+		-- config
+		cfg_swram_enable_i				=> cfg_swram_enable_i,
+		cfg_map0n1_i						=> cfg_map0n1_i,
+		cfg_mosram_i						=> cfg_mosram_i,
 		cfg_sys_via_block_i					=> r_do_sys_via_block,
-		
-		-- system type
 		cfg_sys_type_i							=> cfg_sys_type_i,
-		cfg_swram_enable_i					=> cfg_swram_enable_i,
-		cfg_mosram_i							=> cfg_mosram_i,
-		cfg_map0n1_i							=> cfg_map0n1_i,
 
 		-- extra memory map control signals
 		sys_ROMPG_i								=> sys_ROMPG_i,
 		JIM_page_i								=> JIM_page_i,
-		JIM_en_i									=> JIM_en_i,
-
-		-- memctl signals
-		swmos_shadow_i							=> swmos_shadow_i,
+		jim_en_i								=> JIM_en_i,
 		turbo_lo_mask_i						=> turbo_lo_mask_i,
-		rom_autohazel_map_i					=> rom_autohazel_map_i,
 
 		throttle_mos_i							=> throttle_mos_i,
+		rom_throttle_map_i				=> rom_throttle_map_i,
 		throttle_all_i							=> throttle_all_i,
-		rom_throttle_map_i					=> rom_throttle_map_i,
-		throttle_act_o							=> i_throttle_act,
+		throttle_act_o						=> i_log2phys_throttle_act,
 
-		-- noice signals
-		noice_debug_shadow_i					=> noice_debug_shadow_i,
+		rom_autohazel_map_i				=> rom_autohazel_map_i,
 
 		-- 65816/model C extras
 		window_65816_i							=> window_65816_i,
 		window_65816_wr_en_i					=> window_65816_wr_en_i,		
 
-		-- preboot
-		preboot_i								=> i_preboot
+		-- memctl signals
+		swmos_shadow_i						=> swmos_shadow_i,
 
+		-- noice signals
+		noice_debug_shadow_i				=> noice_debug_shadow_i,
+
+		-- preboot
+		preboot_i							=> i_preboot,
+
+		-- address to map, from e_burst
+		A_i									=> i_log2phys_A_log,
+		instruction_fetch_i				=> i_log2phys_instr_fetch,
+		A_stb_i								=> i_log2phys_A_stb,
+		A_o									=> i_log2phys_A_phys
 	);
 
+	-- the throttle for the transaction just started, held until the next one
+	-- (the wrappers sample it later in the CPU cycle)
+	p_throttle_act:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_throttle_act <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			if i_log2phys_A_stb = '1' then
+				r_throttle_act <= i_log2phys_throttle_act;
+			end if;
+		end if;
+	end process;
 
 	i_preboot <= (r_cpu_en_t65 or r_cpu_en_65816) and preboot_i;
-	throttle_act_o <= i_throttle_act;
+	throttle_act_o <= r_throttle_act;
 
 
 	-- ================================================================================================ --
@@ -1071,7 +1087,7 @@ END GENERATE;
 	i_wrap_i.noice_debug_nmi_n 		<= noice_debug_nmi_n_i;
 	i_wrap_i.noice_debug_shadow 		<= noice_debug_shadow_i;
 	i_wrap_i.noice_debug_inhibit_cpu <= noice_debug_inhibit_cpu_i;
-	i_wrap_i.throttle_cpu_2MHz 		<= i_throttle_act;
+	i_wrap_i.throttle_cpu_2MHz 		<= r_throttle_act;
 	i_wrap_i.cpu_2MHz_phi2_clken 		<= cpu_2MHz_phi2_clken_i;
 	i_wrap_i.nmi_n 						<= r_nmi;
 	i_wrap_i.irq_n 						<= irq_n_i;
