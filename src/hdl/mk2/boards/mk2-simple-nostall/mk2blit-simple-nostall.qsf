@@ -90,7 +90,7 @@ source ../../simulation/sim_tb/sim_t65.qsf
 
 source ../../simulation/sim_tb/sim_65816.qsf
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_tb -section_id eda_simulation
 
 
 set_global_assignment -name SDC_FILE "mk2blit-simple-nostall.sdc"
@@ -106,6 +106,7 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_buffer.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_null.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_inferred_mem_altera.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd

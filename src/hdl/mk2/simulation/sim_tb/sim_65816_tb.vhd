@@ -27,8 +27,8 @@ use IEEE.NUMERIC_STD.ALL;
 entity sim_65816_tb is
 generic (
 
---	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
-   G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/MOS120.M"
+	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/build/blit-bringup2-rom0.rom"
+--   G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm/MOS120.M"
 	);
 end sim_65816_tb;
 
@@ -136,9 +136,9 @@ e_SYS:entity work.sim_SYS_tb
 	i_CFG <= (
 	0				=>	'1',	-- don't use t65 core
 	3 downto 1 	=> "001", -- 65816 @ 8MHz
-	4 				=> '0', -- swromx on
+	4 				=> '1', -- swromx off
 	7				=> '1', -- debug button
-	8				=> '0', -- onboard swrom/ram disable
+	8				=> '1', -- onboard swrom/ram enable
 	14				=> i_vsync,
 	15				=> i_hsync,
 	others		=> 'H');
@@ -148,7 +148,8 @@ e_SYS:entity work.sim_SYS_tb
 
 	e_daughter: entity work.mk2blit
 	generic map (
-		SIM => true
+		SIM => true,
+		PROJECT_ROOT => "../.."
 	)
 	port map (
 		CLK_48M_i							=> i_EXT_CLK_48M,

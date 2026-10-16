@@ -43,32 +43,24 @@ package fb_intcon_pack is
 
 component fb_intcon_shared is
    generic (
-      SIM                        : boolean := false;
-      G_CONTROLLER_COUNT         : POSITIVE;
-      G_PERIPHERAL_COUNT         : POSITIVE;
-      G_ARB_ROUND_ROBIN          : boolean := false;
-      G_REGISTER_CONTROLLER_P2C  : boolean := false;
-      G_REGISTER_CONTROLLER_P2C_BEFORE_MUX : boolean := false;
-      G_REGISTER_PERIPHERAL_C2P  : boolean := false
+      G_CONTROLLER_COUNT : positive;
+      G_PERIPHERAL_COUNT : positive;
+      G_ARB_ROUND_ROBIN  : boolean  := false;
+      G_MAXOUT           : positive := 15
    );
    port (
+      fb_syscon_i           : in  fb_syscon_t;
 
-      fb_syscon_i          : in  fb_syscon_t;
+      fb_up_c2p_i           : in  fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
+      fb_up_p2c_o           : out fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
 
-      -- peripheral port connect to controllers
-      fb_con_c2p_i         : in  fb_con_o_per_i_arr(G_CONTROLLER_COUNT-1 downto 0);
-      fb_con_p2c_o         : out fb_con_i_per_o_arr(G_CONTROLLER_COUNT-1 downto 0);
+      fb_dn_c2p_o           : out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
+      fb_dn_p2c_i           : in  fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
 
-      -- controller port connecto to peripherals
-      fb_per_c2p_o         : out fb_con_o_per_i_arr(G_PERIPHERAL_COUNT-1 downto 0);
-      fb_per_p2c_i         : in  fb_con_i_per_o_arr(G_PERIPHERAL_COUNT-1 downto 0);
-
-      -- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
-      peripheral_sel_addr_o      : out fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(23 downto 0);
-      peripheral_sel_we_o        : out std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
-      peripheral_sel_i           : in fb_arr_unsigned(G_CONTROLLER_COUNT-1 downto 0)(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- address decoded selected peripheral
-      peripheral_sel_oh_i        : in fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)      -- address decoded selected peripherals as one-hot
-
+      peripheral_sel_addr_o : out fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(23 downto 0);
+      peripheral_sel_we_o   : out std_logic_vector(G_CONTROLLER_COUNT-1 downto 0);
+      peripheral_sel_i      : in  fb_arr_unsigned(G_CONTROLLER_COUNT-1 downto 0)(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
+      peripheral_sel_oh_i   : in  fb_arr_std_logic_vector(G_CONTROLLER_COUNT-1 downto 0)(G_PERIPHERAL_COUNT-1 downto 0)
    );
 end component;
 

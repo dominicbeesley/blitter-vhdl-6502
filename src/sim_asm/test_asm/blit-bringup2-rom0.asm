@@ -573,12 +573,23 @@ mos_handle_res:
 	bne	@tlp1
 
 
+	; turn off throttling 
+	lda	$FE36
+	pha
+	and	#$3F
+	sta	$FE36
+
+
 	; test BBC slow bus bodge
 	sta	sheila_SYSVIA_orb
 	lda	sheila_SYSVIA_ora
 	lda	#$5A
 	sta	sheila_SYSVIA_orb
 	sta	sheila_SYSVIA_orb
+
+	pla
+	sta	$FE36
+
 
 	; quick chipram r/w
 	lda	#$D1
