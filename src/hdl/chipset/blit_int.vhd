@@ -39,7 +39,8 @@
 -- Revision: 
 -- Revision 0.01 - File Created
 -- Revision 0.02 - line mode 
---          Oct 2026 Fishbone: A_ack/D_ack replace stall/ack on both interfaces
+-- Revision 0.03 - Oct 2026 Fishbone: A_ack/D_ack replace stall/ack on both interfaces
+-- Revision 0.04 - precompute line end wrap and stride terms to aid timing closure
 -- Additional Comments: 
 -- 
 ----------------------------------------------------------------------------------
@@ -277,7 +278,20 @@ architecture Behavioral of fb_dmac_blit is
 	signal i_next_addr_blit			: std_logic_vector(15 downto 0);
 	signal i_next_addr_ready		: std_logic;
 	signal i_cur_mode_cell			: boolean;
-	signal i_cur_width				: unsigned(7 downto 0);
+	signal i_cur_delta_wrap			: std_logic_vector(15 downto 0);		-- blit_addr operands for the current channel
+	signal i_cur_stride_m7			: std_logic_vector(15 downto 0);
+
+	-- blit_addr operands, precomputed per channel from stride/width/cell, which
+	-- are constant during a blit (r_width changes in line mode, which never
+	-- uses SPR_WRAP, the only direction that uses the width terms)
+	signal r_dA_wrap					: std_logic_vector(15 downto 0);		-- A is never cell mode
+	signal r_dB_wrap					: std_logic_vector(15 downto 0);
+	signal r_dC_wrap					: std_logic_vector(15 downto 0);
+	signal r_dD_wrap					: std_logic_vector(15 downto 0);
+	signal r_dB_stride_m7			: std_logic_vector(15 downto 0);
+	signal r_dC_stride_m7			: std_logic_vector(15 downto 0);
+	signal r_dD_stride_m7			: std_logic_vector(15 downto 0);
+	signal r_d_wrap_mid				: std_logic_vector(15 downto 0);		-- cell, B/C/D (r_width)
 	signal i_cur_direction			: blit_addr_direction;
 	signal i_cur_wrap					: std_logic;
 	signal i_cur_min					: std_logic_vector(15 downto 0);
@@ -310,6 +324,8 @@ begin
 		, r_bltcon_mode
 		, r_cha_a_data
 		, r_BLTCON_wrap, r_cha_D_addr_min, r_cha_D_addr_max
+		, r_dA_wrap, r_dB_wrap, r_dC_wrap, r_dD_wrap
+		, r_dB_stride_m7, r_dC_stride_m7, r_dD_stride_m7
 		)
 		
 		impure function fnDirection(
@@ -371,7 +387,8 @@ begin
 				i_cur_addr <= r_cha_A_addr(15 downto 0);
 				i_cur_direction <= fnDirection(i_cha_A_last,false);
 				i_cur_mode_cell <= false;
-				i_cur_width <= i_cha_A_width;
+				i_cur_delta_wrap <= r_dA_wrap;
+				i_cur_stride_m7 <= (others => '-');		-- A is never cell mode
 				i_cur_wrap <= '0';
 				i_cur_min <= (others => '-');
 				i_cur_max <= (others => '-');
@@ -380,7 +397,8 @@ begin
 				i_cur_addr <= r_cha_B_addr(15 downto 0);
 				i_cur_mode_cell <= r_BLTCON_cellB = '1';
 				i_cur_direction <= fnDirection(i_main_last, r_blit_state = sMemAccB);
-				i_cur_width <= r_width;
+				i_cur_delta_wrap <= r_dB_wrap;
+				i_cur_stride_m7 <= r_dB_stride_m7;
 				i_cur_wrap <= '0';
 				i_cur_min <= (others => '-');
 				i_cur_max <= (others => '-');
@@ -389,7 +407,8 @@ begin
 				i_cur_addr <= r_cha_C_addr(15 downto 0);
 				i_cur_mode_cell <= r_BLTCON_cell = '1';
 				i_cur_direction <= fnDirection(i_main_last, r_blit_state = sMemAccC);
-				i_cur_width <= r_width;
+				i_cur_delta_wrap <= r_dC_wrap;
+				i_cur_stride_m7 <= r_dC_stride_m7;
 				i_cur_wrap <= r_BLTCON_wrap;
 				i_cur_min <= r_cha_D_addr_min(15 downto 0);
 				i_cur_max <= r_cha_D_addr_max(15 downto 0);
@@ -398,7 +417,8 @@ begin
 				i_cur_addr <= r_cha_D_addr(15 downto 0);
 				i_cur_mode_cell <= r_BLTCON_cell = '1';
 				i_cur_direction <= fnDirection(i_main_last, r_blit_state = sMemAccD);
-				i_cur_width <= r_width;
+				i_cur_delta_wrap <= r_dD_wrap;
+				i_cur_stride_m7 <= r_dD_stride_m7;
 				i_cur_wrap <= r_BLTCON_wrap;
 				i_cur_min <= r_cha_D_addr_min(15 downto 0);
 				i_cur_max <= r_cha_D_addr_max(15 downto 0);
@@ -407,7 +427,8 @@ begin
 				i_cur_addr <= r_cha_E_addr(15 downto 0);
 				i_cur_mode_cell <= false;
 				i_cur_direction <= CHA_E;
-				i_cur_width <= r_width;
+				i_cur_delta_wrap <= (others => '-');
+				i_cur_stride_m7 <= (others => '-');
 				i_cur_wrap <= '0';
 				i_cur_min <= (others => '-');
 				i_cur_max <= (others => '-');
@@ -416,7 +437,8 @@ begin
 				i_cur_addr <= (others => '0');
 				i_cur_mode_cell <= false;
 				i_cur_direction <= NONE;
-				i_cur_width <= r_width;
+				i_cur_delta_wrap <= (others => '-');
+				i_cur_stride_m7 <= (others => '-');
 				i_cur_wrap <= '0';
 				i_cur_min <= (others => '-');
 				i_cur_max <= (others => '-');
@@ -426,7 +448,6 @@ begin
 	addr_gen: entity work.blit_addr
 	generic map (
 		ram_A_hi => 15,
-		width_hi => 7,
 		stride_hi => G_STRIDE_HIGH					
 	)
 	port map (
@@ -438,12 +459,59 @@ begin
 		addr_out => i_next_addr_blit,
 		addr_ready => i_next_addr_ready,
 		bytes_stride => i_cur_stride,
-		width => i_cur_width,
+		delta_wrap => i_cur_delta_wrap,
+		delta_wrap_mid => r_d_wrap_mid,
+		stride_m7 => i_cur_stride_m7,
 		direction => i_cur_direction,
 		wrap => i_cur_wrap,
 		addr_min => i_cur_min,
 		addr_max => i_cur_max
 	); 
+
+	-- blit_addr operands per channel (see the declarations). Registered every
+	-- clock: stride/width/cell are set by register writes well before a blit
+	-- starts, so a clock's lag doesn't matter
+	p_addr_deltas:process(fb_syscon_i)
+	variable v_w8 : unsigned(15 downto 0);
+	function f_stride(s : std_logic_vector) return unsigned is
+	begin
+		return unsigned(resize(signed(s), 16));
+	end function;
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_dA_wrap <= (others => '0');
+			r_dB_wrap <= (others => '0');
+			r_dC_wrap <= (others => '0');
+			r_dD_wrap <= (others => '0');
+			r_dB_stride_m7 <= (others => '0');
+			r_dC_stride_m7 <= (others => '0');
+			r_dD_stride_m7 <= (others => '0');
+			r_d_wrap_mid <= (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
+			v_w8 := resize(r_width & "000", 16);
+
+			r_dA_wrap <= std_logic_vector(f_stride(r_cha_A_stride(G_STRIDE_HIGH downto 0)) - resize(i_cha_A_width, 16));
+
+			if r_BLTCON_cellB = '1' then
+				r_dB_wrap <= std_logic_vector(f_stride(r_cha_B_stride) - v_w8 - 7);
+			else
+				r_dB_wrap <= std_logic_vector(f_stride(r_cha_B_stride) - resize(r_width, 16));
+			end if;
+			if r_BLTCON_cell = '1' then
+				r_dC_wrap <= std_logic_vector(f_stride(r_cha_C_stride) - v_w8 - 7);
+				r_dD_wrap <= std_logic_vector(f_stride(r_cha_D_stride) - v_w8 - 7);
+			else
+				r_dC_wrap <= std_logic_vector(f_stride(r_cha_C_stride) - resize(r_width, 16));
+				r_dD_wrap <= std_logic_vector(f_stride(r_cha_D_stride) - resize(r_width, 16));
+			end if;
+
+			r_dB_stride_m7 <= std_logic_vector(f_stride(r_cha_B_stride) - 7);
+			r_dC_stride_m7 <= std_logic_vector(f_stride(r_cha_C_stride) - 7);
+			r_dD_stride_m7 <= std_logic_vector(f_stride(r_cha_D_stride) - 7);
+
+			r_d_wrap_mid <= std_logic_vector(1 - v_w8);
+		end if;
+	end process;
 	
 
 	p_cha_A_shift1: process(r_cha_A_data_pre, r_cha_A_data, r_shift_A)
