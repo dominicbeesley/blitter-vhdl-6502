@@ -111,6 +111,8 @@ begin
 	         r_A_ack <= '0';
 				case r_state is
 					when idle =>
+						-- capture early for less muxing
+                  r_A <= fb_c2p_i.A(7 downto 0);
 	               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
 						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
 	                     if fb_c2p_i.we = '1' then
@@ -118,7 +120,6 @@ begin
 								else
 	                        r_state <= act_rd;
 								end if;
-	                     r_A <= fb_c2p_i.A(7 downto 0);
 	                     r_A_ack <= '1';
 							end if;
 	               when act_wr =>
