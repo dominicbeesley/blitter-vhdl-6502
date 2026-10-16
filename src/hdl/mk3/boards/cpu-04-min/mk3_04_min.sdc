@@ -138,9 +138,6 @@ set t65regs  [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
 set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
-set_multicycle_path -setup -end -from  $t65regs 2
-set_multicycle_path -hold -end -from  $t65regs 1
-
 
 #**************************************************************
 # Set Maximum Delay

@@ -90,7 +90,7 @@ source ../../simulation/sim_tb/sim_t65.qsf
 
 source ../../simulation/sim_tb/sim_65816.qsf
 
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_65816_tb -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH sim_t65_tb -section_id eda_simulation
 
 
 set_global_assignment -name SDC_FILE "mk2blit-simple-nostall.sdc"
@@ -135,7 +135,6 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_Z80_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_Z80.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_68008_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_68008.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_con_burst.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd

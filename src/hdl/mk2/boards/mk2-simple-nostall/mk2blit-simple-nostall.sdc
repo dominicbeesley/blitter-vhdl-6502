@@ -118,9 +118,6 @@ set t65regs  [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
 set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
-#set_multicycle_path -setup -end -from  $t65regs 2
-#set_multicycle_path -hold -end -from  $t65regs 1
-
 #blitter addr calcs multi-cycles
 
 set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}

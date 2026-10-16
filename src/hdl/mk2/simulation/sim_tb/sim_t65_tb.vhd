@@ -132,7 +132,8 @@ e_SYS:entity work.sim_SYS_tb
 
    e_daughter: entity work.mk2blit
    generic map (
-      SIM => true
+		SIM => true,
+		PROJECT_ROOT => "../.."
    )
    port map (
       CLK_48M_i                     => i_EXT_CLK_48M,

@@ -69,10 +69,14 @@ end fb_cpu_t65;
 architecture rtl of fb_cpu_t65 is
 
 	signal i_t65_RnW			: std_logic;
+	signal r_t65_RnW			: std_logic;
 	signal i_t65_SYNC			: std_logic;
+	signal r_t65_SYNC			: std_logic;
 	signal i_t65_A	 			: std_logic_vector(23 downto 0);
+	signal r_t65_A	 			: std_logic_vector(15 downto 0);
 	signal i_t65_D_in			: std_logic_vector(7 downto 0);
 	signal i_t65_D_out		: std_logic_vector(7 downto 0);
+	signal r_t65_D_out		: std_logic_vector(7 downto 0);
 	signal r_t65_res_n		: std_logic;
 	signal r_d_wr_stb			: std_logic;
 
@@ -86,8 +90,9 @@ architecture rtl of fb_cpu_t65 is
 	signal r_cpu_clk			: std_logic_vector(CLK_BITS - 1 downto 0) := (others => '0');
 
 	-- r_t65_clken '1' for one cycle to complete a cycle/start another
-	signal r_t65_clken		: std_logic := '0';
-	signal r_t65_clken_h		: std_logic := '0'; -- clocken masked by halt
+	signal i_t65_clken_next : std_logic;
+	signal r_t65_clken		: std_logic;
+	signal r_t65_clken_h		: std_logic; -- clocken masked by halt
 	-- the above signal delayed
 	signal r_clken_dly		: std_logic_vector(CLKEN_DLY_MAX downto 0) := (0 => '1', others => '0');
 
@@ -97,7 +102,7 @@ architecture rtl of fb_cpu_t65 is
 	signal i_throttle			: std_logic;		-- '1' if current throttle or sync throttle
 	signal r_had_phi2			: std_logic;		-- a phi2 occurred already while we were waiting for ack
 
-	signal i_wrap_cyc 		: std_logic;
+	signal r_wrap_cyc 		: std_logic;
 
 	signal i_wrap_ack 		: std_logic;
 	signal r_wrap_acked		: std_logic;
@@ -114,35 +119,41 @@ begin
 	-- the current cycle if BLTURBO R and may stay active to next SYNC
 	i_throttle <= r_throttle_sync or wrap_i.throttle_cpu_2MHz;
 
-	-- NOTE: need to latch address on dly(1) not dly(0) as it was unreliable
-
-	i_wrap_cyc			<= '1' when wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and r_t65_clken /= '1' and cpu_en_i = '1' else
-								'0';
-
 	wrap_o.BE				<= '0';
-	wrap_o.A 				<= x"FF" & i_t65_A(15 downto 0);
-	wrap_o.cyc				<= i_wrap_cyc;
+	wrap_o.A 				<= x"FF" & r_t65_A(15 downto 0);
+	wrap_o.cyc				<= r_wrap_cyc;
 	wrap_o.lane_req   	<= (0 => '1', others => '0');
 	wrap_o.rdy_ctdn   	<= RDY_CTDN_MIN;
-	wrap_o.we	 			<= not i_t65_RnW;
-	wrap_o.D_WR(7 downto 0) <= i_t65_D_out;
+	wrap_o.we	 			<= not r_t65_RnW;
+	wrap_o.D_WR(7 downto 0) <= r_t65_D_out;
 	G_D_WR_EXT:if C_CPU_BYTELANES > 1 GENERATE
 		wrap_o.D_WR((8*C_CPU_BYTELANES)-1 downto 8) <= (others => '-');
 	END GENERATE;
-	wrap_o.D_WR_stb 		<= (0 => r_d_wr_stb, others => '0');								-- TEST late Data strobe TODOPIPE: put this back to (0)
-	wrap_o.instr_fetch  	<= i_t65_SYNC;
+	wrap_o.D_WR_stb 		<= (0 => r_d_wr_stb, others => '0');
+	wrap_o.instr_fetch  	<= r_t65_SYNC;
 
 	i_cpu65_nmi_n <= wrap_i.nmi_n and wrap_i.noice_debug_nmi_n;
 
-	p_d_wr_stb:process(fb_syscon_i)
+	p_reg_cyc:process(fb_syscon_i)
    begin
       if fb_syscon_i.rst = '1' then
          r_d_wr_stb <= '0';
+			r_wrap_cyc <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
-         if r_t65_clken = '1' then
+         if i_t65_clken_next = '1' then
             r_d_wr_stb <= '0';                        -- end of cpu cycle
-         elsif r_clken_dly(1) = '1' and i_t65_RnW = '0' then
-            r_d_wr_stb <= '1';
+				r_wrap_cyc <= '0';
+         elsif r_clken_dly(0) = '1' then
+				if wrap_i.noice_debug_inhibit_cpu = '0' and r_cpu_halt = '0' and cpu_en_i = '1' then
+					r_wrap_cyc <= '1';
+				else
+					r_wrap_cyc <= '0';
+				end if;
+				r_t65_RnW <= i_t65_RnW;
+				r_t65_D_out <= i_t65_D_out;
+				r_t65_A <= i_t65_A(15 downto 0);
+				r_t65_SYNC <= i_t65_SYNC;
+            r_d_wr_stb <= not i_t65_RnW;
          end if;
       end if;
    end process;
@@ -165,28 +176,26 @@ begin
 		end if;
 	end process;
 
-	p_clken:process(all)
-	variable v_t65_clken : std_logic;
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_t65_clken <= '0';
-			r_t65_clken_h <= '0';
-		elsif rising_edge(fb_syscon_i.clk) then
-			if r_t65_clken = '0'
+	i_t65_clken_next <= 
+		'1' when
+							r_t65_clken = '0'
 							and r_cpu_clk(0) = '1' 
 							and (i_throttle = '0' or wrap_i.cpu_2MHz_phi2_clken = '1' or r_had_phi2 = '1') 
 							and (		
 									i_wrap_ack = '1' or 
 									wrap_i.noice_debug_inhibit_cpu = '1' or
 									r_cpu_halt = '1'
-									) then
-				v_t65_clken := '1';
-			else
-				v_t65_clken := '0';
-			end if;
+									)
+		else '0';
 
-			r_t65_clken <= v_t65_clken;
-			r_t65_clken_h <= v_t65_clken and not r_cpu_halt;
+	p_clken:process(all)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_t65_clken <= '0';
+			r_t65_clken_h <= '0';
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_t65_clken <= i_t65_clken_next;
+			r_t65_clken_h <= i_t65_clken_next and not r_cpu_halt;
 
 		end if;
 	end process;
