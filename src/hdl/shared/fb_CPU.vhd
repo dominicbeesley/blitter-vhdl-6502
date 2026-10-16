@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    	16/04/2019
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component
+-- Module Name:    	fb_cpu
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
