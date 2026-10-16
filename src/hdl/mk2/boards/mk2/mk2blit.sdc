@@ -118,37 +118,28 @@ set t65regs  [ get_pins {e_fb_cpu|\gt65:e_t65|e_cpu|*|*} ]
 set_multicycle_path -setup -end -from  $t65paths  -to  $t65paths 2
 set_multicycle_path -hold -end -from  $t65paths   -to  $t65paths 1
 
-set_multicycle_path -setup -end -from  $t65regs 2
-set_multicycle_path -hold -end -from  $t65regs 1
-
 #blitter addr calcs multi-cycles
 
 set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
-set blitpaths2 [ get_registers "$blit|*" ]
+# Register reads: r_per_addr is loaded on A_stb, act_rd0 waits a clock, and
+# r_per_D_rd only captures in act_rd, so the read mux has 2 clocks.
+set blit_rd [get_registers "$blit|r_per_D_rd*"]
+set_multicycle_path -setup -end -from [get_registers "$blit|*"] -to $blit_rd 2
+set_multicycle_path -hold  -end -from [get_registers "$blit|*"] -to $blit_rd 1
 
-set_multicycle_path -setup -end -from  $blitpaths2  -to  $blitpaths2 2
-set_multicycle_path -hold -end -from  $blitpaths2  -to  $blitpaths2 1
+# Address calc: the inputs (r_blit_state, channel address/stride/width regs)
+# change in the same edge as r_clken_addr_calc_start; blit_addr goes to calc
+# a clock later and loads r_addr_out from i_addr_next the clock after that.
+# Excludes the start strobe itself and blit_addr's own state, which act each clock.
+set blit_addr_src [remove_from_collection [get_registers "$blit|r_*"] \
+                                          [get_registers "$blit|r_clken_addr_calc_start"]]
+set blit_addr_out [get_registers "$blit|blit_addr:addr_gen|r_addr_out*"]
+set_multicycle_path -setup -end -from $blit_addr_src -to $blit_addr_out 2
+set_multicycle_path -hold  -end -from $blit_addr_src -to $blit_addr_out 1
 
 
-#aeris - not thoroughly checked!
-
-set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
-set aeris_src_regs [get_registers "$aeris|r_op*"] 
-set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
-set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 1
+# NOTE: the Aeries no longer needs multi_cycle_paths!
 
 
 #**************************************************************

@@ -112,6 +112,7 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_pack.v
 set_global_assignment -name VHDL_FILE ../../../library/common.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_many_to_one.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to_many.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_buffer.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
@@ -143,7 +144,6 @@ set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_Z80_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_Z80.vhd
 set_global_assignment -name VHDL_FILE ../../shared/fb_CPU_68008_exp_pins.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_68008.vhd
-set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU_log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_cpu_con_burst.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/log2phys.vhd
 set_global_assignment -name VHDL_FILE ../../../shared/fb_CPU.vhd
