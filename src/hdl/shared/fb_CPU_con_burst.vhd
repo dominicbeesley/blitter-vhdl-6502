@@ -26,35 +26,13 @@
 -- 
 -- Create Date:      28/10/2022
 -- Design Name: 
--- Module Name:      fb_cpu_con_burst
+-- Module Name:      fishbone bus - CPU burst transfers for multiple bytes
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description:      fishbone bus - CPU burst transfers for multiple bytes
 -- Dependencies: 
 --
 -- Revision: 
---                   Oct 2026: optional external address mapper (G_MAP_ADDRESS):
---                   the logical to physical mapping is done here, as the
---                   address is registered, instead of in a separate
---                   registered stage (fb_cpu_log2phys), saving a clock on
---                   every transaction
--- Additional Comments:
---
---   Address mapper interface (used when G_MAP_ADDRESS is true):
---   * map_A_logical_o is the logical address to map. The first transaction 
---     is mapped as the cycle starts, then the address of the next byte 
---     lane's transaction.
---   * map_A_physical_i is the mapped address, combinatorial from
---     map_A_logical_o (and map_instr_fetch_o).
---   * map_A_stb_o is '1' in the clock before the edge at which a mapped
---     address is used for a new transaction. A mapper with side effects
---     (counters, per-instruction registers) must only update them then.
---   * The first transaction's physical address is registered from the
---     mapper as the cycle starts. 
---   When G_MAP_ADDRESS is false the mapper ports are ignored and the
---   logical address is used directly, as before.
---   TODO: get rid of G_MAP_ADDRESS generic and fix up the other users
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -68,8 +46,7 @@ use work.common.all;
 entity fb_cpu_con_burst is
 generic (
    SIM : boolean := false;
-   G_BYTELANES : positive := 1;
-   G_MAP_ADDRESS : boolean := false                                     -- use the external address mapper (see header)
+   G_BYTELANES : positive := 1
    );
 port (
 
@@ -102,14 +79,7 @@ port (
 
    fb_con_c2p_o      : out fb_con_o_per_i_t;
    fb_con_p2c_i      : in  fb_con_i_per_o_t;
-   fb_con_c2pinstr_fetch_o : out std_logic; -- qualify current cycle as an instruction fetch
-
-   -- external address mapper (see header), unused unless G_MAP_ADDRESS
-
-   map_A_logical_o   : out std_logic_vector(23 downto 0);               -- logical address to map
-   map_instr_fetch_o : out std_logic;                                   -- the address to map is an instruction fetch
-   map_A_stb_o       : out std_logic;                                   -- the mapped address is used at the next edge
-   map_A_physical_i  : in  std_logic_vector(23 downto 0) := (others => '0')   -- mapped address
+   fb_con_c2pinstr_fetch_o : out std_logic -- qualify current cycle as an instruction fetch
 
 );
 end fb_cpu_con_burst;
@@ -128,12 +98,7 @@ architecture rtl of fb_cpu_con_burst is
    signal i_txd_cur     : std_logic_vector(G_BYTELANES-1 downto 0);     -- next byte lane to service priority encoded by BE/LE
    signal i_rx_cur      : std_logic_vector(G_BYTELANES-1 downto 0);     -- next byte lane to service priority encoded by BE/LE
 
-   signal r_A           : std_logic_vector(23 downto 0);                -- address of the current transaction (physical if mapped)
-   signal r_A_log       : std_logic_vector(23 downto 0);                -- logical address of the current transaction
-   signal r_A_next      : std_logic_vector(23 downto 0);                -- mapped address of the next transaction
-   signal i_A_log_map   : std_logic_vector(23 downto 0);                -- logical address being mapped
-   signal i_A_map       : std_logic_vector(23 downto 0);                -- mapped (or logical) address
-   signal i_more_lanes  : std_logic;                                    -- lanes still to address after the current one
+   signal r_A           : std_logic_vector(23 downto 0);
    signal r_D_rd        : std_logic_vector((8 * G_BYTELANES)-1 downto 0);
    signal r_rdy         : std_logic;
    signal r_ack         : std_logic;
@@ -173,22 +138,6 @@ architecture rtl of fb_cpu_con_burst is
 begin
 
    i_tx_cur <= priority_endian(BE_i, lane_req_i and r_tx_mas);
-   i_more_lanes <= my_or_reduce(lane_req_i and r_tx_mas and not i_tx_cur);
-
-   -- address mapping: the wrapper's address while no cycle is active, then
-   -- the next transaction's address (single lane: only ever one
-   -- transaction, so no adder in front of the mapper)
-   i_A_log_map <= A_i when r_cyc = '0' or G_BYTELANES = 1 else
-                  std_logic_vector(unsigned(r_A_log) + 1);
-   i_A_map     <= map_A_physical_i when G_MAP_ADDRESS else
-                  i_A_log_map;
-
-   map_A_logical_o   <= i_A_log_map;
-   map_instr_fetch_o <= instr_fetch_i when r_cyc = '0' else r_instr_fetch;
-   map_A_stb_o       <= '1' when (r_cyc = '0' and cyc_i = '1')
-                              or (r_cyc = '1' and cyc_i = '1' and fb_con_p2c_i.A_ack = '1'
-                                  and my_or_reduce(i_tx_cur) = '1' and i_more_lanes = '1')
-                        else '0';
    i_txd_cur <= priority_endian(BE_i, lane_req_i and r_txd_mas);
    i_rx_cur <= priority_endian(BE_i, lane_req_i and r_rx_mas);
 
@@ -216,27 +165,19 @@ begin
       if fb_syscon_i.rst = '1' then
          r_tx_mas <= (others => '1');
          r_A <= (others => '0'); 
-         r_A_log <= (others => '0');
-         r_A_next <= (others => '0');
          r_instr_fetch <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
 
-         -- next transaction's mapped address, registered every clock so it is
-         -- ready by the (registered, so at least 2 clocks later) A_ack
-         r_A_next <= i_A_map;
-
          if r_cyc = '0' and cyc_i = '1' then
             r_tx_mas <= (others => '1');
-            r_A <= i_A_map;
-            r_A_log <= A_i;
+            r_A <= A_i;
             r_instr_fetch <= instr_fetch_i;
          elsif r_cyc = '1' then
             if cyc_i = '0' then
                r_tx_mas <= (others => '0');
             elsif fb_con_p2c_i.A_ack = '1' and my_or_reduce(i_tx_cur) = '1' then
                r_tx_mas <= r_tx_mas and not i_tx_cur;
-               r_A <= r_A_next;
-               r_A_log <= std_logic_vector(unsigned(r_A_log) + 1);
+               r_A <= std_logic_vector(unsigned(r_A) + 1);
             end if;
          else
             r_tx_mas <= (others => '0');

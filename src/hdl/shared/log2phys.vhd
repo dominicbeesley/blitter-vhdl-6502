@@ -46,8 +46,6 @@
 -- Dependencies: 
 --
 -- Revision: 
---                   Oct 2026: per-instruction registers update only on A_stb_i, so
---                   A_i may change between transactions (fb_cpu_con_burst mapper)
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
@@ -113,10 +111,7 @@ entity log2phys is
 		-- addresses to map
 		A_i									: in	std_logic_vector(23 downto 0);
 		instruction_fetch_i				: in  std_logic;		-- qualify current cycle as an instruction fetch
-		A_stb_i								: in  std_logic;		-- '1' in the clock before the edge where A_o is used for a
-																-- new transaction; registers with side effects (VIA
-																-- blocker, per-instruction throttle/autohazel) only
-																-- update then, as A_i may change between transactions
+		A_stb_i								: in  std_logic;		-- qualify cycle start
 		-- mapped address
 		A_o									: out std_logic_vector(23 downto 0)
 
@@ -291,7 +286,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_instr_autohazel_cur <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if A_stb_i = '1' and instruction_fetch_i = '1' then
+			if instruction_fetch_i = '1' then
 				if i_nmi_acc = '1' then
 					r_instr_autohazel_cur <= r_rom_autohazel_cur;
 				elsif i_rom_acc = '1' then
@@ -312,7 +307,7 @@ begin
 		if fb_syscon_i.rst = '1' then
 			r_instr_rom_throttle <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			if A_stb_i = '1' and instruction_fetch_i = '1' then
+			if instruction_fetch_i = '1' then
 				r_instr_rom_throttle <= i_throttle_rom or r_all_throttle_reg or r_sysvia_blocking;
 			end if;
 		end if;
