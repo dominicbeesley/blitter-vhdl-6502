@@ -49,112 +49,112 @@ use work.firmware_info_pack.all;
 use work.board_config_pack.all;
 
 entity fb_config is
-	generic (
-		SIM                           : boolean := false                     -- skip some stuff, i.e. slow sdram start up
-	);
-	port(
+   generic (
+      SIM                           : boolean := false                     -- skip some stuff, i.e. slow sdram start up
+   );
+   port(
 
-		-- fishbone signals
+      -- fishbone signals
 
-		fb_syscon_i                   : in     fb_syscon_t;
-		fb_c2p_i                      : in     fb_con_o_per_i_t;
-		fb_p2c_o                      : out    fb_con_i_per_o_t;
+      fb_syscon_i                   : in     fb_syscon_t;
+      fb_c2p_i                      : in     fb_con_o_per_i_t;
+      fb_p2c_o                      : out    fb_con_i_per_o_t;
 
-		cfg_eco_station_id_o          : out    std_logic_vector(7 downto 0)
-	);
+      cfg_eco_station_id_o          : out    std_logic_vector(7 downto 0)
+   );
 end fb_config;
 
 
 architecture rtl of fb_config is
 
-	type     state_mem_t is (idle, act_rd, act_wr);
+   type     state_mem_t is (idle, act_rd, act_wr);
 
-	signal   r_state  : state_mem_t;
+   signal   r_state  : state_mem_t;
 
-	signal   r_D_ack  : std_logic;
-	signal   r_A      : std_logic_vector(7 downto 0);
-	signal   r_A_ack  : std_logic;
-	signal   r_D_rd   : std_logic_vector(7 downto 0);
-	
-	signal   r_eco_station_id : std_logic_vector(7 downto 0);
+   signal   r_D_ack  : std_logic;
+   signal   r_A      : std_logic_vector(7 downto 0);
+   signal   r_A_ack  : std_logic;
+   signal   r_D_rd   : std_logic_vector(7 downto 0);
+   
+   signal   r_eco_station_id : std_logic_vector(7 downto 0);
 
 
-	constant IX_STAT_ID  : natural := 16#10#;
+   constant IX_STAT_ID  : natural := 16#10#;
 
 begin
 
-	cfg_eco_station_id_o <= r_eco_station_id;
+   cfg_eco_station_id_o <= r_eco_station_id;
 
-	fb_p2c_o.A_ack    <= r_A_ack;
-	fb_p2c_o.D_rd     <= r_D_rd;
-	fb_p2c_o.rdy      <= r_D_ack;
-	fb_p2c_o.D_ack    <= r_D_ack;
+   fb_p2c_o.A_ack    <= r_A_ack;
+   fb_p2c_o.D_rd     <= r_D_rd;
+   fb_p2c_o.rdy      <= r_D_ack;
+   fb_p2c_o.D_ack    <= r_D_ack;
 
 
-	p_state:process(fb_syscon_i)
-	begin
+   p_state:process(fb_syscon_i)
+   begin
 
-		if rising_edge(fb_syscon_i.clk) then
-			-- we need to make the reset synchronous to only reset r_eco_station_id on powerup/resetfull
-			if fb_syscon_i.rst = '1' then
-				r_state <= idle;
-				r_D_ack <= '0';
-				r_A_ack <= '0';
-				r_D_rd <= (others => '0');
-				r_A <= (others => '0');
+      if rising_edge(fb_syscon_i.clk) then
+         -- we need to make the reset synchronous to only reset r_eco_station_id on powerup/resetfull
+         if fb_syscon_i.rst = '1' then
+            r_state <= idle;
+            r_D_ack <= '0';
+            r_A_ack <= '0';
+            r_D_rd <= (others => '0');
+            r_A <= (others => '0');
 
-				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_eco_station_id <= x"24";
-				end if;
-			else
-	         r_D_ack <= '0';
-	         r_A_ack <= '0';
-				case r_state is
-					when idle =>
-						-- capture early for less muxing
+            if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
+               r_eco_station_id <= x"24";
+            end if;
+         else
+            r_D_ack <= '0';
+            r_A_ack <= '0';
+            case r_state is
+               when idle =>
+                  -- capture early for less muxing
                   r_A <= fb_c2p_i.A(7 downto 0);
-	               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
-						if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
-	                     if fb_c2p_i.we = '1' then
-	                        r_state <= act_wr;
-								else
-	                        r_state <= act_rd;
-								end if;
-	                     r_A_ack <= '1';
-							end if;
-	               when act_wr =>
-	                  if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-								case to_integer(unsigned(r_A(7 downto 0))) is
-									when IX_STAT_ID =>
-	                           r_eco_station_id <= fb_c2p_i.D_wr;
-									when others => null;
-	                     end case;                  
-	                     r_D_ack <= '1';
-	                     r_state <= idle;
-						end if;
-	               when act_rd =>
-	                  if fb_c2p_i.cyc = '1' then
-	                  	r_D_rd <= x"FF";
-	                     case to_integer(unsigned(r_A(7 downto 0))) is
-									when IX_STAT_ID =>
-										r_D_rd <= r_eco_station_id;
-						    		when others => null;
-						 		end case;
-	                     r_D_ack <= '1';
-	                  end if;
-	                  r_state <= idle;					
-	               when others =>
-	                  -- not sure if we should blindly ack here
-	                  r_state <= idle;
-					end case;
+                  -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+                  if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+                        if fb_c2p_i.we = '1' then
+                           r_state <= act_wr;
+                        else
+                           r_state <= act_rd;
+                        end if;
+                        r_A_ack <= '1';
+                     end if;
+                  when act_wr =>
+                     if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                        case to_integer(unsigned(r_A(7 downto 0))) is
+                           when IX_STAT_ID =>
+                              r_eco_station_id <= fb_c2p_i.D_wr;
+                           when others => null;
+                        end case;                  
+                        r_D_ack <= '1';
+                        r_state <= idle;
+                  end if;
+                  when act_rd =>
+                     if fb_c2p_i.cyc = '1' then
+                        r_D_rd <= x"FF";
+                        case to_integer(unsigned(r_A(7 downto 0))) is
+                           when IX_STAT_ID =>
+                              r_D_rd <= r_eco_station_id;
+                           when others => null;
+                        end case;
+                        r_D_ack <= '1';
+                     end if;
+                     r_state <= idle;              
+                  when others =>
+                     -- not sure if we should blindly ack here
+                     r_state <= idle;
+               end case;
 
-				if fb_c2p_i.cyc = '0' then
-					r_state <= idle;
-				end if;
-			end if;
-		end if;
+            if fb_c2p_i.cyc = '0' then
+               r_state <= idle;
+            end if;
+         end if;
+      end if;
 
-	end process;
+   end process;
 
 
 end rtl;
