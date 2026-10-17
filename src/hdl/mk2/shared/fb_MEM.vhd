@@ -26,7 +26,7 @@
 -- 
 -- Create Date:      16/04/2019
 -- Design Name: 
--- Module Name:      fishbone bus - MEM - memory wrapper
+-- Module Name:      fb_mem
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
