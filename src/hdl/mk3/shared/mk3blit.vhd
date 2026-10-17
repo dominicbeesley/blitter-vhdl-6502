@@ -27,11 +27,11 @@
 -- 
 -- Create Date:    	1/7/2021
 -- Design Name: 
--- Module Name:    	Mk.3 Blitter top-level design
+-- Module Name:    	mk3blit
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		
+-- Description: 	Mk.3 Blitter top-level design	
 -- Dependencies: 
 --
 -- Revision: 
@@ -60,8 +60,8 @@ entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
-		G_DWRITE_HOLD						: natural := 6									-- hold write data on system bus for this many cycles
+		G_DWRITE_HOLD						: natural := 6;								-- hold write data on system bus for this many cycles
+      	PROJECT_ROOT                  : string  := "../"                     -- path to root of project (to find relative files, override in simulations)
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -182,6 +182,10 @@ architecture rtl of mk3blit is
 
    signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
 
+   -----------------------------------------------------------------------------
+   -- Aeris external signals in from CRTC
+   -----------------------------------------------------------------------------
+
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
@@ -207,7 +211,7 @@ architecture rtl of mk3blit is
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
 	signal i_p2c_memctl			: fb_con_i_per_o_t;
 
-	-- memory control registers wrapper
+	-- version information wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
@@ -421,12 +425,6 @@ begin
 g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
-	generic map (
-		SIM							=> SIM,
-		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
-		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI
-	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
 		we_i							=> i_intcon_peripheral_sel_we(I),
@@ -438,22 +436,20 @@ end generate;
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => true
+      G_ARB_ROUND_ROBIN             => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
 		peripheral_sel_we_o						=> i_intcon_peripheral_sel_we,
@@ -466,20 +462,18 @@ END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 	e_fb_intcon: fb_intcon_one_to_many
 	generic map (
-		SIM 									=> SIM,
-		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
 		)
 	port map (
 		fb_syscon_i 						=> i_fb_syscon,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon(0),
-		fb_con_p2c_o						=> i_con_p2c_intcon(0),
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon(0),
+      fb_up_p2c_o                   => i_con_p2c_intcon(0),
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
 		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
 		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
@@ -505,10 +499,12 @@ END GENERATE;
    i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
+   GCHIPSET_MASTER:if CONTROLLER_COUNT_CHIPSET > 0 GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
-	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
-
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
+   end generate;
+
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
 	e_chipset:fb_chipset
@@ -768,18 +764,9 @@ END GENERATE;
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
 		G_MK3 => true,
+		G_C20K => false
 
-		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
-		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
-		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
-		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
-		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
-		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
-		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_Z180						=> G_INCL_CPU_Z180,
-		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
-		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
-		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
+		
 	)
 	port map (
 
@@ -912,6 +899,9 @@ END GENERATE;
 
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 	p_debug_btn:process(i_fb_syscon)
 	variable vcnt:unsigned(7 downto 0);
@@ -936,9 +926,6 @@ END GENERATE;
 	end process;
 
 
--- ================================================================================================ --
--- BOOT TIME CONFIGURATION
--- ================================================================================================ --
 
 
 -- enable port F/G for reading configuration

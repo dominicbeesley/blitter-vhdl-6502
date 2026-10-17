@@ -6,6 +6,7 @@
 	QUARTUS_ASM=quartus_asm.exe
 	QUARTUS_PGM=quartus_pgm.exe
 	QUARTUS_CPF=quartus_cpf.exe
+	QUARTUS_STA=quartus_sta.exe
 
 
 ###################################################################
@@ -18,6 +19,8 @@
 PROJECT = mk3_16_tiny
 SCRIPTS = ../../../../scripts
 
+.PHONY: timing all
+
 ###################################################################
 # Main Targets
 #
@@ -26,12 +29,13 @@ SCRIPTS = ../../../../scripts
 # program: program your device with the compiled design
 ###################################################################
 
-all:: output_files/$(PROJECT).asm.rpt Makefile.deps
+all:: output_files/$(PROJECT).asm.rpt Makefile.deps timing
 
 clean:
-	rm -rf *.rpt *.chg smart.log *.htm *.eqn *.pin *.pof db incremental_db
-	rm output_files/$(PROJECT).sof
-	rm output_files/$(PROJECT).pof
+	-rm -rf *.rpt *.chg smart.log *.htm *.eqn *.pin *.pof db incremental_db
+	-rm output_files/$(PROJECT).sof
+	-rm output_files/$(PROJECT).pof
+	-rm version.tag version.vhd version.tmp
 
 
 map: $(PROJECT).map.rpt
@@ -73,15 +77,36 @@ output_files/$(PROJECT).sof output_files/$(PROJECT).asm.rpt: $(PROJECT).qsf outp
 
 
 ###################################################################
+# Timing check (all corners) - reports pass/fail, doesn't stop the build
+###################################################################
+
+output_files/$(PROJECT).sta.summary: output_files/$(PROJECT).fit.rpt
+	$(QUARTUS_STA) $(PROJECT) --multicorner=on
+
+# any negative slack in the summary (setup, hold, recovery, removal, pulse
+# width, every corner) is a fail: show the failing summary lines and the
+# worst paths in red, else a blue pass message
+timing: output_files/$(PROJECT).sta.summary
+	@if awk '/^Type/ {t=$$0} /^Slack/ {if ($$3+0 < 0) {print t "  slack " $$3; f=1}} END {exit !f}' \
+			$< > output_files/timing_fail.txt; then \
+		printf '\033[1;31m*** TIMING FAILED ***\033[0m\n'; \
+		printf '\033[31m'; cat output_files/timing_fail.txt; printf '\033[0m'; \
+		$(QUARTUS_STA) -t $(SCRIPTS)/tcl/sta-fail-paths.tcl $(PROJECT) output_files/timing_paths.txt > /dev/null; \
+		printf '\033[31m'; cat output_files/timing_paths.txt; printf '\033[0m\n'; \
+	else \
+		printf '\033[1;34m*** Timing passed, all corners ***\033[0m\n'; \
+	fi
+
+###################################################################
 # Programming the device
 ###################################################################
 
-program: output_files/$(PROJECT).sof reprogram
+program: output_files/$(PROJECT).sof timing reprogram
 
 reprogram:
 	$(QUARTUS_PGM) --no_banner --mode=jtag -o "P;output_files/$(PROJECT).sof"
 
-program-perm: output_files/$(PROJECT).pof
+program-perm: output_files/$(PROJECT).pof timing
 	$(QUARTUS_PGM) --no_banner --mode=jtag -o "BVP;output_files/$(PROJECT).pof"
 
 #program-perm:: output_files/$(PROJECT).jic
