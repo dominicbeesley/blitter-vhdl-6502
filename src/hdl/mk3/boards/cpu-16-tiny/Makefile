@@ -19,7 +19,7 @@
 PROJECT = mk3_16_tiny
 SCRIPTS = ../../../../scripts
 
-.PHONY: timing all
+.PHONY: timing all program program-perm reprogram
 
 ###################################################################
 # Main Targets
@@ -47,10 +47,13 @@ sta: $(PROJECT).sta.rpt
 # Executable Configuration
 ###################################################################
 
-MAP_ARGS = --read_settings_files=on
+# --write_settings_files=off: by default each Quartus tool rewrites the .qsf
+# (expanding the "source"d pin and simulation files into it). That makes the
+# .qsf newer than map.rpt, so the next make reran everything from quartus_map.
+MAP_ARGS = --read_settings_files=on --write_settings_files=off
 
-FIT_ARGS = --read_settings_files=on
-ASM_ARGS =
+FIT_ARGS = --read_settings_files=on --write_settings_files=off
+ASM_ARGS = --write_settings_files=off
 
 ###################################################################
 # Target implementations
@@ -84,14 +87,24 @@ output_files/$(PROJECT).sta.summary: output_files/$(PROJECT).fit.rpt
 	$(QUARTUS_STA) $(PROJECT) --multicorner=on
 
 # any negative slack in the summary (setup, hold, recovery, removal, pulse
-# width, every corner) is a fail: show the failing summary lines and the
-# worst paths in red, else a blue pass message
-timing: output_files/$(PROJECT).sta.summary
-	@if awk '/^Type/ {t=$$0} /^Slack/ {if ($$3+0 < 0) {print t "  slack " $$3; f=1}} END {exit !f}' \
-			$< > output_files/timing_fail.txt; then \
+# width, every corner) is a fail. timing_fail.txt lists the failing summary
+# lines (empty = pass) and timing_paths.txt the worst failing paths (only
+# worked out on a fail). Both are files, so they're only redone after a new
+# timing analysis; the "timing" target prints them every time it's made.
+output_files/timing_fail.txt: output_files/$(PROJECT).sta.summary
+	awk '/^Type/ {t=$$0} /^Slack/ {if ($$3+0 < 0) print t "  slack " $$3}' $< > $@
+
+output_files/timing_paths.txt: output_files/timing_fail.txt
+	if [ -s $< ]; then \
+		$(QUARTUS_STA) -t $(SCRIPTS)/tcl/sta-fail-paths.tcl $(PROJECT) $@ > /dev/null; \
+	else \
+		: > $@; \
+	fi
+
+timing: output_files/timing_paths.txt
+	@if [ -s output_files/timing_fail.txt ]; then \
 		printf '\033[1;31m*** TIMING FAILED ***\033[0m\n'; \
 		printf '\033[31m'; cat output_files/timing_fail.txt; printf '\033[0m'; \
-		$(QUARTUS_STA) -t $(SCRIPTS)/tcl/sta-fail-paths.tcl $(PROJECT) output_files/timing_paths.txt > /dev/null; \
 		printf '\033[31m'; cat output_files/timing_paths.txt; printf '\033[0m\n'; \
 	else \
 		printf '\033[1;34m*** Timing passed, all corners ***\033[0m\n'; \
