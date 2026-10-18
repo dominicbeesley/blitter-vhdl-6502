@@ -131,7 +131,7 @@ begin
                         end case;                  
                         r_D_ack <= '1';
                         r_state <= idle;
-                  end if;
+                     end if;
                   when act_rd =>
                      if fb_c2p_i.cyc = '1' then
                         r_D_rd <= x"FF";

@@ -1112,8 +1112,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i	=> (others => '1'),
 
-		PCM_L_i				=> i_dac_sample & "000000",
-		PCM_R_i				=> i_dac_sample & "000000",
+		PCM_L_i				=> i_dac_sample,
+		PCM_R_i				=> i_dac_sample,
 
 		debug_hsync_det_o => i_debug_hsync_det,
 		debug_vsync_det_o => i_debug_vsync_det,

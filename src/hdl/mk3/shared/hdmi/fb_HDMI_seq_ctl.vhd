@@ -45,15 +45,19 @@ end fb_HDMI_seq_ctl;
 
 architecture rtl of fb_HDMI_seq_ctl is
 
-	type		t_per_state	is (idle, rd, wait_d_stb);
-	signal	r_per_state : t_per_state;
+   -- FISHBONE wrapper signals
+   type     state_per_t is (idle, act_rd, act_wr);
 
-	-- FISHBONE wrapper signals
-	signal	r_seq_en				: std_logic;
-	signal	r_seq_rnw			: std_logic;
-	signal	r_ack					: std_logic;
-	signal	r_A					: std_logic;
-	signal	r_D_wr				: std_logic_vector(7 downto 0);
+   signal   r_state     : state_per_t;
+
+   signal   r_D_ack     : std_logic;
+   signal   r_A         : std_logic_vector(0 downto 0);
+   signal   r_A_ack     : std_logic;
+   signal   r_D_rd      : std_logic_vector(7 downto 0);
+   signal   i_D_rd      : std_logic_vector(7 downto 0);
+
+   signal   r_D_wr      : std_logic_vector(7 downto 0);
+   signal   r_d_wr_stb  : std_logic;
 
 	-- local signals
 
@@ -63,66 +67,68 @@ architecture rtl of fb_HDMI_seq_ctl is
 
 begin
 
+   fb_p2c_o.A_ack    <= r_A_ack;
+   fb_p2c_o.D_rd     <= r_D_rd;
+   fb_p2c_o.rdy      <= r_D_ack;
+   fb_p2c_o.D_ack    <= r_D_ack;
+
+
 	mode_alpha_o <= r_mode_alpha;
 	addr_alpha_fontA <= r_addr_alpha_fontA;
 
 
-	-- FISHBONE wrapper for CPU/DMA access
-	fb_p2c_o.ack <= r_ack;
-	fb_p2c_o.rdy <= r_ack;
-	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
-
 	p_per_state:process(fb_syscon_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_per_state <= idle;
-			r_ack <= '0';
-			r_seq_en <= '0';
-			r_seq_rnw <= '1';
-			r_A <= '0';
-			r_d_wr <= (others => '0');
-		elsif rising_edge(fb_syscon_i.clk) then
-			r_ack <= '0';
-			r_seq_en <= '0';
-			case r_per_state is
-				when idle =>
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
-						r_seq_rnw <= not fb_c2p_i.we;
-						r_A <= fb_c2p_i.A(0);
-						if fb_c2p_i.we = '1' then
-							if fb_c2p_i.D_wr_stb = '1' then
-								r_d_wr <= fb_c2p_i.D_Wr;
-								r_seq_en <= '1';
-								r_ack <= '1';
-								r_per_state <= idle;
-							else
-								r_per_state <= wait_d_stb;
-							end if;
-						else
-							r_seq_en <= '1';
-							r_per_state <= rd;
-						end if;
-					end if;
-				when wait_d_stb =>
-					if fb_c2p_i.D_wr_stb = '1' then
-						r_d_wr <= fb_c2p_i.D_Wr;
-						r_seq_en <= '1';
-						r_ack <= '1';
-						r_per_state <= idle;
-					else
-						r_per_state <= wait_d_stb;
-					end if;
-				when rd =>
-					r_ack <= '1';
-					r_per_state <= idle;
-				when others =>
-					r_per_state <= idle;
-					r_ack <= '1';
-					r_seq_en <= '0';
-					r_seq_rnw <= '1';
-			end case;
-		end if;
-	end process;
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_state <= idle;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_rd <= (others => '0');
+         r_A <= (others => '0');
+         r_d_wr <= (others => '0');
+         r_d_wr_stb <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         -- defer write one cycle to ease routing
+         r_d_wr_stb <= '0';
+         -- capture early - only needs to remain for one cycle but followed by a big mux so register to split timing
+         r_d_wr <= fb_c2p_i.D_wr;
+         case r_state is
+            when idle =>
+               -- capture early for less muxing
+               r_A <= fb_c2p_i.A(0 downto 0);
+               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+               if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
+                  if fb_c2p_i.we = '1' then
+                     r_state <= act_wr;
+                  else
+                     r_state <= act_rd;
+                  end if;
+                  r_A_ack <= '1';
+               end if;
+            when act_wr =>
+               if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                  r_D_ack <= '1';
+                  r_state <= idle;
+                  r_d_wr_stb <= '1';
+               end if;
+            when act_rd =>
+               if fb_c2p_i.cyc = '1' then
+                  r_D_rd <= i_D_rd;
+                  r_D_ack <= '1';
+               end if;
+               r_state <= idle;              
+            when others =>
+               -- not sure if we should blindly ack here
+               r_state <= idle;
+         end case;
+
+         if fb_c2p_i.cyc = '0' then
+            r_state <= idle;
+         end if;
+      end if;
+   end process;
 
 
 	p_wr:process(fb_syscon_i)
@@ -132,8 +138,8 @@ begin
 			r_addr_alpha_fontA <= (others => '0');
 			r_IX <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_seq_en = '1' and r_seq_rnw = '0' then
-				if r_A = '1' then
+			if r_d_wr_stb then
+				if r_A = "1" then
 					-- data write
 					case to_integer(r_IX) is
 						when 0 =>
@@ -150,7 +156,8 @@ begin
 		end if;
 	end process;
 
-	fb_p2c_o.D_rd <= 	(0 => r_mode_alpha, others => '0') when r_IX  = 0 else
+	-- Note: reads back always read back the value not the index - TODO: change this?
+	i_D_rd <= 	(0 => r_mode_alpha, others => '0') when r_IX  = 0 else
 							r_addr_alpha_fontA when r_IX  = 1 else
 							(others => '0');
 
