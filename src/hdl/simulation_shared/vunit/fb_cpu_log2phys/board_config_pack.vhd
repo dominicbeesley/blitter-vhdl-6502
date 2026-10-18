@@ -62,7 +62,6 @@ package board_config_pack is
 	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
 
 	constant G_INCL_HDMI		: boolean := true;
-	constant G_HDMI_SHADOW_SYS	: boolean := true;
 		
 	constant G_INCL_PREBOOT		: boolean := true;
 	constant G_INCL_XFLASH     : boolean := true;
