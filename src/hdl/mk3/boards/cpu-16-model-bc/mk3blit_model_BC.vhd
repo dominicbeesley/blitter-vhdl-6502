@@ -1151,4 +1151,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 END GENERATE;
 
 
+i_hsync <= i_vga_debug_hs;
+i_vsync <= i_vga_debug_vs;
+
 end rtl;
