@@ -36,11 +36,17 @@
 --
 -- Revision: 
 -- Additional Comments: 
---
+--                   Note: dropping a cyc before D_wr_stb has been received
+--                   causes corrupted data to be written.
 ----------------------------------------------------------------------------------
 -- TODO: Master/Elk
 --
 
+--TODOPIPE: separate peripheral and motherboard cycle r_state machines
+--TODOPIPE: don't wait for cycle release
+-- TODO: what's all this r_con_cyc for, I suspect it can go and cyc drop handled more elegantly
+-- TODO: we can probably simplify or remove the r_had_d_stb...maybe?
+-- TODO: is separate rnw and we really necessary - can/should we leak writes out for JIM dev/paging regs?
 
 
 library ieee;
@@ -162,8 +168,10 @@ architecture rtl of fb_SYS_c20k is
    );
 
    signal   r_state           : state_sys_t;
-   signal   r_ack             : std_logic;                     -- goes to 1 for single cycle when read data ready or for writes when data strobed
+   signal   r_D_ack           : std_logic;                     -- goes to 1 for single cycle when read data ready or for writes when data strobed
    signal   r_rdy             : std_logic;                     -- goes to 1 when r_ack will occur in < r_con_rdy_ctdn cycles
+   signal   r_A_ack           : std_logic;
+   signal   r_we              : std_logic;
 
    -- regs for D_Rd
    signal   r_D_rd            : std_logic_vector(7 downto 0);
@@ -228,10 +236,11 @@ architecture rtl of fb_SYS_c20k is
    signal   i_acia_d_o        : std_logic_vector(7 downto 0);
    signal   i_adc_d_o         : std_logic_vector(7 downto 0);
    signal   i_sid_d_o         : std_logic_vector(7 downto 0);
-   signal   r_local_d_o       : std_logic_vector(7 downto 0);
+   signal   r_sysvia_d_o      : std_logic_vector(7 downto 0);  -- system VIA read data, captured at the end of phase 2
    signal   r_sysvia_nCS2     : std_logic;
    signal   r_serproc_nCS     : std_logic;
    signal   r_acia_nCS        : std_logic;
+   signal   r_acia_cs         : std_logic;                     -- one clock strobe to the ACIA, see p_acia_cs
    signal   r_adc_nCS         : std_logic;
    signal   r_sid_nCS         : std_logic;
    signal   i_sysvia_nIRQ     : std_logic;
@@ -299,11 +308,10 @@ begin
    jim_en_o <= r_JIM_en;
    jim_page_o <= r_JIM_page;
 
-   fb_p2c_o.D_rd <=  r_local_d_o when r_sysvia_nCS2 = '0' or r_acia_nCS = '0' or r_intoff_nCS = '0' or r_adc_nCS = '0' else                     
-                     r_D_rd; -- this used to be a latch but got rid for timing simplification
-   fb_p2c_o.stall <= '0' when r_state = idle and i_SYScyc_st_clken = '1' else '1'; --TODO_PIPE: check this is best way?
-   fb_p2c_o.rdy <= r_rdy and fb_c2p_i.cyc;
-   fb_p2c_o.ack <= r_ack and fb_c2p_i.cyc;
+     fb_p2c_o.A_Ack <= r_A_ack;
+   fb_p2c_o.rdy   <= r_rdy;   
+   fb_p2c_o.D_rd  <= r_D_rd; 
+   fb_p2c_o.D_ack <= r_D_ack;
 
    p_state:process(fb_syscon_i)
    variable v_next_state : state_sys_t;
@@ -313,9 +321,12 @@ begin
          r_state <= idle;
 
          r_con_cyc <= '0';
-         r_ack <= '0';
+         r_D_ack <= '0';
+         r_A_ack <= '0';
          r_con_rdy_ctdn <= RDY_CTDN_MAX;
          r_rdy <= '0';
+
+         r_we <= '0';
 
          r_sys_A <= DEFAULT_SYS_ADDR;
          r_sys_RnW <= '1';
@@ -339,7 +350,8 @@ begin
       else
          if rising_edge(fb_syscon_i.clk) then
 
-            r_ack <= '0';
+            r_D_ack <= '0';
+            r_A_ack <= '0';
             v_next_state := r_state;
 
             case r_state is
@@ -365,6 +377,7 @@ begin
                      if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
 
                         r_sys_A <= fb_c2p_i.A(15 downto 0);
+                        r_we    <= fb_c2p_i.we;
                         r_con_cyc <= '1';
                         r_con_rdy_ctdn <= fb_c2p_i.rdy_ctdn; 
 
@@ -403,6 +416,7 @@ begin
                               r_adc_nCS <= '0';
                            end if;  
                         end if;
+                        r_A_ack <= '1';
                      end if;
                   end if;
 
@@ -421,9 +435,26 @@ begin
                      end if;
                      if i_SYScyc_end_clken = '1' then
                         v_next_state := idle;     
-                        r_ack <= '1';     
+                        r_D_ack <= '1';     
+                        -- all read data is chosen here. Every source is
+                        -- valid on this edge (the local chip selects are
+                        -- only released in idle); the system VIA's output
+                        -- goes to 00 with phase 2, so it's captured earlier
+                        -- in p_reg_sysvia_do
+                        if r_sysvia_nCS2 = '0' then
+                           r_D_rd <= r_sysvia_d_o;
+                        elsif r_sid_nCS = '0' then
+                           r_D_rd <= i_sid_d_o;
+                        elsif r_intoff_nCS = '0' then
+                           r_D_rd <= cfg_eco_station_id_i;
+                        elsif r_adc_nCS = '0' then
+                           r_D_rd <= i_adc_d_o;
+                        elsif r_acia_nCS = '0' then
+                           r_D_rd <= i_acia_d_o;
+                        else
                         r_D_rd <= i_D_rd;          
                      end if;
+                  end if;
                   end if;
                when addrlatched_wr =>
                   -- TODO: This assumes that the data will be ready in this cycle                     
@@ -453,8 +484,6 @@ begin
                            end if;
                         end if;
                         r_sys_D_wr <= r_D_wr;
-                        r_ack <= '1';
-                        r_rdy <= '1';
                         v_next_state := wait_sys_end_wr;
                      end if;
                   end if;
@@ -485,20 +514,27 @@ begin
                   end if;
 
                when jim_dev_rd =>
-                  r_rdy <= '1';
+                  -- TODO: should this wait for end of cycle? Probably not but consider it
                   v_next_state := idle;     
-                  r_ack <= '1';     
+                  if fb_c2p_i.cyc = '1' then
+                  r_rdy <= '1';
+                     r_D_ack <= '1';     
                   r_D_rd <= G_JIM_DEVNO xor x"FF";          
+                  end if;
                when jim_page_rd =>
-                  r_rdy <= '1';
+                  -- TODO: should this wait for end of cycle? Probably not but consider it
                   v_next_state := idle;     
-                  r_ack <= '1';     
+                  if fb_c2p_i.cyc = '1' then
+                  r_rdy <= '1';
+                     r_D_ack <= '1';     
                   if r_sys_A(0) = '0' then
                      r_D_rd <= r_JIM_page(7 downto 0);            
                   else
                      r_D_rd <= r_JIM_page(15 downto 8);
                   end if;
+                  end if;
                when jim_page_wr =>
+                  -- TODO: what's all this r_con_cyc for, I suspect it can go and cyc drop handled more elegantly
                   if fb_c2p_i.cyc = '0' or r_con_cyc = '0' then
                      if i_SYScyc_end_clken = '1' then
                         v_next_state := idle;
@@ -511,8 +547,6 @@ begin
                      else
                         r_JIM_page(15 downto 8) <= r_d_wr;
                      end if;
-                     r_ack <= '1';
-                     r_rdy <= '1';
                      v_next_state := idle;
                   end if;
                when others =>
@@ -525,9 +559,17 @@ begin
 
             end case;
 
-            if fb_c2p_i.D_wr_stb = '1' and (r_state = idle or r_had_d_stb = '0') then
+            if r_we = '1' and fb_c2p_i.cyc = '1' and r_con_cyc = '1'
+                  and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' and r_had_d_stb = '0' then
                r_had_d_stb <= '1';
+               r_D_ack <= '1'; -- this means controller can get on with its life early, might cause game/demo timing issues?
+               r_rdy <= '1';
                r_d_wr <= fb_c2p_i.d_wr;
+            end if;
+
+            -- don't hold rdy='1' after a D_ack
+            if r_D_ack = '1' then
+               r_rdy <= '0';
             end if;
 
             r_state <= v_next_state;
@@ -537,8 +579,6 @@ begin
                -- controller has dropped the cycle
                r_con_cyc <= '0';
                r_rdy <= '0';
-               r_ack <= '0';
-
             end if;
 
          end if;
@@ -724,21 +764,17 @@ begin
       CLK                   => fb_syscon_i.clk
    );
 
+   -- The M6522's O_DATA is combinational and forced to 00 outside phase 2
+   -- (its cs needs I_CS1 = 2MHzE and I_P2_H = 1MHzE). Both have fallen by the
+   -- time i_SYScyc_end_clken is seen, so capture on each 4MHz enable while
+   -- 2MHzE is high; the last capture is on the edge 2MHzE falls, the same
+   -- edge the VIA applies its read side effects, so this is the value a 6502
+   -- would latch.
    p_reg_sysvia_do:process(fb_syscon_i)
    begin 
       if rising_edge(fb_syscon_i.clk) then
-         if r_sys_RnW = '1' and mux_mhz2E_clk_o = '1' and i_MHz4_clken = '1' then
-            if r_sysvia_nCS2 = '0' then
-               r_local_d_o <= i_sysvia_d_o;
-            elsif r_sid_nCS = '0' then
-               r_local_d_o <= i_sid_d_o;
-            elsif r_intoff_nCS = '0' then
-               r_local_d_o <= cfg_eco_station_id_i;
-            elsif r_adc_nCS = '0' then
-               r_local_d_o <= i_adc_d_o;
-            else
-               r_local_d_o <= i_acia_d_o;            
-            end if;
+         if r_sys_RnW = '1' and mux_mhz2E_clk_o = '1' and i_MHz4_clken = '1' and r_sysvia_nCS2 = '0' then
+            r_sysvia_d_o <= i_sysvia_d_o;
          end if;
       end if;
    end process;
@@ -793,12 +829,42 @@ begin
    --------------------------------------------------------
    -- ACIA 6850
    --------------------------------------------------------
+
+   -- The acia6850 core does a read or write on every clock its cs is high.
+   -- With cs held for the whole bus cycle, reading the data register cleared
+   -- RxRdy on every clock of the cycle, so a character arriving during the
+   -- cycle was marked as read and lost; a transmit write was repeated too.
+   -- Give it a one clock strobe instead, in the clock where
+   -- i_SYScyc_end_clken is high (i_MHz2E_clken is always one clock before
+   -- it), i.e. the clock whose edge samples i_acia_d_o for a read. For
+   -- writes, only on the final end of cycle: if the write is repeated
+   -- (wait_sys_repeat_wr) the strobe is given once, on the last pass.
+   -- r_acia_cs is a register because the core is clocked on the falling
+   -- edge (half a clock from this one).
+   p_acia_cs:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_acia_cs <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         r_acia_cs <= '0';
+         if r_acia_nCS = '0' and i_MHz2E_clken = '1' then
+            if r_state = addrlatched_rd then
+               r_acia_cs <= '1';
+            elsif r_state = wait_sys_end_wr and r_wr_setup_ctr >= C_WRITE_SETUP - 1 then
+               -- wait_sys_end_wr will see r_wr_setup_ctr >= C_WRITE_SETUP at
+               -- the end of cycle (it counts up once more) and go to idle
+               r_acia_cs <= '1';
+            end if;
+         end if;
+      end if;
+   end process;
+
    e_acia : entity work.acia6850
    port map (
       -- CPU signals
       clk      => not fb_syscon_i.clk,
       rst      => i_reset_full,
-      cs       => not r_acia_nCS,
+      cs       => r_acia_cs,
       rw       => r_sys_RnW,
       irq      => i_acia_IRQ,
       addr     => r_sys_A(0),

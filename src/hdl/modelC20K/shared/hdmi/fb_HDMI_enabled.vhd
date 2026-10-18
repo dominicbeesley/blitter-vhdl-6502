@@ -570,28 +570,32 @@ end process;
 	i_per_p2c_intcon(PERIPHERAL_N_SPRITES) <= i_sprites_fb_p2c;
 
 
-
-	e_fb_intcon: entity work.fb_intcon_one_to_many
+   -- fb_intcon_shared with one controller rather than fb_intcon_one_to_many:
+   -- the HDMI decode (p_sel) goes in front of the shared intcon's slot
+   -- register, so the peripherals get A_stb and the address from registers.
+   -- one_to_many's live decode put the top-level address, this decode, the
+   -- steering and each peripheral's accept in one clock (failed by ~5.6 ns on
+   -- the C20K). Costs one clock on HDMI accesses.
+   e_fb_intcon: entity work.fb_intcon_shared
 	generic map (
-		SIM 									=> SIM,
-		G_PERIPHERAL_COUNT 				=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24,
-		G_REGISTER_CON_READS				=> true
-		)
+      G_CONTROLLER_COUNT            => 1,
+    	G_PERIPHERAL_COUNT          => PERIPHERAL_COUNT
+	)
 	port map (
-		fb_syscon_i 						=> fb_syscon_i,
+		fb_syscon_i 				=> fb_syscon_i,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> fb_c2p_i,
-		fb_con_p2c_o						=> fb_p2c_o,
+      -- upstream port connects to the controller
+      fb_up_c2p_i(0)                => fb_c2p_i,
+      fb_up_p2c_o(0)                => fb_p2c_o,
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      	fb_dn_c2p_o                 => i_per_c2p_intcon,
+      	fb_dn_p2c_i                 => i_per_p2c_intcon,
 
-		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr,
-		peripheral_sel_i					=> i_intcon_peripheral_sel,
-		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh
+      peripheral_sel_addr_o(0)      => i_intcon_peripheral_sel_addr,
+      peripheral_sel_we_o           => open,
+      peripheral_sel_i(0)           => i_intcon_peripheral_sel,
+      peripheral_sel_oh_i(0)        => i_intcon_peripheral_sel_oh
 	);
 
 	p_sel:process(i_intcon_peripheral_sel_addr)

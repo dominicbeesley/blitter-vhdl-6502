@@ -43,7 +43,11 @@
         <File path="../../../library/bbc/bbc_slow_cyc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_buffer.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/clockreg.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/metadelay.vhd" type="file.vhdl" enable="1" />
@@ -72,6 +76,7 @@
         <File path="../../shared/hdmi//hdmi_out_gowin_2a.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/sync_sync.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/mc6845.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/fb_HDMI_crtc.vhd" type="file.vhdl" enable="1" />

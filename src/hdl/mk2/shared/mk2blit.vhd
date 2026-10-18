@@ -381,7 +381,6 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	);
 end generate;
 
-g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
@@ -405,32 +404,6 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
 
-
-END GENERATE;
-g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-	e_fb_intcon: fb_intcon_one_to_many
-	generic map (
-      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
-		)
-	port map (
-		fb_syscon_i 						=> i_fb_syscon,
-
-      -- upstream ports connect to controllers
-      fb_up_c2p_i                   => i_con_c2p_intcon(0),
-      fb_up_p2c_o                   => i_con_p2c_intcon(0),
-
-      -- downstream ports connect to peripherals
-      fb_dn_c2p_o                   => i_per_c2p_intcon,
-      fb_dn_p2c_i                   => i_per_p2c_intcon,
-
-		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
-		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
-		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
-		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
-	);
-
-
-END GENERATE;
 
 	i_con_c2p_intcon(MAS_NO_CPU)			<= i_c2p_cpu;
 	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;

@@ -77,14 +77,24 @@ end fb_uart;
 
 architecture rtl of fb_uart is
 
+   -- fishbone peripheral handler
+   type     state_mem_t is (idle, act_rd, act_wr);
+
+   signal   r_state     : state_mem_t;
+
+   signal   r_D_ack     : std_logic;
+   signal   r_A         : std_logic_vector(0 downto 0);
+   signal   r_A_ack     : std_logic;
+   signal   r_D_rd      : std_logic_vector(7 downto 0);
+   signal   i_D_rd      : std_logic_vector(7 downto 0);
+
+   signal   r_D_wr      : std_logic_vector(7 downto 0);
+   signal   r_D_wr_stb  : std_logic;
+
+
 	signal i_tx_ack	: std_logic;
 	signal r_tx_req	: std_logic;
 
-	signal r_fb_ack	: std_logic;
-	type state_t is (idle, wait_wr_stb);
-	signal r_state    : state_t;
-	signal r_wr_addr	: std_logic;
-	signal i_wr_addr	: std_logic;
 	signal r_tx_char	: std_logic_vector(7 downto 0);
 
 	signal r_clk_div	: unsigned(3 downto 0); -- divide the 16x clock down for TX
@@ -98,70 +108,100 @@ architecture rtl of fb_uart is
 	signal i_rx_dat   : std_logic_vector(7 downto 0);
 begin
 
-	fb_p2c_o.D_rd <= 	(7 => i_rx_req xor r_rx_ack, 6 => i_tx_ack xor r_tx_req, 0 => i_rx_ferr, others => '0') when fb_c2p_i.A(0) = '0' else
+   read:process(all)
+   begin
+		i_D_rd <= 	(7 => i_rx_req xor r_rx_ack, 6 => i_tx_ack xor r_tx_req, 0 => i_rx_ferr, others => '0') when r_A = "0" else
 							i_rx_dat;
-	fb_p2c_o.ack <= r_fb_ack;
-	fb_p2c_o.rdy <= r_fb_ack;
-	fb_p2c_o.stall <= '0' when r_state = idle else '1';
+   end process;
 
-	i_wr_addr <= 	fb_c2p_i.A(0) when r_state = idle else
-						r_wr_addr;
-
-	p_state:process(fb_syscon_i)
-	variable v_dowrite: boolean;
-	begin
-		
-		if fb_syscon_i.rst = '1' then
-			r_fb_ack <= '0';
+	p_wr:process(fb_syscon_i)
+   variable v_index : integer; 
+   variable v_A : std_logic_vector(1 downto 0);
+   variable v_D : unsigned(3 downto 0);
+   begin
+      if fb_syscon_i.rst = '1' then
 			r_tx_req <= '0';
-			r_rx_ack <= '0';
-		elsif rising_edge(fb_syscon_i.clk) then
-			
-			v_dowrite := false;
-
-			r_fb_ack <= '0';
-
-			case r_state is
-				when idle =>
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
-						r_wr_addr <= fb_c2p_i.A(0);
-						if fb_c2p_i.we = '1' then
-							if fb_c2p_i.D_wr_stb = '1' then
-								v_dowrite := true;
-							else
-								r_state <= wait_wr_stb;
-							end if;
-						else
-							r_fb_ack <= '1';						
-							if fb_c2p_i.A(0) = '1' then
-								-- ack read of data
-								r_rx_ack <= i_rx_req;
-							end if;
-
-						end if;
-					end if;
-				when wait_wr_stb =>
-					if fb_c2p_i.D_wr_stb = '1' then
-						v_dowrite := true;
-						r_state <= idle;
-					end if;
-				when others =>
-					r_state <= idle;
-
-			end case;
-
-
-			if v_dowrite then
-				if i_wr_addr = '1' then
-					-- write to TX
+      elsif rising_edge(fb_syscon_i.clk) then
+      	if r_D_wr_stb = '1' then
+	      	if r_A = "1" then
 					r_tx_req <= not i_tx_ack;
 					r_tx_char <= fb_c2p_i.D_wr;
 				end if;
-				r_fb_ack <= '1';
 			end if;
+      end if;
+   end process;
 
-		end if;
-	end process;
+	fb_p2c_o.A_ack    <= r_A_ack;
+   fb_p2c_o.D_rd     <= r_D_rd;
+   fb_p2c_o.rdy      <= r_D_ack;
+   fb_p2c_o.D_ack    <= r_D_ack;
+
+
+   -- fishbone register access
+   p_state_cyc:process(fb_syscon_i)
+   variable v_dowrite : boolean;
+   begin
+
+      if fb_syscon_i.rst = '1' then
+
+         r_state <= idle;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_rd <= (others => '0');
+         r_A <= (others => '0');
+         r_D_wr_stb <= '0';
+         r_D_wr <= (others => '0');
+
+      elsif rising_edge(fb_syscon_i.clk) then
+         v_dowrite := false;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_wr_stb <= '0';
+
+         case r_state is
+            when idle =>
+               -- capture early for less muxing
+               r_A <= fb_c2p_i.A(0 downto 0);
+               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+               if (fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1') then
+                  r_A_ack <= '1';
+                  if fb_c2p_i.we = '1' then
+                     r_state <= act_wr;
+                  else
+                     r_state <= act_rd;                     
+                  end if;
+               end if;              
+            when act_wr =>
+               if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                  v_dowrite := true;
+               end if;
+            when act_rd => 
+               if fb_c2p_i.cyc = '1' then
+                  r_D_ack <= '1';   
+                  r_D_rd <= i_D_rd;             
+						if r_A = "1" then
+							-- ack read of data
+							r_rx_ack <= i_rx_req;
+						end if;
+               end if;
+               r_state <= idle;
+            when others =>
+               r_state <= idle;
+         end case;
+
+         if fb_c2p_i.cyc = '0' then
+            r_state <= idle;
+            r_A_ack <= '0';
+            r_D_ack <= '0';
+         elsif v_dowrite then
+            r_state <= idle;
+            r_D_ack <= '1';
+            r_D_wr_stb <= '1';
+            r_D_wr <= fb_c2p_i.D_wr;
+         end if;
+      end if;
+   end process;
+
 
 	e_tx:entity work.uart_tx
 	port map (

@@ -302,21 +302,11 @@ architecture rtl of C20KFirstLight is
    signal i_sys_nNMI        : std_logic;
 
    -- multiplex in to core, out from peripheral (I1 phase)   
-   signal icipo_j_i0       : std_logic;
-   signal icipo_j_i1       : std_logic;
-   signal icipo_j_spi_miso : std_logic;
    signal icipo_btn0       : std_logic;
    signal icipo_btn1       : std_logic;
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
 
-
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_j_ds_nCS2  : std_logic;
-   signal icopi_j_ds_nCS1  : std_logic;
-   signal icopi_j_spi_clk  : std_logic;
-   signal icopi_j_spi_mosi : std_logic;
-   signal icopi_j_adc_nCS  : std_logic;
 
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
@@ -412,26 +402,25 @@ begin
       peripheral_sel_oh_o     => i_intcon_peripheral_sel_oh(0)
    );
 
-   e_fb_intcon: fb_intcon_one_to_many
+   e_fb_intcon: fb_intcon_shared
    generic map (
-      SIM                           => SIM,
-      G_PERIPHERAL_COUNT                  => PERIPHERAL_COUNT,
-      G_ADDRESS_WIDTH               => 24
+      G_CONTROLLER_COUNT            => CONTROLLER_COUNT,
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
       )
    port map (
       fb_syscon_i                   => i_fb_syscon,
 
       -- peripheral ports connect to controllers
-      fb_con_c2p_i                  => i_con_c2p_intcon(0),
-      fb_con_p2c_o                  => i_con_p2c_intcon(0),
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
 
       -- controller ports connect to peripherals
-      fb_per_c2p_o                  => i_per_c2p_intcon,
-      fb_per_p2c_i                  => i_per_p2c_intcon,
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_i              => i_intcon_peripheral_sel(0),
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
+      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr,
+      peripheral_sel_i              => i_intcon_peripheral_sel,
+      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh
    );
 
    i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
@@ -653,9 +642,6 @@ END GENERATE;
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_i0_o                      => icipo_j_i0,
-      p_j_i1_o                      => icipo_j_i1,
-      p_j_spi_miso_o                => icipo_j_spi_miso,
       p_btn0_o                      => icipo_btn0,
       p_btn1_o                      => icipo_btn1,
       p_btn2_o                      => icipo_btn2,
@@ -663,13 +649,8 @@ END GENERATE;
 
 
       -- random other multiplexed pins in from FPGA (O1 phase)
-      p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
-      p_j_ds_nCS1_i                 => icopi_j_ds_nCS1,
-      p_j_spi_clk_i                 => icopi_j_spi_clk,
       p_VID_HS_i                    => r_vid_128_hs,
       p_VID_VS_i                    => r_vid_128_vs,
-      p_j_spi_mosi_i                => icopi_j_spi_mosi,
-      p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 
       -- other inputs to FPGA
       lpstb_i                       => pj_LPSTB_i,

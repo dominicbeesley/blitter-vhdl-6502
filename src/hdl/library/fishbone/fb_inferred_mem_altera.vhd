@@ -114,7 +114,9 @@ begin
 					if fb_c2p_i.cyc = '0' then
 						r_wait_d_stb <= '0';
 					elsif fb_c2p_i.D_wr_stb = '1' then
-						r_mem(to_integer(unsigned(r_addr))) <= fb_c2p_i.D_wr;
+						if not G_READONLY then
+							r_mem(to_integer(unsigned(i_addr))) <= fb_c2p_i.D_wr;
+						end if;	
 						r_D_ack <= '1';
 						r_wait_d_stb <= '0';
 					end if;
@@ -128,7 +130,9 @@ begin
 							r_D_ack <= '1';
 						else
 							if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-								r_mem(to_integer(unsigned(i_addr))) <= fb_c2p_i.D_wr;
+								if not G_READONLY then
+									r_mem(to_integer(unsigned(i_addr))) <= fb_c2p_i.D_wr;
+								end if;								
 								r_D_ack <= '1';
 							else
 								r_wait_d_stb <= '1';

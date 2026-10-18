@@ -31,7 +31,7 @@ create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_ne
 # Set Clock Groups
 #**************************************************************
 
-#set_clock_groups -asynchronous -group [get_clocks {CLOCK_128M}] -group [get_clocks {CLOCK_48M}] 
+set_clock_groups -asynchronous -group [get_clocks {CLOCK_128M}] -group [get_clocks {CLOCK_48M}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_128M}] -group [get_clocks {CLOCK_PIXEL_HDMI}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_PIXEL_HDMI}] 
 

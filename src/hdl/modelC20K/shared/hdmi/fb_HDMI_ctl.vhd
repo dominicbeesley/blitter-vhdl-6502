@@ -56,26 +56,35 @@ architecture rtl of fb_HDMI_ctl is
 	constant	C_DEFAULT_AVI_ILACE			: std_logic_vector(111 downto 0) := x"00000000000000000115840812BB";
 	constant	C_DEFAULT_AVI					: std_logic_vector(111 downto 0) := x"00000000000000000117840812B9";
 
-	signal r_avi							: std_logic_vector(111 downto 0) := C_DEFAULT_AVI;
-
-	signal r_avi_lat						: std_logic_vector(111 downto 0) := C_DEFAULT_AVI;
-
+   signal r_avi                     : std_logic_vector(111 downto 0);
+   signal r_avi_lat                 : std_logic_vector(111 downto 0);
 	signal r_avi_default					: std_logic;
 
 
 	signal r_pixel_double				: std_logic;
 	signal r_audio_enable				: std_logic;
 
-	type	 per_state_t is (idle, rd, wait_d_stb);
-	signal r_per_state 					: per_state_t;
+   -- FISHBONE wrapper signals
+   type     state_per_t is (idle, act_rd, act_wr);
 
+   signal   r_state     : state_per_t;
+
+   signal   r_D_ack     : std_logic;
 	signal r_A								: std_logic_vector(3 downto 0);
-	signal r_d_wr							: std_logic_vector(7 downto 0);
-	signal r_d_wr_stb						: std_logic;
-	signal r_ack							: std_logic;
+   signal   r_A_ack     : std_logic;
+   signal   r_D_rd      : std_logic_vector(7 downto 0);
 	signal i_D_rd							: std_logic_vector(7 downto 0);
 
+   signal   r_D_wr      : std_logic_vector(7 downto 0);
+   signal   r_d_wr_stb  : std_logic;
+
 begin
+
+   fb_p2c_o.A_ack    <= r_A_ack;
+   fb_p2c_o.D_rd     <= r_D_rd;
+   fb_p2c_o.rdy      <= r_D_ack;
+   fb_p2c_o.D_ack    <= r_D_ack;
+
 
 	p_avi_override:process(fb_syscon_i)
 	begin
@@ -95,7 +104,7 @@ begin
 	pixel_double_o <= r_pixel_double;
 	audio_enable_o <= r_audio_enable;
 
-	p_hdmi_regs:process(fb_syscon_i)
+   p_d_wr:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_pixel_double <= '1';
@@ -103,9 +112,7 @@ begin
 			r_avi <= C_DEFAULT_AVI;
 			r_avi_lat <= C_DEFAULT_AVI;
 			r_avi_default <= '1';
-		else
-			if rising_edge(fb_syscon_i.clk) then
-
+      elsif rising_edge(fb_syscon_i.clk) then
 				if r_d_wr_stb = '1' then
 					case to_integer(unsigned(r_A)) is
 						when 0 =>
@@ -146,7 +153,6 @@ begin
 						end case;
 				end if;	
 			end if;
-		end if;
 	end process;
 
 	i_D_rd <=
@@ -170,55 +176,55 @@ begin
 	p_per_state:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
-			r_per_state <= idle;
-			r_ack <= '0';
-			r_d_wr_stb <= '0';
-			r_d_wr <= (others => '0');
+         r_state <= idle;
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         r_D_rd <= (others => '0');
 			r_A <= (others => '0');
+         r_d_wr <= (others => '0');
+         r_d_wr_stb <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
-			r_ack <= '0';
+         r_D_ack <= '0';
+         r_A_ack <= '0';
+         -- defer write one cycle to ease routing
 			r_d_wr_stb <= '0';
-			case r_per_state is
+         -- capture early - only needs to remain for one cycle but followed by a big mux so register to split timing
+         r_d_wr <= fb_c2p_i.D_wr;
+         case r_state is
 				when idle =>
-					if fb_c2p_i.cyc = '1' and fb_c2p_i.a_stb = '1' then
+               -- capture early for less muxing
 						r_A <= fb_c2p_i.A(3 downto 0);
+               -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
+               if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
 						if fb_c2p_i.we = '1' then
-							if fb_c2p_i.D_wr_stb = '1' then
-								r_d_wr_stb <= '1';
-								r_d_wr <= fb_c2p_i.d_wr;
-								r_ack <= '1';
-								r_per_state <= idle;
+                     r_state <= act_wr;
 							else
-								r_per_state <= wait_d_stb;
+                     r_state <= act_rd;
 							end if;
-						else
-							r_per_state <= rd;
+                  r_A_ack <= '1';
 						end if;
-					end if;
-				when wait_d_stb =>
-					if fb_c2p_i.D_wr_stb = '1' then
+            when act_wr =>
+               if fb_c2p_i.cyc = '1' and fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                  r_D_ack <= '1';
+                  r_state <= idle;
 						r_d_wr_stb <= '1';
-						r_d_wr <= fb_c2p_i.d_wr;
-						r_ack <= '1';
-						r_per_state <= idle;
-					else
-						r_per_state <= wait_d_stb;
 					end if;
-				when rd =>
-					r_ack <= '1';
-					r_per_state <= idle;	
-					fb_p2c_o.D_rd <= i_D_rd;
+            when act_rd =>
+               if fb_c2p_i.cyc = '1' then
+                  r_D_rd <= i_D_rd;
+                  r_D_ack <= '1';
+               end if;
+               r_state <= idle;              
 				when others =>
-					r_per_state <= idle;
-					r_ack <= '1';
+               -- not sure if we should blindly ack here
+               r_state <= idle;
 			end case;
+
+         if fb_c2p_i.cyc = '0' then
+            r_state <= idle;
+         end if;
 		end if;
 	end process;
-
-
-	fb_p2c_o.ack <= 	r_ack;
-	fb_p2c_o.rdy <= 	r_ack;
-	fb_p2c_o.stall <= '0' when r_per_state = idle else '1';
 
 
 
