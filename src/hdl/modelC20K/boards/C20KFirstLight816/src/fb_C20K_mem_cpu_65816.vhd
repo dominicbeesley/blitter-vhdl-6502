@@ -169,6 +169,8 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
 
    signal r_had_fb_ack     : std_logic;
    signal r_fb_D_rd        : std_logic_vector(7 downto 0);
+   signal r_fb_p2c_D_ack   : std_logic;                     -- fb_p2c_i.D_ack registered, see p_fb_ret
+   signal r_fb_p2c_D_rd    : std_logic_vector(7 downto 0);  -- fb_p2c_i.D_rd registered with it
    signal r_D_wr_local     : std_logic_vector(7 downto 0);
    signal r_was_ready      : std_logic;
 
@@ -272,8 +274,7 @@ begin
 
    e_ad_local:entity work.address_decode_p20k
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT
+      SIM                     => SIM
    )
    port map (
       addr_i                  => i_log_A,
@@ -394,47 +395,52 @@ begin
                      r_VPB <= MEM_A_io(20);
                   end if;
                when read_fb =>
-                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.stall = '0' then
+                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.A_ack = '1' then
                      fb_c2p_o.A_stb <= '0';
-                  else
-                     if fb_p2c_i.ack = '1' then
-                        r_fb_D_rd <= fb_p2c_i.D_rd;
-                        r_had_fb_ack <= '1';
-                        CPU_RDY_io <= '1';
-                        fb_c2p_o.cyc <= '0';
-                     end if;
-
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
-                        r_was_ready <= '1';
-                     end if;
-
-                     if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-                        r_state <= wait_asetup;
-                     end if;
-
                   end if;
+
+                  if r_fb_p2c_D_ack = '1' then
+                     r_fb_D_rd <= r_fb_p2c_D_rd;
+                     r_had_fb_ack <= '1';
+                     fb_c2p_o.cyc <= '0';
+                  end if;
+
+                  -- RDY only at the DSR point (as write_fb). Raised on D_ack, a
+                  -- D_ack after DSR let the cpu finish the cycle without data
+                  -- setup, and without r_was_ready the state machine then missed
+                  -- the cpu's next cycle. Here r_fb_D_rd has been on MEM_D_io
+                  -- (p_mem_D) since at least this edge.
+                  if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
+                     r_was_ready <= '1';
+                     CPU_RDY_io <= '1';
+                  end if;
+
+                  if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     r_state <= wait_asetup;
+                  end if;
+
                when write_fb =>
-                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.stall = '0' then
+                  if fb_c2p_o.A_stb = '1' and fb_p2c_i.A_ack = '1' then
                      fb_c2p_o.A_stb <= '0';
-                  else
-                     if fb_p2c_i.ack = '1' then
-                        r_had_fb_ack <= '1';
-                        fb_c2p_o.cyc <= '0';
-                     end if;
+                  end if;
+                  
+                  if r_fb_p2c_D_ack = '1' and fb_c2p_o.D_wr_stb = '1' then
+                     r_had_fb_ack <= '1';
+                     fb_c2p_o.cyc <= '0';
+                  end if;
 
-                     if i_ring_next(C_CPU_DIV_MDS) = '1' then
-                        fb_c2p_o.D_wr <= MEM_D_io;
-                        fb_c2p_o.D_wr_stb <= '1';
-                     end if;
+                  if i_ring_next(C_CPU_DIV_MDS) = '1' then
+                     fb_c2p_o.D_wr <= MEM_D_io;
+                     fb_c2p_o.D_wr_stb <= '1';
+                  end if;
 
-                     if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
-                        r_was_ready <= '1';
-                        CPU_RDY_io <= '1';
-                     end if;
+                  if i_ring_next(C_CPU_DIV_PHI2_DSR) = '1' and r_had_fb_ack = '1' then
+                     r_was_ready <= '1';
+                     CPU_RDY_io <= '1';
+                  end if;
 
-                     if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
-                        r_state <= wait_asetup;
-                     end if;
+                  if r_was_ready = '1' and i_ring_next(C_CPU_DIV_PHI1_DHR) = '1' then
+                     r_state <= wait_asetup;
                   end if;
                when read_local =>
                   -- assumes all reads complete in time - check
@@ -477,6 +483,39 @@ begin
          end if;
       end if;
       
+   end process;
+
+   -- ================================================================================================ --
+   -- Fishbone returns registered on entry
+   -- ================================================================================================ --
+   -- D_ack and D_rd come back through two register-steered return muxes (the
+   -- top intcon, and the HDMI intcon for HDMI peripherals). Using them
+   -- directly put those muxes, the read_fb/write_fb logic and the long route
+   -- to the CPU_RDY_io I/O register in one clock (failed by ~1.8 ns). They
+   -- are registered here and acted on a clock later (r_had_fb_ack, RDY and
+   -- the cyc drop are one clock later; at 16 fast clocks per CPU cycle this
+   -- only stretches a CPU cycle if D_ack was already at the RDY sample point).
+   -- D_rd is loaded every clock with no enable; it's only used with
+   -- r_fb_p2c_D_ack.
+   -- One D_ack per cyc, and cyc drops when r_fb_p2c_D_ack is seen, so a
+   -- registered D_ack can't be left over for the next cycle. For a write,
+   -- D_wr_stb is still high (with cyc) for one clock more than before; that's
+   -- safe as the peripheral only takes D_wr_stb for an accepted write that is
+   -- still waiting for data, and there is only one transaction per cyc.
+   p_fb_ret:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_fb_p2c_D_ack <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
+         r_fb_p2c_D_ack <= fb_p2c_i.D_ack;
+      end if;
+   end process;
+
+   p_fb_ret_d:process(fb_syscon_i)
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+         r_fb_p2c_D_rd  <= fb_p2c_i.D_rd;
+      end if;
    end process;
 
    -- ================================================================================================ --

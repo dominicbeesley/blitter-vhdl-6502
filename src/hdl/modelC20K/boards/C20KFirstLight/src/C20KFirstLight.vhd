@@ -98,8 +98,8 @@ entity C20KFirstLight is
       cpu_E_i              : in            std_logic;
       cpu_MX_i             : in            std_logic;
       cpu_PHI2_o           : out           std_logic;
-      cpu_RDY_o            : out           std_logic;
-      cpu_nABORT_io        : in            std_logic;
+      cpu_RDY_io           : inout         std_logic;
+      cpu_nABORT_o         : out           std_logic;
       cpu_nIRQ_o           : out           std_logic;
       cpu_nNMI_o           : out           std_logic;
       cpu_nRES_o           : out           std_logic;
@@ -195,9 +195,6 @@ architecture rtl of C20KFirstLight is
    );
    END COMPONENT;
 
-   signal   i_JIM_page     : std_logic_vector(15 downto 0);
-   signal   i_JIM_en       : std_logic;
-
    signal i_cfg_eco_station_id: std_logic_vector(7 downto 0) := x"A5";
    -----------------------------------------------------------------------------
    -- fishbone signals
@@ -241,6 +238,13 @@ architecture rtl of C20KFirstLight is
    signal i_per_p2c_intcon    : fb_con_i_per_o_arr(PERIPHERAL_COUNT-1 downto 0);
 
    -----------------------------------------------------------------------------
+	-- inter component (non-fishbone) signals
+	-----------------------------------------------------------------------------
+
+	signal i_JIM_en						: std_logic;							-- local jim device enable
+	signal i_JIM_page						: std_logic_vector(15 downto 0);	-- the actual mapping is done in the cpu component address
+
+   -----------------------------------------------------------------------------
    -- intcon to peripheral sel
    -----------------------------------------------------------------------------
    signal i_intcon_peripheral_sel_addr    : fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
@@ -253,6 +257,7 @@ architecture rtl of C20KFirstLight is
 
 	signal i_clk_snd						: std_logic := '0';					-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
+	
 	-----------------------------------------------------------------------------
 	-- HDMI stuff
 	-----------------------------------------------------------------------------

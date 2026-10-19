@@ -1,28 +1,28 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.11 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Mon Jun  2 18:11:55 2025
+--Created Time: Tue Jan  6 14:36:54 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity pll_48_128 is
+entity pll_360_384_128 is
     port (
         clkout: out std_logic;
+        clkoutd3: out std_logic;
         clkin: in std_logic
     );
-end pll_48_128;
+end pll_360_384_128;
 
-architecture Behavioral of pll_48_128 is
+architecture Behavioral of pll_360_384_128 is
 
     signal lock_o: std_logic;
     signal clkoutp_o: std_logic;
     signal clkoutd_o: std_logic;
-    signal clkoutd3_o: std_logic;
     signal gw_gnd: std_logic;
     signal FBDSEL_i: std_logic_vector(5 downto 0);
     signal IDSEL_i: std_logic_vector(5 downto 0);
@@ -88,16 +88,16 @@ begin
 
     rpll_inst: rPLL
         generic map (
-            FCLKIN => "48",
+            FCLKIN => "360",
             DEVICE => "GW2A-18C",
             DYN_IDIV_SEL => "false",
-            IDIV_SEL => 2,
+            IDIV_SEL => 14,
             DYN_FBDIV_SEL => "false",
-            FBDIV_SEL => 7,
+            FBDIV_SEL => 15,
             DYN_ODIV_SEL => "false",
-            ODIV_SEL => 4,
+            ODIV_SEL => 2,
             PSDA_SEL => "0000",
-            DYN_DA_EN => "true",
+            DYN_DA_EN => "false",
             DUTYDA_SEL => "1000",
             CLKOUT_FT_DIR => '1',
             CLKOUTP_FT_DIR => '1',
@@ -116,7 +116,7 @@ begin
             LOCK => lock_o,
             CLKOUTP => clkoutp_o,
             CLKOUTD => clkoutd_o,
-            CLKOUTD3 => clkoutd3_o,
+            CLKOUTD3 => clkoutd3,
             RESET => gw_gnd,
             RESET_P => gw_gnd,
             CLKIN => clkin,
@@ -129,4 +129,4 @@ begin
             FDLY => FDLY_i
         );
 
-end Behavioral; --pll_48_128
+end Behavioral; --pll_360_384_128

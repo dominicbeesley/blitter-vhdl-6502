@@ -1,23 +1,23 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.11 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Mon Jun  2 18:09:36 2025
+--Created Time: Tue Jan  6 13:14:36 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity pll_27_48 is
+entity pll_27_360 is
     port (
         clkout: out std_logic;
         clkin: in std_logic
     );
-end pll_27_48;
+end pll_27_360;
 
-architecture Behavioral of pll_27_48 is
+architecture Behavioral of pll_27_360 is
 
     signal lock_o: std_logic;
     signal clkoutp_o: std_logic;
@@ -91,11 +91,11 @@ begin
             FCLKIN => "27",
             DEVICE => "GW2A-18C",
             DYN_IDIV_SEL => "false",
-            IDIV_SEL => 8,
+            IDIV_SEL => 2,
             DYN_FBDIV_SEL => "false",
-            FBDIV_SEL => 15,
+            FBDIV_SEL => 39,
             DYN_ODIV_SEL => "false",
-            ODIV_SEL => 16,
+            ODIV_SEL => 2,
             PSDA_SEL => "0000",
             DYN_DA_EN => "true",
             DUTYDA_SEL => "1000",
@@ -129,4 +129,4 @@ begin
             FDLY => FDLY_i
         );
 
-end Behavioral; --pll_27_48
+end Behavioral; --pll_27_360

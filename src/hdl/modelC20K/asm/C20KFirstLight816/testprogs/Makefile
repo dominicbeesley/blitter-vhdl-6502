@@ -1,6 +1,6 @@
 	include ../Makefile.defs
 
-SUBDIRSWIMAKE:= flashinfo 
+SUBDIRSWIMAKE:= flashinfo hdmidemo
 
 $(TOPTARGETS): $(SUBDIRSWIMAKE)
 

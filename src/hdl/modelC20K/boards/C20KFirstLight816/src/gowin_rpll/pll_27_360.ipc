@@ -1,7 +1,7 @@
 [General]
 ipc_version=4
-file=pll_48_128
-module=pll_48_128
+file=pll_27_360
+module=pll_27_360
 target_device=gw2a18c-011
 type=clock_rpll
 version=1.0
@@ -9,12 +9,12 @@ version=1.0
 [Config]
 CKLOUTD3=false
 CLKFB_SOURCE=0
-CLKIN_FREQ=48
+CLKIN_FREQ=27
 CLKOUTD=false
 CLKOUTP=false
 CLKOUT_BYPASS=false
 CLKOUT_DIVIDE_DYN=true
-CLKOUT_FREQ=128
+CLKOUT_FREQ=360
 CLKOUT_TOLERANCE=0
 DYNAMIC=true
 LANG=1
