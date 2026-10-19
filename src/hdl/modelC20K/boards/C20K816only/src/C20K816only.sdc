@@ -38,5 +38,23 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clock
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_SOUND}] -group [get_clocks {CLOCK_128M}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
 
-#set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -setup -end 2
-#set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -hold -end 1
+# blit_addr: address-calc inputs -> r_addr_out has 2 clocks (inputs change with
+# r_clken_addr_calc_start; calc a clock later; r_addr_out loads the clock after).
+# The start strobe itself is deliberately not covered.
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_blit_state*}]   -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_blit_state*}]   -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_cha_*}]         -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_cha_*}]         -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_BLTCON_*}]      -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_BLTCON_*}]      -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_d*}]            -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_d*}]            -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_row_countdn*}]  -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_row_countdn*}]  -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -hold -end 1
+
+# SID is only at 1MHz! - these could be 128/127 
+set_multicycle_path -from [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -to [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -setup -end 2
+set_multicycle_path -from [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -to [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -hold -end 1
