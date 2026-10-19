@@ -55,7 +55,9 @@
 --     loaded whenever the slot is free. The slot is marked full,
 --     and A_ack given to the controller, only for an A_stb.
 --   * A_stb to peripheral k is r_full and r_sel_oh(k) and not i_hold, where
---     i_hold compares registers only. So the address decoders sit between
+--     i_hold compares registers only (the count conditions are kept as
+--     their own registers, r_cnt_nz/r_cnt_max, so only the r_sel_ix/r_own_ix
+--     compare is left in front of A_stb). So the address decoders sit between
 --     the controllers and the slot register, not on the path to the
 --     peripherals.
 --   * The slot empties on the peripheral's A_ack and can reload in the same
@@ -157,6 +159,8 @@ architecture rtl of fb_intcon_shared is
 
    -- peripheral bookkeeping (as fb_intcon_one_to_many)
    signal r_cnt          : integer range 0 to G_MAXOUT;                       -- A_ack'd, not D_ack'd
+   signal r_cnt_nz       : std_logic;                                         -- r_cnt /= 0, registered with r_cnt
+   signal r_cnt_max      : std_logic;                                         -- r_cnt = G_MAXOUT, registered with r_cnt
    signal r_own_ix       : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- peripheral owing them
    signal r_own_oh       : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
    signal i_hold         : std_logic;                                         -- don't forward the slot's A_stb yet
@@ -220,7 +224,7 @@ end generate;
    -- --------------------------------------------------------------------------
    -- Downstream: only A_stb is steered, and only from registers
    -- --------------------------------------------------------------------------
-   i_hold <= '1' when r_cnt /= 0 and (r_sel_ix /= r_own_ix or r_cnt = G_MAXOUT)
+   i_hold <= '1' when r_cnt_nz = '1' and (r_sel_ix /= r_own_ix or r_cnt_max = '1')
              else '0';
 
    g_dn : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
@@ -289,6 +293,8 @@ end generate;
          r_D_wr     <= (others => '0');
          r_D_wr_stb <= '0';
          r_cnt      <= 0;
+         r_cnt_nz   <= '0';
+         r_cnt_max  <= '0';
          r_own_ix   <= (others => '0');
          r_own_oh   <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
@@ -353,6 +359,17 @@ end generate;
             v_cnt := r_cnt - 1;
 					end if;
          r_cnt <= v_cnt;
+         -- the count conditions used by i_hold, registered from the same value
+         if v_cnt /= 0 then
+            r_cnt_nz <= '1';
+         else
+            r_cnt_nz <= '0';
+         end if;
+         if v_cnt = G_MAXOUT then
+            r_cnt_max <= '1';
+         else
+            r_cnt_max <= '0';
+         end if;
 
          -- the granted controller has dropped cyc: end (or abort) the cycle
          if r_state = act and i_cyc(to_integer(r_grant_ix)) = '0' then
@@ -363,6 +380,8 @@ end generate;
             r_up_A_ack <= '0';
             r_D_wr_stb <= '0';
             r_cnt      <= 0;
+            r_cnt_nz   <= '0';
+            r_cnt_max  <= '0';
 			end if;
 		end if;
 	end process;
