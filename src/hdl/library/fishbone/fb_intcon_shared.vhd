@@ -54,10 +54,11 @@
 --   * The slot holds A, we, and the peripheral select (index and one-hot)
 --     loaded whenever the slot is free. The slot is marked full,
 --     and A_ack given to the controller, only for an A_stb.
---   * A_stb to peripheral k is r_full and r_sel_oh(k) and not i_hold, where
---     i_hold compares registers only (the count conditions are kept as
---     their own registers, r_cnt_nz/r_cnt_max, so only the r_sel_ix/r_own_ix
---     compare is left in front of A_stb). So the address decoders sit between
+--   * A_stb to peripheral k is r_full and r_sel_oh(k), unless something is
+--     owed (r_cnt_nz) and k isn't the peripheral owed it (r_own_oh(k)) or the
+--     count is at G_MAXOUT (r_cnt_max). Using the one-hots (index and
+--     one-hot always agree) needs no index compare, so each A_stb is one
+--     small LUT of registers. So the address decoders sit between
 --     the controllers and the slot register, not on the path to the
 --     peripherals.
 --   * The slot empties on the peripheral's A_ack and can reload in the same
@@ -163,7 +164,6 @@ architecture rtl of fb_intcon_shared is
    signal r_cnt_max      : std_logic;                                         -- r_cnt = G_MAXOUT, registered with r_cnt
    signal r_own_ix       : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- peripheral owing them
    signal r_own_oh       : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
-   signal i_hold         : std_logic;                                         -- don't forward the slot's A_stb yet
 
    -- returns from the peripherals, steered by registers
    signal i_dn_A_ack     : std_logic;
@@ -224,12 +224,16 @@ end generate;
    -- --------------------------------------------------------------------------
    -- Downstream: only A_stb is steered, and only from registers
    -- --------------------------------------------------------------------------
-   i_hold <= '1' when r_cnt_nz = '1' and (r_sel_ix /= r_own_ix or r_cnt_max = '1')
-             else '0';
+   -- The slot's A_stb is forwarded to peripheral k when it is addressed to k
+   -- (r_sel_oh(k)) and either nothing is owed, or k is the peripheral owed
+   -- (r_own_oh(k)) and the count isn't at G_MAXOUT. With r_sel_oh(k) = '1',
+   -- r_sel_ix = k, so "r_sel_ix /= r_own_ix" is "r_own_oh(k) = '0'": no index
+   -- compare, and A_stb(k) depends on five registers only.
 
    g_dn : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
       fb_dn_c2p_o(k).cyc      <= r_dn_cyc;
-      fb_dn_c2p_o(k).A_stb    <= r_full and r_sel_oh(k) and not i_hold;
+      fb_dn_c2p_o(k).A_stb    <= r_full and r_sel_oh(k) and
+                                 (not r_cnt_nz or (r_own_oh(k) and not r_cnt_max));
       fb_dn_c2p_o(k).A        <= r_A;
       fb_dn_c2p_o(k).we       <= r_we;
       fb_dn_c2p_o(k).D_wr     <= r_D_wr;
@@ -359,7 +363,7 @@ end generate;
             v_cnt := r_cnt - 1;
 					end if;
          r_cnt <= v_cnt;
-         -- the count conditions used by i_hold, registered from the same value
+         -- the count conditions used by A_stb, registered from the same value
          if v_cnt /= 0 then
             r_cnt_nz <= '1';
          else
