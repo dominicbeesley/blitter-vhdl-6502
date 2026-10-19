@@ -248,6 +248,14 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_mem_RnW        : std_logic;
    signal r_mem_D_WR       : std_logic_vector(7 downto 0);
 
+   -- fishbone memory peripheral port (chipset controllers -> shared memory)
+   signal r_mem_A_ack      : std_logic;                     -- A_ack for an accepted fb_mem request
+   signal r_mem_D_ack      : std_logic;                     -- D_ack (and rdy) for it
+   signal r_mem_had_d_stb  : std_logic;                     -- write data has arrived for the accepted write
+   signal r_mem_abort      : std_logic;                     -- the controller dropped cyc during the access
+   signal r_mem_done       : std_logic;                     -- memory access finished (D_ack given or aborted)
+   signal r_mem_A          : std_logic_vector(23 downto 0); -- fb_mem address, followed while not in mem1..mem4
+
    signal r_CPU_RDY        : std_logic;
 
    signal i_throttle_all_E : std_logic;
@@ -401,10 +409,6 @@ begin
 
    e_ad_local:entity work.address_decode
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET          => G_INCL_CHIPSET,
-      G_INCL_HDMI             => G_INCL_HDMI,
       G_C20K                  => true,
       G_HDMI_SHADOW_SYS       => G_HDMI_SHADOW_SYS
    )
@@ -460,6 +464,7 @@ begin
          end if;
       end cpu_rdy;
 
+   variable v_mem_accept : boolean;    -- a fb_mem request was accepted (state -> mem1) this clock
    begin
       if fb_syscon_i.rst = '1' then
          r_state      <= reset;
@@ -477,19 +482,20 @@ begin
          r_mem_D_WR <= (others => '1');
          MEM_D_io <= (others => '1');
 
+         r_mem_A_ack <= '0';
+         r_mem_D_ack <= '0';
+         r_mem_had_d_stb <= '0';
+         r_mem_abort <= '0';
+         r_mem_done <= '0';
+
       else
          if rising_edge(fb_syscon_i.clk) then
 
-            fb_mem_p2c_o.stall <= '1';
-
-
-            if fb_mem_c2p_i.D_wr_stb = '1' then
-               r_mem_D_WR <= fb_mem_c2p_i.D_wr;
-            end if;
+            v_mem_accept := false;
 
             r_A_stb <= '0';
-            fb_mem_p2c_o.ack <= '0';
-            fb_mem_p2c_o.rdy <= '0';
+            r_mem_A_ack <= '0';
+            r_mem_D_ack <= '0';
 
             case r_state is
                when reset =>
@@ -539,9 +545,6 @@ begin
                      r_VPB <= MEM_A_io(20);
                      r_state <= cpu_log_a;
 
-                     -- we will accept slave requests next cycle
-                     fb_mem_p2c_o.stall <= '0';
-
                   end if;                  
 
 
@@ -553,6 +556,7 @@ begin
                   if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
                      r_phys_A <= fb_mem_c2p_i.A;
                      r_mem_RnW <= not fb_mem_c2p_i.we;
+                     v_mem_accept := true;
                      CPU_BE_o <= '0';
                      CPU_A_nOE_o <= '1';
                      r_state <= mem1;
@@ -574,6 +578,7 @@ begin
                   if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
                      r_phys_A <= fb_mem_c2p_i.A;
                      r_mem_RnW <= not fb_mem_c2p_i.we;
+                     v_mem_accept := true;
                      CPU_BE_o <= '0';
                      CPU_A_nOE_o <= '1';
                      r_state <= mem1;
@@ -602,14 +607,19 @@ begin
 
                when cpu_read_fb =>
                   if fb_cpu_c2p_o.A_stb = '1' then
-                     if fb_cpu_p2c_i.stall = '0' then
+                     if fb_cpu_p2c_i.A_ack = '1' then
                         fb_cpu_c2p_o.A_stb <= '0';
                      elsif fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
-
+                        -- not yet accepted: abort our cycle (A_stb and cyc
+                        -- down) and serve the fb_mem request first, so a chipset
+                        -- controller holding the intcon can't deadlock us;
+                        -- cpu_log_a restarts the cycle afterwards
                         fb_cpu_c2p_o.cyc <= '0';
+                        fb_cpu_c2p_o.A_stb <= '0';
 
                         r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
+                        v_mem_accept := true;
                         CPU_BE_o <= '0';
                         CPU_A_nOE_o <= '1';
                         r_state <= mem1;
@@ -620,7 +630,7 @@ begin
                      MEM_D_io <= r_fb_D_rd;
                   end if;
 
-                  if fb_cpu_p2c_i.ack = '1' then
+                  if fb_cpu_p2c_i.D_ack = '1' then
                      r_fb_D_rd <= fb_cpu_p2c_i.D_rd;
                      if r_cpu_phi_DHR = '1' then
                         MEM_D_io <= fb_cpu_p2c_i.D_rd;
@@ -639,21 +649,23 @@ begin
 
                when cpu_write_fb =>
                   if fb_cpu_c2p_o.A_stb = '1' then
-                     if fb_cpu_p2c_i.stall = '0' then
+                     if fb_cpu_p2c_i.A_ack = '1' then
                         fb_cpu_c2p_o.A_stb <= '0';
                      elsif fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
-
+                        -- not yet accepted: abort and serve fb_mem (as cpu_read_fb)
                         fb_cpu_c2p_o.cyc <= '0';
+                        fb_cpu_c2p_o.A_stb <= '0';
 
                         r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
+                        v_mem_accept := true;
                         CPU_BE_o <= '0';
                         CPU_A_nOE_o <= '1';
                         r_state <= mem1;
                      end if;
                   end if;
 
-                  if fb_cpu_p2c_i.ack = '1' then
+                  if fb_cpu_p2c_i.D_ack = '1' then
                      r_had_fb_ack <= '1';
                      fb_cpu_c2p_o.cyc <= '0';
                   end if;
@@ -700,6 +712,7 @@ begin
                      if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
                         r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
+                        v_mem_accept := true;
                         CPU_BE_o <= '0';
                         CPU_A_nOE_o <= '1';
                         r_state <= mem1;                        
@@ -728,27 +741,67 @@ begin
                      MEM_D_io <= r_mem_D_WR;
                   end if;
 
-                  if i_ring_next(C_CPU_DIV_END_MEM - 1) = '1' then
-                     fb_mem_p2c_o.ack <= '1';
-                     fb_mem_p2c_o.rdy <= '1';
+                  -- r_mem_had_d_stb: for a write, the data has arrived (r_mem_D_WR
+                  -- is driven onto MEM_D_io above while nWE is low, so data that
+                  -- arrives any time before nWE rises is written). If it hasn't
+                  -- arrived by END_MEM - 1, stay here (cpu still held, BE low) and
+                  -- finish at the next END_MEM - 1 instead of acknowledging a
+                  -- write we haven't got. An aborted request finishes as normal
+                  -- but without D_ack.
+                  if i_ring_next(C_CPU_DIV_END_MEM - 1) = '1' and
+                     (r_mem_RnW = '1' or r_mem_had_d_stb = '1' or r_mem_abort = '1') then
+                     if r_mem_abort = '0' and fb_mem_c2p_i.cyc = '1' then
+                        r_mem_D_ack <= '1';
+                     end if;
                      fb_mem_p2c_o.D_rd <= MEM_D_io;
                      MEM_nWE_o <= '1';
                      MEM_nOE_o <= '1';  
-                  elsif i_ring_next(C_CPU_DIV_END_MEM) = '1' then
+                     r_mem_done <= '1';
+                  elsif i_ring_next(C_CPU_DIV_END_MEM) = '1' and r_mem_done = '1' then
                      -- TODO: massive assumptions about timing, just hope it all fits
-                     -- TODO: write D_wr_stb check
                      mem_unsel;
                      MEM_A_io(7 downto 0) <= (others => 'Z');
-                  elsif i_ring_next(C_CPU_DIV_ADS) = '1' then
+                  elsif i_ring_next(C_CPU_DIV_ADS) = '1' and r_mem_done = '1' then
                      r_state <= cpu_log_a;
                   end if;
                when others =>
                   r_state <= reset;
             end case;
+
+            -- fishbone memory peripheral port bookkeeping
+            if v_mem_accept then
+               -- A_ack the request we have just taken (registered, once)
+               r_mem_A_ack <= '1';
+               r_mem_had_d_stb <= '0';
+               r_mem_abort <= '0';
+               r_mem_done <= '0';
+               -- write data may come with A_stb
+               if fb_mem_c2p_i.we = '1' and fb_mem_c2p_i.D_wr_stb = '1' then
+                  r_mem_D_WR <= fb_mem_c2p_i.D_wr;
+                  r_mem_had_d_stb <= '1';
+               end if;
+            elsif r_state = mem1 or r_state = mem2 or r_state = mem3 or r_state = mem4 then
+               -- take D_wr_stb only for our accepted write still waiting for
+               -- data (D_wr_stb is broadcast to every peripheral)
+               if r_mem_RnW = '0' and r_mem_had_d_stb = '0' and r_mem_abort = '0' and r_mem_done = '0'
+                     and fb_mem_c2p_i.cyc = '1' and fb_mem_c2p_i.D_wr_stb = '1' then
+                  r_mem_D_WR <= fb_mem_c2p_i.D_wr;
+                  r_mem_had_d_stb <= '1';
+               end if;
+               -- an abort (cyc dropped) finishes the access without D_ack
+               if fb_mem_c2p_i.cyc = '0' and r_mem_done = '0' then
+                  r_mem_abort <= '1';
+               end if;
+            end if;
+
          end if;
       end if;
       
    end process;
+
+   fb_mem_p2c_o.A_ack   <= r_mem_A_ack;
+   fb_mem_p2c_o.D_ack   <= r_mem_D_ack;
+   fb_mem_p2c_o.rdy     <= r_mem_D_ack;
 
    -- ================================================================================================ --
    -- WDM / ABORT detect

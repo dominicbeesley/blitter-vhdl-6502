@@ -99,7 +99,7 @@ entity C20K816only is
       cpu_E_i              : in            std_logic;
       cpu_MX_i             : in            std_logic;
       cpu_PHI2_o           : out           std_logic;
-      cpu_RDY_io           : out           std_logic;
+      cpu_RDY_io           : inout         std_logic;
       cpu_nABORT_o         : out           std_logic;
       cpu_nIRQ_o           : out           std_logic;
       cpu_nNMI_o           : out           std_logic;
@@ -475,12 +475,8 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    -- address decode to select peripheral
    e_addr2s:entity work.address_decode
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET		      => G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI,
-		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS,
-      G_C20K                  => true
+		G_HDMI_SHADOW_SYS		=> true,
+	    G_C20K                  => true
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
@@ -490,25 +486,21 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	);
 end generate;
 
-g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-      G_REGISTER_PERIPHERAL_C2P => false
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT
 		)
    port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
 		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+		fb_up_c2p_i						=> i_con_c2p_intcon,
+		fb_up_p2c_o						=> i_con_p2c_intcon,
 
 		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+		fb_dn_c2p_o						=> i_per_c2p_intcon,
+		fb_dn_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
       peripheral_sel_we_o                 => i_intcon_peripheral_sel_we,
@@ -517,33 +509,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
    );
 
 
-END GENERATE;
-g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-   e_fb_intcon: fb_intcon_one_to_many
-   generic map (
-      SIM                           => SIM,
-      G_PERIPHERAL_COUNT                  => PERIPHERAL_COUNT,
-      G_ADDRESS_WIDTH               => 24
-      )
-   port map (
-      fb_syscon_i                   => i_fb_syscon,
 
-      -- peripheral ports connect to controllers
-      fb_con_c2p_i                  => i_con_c2p_intcon(0),
-      fb_con_p2c_o                  => i_con_p2c_intcon(0),
-
-      -- controller ports connect to peripherals
-      fb_per_c2p_o                  => i_per_c2p_intcon,
-      fb_per_p2c_i                  => i_per_p2c_intcon,
-
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_we_o           => i_intcon_peripheral_sel_we(0),
-      peripheral_sel_i              => i_intcon_peripheral_sel(0),
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
-   );
-
-
-END GENERATE;   
 
 	i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
 	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
