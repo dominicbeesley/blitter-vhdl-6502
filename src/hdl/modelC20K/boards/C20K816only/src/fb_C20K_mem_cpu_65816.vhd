@@ -554,7 +554,6 @@ begin
                   r_phys_A <= i_phys_A;
                   r_peripheral_sel_oh <= i_peripheral_sel_oh;
                   if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
-                     r_phys_A <= fb_mem_c2p_i.A;
                      r_mem_RnW <= not fb_mem_c2p_i.we;
                      v_mem_accept := true;
                      CPU_BE_o <= '0';
@@ -566,17 +565,12 @@ begin
                      elsif r_VPA = '0' and r_VDA = '0' then
                         r_state <= cpu_dead;
                      else
-                        if r_VPA = '1' and r_VDA = '1' then
-                           debug_cpu_instr_a <= r_A;
-                        end if;
-                        
                         r_state <= cpu_phys_a;
 
                      end if;
                   end if;
                when cpu_phys_a =>
                   if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
-                     r_phys_A <= fb_mem_c2p_i.A;
                      r_mem_RnW <= not fb_mem_c2p_i.we;
                      v_mem_accept := true;
                      CPU_BE_o <= '0';
@@ -617,7 +611,6 @@ begin
                         fb_cpu_c2p_o.cyc <= '0';
                         fb_cpu_c2p_o.A_stb <= '0';
 
-                        r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
                         v_mem_accept := true;
                         CPU_BE_o <= '0';
@@ -630,11 +623,13 @@ begin
                      MEM_D_io <= r_fb_D_rd;
                   end if;
 
+                  -- read data goes to MEM_D_io from r_fb_D_rd (above) a clock
+                  -- after D_ack. RDY is only raised at the DSR point once
+                  -- r_had_fb_ack is set, by which time r_fb_D_rd is on the bus,
+                  -- so driving D_rd straight from the return path gained nothing
+                  -- (and was a failing path into the MEM_D_io I/O registers)
                   if fb_cpu_p2c_i.D_ack = '1' then
                      r_fb_D_rd <= fb_cpu_p2c_i.D_rd;
-                     if r_cpu_phi_DHR = '1' then
-                        MEM_D_io <= fb_cpu_p2c_i.D_rd;
-                     end if;
                      r_had_fb_ack <= '1';
                      fb_cpu_c2p_o.cyc <= '0';
                   end if;
@@ -656,7 +651,6 @@ begin
                         fb_cpu_c2p_o.cyc <= '0';
                         fb_cpu_c2p_o.A_stb <= '0';
 
-                        r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
                         v_mem_accept := true;
                         CPU_BE_o <= '0';
@@ -710,7 +704,6 @@ begin
 
                   if i_ring_next(C_CPU_DIV_ADS + 1) = '1' then
                      if fb_mem_c2p_i.A_stb = '1' and fb_mem_c2p_i.cyc = '1' then
-                        r_phys_A <= fb_mem_c2p_i.A;
                         r_mem_RnW <= not fb_mem_c2p_i.we;
                         v_mem_accept := true;
                         CPU_BE_o <= '0';
@@ -724,7 +717,9 @@ begin
                   end if;
 
                when mem1 =>
-                  -- do nothing - time for BE to take effect
+                  -- time for BE to take effect; the fb_mem address was captured
+                  -- in r_mem_A (p_mem_A) when the request was accepted
+                  r_phys_A <= r_mem_A;
                   r_CPU_RDY <= '0';
                   r_state <= mem2;
                when mem2 =>
@@ -802,6 +797,30 @@ begin
    fb_mem_p2c_o.A_ack   <= r_mem_A_ack;
    fb_mem_p2c_o.D_ack   <= r_mem_D_ack;
    fb_mem_p2c_o.rdy     <= r_mem_D_ack;
+
+   -- address capture for the fishbone memory port: follows the request while
+   -- not serving one, so the address register's enable doesn't depend on
+   -- A_stb (accept is in several states); copied to r_phys_A in mem1
+   p_mem_A:process(fb_syscon_i)
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+         if r_state /= mem1 and r_state /= mem2 and r_state /= mem3 and r_state /= mem4 then
+            r_mem_A <= fb_mem_c2p_i.A;
+         end if;
+      end if;
+   end process;
+
+   -- debug: address of the last instruction fetch started. Was loaded in
+   -- cpu_log_a behind the throttle/halt decision (log2phys -> throttle_act);
+   -- cpu_phys_a is only reached for a cycle that goes ahead
+   p_debug_instr_a:process(fb_syscon_i)
+   begin
+      if rising_edge(fb_syscon_i.clk) then
+         if r_state = cpu_phys_a and r_VPA = '1' and r_VDA = '1' then
+            debug_cpu_instr_a <= r_A;
+         end if;
+      end if;
+   end process;
 
    -- ================================================================================================ --
    -- WDM / ABORT detect
