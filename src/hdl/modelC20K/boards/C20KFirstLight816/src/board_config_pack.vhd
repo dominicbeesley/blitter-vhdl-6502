@@ -59,7 +59,7 @@ package board_config_pack is
 	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; 
    constant G_1BIT_DAC_VIDEO  : boolean := true;
    constant G_C20K_I2S			: boolean := true;
-   constant G_INCL_SID			: boolean := true;
+   constant G_INCL_SID			: boolean := false;
 	constant G_INCL_HDMI		: boolean := true;
 
 	constant C_CPU_BYTELANES	: positive := 1;		
