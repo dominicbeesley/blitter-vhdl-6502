@@ -279,7 +279,6 @@ end generate;
    p_state : process (fb_syscon_i)
       variable v_act  : boolean;   -- a grant is held, or taken at this edge
       variable v_free : boolean;   -- the slot can take a new transaction
-      variable v_cnt  : integer range 0 to G_MAXOUT;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -355,23 +354,25 @@ end generate;
             r_own_oh <= r_sel_oh;
 					end if;
 
-         -- outstanding count: +1 on the peripheral's A_ack, -1 on its D_ack
-         v_cnt := r_cnt;
+         -- outstanding count: +1 on the peripheral's A_ack, -1 on its D_ack.
+         -- r_cnt_nz / r_cnt_max are worked out from the current r_cnt (compares
+         -- on registers, in parallel with the A_ack/D_ack muxes), not from the
+         -- incremented value, so only the up/down/hold choice follows the muxes.
          if i_dn_A_ack = '1' and i_dn_D_ack = '0' then
-            v_cnt := r_cnt + 1;
-         elsif i_dn_A_ack = '0' and i_dn_D_ack = '1' and r_cnt /= 0 then
-            v_cnt := r_cnt - 1;
-					end if;
-         r_cnt <= v_cnt;
-         -- the count conditions used by A_stb, registered from the same value
-         if v_cnt /= 0 then
+            r_cnt    <= r_cnt + 1;
             r_cnt_nz <= '1';
-         else
-            r_cnt_nz <= '0';
-         end if;
-         if v_cnt = G_MAXOUT then
-            r_cnt_max <= '1';
-         else
+            if r_cnt = G_MAXOUT - 1 then
+               r_cnt_max <= '1';
+            else
+               r_cnt_max <= '0';
+            end if;
+         elsif i_dn_A_ack = '0' and i_dn_D_ack = '1' and r_cnt_nz = '1' then
+            r_cnt <= r_cnt - 1;
+            if r_cnt >= 2 then
+               r_cnt_nz <= '1';
+            else
+               r_cnt_nz <= '0';
+            end if;
             r_cnt_max <= '0';
          end if;
 
