@@ -202,6 +202,35 @@ architecture Behavioral of fb_dmac_blit is
 	signal 	i_per_D_rd				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr				: std_logic_vector(7 downto 0);
 	signal	r_per_D_wr_stb			: std_logic;							-- one clock pulse: commit r_per_D_wr to r_per_addr
+
+	-- register write enables, decoded from r_per_addr a clock ahead (p_per_wr_dec)
+	constant	C_WR_BLTCON				: natural := 0;
+	constant	C_WR_FUNCGEN			: natural := 1;
+	constant	C_WR_WIDTH				: natural := 2;
+	constant	C_WR_HEIGHT				: natural := 3;
+	constant	C_WR_SHIFT				: natural := 4;		-- A_SHIFT: A and B packed
+	constant	C_WR_N_SHIFT_A			: natural := 5;		-- A_N_SHIFT_A: A and B the same
+	constant	C_WR_N_SHIFT_B			: natural := 6;
+	constant	C_WR_MASK_FIRST		: natural := 7;
+	constant	C_WR_MASK_LAST			: natural := 8;
+	constant	C_WR_DATA_A				: natural := 9;
+	constant	C_WR_DATA_B				: natural := 10;
+	constant	C_WR_DATA_C				: natural := 11;
+	constant	C_WR_ADDR_A				: natural := 12;
+	constant	C_WR_ADDR_B				: natural := 13;
+	constant	C_WR_ADDR_C				: natural := 14;
+	constant	C_WR_ADDR_D				: natural := 15;
+	constant	C_WR_ADDR_E				: natural := 16;
+	constant	C_WR_ADDR_D_MIN		: natural := 17;
+	constant	C_WR_ADDR_D_MAX		: natural := 18;
+	constant	C_WR_STRIDE_A			: natural := 19;
+	constant	C_WR_STRIDE_B			: natural := 20;
+	constant	C_WR_STRIDE_C			: natural := 21;
+	constant	C_WR_STRIDE_D			: natural := 22;
+	constant	C_WR_COUNT				: natural := 23;
+
+	signal	r_per_wr_en				: std_logic_vector(C_WR_COUNT-1 downto 0);	-- may have 2 bits set (convenience pokes)
+	signal	r_per_wr_byte			: std_logic_vector(2 downto 0);		-- one-hot, bit n selects bits 8n+7 downto 8n
 	signal	r_per_A_ack				: std_logic;
 	signal 	r_per_D_ack				: std_logic;
 	signal	r_per_D_rd				: std_logic_vector(7 downto 0);
@@ -1000,10 +1029,12 @@ begin
 				r_BLTCON_collision <= '0';
 			end if;
 
-			if r_per_D_wr_stb = '1' then -- register write from peripheral port
-				case to_integer(unsigned(r_per_addr)) is
-					when A_BLTCON | A_N_BLTCON =>
-						if r_per_d_wr(7) = '1' then
+			-- register write from peripheral port: the address decode is done a
+			-- clock earlier in p_per_wr_dec, so here each register only sees
+			-- r_per_D_wr_stb and its registered enable
+			if r_per_D_wr_stb = '1' then
+				if r_per_wr_en(C_WR_BLTCON) = '1' then
+					if r_per_D_wr(7) = '1' then
 							r_BLTCON_act <= '1';
 							r_BLTCON_cell <= r_per_D_wr(6);
 							r_BLTCON_mode <= r_per_D_wr(5 downto 4);
@@ -1018,116 +1049,311 @@ begin
 							r_BLTCON_execE <= r_per_D_wr(4);
 							r_BLTCON_cellB <= r_per_D_wr(5);
 						end if;
-					when A_FUNCGEN | A_N_FUNCGEN =>
-						r_FUNCGEN <= r_per_d_wr;
-					when A_WIDTH | A_N_WIDTH =>
-						r_width(7 downto 0) <= unsigned(r_per_d_wr);
-					when A_HEIGHT | A_N_HEIGHT =>
-						r_height(7 downto 0) <= unsigned(r_per_d_wr);
-					when A_SHIFT => -- TODO: maybe split to two addresses to make calcs easier?
-						r_shift_A <= r_per_d_wr(2 downto 0);
-						r_shift_B <= r_per_d_wr(6 downto 4);
-					when A_N_SHIFT_A =>
-						r_shift_A <= r_per_d_wr(2 downto 0);
-						r_shift_B <= r_per_d_wr(2 downto 0);				-- convenience poke
-					when A_N_SHIFT_B => 
-						r_shift_B <= r_per_d_wr(2 downto 0);
-					when A_MASK_FIRST | A_N_MASK_FIRST=>
-						r_mask_first <= r_per_d_wr;
-					when A_MASK_LAST | A_N_MASK_LAST=>
-						r_mask_last <= r_per_d_wr;
-					when A_DATA_A | A_N_DATA_A=>
-						r_cha_A_data_pre <= r_per_d_wr(6 downto 0);
-						r_cha_A_data <= r_per_d_wr;
-
-					when A_ADDR_A + 0 | A_N_ADDR_A + 2 =>
-						r_cha_A_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_A + 1 | A_N_ADDR_A + 1 =>
-						r_cha_A_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_A + 2 | A_N_ADDR_A + 0 =>
-						r_cha_A_addr(7 downto 0) <= r_per_d_wr;			
-					when A_DATA_B | A_N_DATA_B=>
-						r_cha_B_data_pre <= r_per_d_wr(6 downto 0);
-						r_cha_B_data <= r_per_d_wr;
-					when A_ADDR_B + 0 | A_N_ADDR_B + 2 =>
-						r_cha_B_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_B + 1 | A_N_ADDR_B + 1 =>
-						r_cha_B_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_B + 2 | A_N_ADDR_B + 0 =>
-						r_cha_B_addr(7 downto 0) <= r_per_d_wr;	
-					when A_N_DATA_C =>
-						r_cha_C_data <= r_per_d_wr;
-					when A_ADDR_C + 0 =>
-						r_cha_C_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_C + 1 =>
-						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_C + 2 =>
-						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
-
-					when A_N_ADDR_C + 0 =>
-						r_cha_C_addr(7 downto 0) <= r_per_d_wr;			
-						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			-- convenience
-					when A_N_ADDR_C + 1 =>
-						r_cha_C_addr(15 downto 8) <= r_per_d_wr;			
-						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			-- convenience
-					when A_N_ADDR_C + 2 =>
-						r_cha_C_addr(23 downto 16) <= r_per_d_wr;			
-						r_cha_D_addr(23 downto 16) <= r_per_d_wr;			-- convenience
-
-					when A_ADDR_D + 0 | A_N_ADDR_D + 2 =>
-						r_cha_D_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D + 1 | A_N_ADDR_D + 1 =>
-						r_cha_D_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_D + 2 | A_N_ADDR_D + 0 =>
-						r_cha_D_addr(7 downto 0) <= r_per_d_wr;			
-					when A_ADDR_E + 0 | A_N_ADDR_E + 2 =>
-						r_cha_E_addr(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_E + 1 | A_N_ADDR_E + 1 =>
-						r_cha_E_addr(15 downto 8) <= r_per_d_wr;			
-					when A_ADDR_E + 2 | A_N_ADDR_E + 0 =>
-						r_cha_E_addr(7 downto 0) <= r_per_d_wr;			
-					when A_STRIDE_A + 0| A_N_STRIDE_A + 1 =>
-						r_cha_A_stride(15 downto 8) <= r_per_d_wr; -- note 16 bits for line mode
-					when A_STRIDE_A + 1 | A_N_STRIDE_A + 0 =>
-						r_cha_A_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_B + 0 | A_N_STRIDE_B + 1 =>
-						r_cha_B_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
-					when A_STRIDE_B + 1 | A_N_STRIDE_B + 0 =>
-						r_cha_B_stride(7 downto 0) <= r_per_d_wr;
-					when A_STRIDE_C + 0 =>
-						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
-					when A_STRIDE_C + 1  =>
-						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
-
-					when A_N_STRIDE_C + 0 =>
-						r_cha_C_stride(7 downto 0) <= r_per_d_wr;
-						r_cha_D_stride(7 downto 0) <= r_per_d_wr; -- convenience
-					when A_N_STRIDE_C + 1  =>
-						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
-						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0); -- convenience
-
-					when A_STRIDE_D + 0 | A_N_STRIDE_D + 1 =>
-						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_d_wr(G_STRIDE_HIGH - 8 downto 0);
-					when A_STRIDE_D + 1 | A_N_STRIDE_D + 0 =>
-						r_cha_D_stride(7 downto 0) <= r_per_d_wr;
-
-					when A_ADDR_D_MIN + 0 | A_N_ADDR_D_MIN + 2 => 
-						r_cha_D_addr_min(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D_MIN + 1 | A_N_ADDR_D_MIN + 1 => 
-						r_cha_D_addr_min(15 downto 8) <= r_per_d_wr;
-					when A_ADDR_D_MIN + 2 | A_N_ADDR_D_MIN + 0 => 
-						r_cha_D_addr_min(7 downto 0) <= r_per_d_wr;
-
-					when A_ADDR_D_MAX + 0 | A_N_ADDR_D_MAX + 2 => 
-						r_cha_D_addr_max(23 downto 16) <= r_per_d_wr;
-					when A_ADDR_D_MAX + 1 | A_N_ADDR_D_MAX + 1 => 
-						r_cha_D_addr_max(15 downto 8) <= r_per_d_wr;
-					when A_ADDR_D_MAX + 2 | A_N_ADDR_D_MAX + 0 => 
-						r_cha_D_addr_max(7 downto 0) <= r_per_d_wr;
-
-					when others => null;
-				end case;
+				end if;
+				if r_per_wr_en(C_WR_FUNCGEN) = '1' then
+					r_FUNCGEN <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_WIDTH) = '1' then
+					r_width(7 downto 0) <= unsigned(r_per_D_wr);
+				end if;
+				if r_per_wr_en(C_WR_HEIGHT) = '1' then
+					r_height(7 downto 0) <= unsigned(r_per_D_wr);
+				end if;
+				if r_per_wr_en(C_WR_SHIFT) = '1' then
+					r_shift_A <= r_per_D_wr(2 downto 0);
+					r_shift_B <= r_per_D_wr(6 downto 4);
+				end if;
+				if r_per_wr_en(C_WR_N_SHIFT_A) = '1' then
+					r_shift_A <= r_per_D_wr(2 downto 0);
+					r_shift_B <= r_per_D_wr(2 downto 0);				-- convenience poke
+				end if;
+				if r_per_wr_en(C_WR_N_SHIFT_B) = '1' then
+					r_shift_B <= r_per_D_wr(2 downto 0);
+				end if;
+				if r_per_wr_en(C_WR_MASK_FIRST) = '1' then
+					r_mask_first <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_MASK_LAST) = '1' then
+					r_mask_last <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_DATA_A) = '1' then
+					r_cha_A_data_pre <= r_per_D_wr(6 downto 0);
+					r_cha_A_data <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_DATA_B) = '1' then
+					r_cha_B_data_pre <= r_per_D_wr(6 downto 0);
+					r_cha_B_data <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_DATA_C) = '1' then
+					r_cha_C_data <= r_per_D_wr;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_A) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_A_addr(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_A_addr(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_A_addr(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_B) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_B_addr(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_B_addr(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_B_addr(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_C) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_C_addr(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_C_addr(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_C_addr(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_D) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_D_addr(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_D_addr(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_D_addr(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_E) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_E_addr(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_E_addr(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_E_addr(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_D_MIN) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_D_addr_min(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_D_addr_min(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_D_addr_min(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_ADDR_D_MAX) = '1' then
+					if r_per_wr_byte(2) = '1' then
+						r_cha_D_addr_max(23 downto 16) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(1) = '1' then
+						r_cha_D_addr_max(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_D_addr_max(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_STRIDE_A) = '1' then
+					if r_per_wr_byte(1) = '1' then
+						r_cha_A_stride(15 downto 8) <= r_per_D_wr;
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_A_stride(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_STRIDE_B) = '1' then
+					if r_per_wr_byte(1) = '1' then
+						r_cha_B_stride(G_STRIDE_HIGH downto 8) <= r_per_D_wr(G_STRIDE_HIGH - 8 downto 0);
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_B_stride(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_STRIDE_C) = '1' then
+					if r_per_wr_byte(1) = '1' then
+						r_cha_C_stride(G_STRIDE_HIGH downto 8) <= r_per_D_wr(G_STRIDE_HIGH - 8 downto 0);
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_C_stride(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
+				if r_per_wr_en(C_WR_STRIDE_D) = '1' then
+					if r_per_wr_byte(1) = '1' then
+						r_cha_D_stride(G_STRIDE_HIGH downto 8) <= r_per_D_wr(G_STRIDE_HIGH - 8 downto 0);
+					end if;
+					if r_per_wr_byte(0) = '1' then
+						r_cha_D_stride(7 downto 0) <= r_per_D_wr;
+					end if;
+				end if;
 			end if;
+		end if;
+	end process;
+
+	-- register write decode. r_per_addr is captured at the accept and holds
+	-- through act_wr, and r_per_D_wr_stb comes at least two clocks after the
+	-- accept, so decoding r_per_addr every clock gives enables that are ready
+	-- by the r_per_D_wr_stb clock: no added latency. This takes the 10-bit
+	-- address decode out of the clock that loads the registers (it was
+	-- r_per_addr -> r_cha_D_addr, -0.39 ns on C20K816only).
+	-- Bytes of 24-bit addresses: A_xxx + 0 is the bank (bits 23..16); the
+	-- A_N_xxx (little-endian) aliases run the other way. Strides likewise
+	-- over 2 bytes.
+	p_per_wr_dec:process(fb_syscon_i)
+	begin
+		if fb_syscon_i.rst = '1' then
+			r_per_wr_en <= (others => '0');
+			r_per_wr_byte <= (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_per_wr_en <= (others => '0');
+			r_per_wr_byte <= (others => '0');
+			case to_integer(unsigned(r_per_addr)) is
+				when A_BLTCON | A_N_BLTCON =>
+					r_per_wr_en(C_WR_BLTCON) <= '1';
+					when A_FUNCGEN | A_N_FUNCGEN =>
+					r_per_wr_en(C_WR_FUNCGEN) <= '1';
+					when A_WIDTH | A_N_WIDTH =>
+					r_per_wr_en(C_WR_WIDTH) <= '1';
+					when A_HEIGHT | A_N_HEIGHT =>
+					r_per_wr_en(C_WR_HEIGHT) <= '1';
+				when A_SHIFT =>
+					r_per_wr_en(C_WR_SHIFT) <= '1';
+					when A_N_SHIFT_A =>
+					r_per_wr_en(C_WR_N_SHIFT_A) <= '1';
+					when A_N_SHIFT_B => 
+					r_per_wr_en(C_WR_N_SHIFT_B) <= '1';
+					when A_MASK_FIRST | A_N_MASK_FIRST=>
+					r_per_wr_en(C_WR_MASK_FIRST) <= '1';
+					when A_MASK_LAST | A_N_MASK_LAST=>
+					r_per_wr_en(C_WR_MASK_LAST) <= '1';
+					when A_DATA_A | A_N_DATA_A=>
+					r_per_wr_en(C_WR_DATA_A) <= '1';
+				when A_DATA_B | A_N_DATA_B =>
+					r_per_wr_en(C_WR_DATA_B) <= '1';
+				when A_N_DATA_C =>
+					r_per_wr_en(C_WR_DATA_C) <= '1';
+					when A_ADDR_A + 0 | A_N_ADDR_A + 2 =>
+					r_per_wr_en(C_WR_ADDR_A) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_A + 1 | A_N_ADDR_A + 1 =>
+					r_per_wr_en(C_WR_ADDR_A) <= '1';
+					r_per_wr_byte <= "010";
+					when A_ADDR_A + 2 | A_N_ADDR_A + 0 =>
+					r_per_wr_en(C_WR_ADDR_A) <= '1';
+					r_per_wr_byte <= "001";
+					when A_ADDR_B + 0 | A_N_ADDR_B + 2 =>
+					r_per_wr_en(C_WR_ADDR_B) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_B + 1 | A_N_ADDR_B + 1 =>
+					r_per_wr_en(C_WR_ADDR_B) <= '1';
+					r_per_wr_byte <= "010";
+					when A_ADDR_B + 2 | A_N_ADDR_B + 0 =>
+					r_per_wr_en(C_WR_ADDR_B) <= '1';
+					r_per_wr_byte <= "001";
+					when A_ADDR_C + 0 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_C + 1 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_byte <= "010";
+					when A_ADDR_C + 2 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_byte <= "001";
+				-- A_N_ADDR_C also writes D (convenience)
+					when A_N_ADDR_C + 0 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "001";
+					when A_N_ADDR_C + 1 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "010";
+					when A_N_ADDR_C + 2 =>
+					r_per_wr_en(C_WR_ADDR_C) <= '1';
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_D + 0 | A_N_ADDR_D + 2 =>
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_D + 1 | A_N_ADDR_D + 1 =>
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "010";
+					when A_ADDR_D + 2 | A_N_ADDR_D + 0 =>
+					r_per_wr_en(C_WR_ADDR_D) <= '1';
+					r_per_wr_byte <= "001";
+					when A_ADDR_E + 0 | A_N_ADDR_E + 2 =>
+					r_per_wr_en(C_WR_ADDR_E) <= '1';
+					r_per_wr_byte <= "100";
+					when A_ADDR_E + 1 | A_N_ADDR_E + 1 =>
+					r_per_wr_en(C_WR_ADDR_E) <= '1';
+					r_per_wr_byte <= "010";
+					when A_ADDR_E + 2 | A_N_ADDR_E + 0 =>
+					r_per_wr_en(C_WR_ADDR_E) <= '1';
+					r_per_wr_byte <= "001";
+				when A_ADDR_D_MIN + 0 | A_N_ADDR_D_MIN + 2 =>
+					r_per_wr_en(C_WR_ADDR_D_MIN) <= '1';
+					r_per_wr_byte <= "100";
+				when A_ADDR_D_MIN + 1 | A_N_ADDR_D_MIN + 1 =>
+					r_per_wr_en(C_WR_ADDR_D_MIN) <= '1';
+					r_per_wr_byte <= "010";
+				when A_ADDR_D_MIN + 2 | A_N_ADDR_D_MIN + 0 =>
+					r_per_wr_en(C_WR_ADDR_D_MIN) <= '1';
+					r_per_wr_byte <= "001";
+				when A_ADDR_D_MAX + 0 | A_N_ADDR_D_MAX + 2 =>
+					r_per_wr_en(C_WR_ADDR_D_MAX) <= '1';
+					r_per_wr_byte <= "100";
+				when A_ADDR_D_MAX + 1 | A_N_ADDR_D_MAX + 1 =>
+					r_per_wr_en(C_WR_ADDR_D_MAX) <= '1';
+					r_per_wr_byte <= "010";
+				when A_ADDR_D_MAX + 2 | A_N_ADDR_D_MAX + 0 =>
+					r_per_wr_en(C_WR_ADDR_D_MAX) <= '1';
+					r_per_wr_byte <= "001";
+					when A_STRIDE_A + 0| A_N_STRIDE_A + 1 =>
+					r_per_wr_en(C_WR_STRIDE_A) <= '1';
+					r_per_wr_byte <= "010";
+					when A_STRIDE_A + 1 | A_N_STRIDE_A + 0 =>
+					r_per_wr_en(C_WR_STRIDE_A) <= '1';
+					r_per_wr_byte <= "001";
+					when A_STRIDE_B + 0 | A_N_STRIDE_B + 1 =>
+					r_per_wr_en(C_WR_STRIDE_B) <= '1';
+					r_per_wr_byte <= "010";
+					when A_STRIDE_B + 1 | A_N_STRIDE_B + 0 =>
+					r_per_wr_en(C_WR_STRIDE_B) <= '1';
+					r_per_wr_byte <= "001";
+					when A_STRIDE_C + 0 =>
+					r_per_wr_en(C_WR_STRIDE_C) <= '1';
+					r_per_wr_byte <= "010";
+					when A_STRIDE_C + 1  =>
+					r_per_wr_en(C_WR_STRIDE_C) <= '1';
+					r_per_wr_byte <= "001";
+				-- A_N_STRIDE_C also writes D (convenience)
+					when A_N_STRIDE_C + 0 =>
+					r_per_wr_en(C_WR_STRIDE_C) <= '1';
+					r_per_wr_en(C_WR_STRIDE_D) <= '1';
+					r_per_wr_byte <= "001";
+					when A_N_STRIDE_C + 1  =>
+					r_per_wr_en(C_WR_STRIDE_C) <= '1';
+					r_per_wr_en(C_WR_STRIDE_D) <= '1';
+					r_per_wr_byte <= "010";
+					when A_STRIDE_D + 0 | A_N_STRIDE_D + 1 =>
+					r_per_wr_en(C_WR_STRIDE_D) <= '1';
+					r_per_wr_byte <= "010";
+					when A_STRIDE_D + 1 | A_N_STRIDE_D + 0 =>
+					r_per_wr_en(C_WR_STRIDE_D) <= '1';
+					r_per_wr_byte <= "001";
+				when others =>
+					null;
+				end case;
 		end if;
 	end process;
 
