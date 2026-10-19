@@ -243,6 +243,7 @@ architecture rtl of fb_SYS_c20k is
    signal   r_acia_cs         : std_logic;                     -- one clock strobe to the ACIA, see p_acia_cs
    signal   r_adc_nCS         : std_logic;
    signal   r_sid_nCS         : std_logic;
+   signal   r_cs_decode       : std_logic;                     -- decode the local chip selects from r_sys_A this clock
    signal   i_sysvia_nIRQ     : std_logic;
    signal   i_sysvia_ca2      : std_logic;
    signal   i_sysvia_PA_i     : std_logic_vector(7 downto 0);
@@ -347,6 +348,7 @@ begin
          r_inton_nCS <= '1';
          r_intoff_nCS <= '1';
          r_sid_nCS <= '1';
+         r_cs_decode <= '0';
       else
          if rising_edge(fb_syscon_i.clk) then
 
@@ -400,21 +402,11 @@ begin
                               v_next_state := addrlatched_rd;
                            end if;
 
-                           if fb_c2p_i.A(15 downto 4) = x"FE4" then
-                              r_sysvia_nCS2 <= '0';
-                           elsif fb_c2p_i.A(15 downto 3) = x"FE0" & "1" then
-                              r_acia_nCS <= '0';
-                           elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "0" and fb_c2p_i.we = '1' then
-                              r_serproc_nCS <= '0';
-                           elsif fb_c2p_i.A(15 downto 4) = x"FE2" and fb_c2p_i.we = '0' then
-                              r_inton_nCS <= '0';
-                           elsif fb_c2p_i.A(15 downto 3) = x"FE1" & "1" then
-                              r_intoff_nCS <= '0';
-                           elsif fb_c2p_i.A(15 downto 5) & "0" = x"FC2" and G_INCL_SID then
-                              r_sid_nCS <= '0';
-                           elsif fb_c2p_i.A(15 downto 5) & "0"  = x"FEC"  then
-                              r_adc_nCS <= '0';
-                           end if;  
+                           -- the local chip selects are decoded from r_sys_A
+                           -- in the next clock (r_cs_decode, below), so the
+                           -- decode isn't in the accept clock with A_stb; none
+                           -- of them is used until well into the bus cycle
+                           r_cs_decode <= '1';
                         end if;
                         r_A_ack <= '1';
                      end if;
@@ -573,6 +565,27 @@ begin
             end if;
 
             r_state <= v_next_state;
+
+            -- local chip selects, one clock after the accept (see idle). They
+            -- hold until the state machine returns to idle, as before.
+            r_cs_decode <= '0';
+            if r_cs_decode = '1' then
+               if r_sys_A(15 downto 4) = x"FE4" then
+                  r_sysvia_nCS2 <= '0';
+               elsif r_sys_A(15 downto 3) = x"FE0" & "1" then
+                  r_acia_nCS <= '0';
+               elsif r_sys_A(15 downto 3) = x"FE1" & "0" and r_sys_RnW = '0' then
+                  r_serproc_nCS <= '0';
+               elsif r_sys_A(15 downto 4) = x"FE2" and r_sys_RnW = '1' then
+                  r_inton_nCS <= '0';
+               elsif r_sys_A(15 downto 3) = x"FE1" & "1" then
+                  r_intoff_nCS <= '0';
+               elsif r_sys_A(15 downto 5) & "0" = x"FC2" and G_INCL_SID then
+                  r_sid_nCS <= '0';
+               elsif r_sys_A(15 downto 5) & "0"  = x"FEC"  then
+                  r_adc_nCS <= '0';
+               end if;
+            end if;
 
 
             if fb_c2p_i.cyc = '0' then
