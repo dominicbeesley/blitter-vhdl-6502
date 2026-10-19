@@ -435,9 +435,12 @@ begin
       peripheral_sel_oh_o     => i_chipset_intcon_peripheral_sel_oh
    );
 
+   -- returns registered here (one return mux in front of the top intcon);
+   -- the forward path is registered by e_fb_intcon_chipset's slot, so the
+   -- buffer's forward stage would only add a clock
    e_buf_per:fb_intcon_buffer
    generic map (
-      G_REG_C2P            => true,
+      G_REG_C2P            => false,
       G_REG_P2C            => true
    ) 
    port map (
@@ -454,22 +457,30 @@ begin
 
    );
 
-   e_fb_intcon_chipset:fb_intcon_one_to_many
+   -- fb_intcon_shared with one controller rather than fb_intcon_one_to_many:
+   -- the chipset decode goes in front of the slot register, so the chipset
+   -- peripherals (several with their own buffer/intcon, e.g. sound) get A_stb
+   -- and the address from registers. With one_to_many the decode, steering
+   -- and the next block's accept were in one clock (failed on the C20K). The
+   -- slot replaces e_buf_per's forward register, so latency is unchanged.
+   e_fb_intcon_chipset:entity work.fb_intcon_shared
    generic map (
+      G_CONTROLLER_COUNT => 1,
       G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
    )
    port map (
       fb_syscon_i       => fb_syscon_i,
 
-      fb_up_c2p_i       => i_fb_per_buf_c2p,
-      fb_up_p2c_o       => i_fb_per_buf_p2c,
+      fb_up_c2p_i(0)    => i_fb_per_buf_c2p,
+      fb_up_p2c_o(0)    => i_fb_per_buf_p2c,
 
       fb_dn_c2p_o       => i_per_c2p_chipset,
       fb_dn_p2c_i       => i_per_p2c_chipset,      
 
-      peripheral_sel_addr_o               => i_chipset_intcon_peripheral_sel_addr,
-      peripheral_sel_i                    => i_chipset_intcon_peripheral_sel,
-      peripheral_sel_oh_i                 => i_chipset_intcon_peripheral_sel_oh
+      peripheral_sel_addr_o(0)            => i_chipset_intcon_peripheral_sel_addr,
+      peripheral_sel_we_o                 => open,
+      peripheral_sel_i(0)                 => i_chipset_intcon_peripheral_sel,
+      peripheral_sel_oh_i(0)              => i_chipset_intcon_peripheral_sel_oh
 
    );
 
