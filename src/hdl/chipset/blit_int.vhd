@@ -922,6 +922,8 @@ begin
 	variable v_major_ctr: unsigned(15 downto 0);
 	variable v_reg_line_minor: std_logic;
 	variable v_err_acc:signed(15 downto 0);
+   variable vr_stateD:boolean;
+   variable vr_D_nz:boolean;
 	begin
 
 		if fb_syscon_i.rst = '1' then
@@ -954,6 +956,10 @@ begin
 			r_mask_first <= (others => '0');	
 			r_mask_last <= (others => '0');		
 --			v_reg_line_minor := '0';					-- was making Gowin Syn infer a latch!?
+
+         vr_stateD := false;
+         vr_D_nz := false;
+
 		elsif rising_edge(fb_syscon_i.clk) then
 						
 			if r_blit_state = sFinish then
@@ -1025,9 +1031,15 @@ begin
 				end case;
 			end if;
 			
-			if (r_blit_state = sMemAccD) and (my_or_reduce(i_cha_D_data) /= '0') then
+         -- this bit of foot work registers state=D, or_reduce then clears r_BLTCON_collision
+         -- on the next cycle to assist timing
+         if vr_stateD and vr_D_nz then
 				r_BLTCON_collision <= '0';
 			end if;
+
+         -- picked up next time round
+         vr_stateD := r_blit_state = sMemAccD;
+         vr_D_nz := my_or_reduce(i_cha_D_data) /= '0';
 
 			-- register write from peripheral port: the address decode is done a
 			-- clock earlier in p_per_wr_dec, so here each register only sees
