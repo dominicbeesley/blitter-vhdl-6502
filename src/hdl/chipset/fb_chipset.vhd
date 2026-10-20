@@ -59,6 +59,7 @@ use work.fb_chipset_pack.all;
 entity fb_chipset is
    generic (
       SIM                  : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      G_PIPELINE_DEPTH     : positive := 15;
       CLOCKSPEED           : natural                              -- fast clock speed in mhz                
    );
    port(
@@ -465,6 +466,7 @@ begin
    -- slot replaces e_buf_per's forward register, so latency is unchanged.
    e_fb_intcon_chipset:entity work.fb_intcon_shared
    generic map (
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH,
       G_CONTROLLER_COUNT => 1,
       G_PERIPHERAL_COUNT => PERIPHERAL_COUNT_CHIPSET+1 -- NOTE: +1 for unsel
    )

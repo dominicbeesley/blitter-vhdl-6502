@@ -491,7 +491,8 @@ end generate;
 	e_fb_intcon: fb_intcon_shared
 	generic map (
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
-		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT
+		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH
 		)
    port map (
 		fb_syscon_i 		=> i_fb_syscon,
@@ -537,7 +538,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
 	port map (
 		fb_syscon_i		=> i_fb_syscon,
@@ -938,7 +940,7 @@ end generate;
 		-- configuration
 
 --		cfg_cpu_type_i						=> r_cfg_cpu_type,
---		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+      cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
 --		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
@@ -1189,7 +1191,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH            
 	)
 	port map (
 		CLK_48M_i			=> i_clk_div_48M,

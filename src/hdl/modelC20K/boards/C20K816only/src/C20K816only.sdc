@@ -51,6 +51,9 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clock
 # TODO (clock-group review): the crossing itself is not phase-safe.
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_72M}] 
 
+set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -setup 4
+set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -hold 3
+
 # blit_addr: address-calc inputs -> r_addr_out has 2 clocks (inputs change with
 # r_clken_addr_calc_start; calc a clock later; r_addr_out loads the clock after).
 # The start strobe itself is deliberately not covered.

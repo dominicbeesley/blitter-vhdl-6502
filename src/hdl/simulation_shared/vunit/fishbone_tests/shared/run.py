@@ -39,34 +39,35 @@ ARBS = {
     "contend": (("priority", False), ("roundrobin", True)),
 }
 
-# cross_read and cross_write fill peripheral 1's queue, so they are also run
-# with G_MAXOUT below its G_DEPTH (the interconnect limits the outstanding
-# transactions).
-MAXOUTS = {
-    "cross_read":  (15, 2),
-    "cross_write": (15, 2),
+# Every test runs pipelined (15) and not pipelined (1). cross_read and
+# cross_write fill peripheral 1's queue, so they are also run with
+# G_PIPELINE_DEPTH below its G_DEPTH (the interconnect limits the
+# outstanding transactions).
+DEPTHS_DEFAULT = (15, 1)
+DEPTHS = {
+    "cross_read":  (15, 2, 1),
+    "cross_write": (15, 2, 1),
 }
 
 # Adding a configuration removes a test's default one, so every test gets
-# one configuration per buffer setting (and per arbiter / G_MAXOUT where
+# one configuration per buffer setting, pipeline depth (and arbiter where
 # listed).
 tb = lib.test_bench("test_tb")
 
 for test in tb.get_tests():
     arbs = ARBS.get(test.name, (("priority", False),))
-    maxouts = MAXOUTS.get(test.name, (15,))
+    depths = DEPTHS.get(test.name, DEPTHS_DEFAULT)
     for buf_name, (reg_c2p, reg_p2c) in BUFFERS.items():
         for arb_name, arb_rr in arbs:
-            for maxout in maxouts:
+            for depth in depths:
                 name = buf_name
                 if len(arbs) > 1:
                     name += f"_{arb_name}"
-                if len(maxouts) > 1:
-                    name += f"_maxout{maxout}"
+                name += f"_depth{depth}"
                 test.add_config(
                     name=name,
                     generics=dict(
-                        G_MAXOUT=maxout,
+                        G_PIPELINE_DEPTH=depth,
                         G_ARB_ROUND_ROBIN=arb_rr,
                         G_CON_REG_C2P=reg_c2p,
                         G_CON_REG_P2C=reg_p2c,

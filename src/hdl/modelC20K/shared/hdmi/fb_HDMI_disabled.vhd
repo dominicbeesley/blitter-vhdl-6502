@@ -28,6 +28,7 @@ use work.fishbone.all;
 entity fb_HDMI is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		G_PIPELINE_DEPTH					: positive := 15;
 		CLOCKSPEED							: natural
 	);
 	port(

@@ -410,7 +410,8 @@ begin
    e_fb_intcon: fb_intcon_shared
    generic map (
       G_CONTROLLER_COUNT            => CONTROLLER_COUNT,
-      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT,
+      G_PIPELINE_DEPTH              => G_PIPELINE_DEPTH
       )
    port map (
       fb_syscon_i                   => i_fb_syscon,
@@ -760,7 +761,8 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
 	port map (
 		CLK_48M_i			=> i_clk_div_48M,

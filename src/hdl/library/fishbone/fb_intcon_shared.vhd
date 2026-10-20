@@ -50,27 +50,46 @@
 --   * The grant is taken and the first transaction captured in the same
 --     edge (no extra clock at the start of a cycle).
 --
+--   Pipelining: G_PIPELINE_DEPTH is the most transactions that may be
+--   outstanding at the peripherals (A_ack'd, not yet D_ack'd). 1 turns
+--   pipelining off and uses a simpler slot (below) with shorter paths from
+--   the peripherals' A_ack and D_ack. Use 1 unless a controller on this
+--   interconnect issues its next A_stb before the previous D_ack.
+--
 --   Forward path: one registered slot
 --   * The slot holds A, we, and the peripheral select (index and one-hot)
 --     loaded whenever the slot is free. The slot is marked full,
 --     and A_ack given to the controller, only for an A_stb.
---   * A_stb to peripheral k is r_full and r_sel_oh(k), unless something is
---     owed (r_cnt_nz) and k isn't the peripheral owed it (r_own_oh(k)) or the
---     count is at G_MAXOUT (r_cnt_max). Using the one-hots (index and
---     one-hot always agree) needs no index compare, so each A_stb is one
---     small LUT of registers. So the address decoders sit between
---     the controllers and the slot register, not on the path to the
---     peripherals.
---   * The slot empties on the peripheral's A_ack and can reload in the same
---     clock, so a controller can still issue one transaction per 2 clocks.
 --   * cyc, A, we, D_wr, D_wr_stb and rdy_ctdn are broadcast to every
 --     peripheral; only A_stb is steered. 
+--   * The address decoders sit between the controllers and the slot
+--     register, not on the path to the peripherals: each A_stb is one small
+--     LUT of registers.
 --
---   Peripheral switching and returns (as fb_intcon_one_to_many)
+--   Not pipelined (G_PIPELINE_DEPTH = 1)
+--   * The slot holds its transaction until the peripheral's D_ack.
+--     A_stb to peripheral k is r_full and r_sel_oh(k) until the
+--     peripheral's A_ack (r_dn_A_acked); D_ack empties the slot.
+--   * Returns are steered by r_sel_oh and gated with r_full.
+--   * The peripheral's A_ack and D_ack each feed one LUT (r_dn_A_acked,
+--     r_full) and the controller's returns; nothing in the slot's load or
+--     capture depends on them. A controller that waits for D_ack before its
+--     next A_stb sees no extra latency: the slot is free on the edge where
+--     it sees the D_ack.
+--
+--   Pipelined (G_PIPELINE_DEPTH > 1)
+--   * A_stb to peripheral k is r_full and r_sel_oh(k), unless something is
+--     owed (r_cnt_nz) and k isn't the peripheral owed it (r_own_oh(k)) or the
+--     count is at G_PIPELINE_DEPTH (r_cnt_max). Using the one-hots (index
+--     and one-hot always agree) needs no index compare.
+--   * The slot empties on the peripheral's A_ack and can reload in the same
+--     clock, so a controller can still issue one transaction per 2 clocks.
+--
+--   Peripheral switching and returns when pipelined (as fb_intcon_one_to_many)
 --   * r_cnt counts transactions A_ack'd by a peripheral but not yet D_ack'd,
 --     and r_own_ix/r_own_oh records which peripheral owes them. While
 --     r_cnt /= 0 the slot's A_stb is only forwarded to the same peripheral,
---     and only while r_cnt < G_MAXOUT. So D_acks come back in order, from
+--     and only while r_cnt < G_PIPELINE_DEPTH. So D_acks come back in order, from
 --     one peripheral at a time, and one cycle may span several peripherals.
 --   * Returns are steered by registers only: A_ack by r_sel_oh (the slot
 --     holds its select until A_ack), D_ack/D_rd/rdy by r_own_oh. r_own_*
@@ -105,7 +124,7 @@ entity fb_intcon_shared is
       G_CONTROLLER_COUNT : positive;
       G_PERIPHERAL_COUNT : positive;
 		G_ARB_ROUND_ROBIN : boolean := false;
-      G_MAXOUT           : positive := 15     -- max outstanding transactions
+      G_PIPELINE_DEPTH   : positive := 15     -- max transactions outstanding at the peripherals, 1 = not pipelined
 	);
 	port (
 		fb_syscon_i				: in	fb_syscon_t;
@@ -159,9 +178,15 @@ architecture rtl of fb_intcon_shared is
    signal r_D_wr_stb     : std_logic;
 
    -- peripheral bookkeeping (as fb_intcon_one_to_many)
-   signal r_cnt          : integer range 0 to G_MAXOUT;                       -- A_ack'd, not D_ack'd
+   constant C_PIPELINED  : boolean := G_PIPELINE_DEPTH > 1;
+
+   -- not pipelined only
+   signal r_dn_A_acked   : std_logic;                                         -- the peripheral has A_ack'd the slot's transaction
+
+   -- pipelined only
+   signal r_cnt          : integer range 0 to G_PIPELINE_DEPTH;               -- A_ack'd, not D_ack'd
    signal r_cnt_nz       : std_logic;                                         -- r_cnt /= 0, registered with r_cnt
-   signal r_cnt_max      : std_logic;                                         -- r_cnt = G_MAXOUT, registered with r_cnt
+   signal r_cnt_max      : std_logic;                                         -- r_cnt = G_PIPELINE_DEPTH, registered with r_cnt
    signal r_own_ix       : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- peripheral owing them
    signal r_own_oh       : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
 
@@ -224,16 +249,23 @@ end generate;
    -- --------------------------------------------------------------------------
    -- Downstream: only A_stb is steered, and only from registers
    -- --------------------------------------------------------------------------
-   -- The slot's A_stb is forwarded to peripheral k when it is addressed to k
-   -- (r_sel_oh(k)) and either nothing is owed, or k is the peripheral owed
-   -- (r_own_oh(k)) and the count isn't at G_MAXOUT. With r_sel_oh(k) = '1',
+   -- Not pipelined: the slot's A_stb goes to the peripheral it is addressed
+   -- to (r_sel_oh(k)) until that peripheral A_acks it.
+   -- Pipelined: it is forwarded to peripheral k when it is addressed to k
+   -- and either nothing is owed, or k is the peripheral owed (r_own_oh(k))
+   -- and the count isn't at G_PIPELINE_DEPTH. With r_sel_oh(k) = '1',
    -- r_sel_ix = k, so "r_sel_ix /= r_own_ix" is "r_own_oh(k) = '0'": no index
    -- compare, and A_stb(k) depends on five registers only.
 
    g_dn : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
-      fb_dn_c2p_o(k).cyc      <= r_dn_cyc;
-      fb_dn_c2p_o(k).A_stb    <= r_full and r_sel_oh(k) and
+      g_nopipe : if not C_PIPELINED generate
+         fb_dn_c2p_o(k).A_stb <= r_full and r_sel_oh(k) and not r_dn_A_acked;
+      end generate;
+      g_pipe : if C_PIPELINED generate
+         fb_dn_c2p_o(k).A_stb <= r_full and r_sel_oh(k) and
                                  (not r_cnt_nz or (r_own_oh(k) and not r_cnt_max));
+      end generate;
+      fb_dn_c2p_o(k).cyc      <= r_dn_cyc;
       fb_dn_c2p_o(k).A        <= r_A;
       fb_dn_c2p_o(k).we       <= r_we;
       fb_dn_c2p_o(k).D_wr     <= r_D_wr;
@@ -244,25 +276,37 @@ end generate;
    -- --------------------------------------------------------------------------
    -- Returns from the peripherals, AND-OR muxed by registered one-hots
    -- --------------------------------------------------------------------------
+   -- Not pipelined: D_ack, rdy and D_rd come from the slot's peripheral
+   -- (r_sel_oh, held until D_ack) and only while the slot is full.
+   -- Pipelined: from the peripheral owed (r_own_oh).
    p_p2c_mux : process (all)
-      variable v_A_ack : std_logic;
-      variable v_D_ack : std_logic;
-      variable v_rdy   : std_logic;
-      variable v_D_rd  : std_logic_vector(7 downto 0);
+      variable v_A_ack  : std_logic;
+      variable v_D_ack  : std_logic;
+      variable v_rdy    : std_logic;
+      variable v_D_rd   : std_logic_vector(7 downto 0);
+      variable v_ret_oh : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
+      variable v_D_en   : std_logic;
 	begin
+      if C_PIPELINED then
+         v_ret_oh := r_own_oh;
+         v_D_en   := r_dn_cyc;
+      else
+         v_ret_oh := r_sel_oh;
+         v_D_en   := r_dn_cyc and r_full;
+      end if;
       v_A_ack := '0';
       v_D_ack := '0';
       v_rdy   := '0';
       v_D_rd  := (others => '0');
       for k in 0 to G_PERIPHERAL_COUNT-1 loop
          v_A_ack := v_A_ack or (r_sel_oh(k) and fb_dn_p2c_i(k).A_ack);
-         v_D_ack := v_D_ack or (r_own_oh(k) and fb_dn_p2c_i(k).D_ack);
-         v_rdy   := v_rdy   or (r_own_oh(k) and fb_dn_p2c_i(k).rdy);
-         v_D_rd  := v_D_rd  or (fb_dn_p2c_i(k).D_rd and (v_D_rd'range => r_own_oh(k)));
+         v_D_ack := v_D_ack or (v_ret_oh(k) and fb_dn_p2c_i(k).D_ack);
+         v_rdy   := v_rdy   or (v_ret_oh(k) and fb_dn_p2c_i(k).rdy);
+         v_D_rd  := v_D_rd  or (fb_dn_p2c_i(k).D_rd and (v_D_rd'range => v_ret_oh(k)));
 		end loop;
       i_dn_A_ack <= r_dn_cyc and v_A_ack;
-      i_dn_D_ack <= r_dn_cyc and v_D_ack;
-      i_dn_rdy   <= r_dn_cyc and v_rdy;
+      i_dn_D_ack <= v_D_en and v_D_ack;
+      i_dn_rdy   <= v_D_en and v_rdy;
       i_dn_D_rd  <= v_D_rd;
 	end process;
 
@@ -295,6 +339,7 @@ end generate;
 			r_rdy_ctdn <= RDY_CTDN_MIN;
          r_D_wr     <= (others => '0');
          r_D_wr_stb <= '0';
+         r_dn_A_acked <= '0';
          r_cnt      <= 0;
          r_cnt_nz   <= '0';
          r_cnt_max  <= '0';
@@ -319,9 +364,21 @@ end generate;
          -- slot: A, we and select follow the granted controller whenever the
          -- slot is free (their enable doesn't depend on A_stb); it is marked
          -- full only for an A_stb, which isn't the one just A_ack'd
-         v_free := r_full = '0' or i_dn_A_ack = '1';
-         if i_dn_A_ack = '1' then
-            r_full <= '0';
+         if C_PIPELINED then
+            -- free on the peripheral's A_ack, and can reload in that clock
+            v_free := r_full = '0' or i_dn_A_ack = '1';
+            if i_dn_A_ack = '1' then
+               r_full <= '0';
+            end if;
+         else
+            -- held until the peripheral's D_ack; its A_ack only drops A_stb
+            v_free := r_full = '0';
+            if i_dn_A_ack = '1' then
+               r_dn_A_acked <= '1';
+            end if;
+            if i_dn_D_ack = '1' then
+               r_full <= '0';
+            end if;
          end if;
          if v_free then
             r_A      <= i_gnt_c2p.A;
@@ -331,8 +388,9 @@ end generate;
          end if;
          if v_act and v_free and i_gnt_c2p.cyc = '1' and i_gnt_c2p.A_stb = '1'
                and r_up_A_ack = '0' then
-            r_full     <= '1';
-            r_up_A_ack <= '1';
+            r_full       <= '1';
+            r_up_A_ack   <= '1';
+            r_dn_A_acked <= '0';
          end if;
 
          -- rdy_ctdn is constant for the granted controller's cyc, and the
@@ -348,32 +406,35 @@ end generate;
             r_D_wr_stb <= '0';
 					end if;
 
-         -- owner follows the slot while nothing is owed
-         if r_cnt = 0 then
-            r_own_ix <= r_sel_ix;
-            r_own_oh <= r_sel_oh;
-					end if;
+         -- pipelined only: owner and outstanding count
+         if C_PIPELINED then
+            -- owner follows the slot while nothing is owed
+            if r_cnt = 0 then
+               r_own_ix <= r_sel_ix;
+               r_own_oh <= r_sel_oh;
+            end if;
 
-         -- outstanding count: +1 on the peripheral's A_ack, -1 on its D_ack.
-         -- r_cnt_nz / r_cnt_max are worked out from the current r_cnt (compares
-         -- on registers, in parallel with the A_ack/D_ack muxes), not from the
-         -- incremented value, so only the up/down/hold choice follows the muxes.
-         if i_dn_A_ack = '1' and i_dn_D_ack = '0' then
-            r_cnt    <= r_cnt + 1;
-            r_cnt_nz <= '1';
-            if r_cnt = G_MAXOUT - 1 then
-               r_cnt_max <= '1';
-            else
+            -- outstanding count: +1 on the peripheral's A_ack, -1 on its D_ack.
+            -- r_cnt_nz / r_cnt_max are worked out from the current r_cnt (compares
+            -- on registers, in parallel with the A_ack/D_ack muxes), not from the
+            -- incremented value, so only the up/down/hold choice follows the muxes.
+            if i_dn_A_ack = '1' and i_dn_D_ack = '0' then
+               r_cnt    <= r_cnt + 1;
+               r_cnt_nz <= '1';
+               if r_cnt = G_PIPELINE_DEPTH - 1 then
+                  r_cnt_max <= '1';
+               else
+                  r_cnt_max <= '0';
+               end if;
+            elsif i_dn_A_ack = '0' and i_dn_D_ack = '1' and r_cnt_nz = '1' then
+               r_cnt <= r_cnt - 1;
+               if r_cnt >= 2 then
+                  r_cnt_nz <= '1';
+               else
+                  r_cnt_nz <= '0';
+               end if;
                r_cnt_max <= '0';
             end if;
-         elsif i_dn_A_ack = '0' and i_dn_D_ack = '1' and r_cnt_nz = '1' then
-            r_cnt <= r_cnt - 1;
-            if r_cnt >= 2 then
-               r_cnt_nz <= '1';
-            else
-               r_cnt_nz <= '0';
-            end if;
-            r_cnt_max <= '0';
          end if;
 
          -- the granted controller has dropped cyc: end (or abort) the cycle
@@ -384,6 +445,7 @@ end generate;
             r_full     <= '0';
             r_up_A_ack <= '0';
             r_D_wr_stb <= '0';
+            r_dn_A_acked <= '0';
             r_cnt      <= 0;
             r_cnt_nz   <= '0';
             r_cnt_max  <= '0';

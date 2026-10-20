@@ -99,7 +99,7 @@ entity C20K is
       cpu_E_i              : in            std_logic;
       cpu_MX_i             : in            std_logic;
       cpu_PHI2_o           : out           std_logic;
-      cpu_RDY_io           : out           std_logic;
+      cpu_RDY_io           : inout         std_logic;
       cpu_nABORT_o         : out           std_logic;
       cpu_nIRQ_o           : out           std_logic;
       cpu_nNMI_o           : out           std_logic;
@@ -355,6 +355,8 @@ architecture rtl of C20K is
 	-- hdmi peripheral interface control registers
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
+	signal i_c2p_hdmi_buf				: fb_con_o_per_i_t;		-- after e_hdmi_buf
+	signal i_p2c_hdmi_buf				: fb_con_i_per_o_t;
 
 	signal i_vid_48_r                : std_logic_vector(3 downto 0);
 	signal i_vid_48_g                : std_logic_vector(3 downto 0);
@@ -500,11 +502,7 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    -- address decode to select peripheral
    e_addr2s:entity work.address_decode
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET		      => G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI,
-		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS,
+		G_HDMI_SHADOW_SYS		=> true,
       G_C20K                  => true
 	)
 	port map (
@@ -515,25 +513,22 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	);
 end generate;
 
-g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-      G_REGISTER_PERIPHERAL_C2P => false
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH
 		)
    port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
 		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+		fb_up_c2p_i						=> i_con_c2p_intcon,
+		fb_up_p2c_o						=> i_con_p2c_intcon,
 
 		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+		fb_dn_c2p_o						=> i_per_c2p_intcon,
+		fb_dn_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
       peripheral_sel_we_o                 => i_intcon_peripheral_sel_we,
@@ -542,33 +537,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
    );
 
 
-END GENERATE;
-g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-   e_fb_intcon: fb_intcon_one_to_many
-   generic map (
-      SIM                           => SIM,
-      G_PERIPHERAL_COUNT                  => PERIPHERAL_COUNT,
-      G_ADDRESS_WIDTH               => 24
-      )
-   port map (
-      fb_syscon_i                   => i_fb_syscon,
 
-      -- peripheral ports connect to controllers
-      fb_con_c2p_i                  => i_con_c2p_intcon(0),
-      fb_con_p2c_o                  => i_con_p2c_intcon(0),
-
-      -- controller ports connect to peripherals
-      fb_per_c2p_o                  => i_per_c2p_intcon,
-      fb_per_p2c_i                  => i_per_p2c_intcon,
-
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_we_o         => i_intcon_peripheral_sel_we(0),
-      peripheral_sel_i              => i_intcon_peripheral_sel(0),
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
-   );
-
-
-END GENERATE;   
 
 	i_con_c2p_intcon(MAS_NO_CPU)              <= i_c2p_cpu;
    i_con_c2p_intcon(MAS_NO_CPU816)           <= i_c2p_cpu816;
@@ -596,7 +565,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
 	port map (
 		fb_syscon_i		=> i_fb_syscon,
@@ -1298,17 +1268,42 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
    i_mb_scroll_latch_c <= i_beeb_ic32(5 downto 4);
 
+   -- Return buffer on the HDMI port: the HDMI block has its own interconnect,
+   -- so without this an HDMI peripheral's D_ack/D_rd went through two return
+   -- muxes (HDMI intcon, then the top intcon) into the top intcon's count and
+   -- the CPU block in one clock (failed by ~1.6 ns). D_ack, rdy and D_rd are
+   -- registered here; A_ack and the forward path pass straight through (the
+   -- HDMI intcon's slot already registers the forward path). Costs one clock
+   -- on CPU accesses to the HDMI block, which on the C20K includes main RAM
+   -- (FF 0000-7FFF, G_HDMI_SHADOW_SYS); the old design also registered
+   -- these returns (fb_HDMI_enabled G_REGISTER_CON_READS).
+   e_hdmi_buf:entity work.fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => false,
+      G_REG_P2C            => true
+   )
+   port map (
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_up_c2p_i          => i_c2p_hdmi_per,
+      fb_up_p2c_o          => i_p2c_hdmi_per,
+
+      fb_dn_c2p_o          => i_c2p_hdmi_buf,
+      fb_dn_p2c_i          => i_p2c_hdmi_buf
+   );
+
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH
 	)
 	port map (
 		CLK_48M_i			=> i_clk_div_48M,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_c2p_i				=> i_c2p_hdmi_per,
-		fb_p2c_o				=> i_p2c_hdmi_per,
+		fb_c2p_i				=> i_c2p_hdmi_buf,
+		fb_p2c_o				=> i_p2c_hdmi_buf,
 
 		HDMI_SCL_io			=> edid_scl_io,
 		HDMI_SDA_io			=> edid_sda_io,

@@ -39,7 +39,7 @@
         <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />
-		<File path="src/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
+		<File path="../../shared/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
         
         <File path="../../../shared/address_decode.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
@@ -70,6 +70,7 @@
         <File path="../../../library/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_buffer.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
 

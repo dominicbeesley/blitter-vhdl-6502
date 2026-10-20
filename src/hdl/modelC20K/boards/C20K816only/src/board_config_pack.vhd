@@ -83,7 +83,9 @@ package board_config_pack is
 	constant G_INCL_LED_ARR		: boolean := false;
 	constant G_INCL_DBG_UART	: boolean := true;
 	
-	constant C_CPU_BYTELANES	: positive := 1;		
+	constant C_CPU_BYTELANES	: positive := 1;	
+	constant G_PIPELINE_DEPTH  : positive := 1;
+		
 	constant G_INCL_CPU_T65		: boolean := false;
 	constant G_INCL_CPU_65C02	: boolean := false;
 	constant G_INCL_CPU_6800	: boolean := false;

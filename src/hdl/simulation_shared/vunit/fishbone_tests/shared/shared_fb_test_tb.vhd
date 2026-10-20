@@ -51,8 +51,9 @@ use work.fb_tester_pack.all;
 --   hang.
 --
 -- run.py runs every test in each buffer setting (applied to all three
--- buffers), contend with both arbiters, and cross_read/cross_write with
--- G_MAXOUT 15 and 2 (as the one_to_many bench).
+-- buffers) with G_PIPELINE_DEPTH 15 (pipelined) and 1 (not pipelined),
+-- contend with both arbiters, and cross_read/cross_write also with
+-- G_PIPELINE_DEPTH 2 (as G_MAXOUT 2 in the one_to_many bench).
 --
 -- p_check watches the controller side of each controller's buffer and the
 -- peripheral side of the interconnect.
@@ -60,7 +61,7 @@ use work.fb_tester_pack.all;
 entity test_tb is
    generic (
       runner_cfg        : string;
-      G_MAXOUT          : positive := 15;
+      G_PIPELINE_DEPTH  : positive := 15;
       G_ARB_ROUND_ROBIN : boolean  := false;
 
       G_CON_REG_P2C     : boolean := true;
@@ -540,7 +541,7 @@ begin
       G_CONTROLLER_COUNT      => CONTROLLER_COUNT,
       G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
       G_ARB_ROUND_ROBIN       => G_ARB_ROUND_ROBIN,
-      G_MAXOUT                => G_MAXOUT
+      G_PIPELINE_DEPTH        => G_PIPELINE_DEPTH
    )
    port map (
       fb_syscon_i                => i_fb_syscon,

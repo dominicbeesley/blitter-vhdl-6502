@@ -54,6 +54,7 @@ package fb_chipset_pack is
 component fb_chipset
 	generic (
 		SIM						: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+      G_PIPELINE_DEPTH		: positive := 15;
  		CLOCKSPEED				: natural										-- fast clock speed in mhz						
 	);
 	port(

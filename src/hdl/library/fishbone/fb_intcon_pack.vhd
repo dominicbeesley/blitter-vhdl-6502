@@ -46,7 +46,7 @@ component fb_intcon_shared is
       G_CONTROLLER_COUNT : positive;
       G_PERIPHERAL_COUNT : positive;
       G_ARB_ROUND_ROBIN  : boolean  := false;
-      G_MAXOUT           : positive := 15
+      G_PIPELINE_DEPTH   : positive := 15     -- max outstanding at the peripherals, 1 = not pipelined
    );
    port (
       fb_syscon_i           : in  fb_syscon_t;

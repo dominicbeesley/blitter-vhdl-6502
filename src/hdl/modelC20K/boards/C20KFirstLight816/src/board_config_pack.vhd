@@ -63,6 +63,7 @@ package board_config_pack is
 	constant G_INCL_HDMI		: boolean := true;
 
 	constant C_CPU_BYTELANES	: positive := 1;		
+	constant G_PIPELINE_DEPTH  : positive := 1;
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
