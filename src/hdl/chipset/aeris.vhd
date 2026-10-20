@@ -160,6 +160,7 @@ architecture Behavioral of fb_dmac_aeris is
    signal   r_op_skip      : std_logic;                        -- set by SKIP instruction if next op to be skipped
 
    signal   r_pc           : std_logic_vector(15 downto 0);
+   signal   r_pc_inc       : std_logic_vector(15 downto 0);    -- pre-compute r_pc
    signal   r_play_saved_pc: std_logic_vector(15 downto 0);
 
    signal   r_raster_ctr   : unsigned(8 downto 0); -- lines since VS
@@ -312,6 +313,7 @@ begin
       begin
          if fb_syscon_i.rst = '1' then
             r_pc <= (others => '0');
+            r_pc_inc <= (others => '0');
             r_op <= (others => '0');
             r_arg_0 <= (others => '0');
             r_arg_1 <= (others => '0');
@@ -354,8 +356,15 @@ begin
 
             v_checkrestart := false;
 
+            -- precompute r_pc_inc - assumes that all paths top r_pc being loaded
+            -- from this have at least one cycle where r_pc is constant before
+            -- this is ensured here - if we ever pipeline fishbone requests
+            -- we should watch this.
+            r_pc_inc <= std_logic_vector(unsigned(r_pc) + 1);
+
             if r_ctl_wait_cyc = '0' then
                r_pc <= (others => '0');
+               r_pc_inc <= (0 => '1', others => '0');
                ack_vs_edge_pgm <= tgl_vs_edge_pgm;
                r_state <= idle;
                r_op_skip <= '0';
@@ -384,7 +393,7 @@ begin
                            r_state <= decode;
                            r_op <= fb_con_p2c_i.D_rd;
                         end if;
-                        r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+                        r_pc <= r_pc_inc;
                         r_ack_hs_waith <= tgl_hs_edge;
                      end if;
                   when decode => 
@@ -409,19 +418,19 @@ begin
                      if fb_con_p2c_i.D_ack = '1' then
                         r_arg_0 <= fb_con_p2c_i.D_rd;
                         r_state <= arg_1_fetch;
-                        r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+                        r_pc <= r_pc_inc;
                      end if;
                   when arg_1_fetch =>
                      if fb_con_p2c_i.D_ack = '1' then
                         r_arg_1 <= fb_con_p2c_i.D_rd;
                         r_state <= arg_2_fetch;
-                        r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+                        r_pc <= r_pc_inc;
                      end if;
                   when arg_2_fetch =>
                      if fb_con_p2c_i.D_ack = '1' then
                         r_arg_2 <= fb_con_p2c_i.D_rd;
                         r_state <= exec;
-                        r_pc <= std_logic_vector(unsigned(r_pc) + 1);
+                        r_pc <= r_pc_inc;
                      end if;
                   when exec =>
                      if r_op_skip = '1' then
