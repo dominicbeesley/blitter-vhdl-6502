@@ -34,11 +34,11 @@
 
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_t65.vhd" type="file.vhdl" enable="1" />
-
+        <File path="../../shared/fb_CPU_exp_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/fb_CPU.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_con_burst.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/log2phys.vhd" type="file.vhdl" enable="1" />
-        <File path="src/fb_CPU_t65only.vhd" type="file.vhdl" enable="1" />
 		<File path="../../shared/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
         
         <File path="../../../shared/address_decode.vhd" type="file.vhdl" enable="1" />

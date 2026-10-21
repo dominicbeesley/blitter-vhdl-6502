@@ -52,6 +52,7 @@ use work.board_config_pack.all;
 use work.HDMI_pack.all;
 use work.fb_SYS_pack.all;
 use work.fb_CPU_pack.all;
+use work.fb_CPU_exp_pack.all;
 use work.fb_chipset_pack.all;
 use work.fb_intcon_pack.all;
 use work.ws2812_pack.all;
@@ -416,8 +417,9 @@ architecture rtl of C20K is
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
-   signal i_debug_cpu_instr_a : std_logic_vector(23 downto 0);
-   signal i_debug_cpu_instr816_a : std_logic_vector(23 downto 0);
+
+   signal i_c2p_cpu_instr_fetch     : std_logic;
+   signal i_c2p_cpu816_instr_fetch  : std_logic;
 
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
@@ -1010,13 +1012,13 @@ end generate;
       -- cpu controller
       fb_cpu_c2p_o                  => i_c2p_cpu816,
       fb_cpu_p2c_i                  => i_p2c_cpu816,
+      fb_cpu_c2p_instr_fetch_o      => i_c2p_cpu816_instr_fetch,
       -- mem peripheral
       fb_mem_c2p_i                  => i_c2p_mem,
       fb_mem_p2c_o                  => i_p2c_mem,
 
 
       -- debug
-      debug_cpu_instr_A             => i_debug_cpu_instr816_a,
       debug_throttle_act_o          => open,
 
       -- preboot
@@ -1044,18 +1046,20 @@ end generate;
 
    );
 
-   e_fb_cpu_t65only: entity work.fb_cpu_t65only
+   e_fb_cpu: entity work.fb_cpu
    generic map (
       SIM => SIM,
-      CLOCKSPEED => CLOCKSPEED
+      CLOCKSPEED => CLOCKSPEED,
+      G_MK3 => false,
+      G_C20K => true
    )
    port map (
 
 		-- configuration
 
---		cfg_cpu_type_i						=> r_cfg_cpu_type,
+		cfg_cpu_type_i						=> NONE,
 		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
---		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
+		cfg_cpu_speed_opt_i				=> NONE,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
 		cfg_mosram_i						=> r_cfg_mosram,
@@ -1097,19 +1101,22 @@ end generate;
       fb_syscon_i                   => i_fb_syscon,
       fb_c2p_o                      => i_c2p_cpu,
       fb_p2c_i                      => i_p2c_cpu,
+      fb_c2p_instr_fetch_o          => i_c2p_cpu_instr_fetch,
 
       -- chipset control signals
       cpu_halt_i                    => i_chipset_cpu_halt,
 
-      -- debug
-      debug_cpu_instr_A             => i_debug_cpu_instr_a,
-      debug_throttle_act_o          => open,
-
       -- preboot
-      preboot_i                     => i_preboot 
+      preboot_i                     => i_preboot,
 
+      -- expansion ports
+      wrap_exp_i                    => C_EXP_I_DUMMY,
+      wrap_exp_o                    => open,
 
-
+      -- 816 isn't here - it's in mem
+      boot_65816_i                  => (others => '0'),
+      window_65816_i                => (others => '0'),
+      window_65816_wr_en_i          => '0'
    );
 
 	i_cpu_IRQ_n <= not i_chipset_cpu_int and i_sys_nIRQ;
@@ -1154,6 +1161,7 @@ end generate;
    p_leds:process(i_fb_syscon)
    variable i : integer;
    variable vr_btn : unsigned(7 downto 0);
+   variable vr_instr : std_logic_vector(23 downto 0);
    begin
       if rising_edge(i_fb_syscon.clk) then
          if i_fb_syscon.rst = '1' then
@@ -1171,21 +1179,19 @@ end generate;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
             vr_btn := (others => '0');
+            vr_instr := x"5AF0A5";
          elsif vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
-               if r_cfg_cpu_use_t65 = '1' then
-                  i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
-                  i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
-                  i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
-               else
-                  i_debug_leds(I).red <= (0 => i_debug_cpu_instr816_a(I), others => '0');
-                  i_debug_leds(I).green <= (0 => i_debug_cpu_instr816_a(I + 8), others => '0');
-                  i_debug_leds(I).blue <= (0 => i_debug_cpu_instr816_a(I + 16), others => '0');
-               end if;
-               --i_debug_leds(I).red <= (others => '0');
-               --i_debug_leds(I).green <= (others => '0');
-               --i_debug_leds(I).blue <= (others => '0');
+               i_debug_leds(I).red <= (0 => vr_instr(I), others => '0');
+               i_debug_leds(I).green <= (0 => vr_instr(I + 8), others => '0');
+               i_debug_leds(I).blue <= (0 => vr_instr(I + 16), others => '0');
             end loop;            
+
+            if i_c2p_cpu_instr_fetch = '1' and i_c2p_cpu.A_stb = '1' then
+               vr_instr := i_c2p_cpu.A;
+            elsif i_c2p_cpu816_instr_fetch = '1' and i_c2p_cpu816.A_stb = '1' then
+               vr_instr := i_c2p_cpu816.A;
+            end if;
          end if;
 
          if icipo_btn2 = '0' then

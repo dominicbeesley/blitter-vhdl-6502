@@ -112,6 +112,7 @@ entity fb_C20K_mem_cpu_65816 is
       -- fishbone cpu controller to rest of system
       fb_cpu_c2p_o                     : out fb_con_o_per_i_t;
       fb_cpu_p2c_i                     : in  fb_con_i_per_o_t;
+      fb_cpu_c2p_instr_fetch_o         : out std_logic;
 
       -- fishbone memory peripheral from other bus controller
       fb_mem_c2p_i                     : in  fb_con_o_per_i_t;
@@ -157,9 +158,6 @@ entity fb_C20K_mem_cpu_65816 is
 
       -- noice debugger signals to cpu
       noice_debug_shadow_i          : in std_logic;      -- debugger memory MOS map is active (overrides shadow_mos)
-
-      -- debug 
-      debug_cpu_instr_a             : out std_logic_vector(23 downto 0);
 
       -- memory motherboard signals
 
@@ -541,6 +539,7 @@ begin
          r_fb_D_rd       <= (others => '0');
 
          fb_cpu_c2p_o <= fb_c2p_unsel;
+         fb_cpu_c2p_instr_fetch_o <= '0';
 
          CPU_A_nOE_o <= '0';
          r_CPU_RDY <= '1';
@@ -571,6 +570,7 @@ begin
                when reset =>
                   CPU_BE_o <= '1';
                   fb_cpu_c2p_o <= fb_c2p_unsel;
+                  fb_cpu_c2p_instr_fetch_o <= '0';
                   if i_ring_next(C_CPU_DIV_PHI2) = '1' then
                      r_state <= wait_asetup;
                   end if;
@@ -661,7 +661,8 @@ begin
                      -- not local memory start a fishbone cycle
                      fb_cpu_c2p_o.cyc <= '1';
                      fb_cpu_c2p_o.A <= r_phys_A;
-                     fb_cpu_c2p_o.A_stb <= '1';                     
+                     fb_cpu_c2p_o.A_stb <= '1';      
+                     fb_cpu_c2p_instr_fetch_o <= r_VPA and R_VDA;               
                      r_had_fb_ack <= '0';
                      if r_cpu_RnW = '1' then
                         r_state <= cpu_read_fb;
@@ -925,18 +926,6 @@ begin
       if rising_edge(fb_syscon_i.clk) then
          if r_state /= mem1 and r_state /= mem2 and r_state /= mem3 and r_state /= mem4 then
             r_mem_A <= fb_mem_c2p_i.A;
-         end if;
-      end if;
-   end process;
-
-   -- debug: address of the last instruction fetch started. Was loaded in
-   -- cpu_log_a behind the throttle/halt decision (log2phys -> throttle_act);
-   -- cpu_phys_a is only reached for a cycle that goes ahead
-   p_debug_instr_a:process(fb_syscon_i)
-   begin
-      if rising_edge(fb_syscon_i.clk) then
-         if r_state = cpu_phys_a and r_VPA = '1' and r_VDA = '1' then
-            debug_cpu_instr_a <= r_A;
          end if;
       end if;
    end process;

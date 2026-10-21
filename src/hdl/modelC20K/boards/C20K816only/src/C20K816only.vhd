@@ -393,7 +393,6 @@ architecture rtl of C20K816only is
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
-   signal i_debug_cpu_instr_a : std_logic_vector(23 downto 0);
 
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
