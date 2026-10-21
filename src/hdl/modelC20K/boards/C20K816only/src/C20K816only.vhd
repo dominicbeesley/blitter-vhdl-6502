@@ -394,6 +394,7 @@ architecture rtl of C20K816only is
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
 
+   signal i_c2p_cpu_instr_fetch     : std_logic;
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
    -----------------------------------------------------------------------------
@@ -981,13 +982,13 @@ end generate;
       -- cpu controller
       fb_cpu_c2p_o                  => i_c2p_cpu,
       fb_cpu_p2c_i                  => i_p2c_cpu,
+      fb_cpu_c2p_instr_fetch_o      => i_c2p_cpu_instr_fetch,
       -- mem peripheral
       fb_mem_c2p_i                  => i_c2p_mem,
       fb_mem_p2c_o                  => i_p2c_mem,
 
 
       -- debug
-      debug_cpu_instr_A             => i_debug_cpu_instr_a,
       debug_throttle_act_o          => i_debug_throttle_act,
 
       -- preboot
@@ -1055,6 +1056,7 @@ end generate;
    p_leds:process(i_fb_syscon)
    variable i : integer;
    variable vr_btn : unsigned(7 downto 0);
+   variable vr_instr : std_logic_vector(23 downto 0);
    begin
       if rising_edge(i_fb_syscon.clk) then
          if i_fb_syscon.rst = '1' then
@@ -1072,17 +1074,17 @@ end generate;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
             vr_btn := (others => '0');
-         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
+            vr_instr := x"5AF0A5";
+         elsif vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
-               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
-               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
-               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
-               --i_debug_leds(I).red <= (others => '0');
-               --i_debug_leds(I).green <= (others => '0');
-               --i_debug_leds(I).blue <= (others => '0');
+               i_debug_leds(I).red <= (0 => vr_instr(I), others => '0');
+               i_debug_leds(I).green <= (0 => vr_instr(I + 8), others => '0');
+               i_debug_leds(I).blue <= (0 => vr_instr(I + 16), others => '0');
             end loop;
 
-            
+            if i_c2p_cpu_instr_fetch = '1' and i_c2p_cpu.A_stb = '1' then
+               vr_instr := i_c2p_cpu.A;
+            end if;
          end if;         
 
          if icipo_btn2 = '0' then
