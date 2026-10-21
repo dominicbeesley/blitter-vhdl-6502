@@ -87,15 +87,17 @@
 --
 --   Peripheral switching and returns when pipelined (as fb_intcon_one_to_many)
 --   * r_cnt counts transactions A_ack'd by a peripheral but not yet D_ack'd,
---     and r_own_ix/r_own_oh records which peripheral owes them. While
+--     and r_own_oh records which peripheral owes them. While
 --     r_cnt /= 0 the slot's A_stb is only forwarded to the same peripheral,
 --     and only while r_cnt < G_PIPELINE_DEPTH. So D_acks come back in order, from
 --     one peripheral at a time, and one cycle may span several peripherals.
 --   * Returns are steered by registers only: A_ack by r_sel_oh (the slot
---     holds its select until A_ack), D_ack/D_rd/rdy by r_own_oh. r_own_*
+--     holds its select until A_ack), D_ack/D_rd/rdy by r_own_oh. r_own_oh
 --     follows the slot while r_cnt = 0 and holds while anything is owed.
 --     Acks are registered at the peripherals, so none can answer before the
---     clock after it first sees A_stb, by which time r_own_* holds it.
+--     clock after it first sees A_stb, by which time r_own_oh holds it.
+--   * Only the one-hot select is used; the decoders' index (peripheral_sel_i)
+--     is not needed here and is left unconnected inside.
 --   * D_ack and rdy to the controller are gated with downstream cyc and the
 --     granted controller's one-hot, so nothing from an aborted cycle reaches
 --     the next controller.
@@ -162,7 +164,6 @@ architecture rtl of fb_intcon_shared is
    -- the granted controller: arbiter's choice in idle, held grant in act
    signal i_grant_ix     : unsigned(numbits(G_CONTROLLER_COUNT)-1 downto 0);
    signal i_gnt_c2p      : fb_con_o_per_i_t;
-   signal i_gnt_sel_ix   : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
    signal i_gnt_sel_oh   : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
 
    -- forward slot and downstream registers
@@ -171,7 +172,6 @@ architecture rtl of fb_intcon_shared is
    signal r_up_A_ack     : std_logic;                                         -- A_ack to the granted controller
    signal r_A            : std_logic_vector(23 downto 0);
    signal r_we           : std_logic;
-   signal r_sel_ix       : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
    signal r_sel_oh       : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
 	signal	r_rdy_ctdn		: t_rdy_ctdn;
    signal r_D_wr         : std_logic_vector(7 downto 0);
@@ -187,7 +187,6 @@ architecture rtl of fb_intcon_shared is
    signal r_cnt          : integer range 0 to G_PIPELINE_DEPTH;               -- A_ack'd, not D_ack'd
    signal r_cnt_nz       : std_logic;                                         -- r_cnt /= 0, registered with r_cnt
    signal r_cnt_max      : std_logic;                                         -- r_cnt = G_PIPELINE_DEPTH, registered with r_cnt
-   signal r_own_ix       : unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);  -- peripheral owing them
    signal r_own_oh       : std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0);
 
    -- returns from the peripherals, steered by registers
@@ -243,7 +242,6 @@ end generate;
    i_grant_ix   <= i_arb_grant_ix when r_state = idle and i_a_stb_any = '1' else
                    r_grant_ix;
    i_gnt_c2p    <= fb_up_c2p_i(to_integer(i_grant_ix));
-   i_gnt_sel_ix <= peripheral_sel_i(to_integer(i_grant_ix));
    i_gnt_sel_oh <= peripheral_sel_oh_i(to_integer(i_grant_ix));
 
    -- --------------------------------------------------------------------------
@@ -253,9 +251,9 @@ end generate;
    -- to (r_sel_oh(k)) until that peripheral A_acks it.
    -- Pipelined: it is forwarded to peripheral k when it is addressed to k
    -- and either nothing is owed, or k is the peripheral owed (r_own_oh(k))
-   -- and the count isn't at G_PIPELINE_DEPTH. With r_sel_oh(k) = '1',
-   -- r_sel_ix = k, so "r_sel_ix /= r_own_ix" is "r_own_oh(k) = '0'": no index
-   -- compare, and A_stb(k) depends on five registers only.
+   -- and the count isn't at G_PIPELINE_DEPTH. "Addressed to a peripheral
+   -- other than the one owed" is just r_own_oh(k) = '0' when r_sel_oh(k) =
+   -- '1': no index compare, and A_stb(k) depends on five registers only.
 
    g_dn : for k in G_PERIPHERAL_COUNT-1 downto 0 generate
       g_nopipe : if not C_PIPELINED generate
@@ -334,7 +332,6 @@ end generate;
          r_up_A_ack <= '0';
          r_A        <= (others => '0');
          r_we       <= '0';
-         r_sel_ix   <= (others => '0');
          r_sel_oh   <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MIN;
          r_D_wr     <= (others => '0');
@@ -343,7 +340,6 @@ end generate;
          r_cnt      <= 0;
          r_cnt_nz   <= '0';
          r_cnt_max  <= '0';
-         r_own_ix   <= (others => '0');
          r_own_oh   <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
          r_arb_ack  <= '0';
@@ -383,7 +379,6 @@ end generate;
          if v_free then
             r_A      <= i_gnt_c2p.A;
             r_we     <= i_gnt_c2p.we;
-            r_sel_ix <= i_gnt_sel_ix;
             r_sel_oh <= i_gnt_sel_oh;
          end if;
          if v_act and v_free and i_gnt_c2p.cyc = '1' and i_gnt_c2p.A_stb = '1'
@@ -406,11 +401,15 @@ end generate;
             r_D_wr_stb <= '0';
 					end if;
 
-         -- pipelined only: owner and outstanding count
+         -- pipelined only: owner and outstanding count. Not pipelined, r_own_oh
+         -- is unused; it is still assigned here so it isn't only set by the
+         -- asynchronous reset (which synthesis makes into a latch)
+         if not C_PIPELINED then
+            r_own_oh <= (others => '0');
+         end if;
          if C_PIPELINED then
             -- owner follows the slot while nothing is owed
             if r_cnt = 0 then
-               r_own_ix <= r_sel_ix;
                r_own_oh <= r_sel_oh;
             end if;
 
