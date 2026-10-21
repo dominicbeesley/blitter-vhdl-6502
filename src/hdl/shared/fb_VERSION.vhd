@@ -66,7 +66,7 @@ end fb_version;
 
 architecture rtl of fb_version is
 
-   type     state_mem_t is (idle, act_rd, act_wr);
+   type     state_mem_t is (idle, act_rd, act_rd2, act_wr);
 
    signal   r_state     : state_mem_t;
 
@@ -74,6 +74,7 @@ architecture rtl of fb_version is
    signal   r_A         : std_logic_vector(7 downto 0);
    signal   r_A_ack     : std_logic;
    signal   r_D_rd      : std_logic_vector(7 downto 0);
+   signal   r_D_rd0     : std_logic_vector(7 downto 0);
    signal   i_rom_D_rd  : std_logic_vector(7 downto 0);
 
    signal   i_cap_bits : std_logic_vector(24 downto 0);
@@ -130,11 +131,12 @@ begin
    begin
 
       if fb_syscon_i.rst = '1' then
-         r_state <= idle;
-         r_D_ack <= '0';
-         r_A_ack <= '0';
-         r_D_rd <= (others => '0');
-         r_A <= (others => '0');
+         r_state  <= idle;
+         r_D_ack  <= '0';
+         r_A_ack  <= '0';
+         r_D_rd   <= (others => '0');
+         r_D_rd0  <= (others => '0');
+         r_A      <= (others => '0');
       elsif rising_edge(fb_syscon_i.clk) then
          r_D_ack <= '0';
          r_A_ack <= '0';
@@ -157,37 +159,41 @@ begin
                   r_state <= idle;
                end if;
             when act_rd =>
+               if r_A(7) = '1' then
+                  case to_integer(unsigned(r_A(3 downto 0))) is
+                     when 0 =>
+                        r_D_rd0 <= FW_API_level;
+                     when 1 =>
+                        r_D_rd0 <= std_logic_vector(to_unsigned(firmware_board_level'POS(FW_board_level), 8));
+                     when 2 => 
+                        r_D_rd0 <= FW_API_sublevel;
+                     when 4 =>
+                        r_D_rd0 <= cfg_bits_i(7 downto 0);
+                     when 5 =>
+                        r_D_rd0 <= cfg_bits_i(15 downto 8);
+                     when 6 =>
+                        r_D_rd0 <= cfg_bits_i(23 downto 16);
+                     when 7 =>
+                        r_D_rd0 <= cfg_bits_i(31 downto 24);
+                     when 8 =>
+                        r_D_rd0 <= i_cap_bits(7 downto 0);
+                     when 9 =>
+                        r_D_rd0 <= i_cap_bits(15 downto 8);
+                     when 10 =>
+                        r_D_rd0 <= i_cap_bits(23 downto 16);
+                     when 11 =>
+                        r_D_rd0 <= "0000000" & i_cap_bits(24);
+                     when others =>
+                        r_D_rd0 <= x"00";
+                  end case;
+               else
+                  r_D_rd0 <= i_rom_D_rd;
+               end if;
+               r_state <= act_rd2; -- cancelled below if cyc=0
+
+            when act_rd2 =>
                if fb_c2p_i.cyc = '1' then
-                  if r_A(7) = '1' then
-                     case to_integer(unsigned(r_A(3 downto 0))) is
-                        when 0 =>
-                           r_D_rd <= FW_API_level;
-                        when 1 =>
-                           r_D_rd <= std_logic_vector(to_unsigned(firmware_board_level'POS(FW_board_level), 8));
-                        when 2 => 
-                           r_D_rd <= FW_API_sublevel;
-                        when 4 =>
-                           r_D_rd <= cfg_bits_i(7 downto 0);
-                        when 5 =>
-                           r_D_rd <= cfg_bits_i(15 downto 8);
-                        when 6 =>
-                           r_D_rd <= cfg_bits_i(23 downto 16);
-                        when 7 =>
-                           r_D_rd <= cfg_bits_i(31 downto 24);
-                        when 8 =>
-                           r_D_rd <= i_cap_bits(7 downto 0);
-                        when 9 =>
-                           r_D_rd <= i_cap_bits(15 downto 8);
-                        when 10 =>
-                           r_D_rd <= i_cap_bits(23 downto 16);
-                        when 11 =>
-                           r_D_rd <= "0000000" & i_cap_bits(24);
-                        when others =>
-                           r_D_rd <= x"00";
-                     end case;
-                  else
-                     r_D_rd <= i_rom_D_rd;
-                  end if;
+                  r_D_rd <= r_D_rd0;
                   r_D_ack <= '1';
                end if;
                r_state <= idle;
