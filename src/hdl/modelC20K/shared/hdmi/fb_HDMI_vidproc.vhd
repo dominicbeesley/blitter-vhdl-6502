@@ -194,6 +194,7 @@ begin
 		TTXT80			=> TTX80_i,
 
 		TTXT				=> TTX_o,
+		MHZ12				=> MHZ12_o,
 
 		MODE_ATTR		=> MODE_ATTR_i,
 		SPR_PX_CLKEN	=> SPR_PX_CLKEN,

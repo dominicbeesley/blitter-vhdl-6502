@@ -138,7 +138,7 @@ begin
 			r_addr_alpha_fontA <= (others => '0');
 			r_IX <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if r_d_wr_stb then
+			if r_d_wr_stb = '1' then
 				if r_A = "1" then
 					-- data write
 					case to_integer(r_IX) is
