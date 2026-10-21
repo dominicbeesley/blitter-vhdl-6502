@@ -846,12 +846,14 @@ begin
                      if r_mem_abort = '0' and fb_mem_c2p_i.cyc = '1' then
                         r_mem_D_ack <= '1';
                      end if;
-                     fb_mem_p2c_o.D_rd <= MEM_D_io;
                      MEM_nWE_o <= '1';
-                     MEM_nOE_o <= '1';  
+                     fb_mem_p2c_o.D_rd <= MEM_D_io;
                      r_mem_done <= '1';
                   elsif i_ring_next(cw(C_CPU_DIV_END_MEM)) = '1' and r_mem_done = '1' then
                      mem_unsel;
+                     -- note we need to release nOE a cycle late for 10ns memory or we get
+                     -- spurious reads.
+                     MEM_nOE_o <= '1';  
                      MEM_A_io(7 downto 0) <= (others => 'Z');
                      r_state <= mem5;
                   end if;
