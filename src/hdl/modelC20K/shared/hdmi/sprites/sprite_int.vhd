@@ -382,31 +382,42 @@ begin
          CPU_D_o <= (others => '0');
          CPU_rd_ack_o <= '0';
       elsif rising_edge(clk_48m_i) then
-         CPU_D_o <=
-            r_spr_data(31 downto 24)      when CPU_A_i(3 downto 0) = x"0" else
-            r_spr_data(23 downto 16)      when CPU_A_i(3 downto 0) = x"1" else
-            r_spr_data(15 downto 8)       when CPU_A_i(3 downto 0) = x"2" else
-            r_spr_data(7 downto 0)        when CPU_A_i(3 downto 0) = x"3" else
-            std_logic_vector(r_horz_start(7 downto 0))
-                                          when CPU_A_i(3 downto 0) = x"4" else
-            std_logic_vector(r_vert_start(7 downto 0))
-                                          when CPU_A_i(3 downto 0) = x"5" else
-            std_logic_vector(r_vert_stop(7 downto 0))
-                                          when CPU_A_i(3 downto 0) = x"6" else
-            r_attach & "0" & r_list_cont & "00" & std_logic(r_vert_stop(8)) & std_logic(r_vert_start(8)) & std_logic(r_horz_start(8))
-                                          when CPU_A_i(3 downto 0) = x"7" else
-            r_data_ptr(7 downto 0)        when CPU_A_i(3 downto 0) = x"8" else
-            r_data_ptr(15 downto 8)       when CPU_A_i(3 downto 0) = x"9" else
-            r_listinit_ptr(7 downto 0)    when CPU_A_i(3 downto 0) = x"C" else
-            r_listinit_ptr(15 downto 8)   when CPU_A_i(3 downto 0) = x"D" else
+			case CPU_A_i(3 downto 0) is
+				when x"0" =>
+					CPU_D_o <= r_spr_data(31 downto 24);
+				when x"1" =>
+					CPU_D_o <= r_spr_data(23 downto 16);
+				when x"2" =>
+					CPU_D_o <= r_spr_data(15 downto 8);
+				when x"3" =>
+					CPU_D_o <= r_spr_data(7 downto 0);
+				when x"4" =>
+					CPU_D_o <= std_logic_vector(r_horz_start(7 downto 0));
+				when x"5" =>
+					CPU_D_o <= std_logic_vector(r_vert_start(7 downto 0));
+				when x"6" =>
+					CPU_D_o <= std_logic_vector(r_vert_stop(7 downto 0));
+				when x"7" =>
+					CPU_D_o <= r_attach & "0" & r_list_cont & "00" & std_logic(r_vert_stop(8)) & std_logic(r_vert_start(8)) & std_logic(r_horz_start(8));
+				when x"8" =>
+					CPU_D_o <= r_data_ptr(7 downto 0);
+				when x"9" =>
+					CPU_D_o <= r_data_ptr(15 downto 8);
+				when x"A" =>
             -- debug
-            std_logic_vector(r_debug_ctr2)
-                                          when CPU_A_i(3 downto 0) = x"A" else
-            r_debug_states_prev
-                                          when CPU_A_i(3 downto 0) = x"E" else
-            std_logic_vector(r_debug_ctr)
-                                          when CPU_A_i(3 downto 0) = x"F" else
-            (others => '0');
+					CPU_D_o <= std_logic_vector(r_debug_ctr2);
+				when x"C" =>
+					CPU_D_o <= r_listinit_ptr(7 downto 0);
+			   when x"D" =>
+					CPU_D_o <= r_listinit_ptr(15 downto 8);
+				when x"E" =>
+					CPU_D_o <= r_debug_states_prev;
+				when x"F" =>
+					CPU_D_o <= std_logic_vector(r_debug_ctr);
+				when others => 
+					CPU_D_o <= (others => '0');
+			end case;
+			
          CPU_rd_ack_o <= CPU_rden_i;
       end if;
    end process;

@@ -56,6 +56,8 @@ package HDMI_pack is
 	component fb_HDMI is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+		SIM_NO_DVI							: boolean := false;							-- skip TMDS stream generation
+      G_PIPELINE_DEPTH 					: positive := 15;
 		CLOCKSPEED							: natural
 	);
 	port(
@@ -68,13 +70,16 @@ package HDMI_pack is
 		fb_c2p_i								: in		fb_con_o_per_i_t;
 		fb_p2c_o								: out		fb_con_i_per_o_t;
 
+		-- hdmi extras 
 		HDMI_SCL_io							: inout	std_logic;
 		HDMI_SDA_io							: inout	std_logic;
 		HDMI_HPD_i							: in		std_logic;
-		HDMI_CK_o							: out		std_logic;
-		HDMI_R_o								: out		std_logic;
-		HDMI_G_o								: out		std_logic;
-		HDMI_B_o								: out		std_logic;
+
+		-- tmds pixel data
+      clk_tmds_pixel_i              : in 		std_logic;
+      tmds_R_o                      : out    std_logic_vector(9 downto 0);
+      tmds_G_o                      : out    std_logic_vector(9 downto 0);
+      tmds_B_o                      : out    std_logic_vector(9 downto 0);
 
 		-- analogue video	
 
@@ -104,10 +109,7 @@ package HDMI_pack is
 		debug_hsync_det_o			: out std_logic;
 		debug_hsync_crtc_o			: out std_logic;
 		debug_odd_o					: out std_logic;
-		debug_spr_mem_clken_o		: out std_logic;
-
-		debug_dvi_blank_o					: out std_logic;
-		debug_hdmi_state_o				: out std_logic_vector(2 downto 0)
+		debug_spr_mem_clken_o		: out std_logic
 
 
 	);

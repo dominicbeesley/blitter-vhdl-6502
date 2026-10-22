@@ -11,11 +11,9 @@
 
         <File path="../../shared/version.vhd" type="file.vhdl" enable="1"/>
 
-        <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_27_360.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_360_384_128.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
 
         <File path="../../../shared/firmware_info_pack.vhd" type="file.vhdl" enable="1" />
         <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
@@ -111,7 +109,8 @@
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
 
 
-
+        <File path="../../../library/ram_sdp_2clk.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/ram_tdp_2clk.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi//hdmi_out_gowin_2a.vhd" type="file.vhdl" enable="1" />
 
         <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
@@ -125,6 +124,7 @@
         <File path="../../shared/hdmi/fb_HDMI_vidproc.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/fb_HDMI_ram.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/HDMI_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/hdmi/hdmi_int_pack.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/fb_HDMI_enabled.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/fb_HDMI_ctl.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi/fb_HDMI_seq_ctl.vhd" type="file.vhdl" enable="1" />

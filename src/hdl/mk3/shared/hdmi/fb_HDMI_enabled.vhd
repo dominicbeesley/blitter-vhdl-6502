@@ -29,10 +29,10 @@ use work.sprites_pack.all;
 entity fb_HDMI is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
-      SIM_NODVI                     : boolean := false;
+      SIM_NO_DVI                    : boolean := false;
       CLOCKSPEED                    : natural;
-      G_N_SPRITES                   : natural := 4;
-      G_EXT_TMDS_CLOCKS             : boolean := false
+      G_PIPELINE_DEPTH              : positive := 15;
+      G_N_SPRITES                   : natural := 4
    );
    port(
 
@@ -44,13 +44,16 @@ entity fb_HDMI is
       fb_c2p_i                      : in     fb_con_o_per_i_t;
       fb_p2c_o                      : out    fb_con_i_per_o_t;
 
+      -- hdmi extras 
       HDMI_SCL_io                   : inout  std_logic;
       HDMI_SDA_io                   : inout  std_logic;
       HDMI_HPD_i                    : in     std_logic;
-      HDMI_CK_o                     : out    std_logic;
-      HDMI_R_o                      : out    std_logic;
-      HDMI_G_o                      : out    std_logic;
-      HDMI_B_o                      : out    std_logic;
+
+      -- tmds pixel data
+      clk_tmds_pixel_i              : in     std_logic;
+      tmds_R_o                      : out    std_logic_vector(9 downto 0);
+      tmds_G_o                      : out    std_logic_vector(9 downto 0);
+      tmds_B_o                      : out    std_logic_vector(9 downto 0);
 
       -- analogue video 
       VGA_R_o                       : out    std_logic_vector(3 downto 0);
@@ -81,14 +84,8 @@ entity fb_HDMI is
       debug_hsync_det_o             : out std_logic;
       debug_hsync_crtc_o            : out std_logic;
       debug_odd_o                   : out std_logic;
-      debug_spr_mem_clken_o         : out std_logic;
+      debug_spr_mem_clken_o         : out std_logic
 
-      debug_dvi_blank_o             : out std_logic;
-      debug_hdmi_state_o            : out std_logic_vector(2 downto 0);
-
-      -- external clocks (optional)
-      clk_ext_hdmi_pixel_i          : in std_logic := '1';
-      clk_ext_hdmi_tmds_i           : in std_logic := '1'
 
 
    );
@@ -170,6 +167,7 @@ architecture rtl of fb_hdmi is
    signal i_B_TTX                   : std_logic;
    signal i_TTX                     : std_logic;
    signal i_TTX80                   : std_logic;      -- 80 column teletext
+   signal i_MHZ12                   : std_logic;      -- teletext OR Rob attribute mode
 
    signal r_ttx_pixel_clken         : std_logic_vector(3 downto 0) := "1000";
    signal i_ttx_pixel_clken         : std_logic;
@@ -262,7 +260,9 @@ begin
       
       SPR_PX_CLKEN      => i_sprite_pixel_cken,
       SPR_PX_ACT        => i_sprite_pixel_act,
-      SPR_PX_DAT        => i_sprite_pixel_dat
+      SPR_PX_DAT        => i_sprite_pixel_dat,
+
+      MHZ12_o           => i_MHZ12
 
    );
 
@@ -390,6 +390,7 @@ begin
       hdmi_ram_Q_o      => i_VIDRAM_Q
    
    );
+
 
    e_hdmi_ctl:entity work.fb_hdmi_ctl
    generic map (
@@ -570,25 +571,33 @@ end process;
    i_per_p2c_intcon(PERIPHERAL_N_SPRITES) <= i_sprites_fb_p2c;
 
 
-
-   e_fb_intcon: entity work.fb_intcon_one_to_many
+   -- fb_intcon_shared with one controller rather than fb_intcon_one_to_many:
+   -- the HDMI decode (p_sel) goes in front of the shared intcon's slot
+   -- register, so the peripherals get A_stb and the address from registers.
+   -- one_to_many's live decode put the top-level address, this decode, the
+   -- steering and each peripheral's accept in one clock (failed by ~5.6 ns on
+   -- the C20K). Costs one clock on HDMI accesses.
+   e_fb_intcon: entity work.fb_intcon_shared
    generic map (
-      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
+      G_CONTROLLER_COUNT         => 1,
+      G_PERIPHERAL_COUNT         => PERIPHERAL_COUNT,
+      G_PIPELINE_DEPTH           => G_PIPELINE_DEPTH
       )
    port map (
       fb_syscon_i                   => fb_syscon_i,
 
-      -- peripheral ports connect to controllers
-      fb_up_c2p_i                   => fb_c2p_i,
-      fb_up_p2c_o                   => fb_p2c_o,
+      -- upstream port connects to the controller
+      fb_up_c2p_i(0)             => fb_c2p_i,
+      fb_up_p2c_o(0)             => fb_p2c_o,
 
-      -- controller ports connect to peripherals
+      -- downstream ports connect to peripherals
       fb_dn_c2p_o                   => i_per_c2p_intcon,
       fb_dn_p2c_i                   => i_per_p2c_intcon,
 
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr,
-      peripheral_sel_i              => i_intcon_peripheral_sel,
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh
+      peripheral_sel_addr_o(0)   => i_intcon_peripheral_sel_addr,
+      peripheral_sel_we_o        => open,
+      peripheral_sel_i(0)        => i_intcon_peripheral_sel,
+      peripheral_sel_oh_i(0)     => i_intcon_peripheral_sel_oh
    );
 
    p_sel:process(i_intcon_peripheral_sel_addr)
@@ -645,15 +654,15 @@ end process;
    e_vid15tohdmi:entity work.vid15tohdmi
    generic map (
       SIM                           => SIM,
-      SIM_NODVI                     => SIM_NODVI,
-      G_EXT_TMDS_CLOCKS             => G_EXT_TMDS_CLOCKS
+      SIM_NO_DVI                     => SIM_NO_DVI
    )
    port map (
 
-      HDMI_CK_o                     => HDMI_CK_o,
-      HDMI_R_o                      => HDMI_R_o,
-      HDMI_G_o                      => HDMI_G_o,
-      HDMI_B_o                      => HDMI_B_o,
+      clk_tmds_pixel_i              => clk_tmds_pixel_i,
+
+      tmds_R_o                      => tmds_R_o,
+      tmds_G_o                      => tmds_G_o,
+      tmds_B_o                      => tmds_B_o,
 
       -- video domain clock (pixels are a division of this)
       CLK_48M_i                     => CLK_48M_i,
@@ -666,7 +675,7 @@ end process;
       VID_HS_i                      => i_hsync_CRTC,
       VID_VS_i                      => i_vsync_CRTC,
       VID_DISEN_i                   => i_disen_VIDPROC,
-      TTX_i                         => i_TTX,
+      TTX_i                         => i_MHZ12,
       TTX80_i                       => i_TTX80,
    
       -- sound data in (48KHz)
@@ -686,14 +695,8 @@ end process;
       VGA27_B_o                     => VGA27_B_o,
       VGA27_HS_o                    => VGA27_HS_o,
       VGA27_VS_o                    => VGA27_VS_o,
-      VGA27_BLANK_o                 => VGA27_BLANK_o,
+      VGA27_BLANK_o                 => VGA27_BLANK_o
 
-      -- external clocks (optional)
-      clk_ext_hdmi_pixel_i          => clk_ext_hdmi_pixel_i,
-      clk_ext_hdmi_tmds_i           => clk_ext_hdmi_tmds_i,
-
-      debug_dvi_blank_o             => debug_dvi_blank_o,
-      debug_hdmi_state_o            => debug_hdmi_state_o
 
 );
 

@@ -59,6 +59,7 @@ use work.ws2812_pack.all;
 entity C20K816only is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      SIM_NO_DVI                    : boolean := false;                    -- disable TMDS output
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT                  : string  := ""                        -- path to root of project (to find relative files, override in simulations)
@@ -196,6 +197,21 @@ architecture rtl of C20K816only is
       I:IN std_logic
    );
    END COMPONENT;
+
+
+   component hdmi_out_gowin_2a is
+      port (
+      clock_pixel_i     : in std_logic;   -- x1
+      clock_tdms_i      : in std_logic;   -- x5
+      red_i             : in  std_logic_vector(9 downto 0);
+      green_i           : in  std_logic_vector(9 downto 0);
+      blue_i            : in  std_logic_vector(9 downto 0);      
+      red_s             : out std_logic;
+      green_s           : out std_logic;
+      blue_s            : out std_logic;
+      clock_s           : out std_logic
+   );
+   end component;
 
    -----------------------------------------------------------------------------
 	-- config signals
@@ -345,6 +361,16 @@ architecture rtl of C20K816only is
    signal r_vid_128_vs              : std_logic;
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
+
+   signal i_tmds_R                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_G                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_B                  : std_logic_vector(9 downto 0); -- tmds encoded data
+
+   signal i_clk_tmds_pixel    : std_logic;
+   attribute syn_keep of i_clk_tmds_pixel : signal is 1; -- keep for SDC?
+   signal i_clk_tmds          : std_logic;
+   attribute syn_keep of i_clk_tmds : signal is 1; -- keep for SDC?
+
 
    -----------------------------------------------------------------------------
    -- peripherals
@@ -1192,6 +1218,7 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
+      SIM_NO_DVI => SIM_NO_DVI,
 		CLOCKSPEED => CLOCKSPEED,
       G_PIPELINE_DEPTH => G_PIPELINE_DEPTH            
 	)
@@ -1205,10 +1232,11 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		HDMI_SCL_io			=> edid_scl_io,
 		HDMI_SDA_io			=> edid_sda_io,
 		HDMI_HPD_i			=> HDMI_HPD_io,
-		HDMI_CK_o			=> tmds_clk_o_p,
-		HDMI_B_o				=> tmds_d_o_p(0),
-		HDMI_G_o				=> tmds_d_o_p(1),
-		HDMI_R_o				=> tmds_d_o_p(2),
+
+      clk_tmds_pixel_i  => i_clk_tmds_pixel,
+		tmds_B_o				=> i_tmds_B,
+		tmds_G_o				=> i_tmds_G,
+		tmds_R_o				=> i_tmds_R,
 
 		-- analogue video	straight from CRTC/ULA
 
@@ -1233,6 +1261,64 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		PCM_L_i				=> r_dac_sample_l,
       PCM_R_i           => r_dac_sample_r
 	);
+
+
+   G_NOTSIMDIV:if not SIM_NO_DVI generate
+
+      e_hdmi_serial:hdmi_out_gowin_2a
+      port map (
+         clock_pixel_i => i_clk_tmds_pixel,
+         clock_tdms_i => i_clk_tmds,
+         red_i => i_tmds_R,
+         green_i => i_tmds_G,
+         blue_i => i_tmds_B,
+         red_s => tmds_d_o_p(2),
+         green_s => tmds_d_o_p(1),
+         blue_s => tmds_d_o_p(0),
+         clock_s => tmds_clk_o_p
+      );
+   end generate;
+
+   G_NOTSIM:if not SIM generate
+      e_pll_hdmi: entity work.pll_hdmi
+      port map(
+         clkin => i_clk_div_48M,
+         clkout => i_clk_tmds
+      );
+
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_tmds,
+         CLKOUT => i_clk_tmds_pixel,         -- 27MHz HDMI Pixel Clock
+         CALIB  => '1'
+      );
+   end generate;
+
+   G_SIM:if SIM generate
+      g_hdmi_pixel:if not SIM_NO_DVI generate
+         p_pll_hdmi_pixel: process
+         begin
+            i_clk_tmds_pixel <= '1';
+            wait for 18.5 ns;
+            i_clk_tmds_pixel <= '0';
+            wait for 18.5 ns;
+         end process;
+      end generate;
+
+      p_pll_hdmi_tmds: process
+      begin
+         i_clk_tmds <= '1';
+         wait for 3.7 ns;
+         i_clk_tmds <= '0';
+         wait for 3.7 ns;
+      end process;
+   end generate;
+
 END GENERATE;
 
 --TODO: clash with OSER10's on video

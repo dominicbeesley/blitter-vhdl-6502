@@ -58,6 +58,7 @@ use work.ws2812_pack.all;
 entity C20KFirstLight is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      SIM_NO_DVI                    : boolean := false;                    -- disable TMDS output
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT_PATH             : string  := "../../../../.."
@@ -195,6 +196,20 @@ architecture rtl of C20KFirstLight is
    );
    END COMPONENT;
 
+   component hdmi_out_gowin_2a is
+      port (
+      clock_pixel_i     : in std_logic;   -- x1
+      clock_tdms_i      : in std_logic;   -- x5
+      red_i             : in  std_logic_vector(9 downto 0);
+      green_i           : in  std_logic_vector(9 downto 0);
+      blue_i            : in  std_logic_vector(9 downto 0);      
+      red_s             : out std_logic;
+      green_s           : out std_logic;
+      blue_s            : out std_logic;
+      clock_s           : out std_logic
+   );
+   end component;
+
    signal i_cfg_eco_station_id: std_logic_vector(7 downto 0) := x"A5";
    -----------------------------------------------------------------------------
    -- fishbone signals
@@ -265,6 +280,8 @@ architecture rtl of C20KFirstLight is
 	-- hdmi peripheral interface control registers
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
+	signal i_c2p_hdmi_buf				: fb_con_o_per_i_t;		-- after e_hdmi_buf
+	signal i_p2c_hdmi_buf				: fb_con_i_per_o_t;
 
 	signal i_vid_48_r                : std_logic_vector(3 downto 0);
 	signal i_vid_48_g                : std_logic_vector(3 downto 0);
@@ -276,6 +293,16 @@ architecture rtl of C20KFirstLight is
    signal r_vid_128_vs              : std_logic;
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
+
+   signal i_tmds_R                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_G                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_B                  : std_logic_vector(9 downto 0); -- tmds encoded data
+
+   signal i_clk_tmds_pixel    : std_logic;
+   attribute syn_keep of i_clk_tmds_pixel : signal is 1; -- keep for SDC?
+   signal i_clk_tmds          : std_logic;
+   attribute syn_keep of i_clk_tmds : signal is 1; -- keep for SDC?
+
 
    -----------------------------------------------------------------------------
    -- peripherals
@@ -758,9 +785,34 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
    i_mb_scroll_latch_c <= "11";
 
+-- Return buffer on the HDMI port: the HDMI block has its own interconnect,
+   -- so without this an HDMI peripheral's D_ack/D_rd went through two return
+   -- muxes (HDMI intcon, then the top intcon) into the top intcon's count and
+   -- the CPU block in one clock (failed by ~1.6 ns). D_ack, rdy and D_rd are
+   -- registered here; A_ack and the forward path pass straight through (the
+   -- HDMI intcon's slot already registers the forward path). Costs one clock
+   -- on CPU accesses to the HDMI block, which on the C20K includes main RAM
+   -- (FF 0000-7FFF, G_HDMI_SHADOW_SYS); the old design also registered
+   -- these returns (fb_HDMI_enabled G_REGISTER_CON_READS).
+   e_hdmi_buf:entity work.fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => false,
+      G_REG_P2C            => true
+   )
+   port map (
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_up_c2p_i          => i_c2p_hdmi_per,
+      fb_up_p2c_o          => i_p2c_hdmi_per,
+
+      fb_dn_c2p_o          => i_c2p_hdmi_buf,
+      fb_dn_p2c_i          => i_p2c_hdmi_buf
+   );
+
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
+      SIM_NO_DVI => SIM_NO_DVI,
 		CLOCKSPEED => CLOCKSPEED,
       G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
@@ -768,16 +820,17 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		CLK_48M_i			=> i_clk_div_48M,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_c2p_i				=> i_c2p_hdmi_per,
-		fb_p2c_o				=> i_p2c_hdmi_per,
+		fb_c2p_i				=> i_c2p_hdmi_buf,
+		fb_p2c_o				=> i_p2c_hdmi_buf,
 
 		HDMI_SCL_io			=> edid_scl_io,
 		HDMI_SDA_io			=> edid_sda_io,
 		HDMI_HPD_i			=> HDMI_HPD_io,
-		HDMI_CK_o			=> tmds_clk_o_p,
-		HDMI_B_o				=> tmds_d_o_p(0),
-		HDMI_G_o				=> tmds_d_o_p(1),
-		HDMI_R_o				=> tmds_d_o_p(2),
+
+      clk_tmds_pixel_i  => i_clk_tmds_pixel,
+		tmds_B_o				=> i_tmds_B,
+		tmds_G_o				=> i_tmds_G,
+		tmds_R_o				=> i_tmds_R,
 
 		-- analogue video	straight from CRTC/ULA
 
@@ -799,9 +852,67 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> r_dac_sample & "00000",
-      PCM_R_i           => r_dac_sample & "00000"
+		PCM_L_i				=> r_dac_sample_l,
+      PCM_R_i           => r_dac_sample_r
 	);
+
+
+   G_NOTSIMDIV:if not SIM_NO_DVI generate
+
+      e_hdmi_serial:hdmi_out_gowin_2a
+      port map (
+         clock_pixel_i => i_clk_tmds_pixel,
+         clock_tdms_i => i_clk_tmds,
+         red_i => i_tmds_R,
+         green_i => i_tmds_G,
+         blue_i => i_tmds_B,
+         red_s => tmds_d_o_p(2),
+         green_s => tmds_d_o_p(1),
+         blue_s => tmds_d_o_p(0),
+         clock_s => tmds_clk_o_p
+      );
+   end generate;
+
+   G_NOTSIM:if not SIM generate
+      e_pll_hdmi: entity work.pll_hdmi
+      port map(
+         clkin => i_clk_div_48M,
+         clkout => i_clk_tmds
+      );
+
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_tmds,
+         CLKOUT => i_clk_tmds_pixel,         -- 27MHz HDMI Pixel Clock
+         CALIB  => '1'
+      );
+   end generate;
+
+   G_SIM:if SIM generate
+      g_hdmi_pixel:if not SIM_NO_DVI generate
+         p_pll_hdmi_pixel: process
+         begin
+            i_clk_tmds_pixel <= '1';
+            wait for 18.5 ns;
+            i_clk_tmds_pixel <= '0';
+            wait for 18.5 ns;
+         end process;
+      end generate;
+
+      p_pll_hdmi_tmds: process
+      begin
+         i_clk_tmds <= '1';
+         wait for 3.7 ns;
+         i_clk_tmds <= '0';
+         wait for 3.7 ns;
+      end process;
+   end generate;
+
 END GENERATE;
       ddr_cke_o            <= '0';
       ddr_cs_o             <= '0';

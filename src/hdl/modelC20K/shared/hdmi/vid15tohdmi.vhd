@@ -20,19 +20,19 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.hdmi_int_pack.all;
 
 entity vid15tohdmi is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
-      SIM_NODVI                     : boolean := false;
-      G_EXT_TMDS_CLOCKS             : boolean := false
+      SIM_NO_DVI                    : boolean := false
    );
 port (
 
-      HDMI_CK_o                     : out    std_logic;
-      HDMI_R_o                      : out    std_logic;
-      HDMI_G_o                      : out    std_logic;
-      HDMI_B_o                      : out    std_logic;
+      clk_tmds_pixel_i              : in     std_logic;
+      tmds_R_o                      : out    std_logic_vector(9 downto 0);
+      tmds_G_o                      : out    std_logic_vector(9 downto 0);
+      tmds_B_o                      : out    std_logic_vector(9 downto 0);
 
       -- video domain clock (pixels are a division of this)
       CLK_48M_i                     : in     std_logic;
@@ -73,83 +73,13 @@ port (
       VGA27_B_o                     : out    std_logic_vector(3 downto 0);
       VGA27_HS_o                    : out    std_logic;
       VGA27_VS_o                    : out    std_logic;
-      VGA27_BLANK_o                 : out    std_logic;
+      VGA27_BLANK_o                 : out    std_logic
 
-      -- external clocks (optional)
-      clk_ext_hdmi_pixel_i          : in std_logic := '1';
-      clk_ext_hdmi_tmds_i           : in std_logic := '1'
 
 );
 end vid15tohdmi;
 
 architecture rtl of vid15tohdmi is
-
-   attribute syn_keep : integer;
-
-   component hdmi_out_gowin_2a is
-      port (
-      clock_pixel_i     : in std_logic;   -- x1
-      clock_tdms_i      : in std_logic;   -- x5
-      red_i             : in  std_logic_vector(9 downto 0);
-      green_i           : in  std_logic_vector(9 downto 0);
-      blue_i            : in  std_logic_vector(9 downto 0);      
-      red_s             : out std_logic;
-      green_s           : out std_logic;
-      blue_s            : out std_logic;
-      clock_s           : out std_logic
-   );
-   end component;
-
-   component hdmi is 
-      generic (
-      FREQ: integer := 27000000;              -- pixel clock frequency
-      FS: integer := 48000;                   -- audio sample rate - should be 32000, 44100 or 48000
-      CTS: integer := 27000;                  -- CTS = Freq(pixclk) * N / (128 * Fs)
-      N: integer := 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
-                          -- Check HDMI spec 7.2 for details
-   );
-   port (
-      -- clocks
-      I_CLK_PIXEL    : in std_logic;
-      -- components
-      I_R            : in std_logic_vector(7 downto 0);
-      I_G            : in std_logic_vector(7 downto 0);
-      I_B            : in std_logic_vector(7 downto 0);
-      I_BLANK        : in std_logic;
-      I_HSYNC        : in std_logic;
-      I_VSYNC        : in std_logic;
---      I_ASPECT_169   : in std_logic;
-      I_AVI_DATA     : in std_logic_vector(111 downto 0);
-      -- PCM audio
-      I_AUDIO_ENABLE : in std_logic;
-      I_AUDIO_PCM_L  : in std_logic_vector(15 downto 0);
-      I_AUDIO_PCM_R  : in std_logic_vector(15 downto 0);
-      -- TMDS parallel pixel synchronous outputs (serialize LSB first)
-      O_RED       : out std_logic_vector(9 downto 0); -- Red
-      O_GREEN        : out std_logic_vector(9 downto 0); -- Green
-      O_BLUE         : out std_logic_vector(9 downto 0)  -- Blue
-   );
-   end component;
-
-    component CLKDIV
-        generic (
-            DIV_MODE : string := "2";
-            GSREN: in string := "false"
-        );
-        port (
-            CLKOUT: out std_logic;
-            HCLKIN: in std_logic;
-            RESETN: in std_logic;
-            CALIB: in std_logic
-        );
-    end component;
-
-
-   -- DVI PLL
-   signal i_clk_hdmi_pixel          : std_logic;
-   signal i_clk_hdmi_tmds           : std_logic;
-   attribute syn_keep of i_clk_hdmi_pixel : signal is 1; -- keep for SDC?
-   attribute syn_keep of i_clk_hdmi_tmds : signal is 1; -- keep for SDC?
 
    --============================================================
    -- Re-timed video signals to hdmi pixel clock (27MHz)
@@ -161,10 +91,6 @@ architecture rtl of vid15tohdmi is
    signal i_R_DVI                   : std_logic_vector(7 downto 0);
    signal i_G_DVI                   : std_logic_vector(7 downto 0);
    signal i_B_DVI                   : std_logic_vector(7 downto 0);
-
-   signal i_R_encoded               : std_logic_vector(9 downto 0);
-   signal i_G_encoded               : std_logic_vector(9 downto 0);
-   signal i_B_encoded               : std_logic_vector(9 downto 0);
 
    -- control signals registered to hdmi pixel clock
    signal r_pix_audio_enable        : std_logic;
@@ -182,61 +108,11 @@ begin
    VGA27_HS_o     <= i_hsync_DVI;
    VGA27_BLANK_o  <= i_blank_DVI;
 
-   g_sim_pll:if SIM generate
-
-      g_hdmi_pixel:if not SIM_NODVI generate
-         p_pll_hdmi_pixel: process
-         begin
-            i_clk_hdmi_pixel <= '1';
-            wait for 18.5 ns;
-            i_clk_hdmi_pixel <= '0';
-            wait for 18.5 ns;
-         end process;
-      end generate;
-
-      p_pll_hdmi_tmds: process
-      begin
-         i_clk_hdmi_tmds <= '1';
-         wait for 3.7 ns;
-         i_clk_hdmi_tmds <= '0';
-         wait for 3.7 ns;
-      end process;
-
-   end generate;
-
-   g_not_sim_pll:if not SIM and not G_EXT_TMDS_CLOCKS generate
-
-      e_pll_hdmi: entity work.pll_hdmi
-      port map(
-         clkin => CLK_48M_i,
-         clkout => i_clk_hdmi_tmds
-      );
-
-    clkdiv5 : CLKDIV
-        generic map (
-            DIV_MODE => "5",            -- Divide by 5
-            GSREN => "false"
-        )
-        port map (
-            RESETN => '1',
-            HCLKIN => i_clk_hdmi_tmds,
-            CLKOUT => i_clk_hdmi_pixel,         -- 27MHz HDMI Pixel Clock
-            CALIB  => '1'
-        );
-   end generate;
-
-   g_ext_pll:if G_EXT_TMDS_CLOCKS generate
-
-   i_clk_hdmi_pixel <= clk_ext_hdmi_pixel_i;
-   i_clk_hdmi_tmds <= clk_ext_hdmi_tmds_i;
-
-   end generate;
-
 --====================================================================
 -- DVI 
 --====================================================================
 
-   G_DVI:IF NOT SIM_NODVI generate
+   G_DVI:IF NOT SIM_NO_DVI generate
       e_synch:entity work.dvi_synchro
       port map (
 
@@ -258,7 +134,7 @@ begin
 
          -- synchronised / generated / conditioned signals in DVI pixel clock domain
 
-         clk_pixel_dvi => i_clk_hdmi_pixel,
+         clk_pixel_dvi => clk_tmds_pixel_i,
 
          VSYNC_DVI_o    => i_vsync_dvi,
          HSYNC_DVI_o    => i_hsync_dvi,
@@ -274,72 +150,52 @@ begin
          debug_odd_o          => debug_odd_o
 
       );
-   end generate;
 
 
-G_NOTSIM_SERIAL:IF NOT SIM GENERATE
+      p_r:process(clk_tmds_pixel_i)
+      begin
+         if rising_edge(clk_tmds_pixel_i) then
+            r_pix_audio_enable <= AUDIO_EN_i;
+         end if;
+      end process;
+
+      p_snd:process(clk_tmds_pixel_i)
+      begin
+         if rising_edge(clk_tmds_pixel_i) then
+            r_PCM_L_pix <= PCM_L_i;
+            r_PCM_R_pix <= PCM_R_i;
+         end if;
+      end process;
 
 
-   p_r:process(i_clk_hdmi_pixel)
-   begin
-      if rising_edge(i_clk_hdmi_pixel) then
-         r_pix_audio_enable <= AUDIO_EN_i;
-      end if;
-   end process;
+      e_spirkov:hdmi
+      generic map (
+         FREQ  => 27000000,              -- pixel clock frequency
+         FS    => 48000,                   -- audio sample rate - should be 32000, 44100 or 48000
+         CTS   => 27000,                  -- CTS = Freq(pixclk) * N / (128 * Fs)
+         N     => 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
+                             -- Check HDMI spec 7.2 for details
+      )
+      port map (
+         I_CLK_PIXEL => clk_tmds_pixel_i,
+         I_R => i_R_DVI,
+         I_G => i_G_DVI,
+         I_B => i_B_DVI,
+         I_BLANK => i_blank_DVI,
+         I_HSYNC => i_hsync_DVI,
+         I_VSYNC => i_vsync_DVI,
+   --    I_ASPECT_169 => r_fbhdmi_169,
+         I_AVI_DATA => AVI_i,
 
-   p_snd:process(i_clk_hdmi_pixel)
-   begin
-      if rising_edge(i_clk_hdmi_pixel) then
-         r_PCM_L_pix <= PCM_L_i;
-         r_PCM_R_pix <= PCM_R_i;
-      end if;
-   end process;
+         I_AUDIO_ENABLE => r_pix_audio_enable,
+         I_AUDIO_PCM_L => std_logic_vector(r_PCM_L_pix),
+         I_AUDIO_PCM_R => std_logic_vector(r_PCM_R_pix),
 
+         O_RED => TMDS_R_o,
+         O_GREEN => TMDS_G_o,
+         O_BLUE => TMDS_B_o
+      );
 
-   e_spirkov:hdmi
-   generic map (
-      FREQ  => 27000000,              -- pixel clock frequency
-      FS    => 48000,                   -- audio sample rate - should be 32000, 44100 or 48000
-      CTS   => 27000,                  -- CTS = Freq(pixclk) * N / (128 * Fs)
-      N     => 6144                      -- N = 128 * Fs /1000,  128 * Fs /1500 <= N <= 128 * Fs /300
-                          -- Check HDMI spec 7.2 for details
-   )
-   port map (
-      I_CLK_PIXEL => i_clk_hdmi_pixel,
-      I_R => i_R_DVI,
-      I_G => i_G_DVI,
-      I_B => i_B_DVI,
-      I_BLANK => i_blank_DVI,
-      I_HSYNC => i_hsync_DVI,
-      I_VSYNC => i_vsync_DVI,
---    I_ASPECT_169 => r_fbhdmi_169,
-      I_AVI_DATA => AVI_i,
-
-      I_AUDIO_ENABLE => r_pix_audio_enable,
-      I_AUDIO_PCM_L => std_logic_vector(PCM_L_i),
-      I_AUDIO_PCM_R => std_logic_vector(PCM_R_i),
-
-      O_RED => i_R_encoded,
-      O_GREEN => i_G_encoded,
-      O_BLUE => i_B_encoded
-   );
-
-
-
-   e_hdmi_serial:hdmi_out_gowin_2a
-   port map (
-      clock_pixel_i => i_clk_hdmi_pixel,
-      clock_tdms_i => i_clk_hdmi_tmds,
-      red_i => i_R_encoded,
-      green_i => i_G_encoded,
-      blue_i => i_B_encoded,
-      red_s => HDMI_R_o,
-      green_s => HDMI_G_o,
-      blue_s => HDMI_B_o,
-      clock_s => HDMI_CK_o
-   );
-
-
-END GENERATE;
+   END GENERATE;
 
 end architecture rtl;

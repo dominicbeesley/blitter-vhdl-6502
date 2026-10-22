@@ -29,11 +29,10 @@ use work.sprites_pack.all;
 entity fb_HDMI is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
-      SIM_NODVI                     : boolean := false;
+      SIM_NO_DVI                    : boolean := false;
       CLOCKSPEED                    : natural;
       G_PIPELINE_DEPTH              : positive := 15;
-      G_N_SPRITES                   : natural := 4;
-      G_EXT_TMDS_CLOCKS             : boolean := false
+      G_N_SPRITES                   : natural := 4
    );
    port(
 
@@ -45,13 +44,16 @@ entity fb_HDMI is
       fb_c2p_i                      : in     fb_con_o_per_i_t;
       fb_p2c_o                      : out    fb_con_i_per_o_t;
 
+      -- hdmi extras 
       HDMI_SCL_io                   : inout  std_logic;
       HDMI_SDA_io                   : inout  std_logic;
       HDMI_HPD_i                    : in     std_logic;
-      HDMI_CK_o                     : out    std_logic;
-      HDMI_R_o                      : out    std_logic;
-      HDMI_G_o                      : out    std_logic;
-      HDMI_B_o                      : out    std_logic;
+
+      -- tmds pixel data
+      clk_tmds_pixel_i              : in     std_logic;
+      tmds_R_o                      : out    std_logic_vector(9 downto 0);
+      tmds_G_o                      : out    std_logic_vector(9 downto 0);
+      tmds_B_o                      : out    std_logic_vector(9 downto 0);
 
       -- analogue video 
       VGA_R_o                       : out    std_logic_vector(3 downto 0);
@@ -82,11 +84,8 @@ entity fb_HDMI is
       debug_hsync_det_o             : out std_logic;
       debug_hsync_crtc_o            : out std_logic;
       debug_odd_o                   : out std_logic;
-      debug_spr_mem_clken_o         : out std_logic;
+      debug_spr_mem_clken_o         : out std_logic
 
-      -- external clocks (optional)
-      clk_ext_hdmi_pixel_i          : in std_logic := '1';
-      clk_ext_hdmi_tmds_i           : in std_logic := '1'
 
 
    );
@@ -392,6 +391,7 @@ begin
    
    );
 
+
    e_hdmi_ctl:entity work.fb_hdmi_ctl
    generic map (
       SIM => SIM
@@ -654,15 +654,15 @@ end process;
    e_vid15tohdmi:entity work.vid15tohdmi
    generic map (
       SIM                           => SIM,
-      SIM_NODVI                     => SIM_NODVI,
-      G_EXT_TMDS_CLOCKS             => G_EXT_TMDS_CLOCKS
+      SIM_NO_DVI                     => SIM_NO_DVI
    )
    port map (
 
-      HDMI_CK_o                     => HDMI_CK_o,
-      HDMI_R_o                      => HDMI_R_o,
-      HDMI_G_o                      => HDMI_G_o,
-      HDMI_B_o                      => HDMI_B_o,
+      clk_tmds_pixel_i              => clk_tmds_pixel_i,
+
+      tmds_R_o                      => tmds_R_o,
+      tmds_G_o                      => tmds_G_o,
+      tmds_B_o                      => tmds_B_o,
 
       -- video domain clock (pixels are a division of this)
       CLK_48M_i                     => CLK_48M_i,
@@ -695,11 +695,8 @@ end process;
       VGA27_B_o                     => VGA27_B_o,
       VGA27_HS_o                    => VGA27_HS_o,
       VGA27_VS_o                    => VGA27_VS_o,
-      VGA27_BLANK_o                 => VGA27_BLANK_o,
+      VGA27_BLANK_o                 => VGA27_BLANK_o
 
-      -- external clocks (optional)
-      clk_ext_hdmi_pixel_i          => clk_ext_hdmi_pixel_i,
-      clk_ext_hdmi_tmds_i           => clk_ext_hdmi_tmds_i
 
 );
 

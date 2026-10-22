@@ -25,9 +25,7 @@ use work.fishbone.all;
 
 entity fb_HDMI_ram is
    generic (
-      SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
-      G_MEM_ADDR_WIDTH              : positive := 15
-
+      SIM                           : boolean := false                    -- skip some stuff, i.e. slow sdram start up
    );
    port(
 
@@ -54,7 +52,7 @@ architecture rtl of fb_HDMI_ram is
    signal   r_state     : state_per_t;
 
    signal   r_D_ack     : std_logic;
-   signal   r_A         : std_logic_vector(G_MEM_ADDR_WIDTH-1 downto 0);
+   signal   r_A         : std_logic_vector(14 downto 0);
    signal   r_A_ack     : std_logic;
    signal   r_D_rd      : std_logic_vector(7 downto 0);
    signal   i_D_rd      : std_logic_vector(7 downto 0);
@@ -91,7 +89,7 @@ begin
          case r_state is
             when idle =>
                -- capture early for less muxing
-               r_A <= fb_c2p_i.A(G_MEM_ADDR_WIDTH-1 downto 0);
+                  r_A <= fb_c2p_i.A(14 downto 0);
                -- no need to check for previous r_A_ack cycle here as we can only go to act_wr, act_rd so no double ack
                if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
                   if fb_c2p_i.we = '1' then
@@ -126,23 +124,26 @@ begin
       end if;
    end process;
 
+   e_hdmi_ram:entity work.ram_tdp_2clk
+   generic map (
+      G_ADDRESS_SIZE    => 32 * 1024,
+      G_DATA_WIDTH      => 8
+   )
+   port map (
+      -- port A
+      a_clk_i           => fb_syscon_i.clk,
+      a_wr_en_i         => r_D_wr_stb,
+      a_addr_i          => r_A,
+      a_D_i             => r_D_Wr,
+      a_D_o             => i_D_rd,
 
-   e_ram: entity work.hdmi_blockram
-   port map
-   (
-      address_a =>   r_A,
-      clock_a =>     fb_syscon_i.clk,
-      data_a =>      r_D_wr,
-      wren_a =>      r_D_wr_stb,
-      q_a =>         i_D_rd,
-
-      address_b =>   hdmi_ram_addr_i(G_MEM_ADDR_WIDTH-1 downto 0),
-      clock_b =>     hdmi_ram_clk_i,
-      data_b =>      (others => '0'),
-      wren_b =>      '0',
-      q_b =>         hdmi_ram_Q_o      
+      -- port B
+      b_clk_i           => hdmi_ram_clk_i,
+      b_wr_en_i         => '0',
+      b_addr_i          => hdmi_ram_addr_i(14 downto 0),
+      b_D_i             => (others => '0'),
+      b_D_o             => hdmi_ram_Q_o
    );
-
 
 
 end rtl;
