@@ -169,8 +169,7 @@ architecture rtl of fb_hdmi is
    signal i_TTX80                   : std_logic;      -- 80 column teletext
    signal i_MHZ12                   : std_logic;      -- teletext OR Rob attribute mode
 
-   signal r_ttx_pixel_clken         : std_logic_vector(3 downto 0) := "1000";
-   signal i_ttx_pixel_clken         : std_logic;
+   signal i_ttx_pixel_clken         : std_logic;      -- vidproc pixel clock: 12 MHz (24 MHz TTX80) in teletext
    signal i_ttx_pixde               : std_logic;   -- display enable after pass through saa5050
 
    signal i_pixel_double            : std_logic;
@@ -247,7 +246,7 @@ begin
       R_o               => i_ULA_R,
       G_o               => i_ULA_G,
       B_o               => i_ULA_B,
-      PIXCLKEN_o        => open, -- TODO: pass on?
+      PIXCLKEN_o        => i_ttx_pixel_clken,
       PIXDE_o           => i_disen_VIDPROC,
 
       TTX_o             => i_TTX,
@@ -301,13 +300,6 @@ begin
 
    i_disen_CRTC <= i_disen_CRTC_U and (not i_crtc_RA(3) or r_seq_alphamode48);
 
-   p_ttx_px_clk:process(CLK_48M_i)
-   begin
-      if rising_edge(CLK_48M_i) then
-         r_ttx_pixel_clken <= r_ttx_pixel_clken(0) & r_ttx_pixel_clken(r_ttx_pixel_clken'high downto 1);
-      end if;
-   end process;
-
    p_ttx80:process(CLK_48M_i)
    begin
       if rising_edge(CLK_48M_i) then
@@ -318,9 +310,8 @@ begin
          end if;
       end if;
    end process;
-
-   i_ttx_pixel_clken <= r_ttx_pixel_clken(0) or (r_ttx_pixel_clken(2) and i_ttx80);
-
+   -- Note: we get the ttx_pixel_clken from the ULA now not it's own free-running counter
+   -- which was causing reset-to-reset changes in alignment
    e_ttx:entity work.saa5050
    port map (
       CLOCK       => CLK_48M_i,
