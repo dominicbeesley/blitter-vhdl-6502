@@ -116,27 +116,27 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spir
 
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
 
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sync_sync.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/dvi_synchro.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sync_sync.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_crtc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/hdmi_int_pack.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_enabled.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ctl.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_seq_ctl.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/vidmem_sequencer.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/vid15tohdmi.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_vidproc.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_ram.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/HDMI_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/hdmi_int_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_enabled.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_ctl.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_seq_ctl.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/vidmem_sequencer.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/vid15tohdmi.vhd
 
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/fb_sprites.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprite_int.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/fb_sprites.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprite_int.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprites.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprites_pack.vhd
 
 set_global_assignment -name VHDL_FILE ../../../library/ram_sdp_2clk.vhd
 set_global_assignment -name VHDL_FILE ../../../library/ram_tdp_2clk.vhd
