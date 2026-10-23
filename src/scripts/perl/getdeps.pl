@@ -25,9 +25,9 @@ while (<stdin>) {
 
 	if ($l =~ /$rex/)
 	{
-
 		my $val = $2;
-		push @files, $2;
+		$val =~ s/\"([^\"]+)\"/\1/;
+		push @files, $val;
 	}
 
 }

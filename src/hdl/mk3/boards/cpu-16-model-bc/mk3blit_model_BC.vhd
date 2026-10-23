@@ -27,11 +27,11 @@
 -- 
 -- Create Date:    	1/7/2021
 -- Design Name: 
--- Module Name:    	Mk.3 Blitter top-level design
+-- Module Name:    	mk3blit
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		
+-- Description: 	Mk.3 Blitter top-level design Model B/C	
 -- Dependencies: 
 --
 -- Revision: 
@@ -59,9 +59,10 @@ use work.fb_intcon_pack.all;
 entity mk3blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
+      SIM_NO_DVI                    : boolean := false;                    -- disable TMDS output
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
-		G_DWRITE_HOLD						: natural := 6									-- hold write data on system bus for this many cycles
+		G_DWRITE_HOLD						: natural := 6;								-- hold write data on system bus for this many cycles
+      	PROJECT_ROOT                  : string  := "../"                     -- path to root of project (to find relative files, override in simulations)
 	);
 	port(
 		-- crystal osc 48Mhz - on WS board
@@ -160,6 +161,51 @@ end mk3blit;
 
 architecture rtl of mk3blit is
 
+   attribute syn_keep : integer;
+
+
+	-----------------------------------------------------------------------------
+	-- component declarations
+	-----------------------------------------------------------------------------
+
+   component hdmi_out_altera_max10 is
+      port (
+      clock_pixel_i     : in std_logic;   -- x1
+      clock_tdms_i      : in std_logic;   -- x5
+      red_i             : in  std_logic_vector(9 downto 0);
+      green_i           : in  std_logic_vector(9 downto 0);
+      blue_i            : in  std_logic_vector(9 downto 0);      
+      red_s             : out std_logic;
+      green_s           : out std_logic;
+      blue_s            : out std_logic;
+      clock_s           : out std_logic
+   );
+   end component;
+
+
+	component CLKDIV
+		generic (
+			DIV_MODE : string := "2";
+			GSREN: in string := "false"
+		);
+		port (
+			CLKOUT: out std_logic;
+			HCLKIN: in std_logic;
+			RESETN: in std_logic;
+			CALIB: in std_logic
+		);
+	end component;
+
+	component pll_hdmi
+		port
+		(
+			areset		: IN STD_LOGIC  := '0';
+			inclk0		: IN STD_LOGIC  := '0';
+			c0		: OUT STD_LOGIC ;
+			c1		: OUT STD_LOGIC ;
+			locked		: OUT STD_LOGIC 
+		);
+	end component;
 	-----------------------------------------------------------------------------
 	-- config signals
 	-----------------------------------------------------------------------------
@@ -181,6 +227,10 @@ architecture rtl of mk3blit is
 	signal r_cfg_ver_boot		: std_logic_vector(31 downto 0);
 
    signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
+
+   -----------------------------------------------------------------------------
+   -- Aeris external signals in from local CRTC
+   -----------------------------------------------------------------------------
 
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
@@ -207,7 +257,7 @@ architecture rtl of mk3blit is
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
 	signal i_p2c_memctl			: fb_con_i_per_o_t;
 
-	-- memory control registers wrapper
+	-- version information wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
@@ -281,7 +331,7 @@ architecture rtl of mk3blit is
 
 	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
-	signal i_dac_sample					: signed(9 downto 0);				-- sample playing
+	signal i_dac_sample					: signed(15 downto 0);				-- sample playing
 
 	-----------------------------------------------------------------------------
 	-- sys signals
@@ -335,6 +385,8 @@ architecture rtl of mk3blit is
 	-- hdmi peripheral interface control registers
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
+	signal i_c2p_hdmi_buf				: fb_con_o_per_i_t;
+	signal i_p2c_hdmi_buf				: fb_con_i_per_o_t;
 
 	signal i_vga_debug_r					: std_logic_vector(3 downto 0);
 	signal i_vga_debug_g					: std_logic_vector(3 downto 0);
@@ -358,6 +410,14 @@ architecture rtl of mk3blit is
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
 
+   signal i_tmds_R                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_G                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_B                  : std_logic_vector(9 downto 0); -- tmds encoded data
+
+   signal i_clk_tmds_pixel    : std_logic;
+   attribute syn_keep of i_clk_tmds_pixel : signal is 1; -- keep for SDC?
+   signal i_clk_tmds          : std_logic;
+   attribute syn_keep of i_clk_tmds : signal is 1; -- keep for SDC?
 
 	-----------------------------------------------------------------------------
 	-- temporary debugging signals
@@ -431,10 +491,6 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
 	generic map (
-		SIM							=> SIM,
-		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
-		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI,
 		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS
 	)
 	port map (
@@ -448,22 +504,20 @@ end generate;
 g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => true
+      G_ARB_ROUND_ROBIN             => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
 		peripheral_sel_we_o						=> i_intcon_peripheral_sel_we,
@@ -476,20 +530,18 @@ END GENERATE;
 g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
 	e_fb_intcon: fb_intcon_one_to_many
 	generic map (
-		SIM 									=> SIM,
-		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT
 		)
 	port map (
 		fb_syscon_i 						=> i_fb_syscon,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon(0),
-		fb_con_p2c_o						=> i_con_p2c_intcon(0),
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon(0),
+      fb_up_p2c_o                   => i_con_p2c_intcon(0),
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
 		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
 		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
@@ -515,10 +567,12 @@ END GENERATE;
    i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
+   GCHIPSET_MASTER:if CONTROLLER_COUNT_CHIPSET > 0 GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)				<= i_c2p_chipset_con;
-	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
-
 	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
+   end generate;
+
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
 	e_chipset:fb_chipset
@@ -554,8 +608,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 		SD_MISO_i		=> SD_MISO_i,
 		SD_DET_i			=> SD_DET_i,
 
-		snd_dat_o		=> i_dac_sample,
-		snd_dat_change_clken_o => open
+		snd_dat_o		=> i_dac_sample
+		
 
 	);
 
@@ -576,7 +630,7 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 			rst_i					=> i_fb_syscon.rst,
 			clk_dac				=> i_fb_syscon.clk,
 
-			sample				=> i_dac_sample,
+			sample				=> i_dac_sample(15 downto 6),
 		
 			bitstream			=> i_dac_snd_pwm
 		);
@@ -784,18 +838,9 @@ END GENERATE;
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
 		G_MK3 => true,
+		G_C20K => false
 
-		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
-		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
-		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
-		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
-		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
-		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
-		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_Z180						=> G_INCL_CPU_Z180,
-		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
-		G_INCL_CPU_68008					=> G_INCL_CPU_68008,
-		G_INCL_CPU_ARM2					=> G_INCL_CPU_ARM2
+
 	)
 	port map (
 
@@ -928,6 +973,9 @@ END GENERATE;
 
 
 
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
 
 	p_debug_btn:process(i_fb_syscon)
 	variable vcnt:unsigned(7 downto 0);
@@ -952,9 +1000,6 @@ END GENERATE;
 	end process;
 
 
--- ================================================================================================ --
--- BOOT TIME CONFIGURATION
--- ================================================================================================ --
 
 
 -- enable port F/G for reading configuration
@@ -1108,28 +1153,54 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 	i_per_p2c_intcon(PERIPHERAL_NO_HDMI)		<= i_p2c_hdmi_per;
 	i_c2p_hdmi_per			<= i_per_c2p_intcon(PERIPHERAL_NO_HDMI);
 
+   -- Return buffer on the HDMI port: the HDMI block has its own interconnect,
+   -- so without this an HDMI peripheral's D_ack/D_rd went through two return
+   -- muxes (HDMI intcon, then the top intcon) into the top intcon's count and
+   -- the CPU block in one clock (failed by ~1.6 ns). D_ack, rdy and D_rd are
+   -- registered here; A_ack and the forward path pass straight through (the
+   -- HDMI intcon's slot already registers the forward path). Costs one clock
+   -- on CPU accesses to the HDMI block, which on the C20K includes main RAM
+   -- (FF 0000-7FFF, G_HDMI_SHADOW_SYS); the old design also registered
+   -- these returns (fb_HDMI_enabled G_REGISTER_CON_READS).
+   e_hdmi_buf:entity work.fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => false,
+      G_REG_P2C            => true
+   )
+   port map (
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_up_c2p_i          => i_c2p_hdmi_per,
+      fb_up_p2c_o          => i_p2c_hdmi_per,
+
+      fb_dn_c2p_o          => i_c2p_hdmi_buf,
+      fb_dn_p2c_i          => i_p2c_hdmi_buf
+   );
 
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+      SIM_NO_DVI => SIM_NO_DVI,
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH
 	)
 	port map (
 		CLK_48M_i			=> CLK_48M_i,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_c2p_i				=> i_c2p_hdmi_per,
-		fb_p2c_o				=> i_p2c_hdmi_per,
+		fb_c2p_i				=> i_c2p_hdmi_buf,
+		fb_p2c_o				=> i_p2c_hdmi_buf,
 
 		HDMI_SCL_io			=> HDMI_SCL_io,
 		HDMI_SDA_io			=> HDMI_SDA_io,
 		HDMI_HPD_i			=> HDMI_HPD_i,
-		HDMI_CK_o			=> HDMI_CK_o,
-		HDMI_B_o				=> HDMI_D0_o,
-		HDMI_G_o				=> HDMI_D1_o,
-		HDMI_R_o				=> HDMI_D2_o,
 
-		-- debug video	
+      clk_tmds_pixel_i  => i_clk_tmds_pixel,
+		tmds_B_o				=> i_tmds_B,
+		tmds_G_o				=> i_tmds_G,
+		tmds_R_o				=> i_tmds_R,
+
+		-- analogue video	straight from CRTC/ULA	
 
 		VGA_R_o				=> i_vga_debug_r,
 		VGA_G_o				=> i_vga_debug_g,
@@ -1149,17 +1220,59 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> i_dac_sample & "000000",
-		PCM_R_i				=> i_dac_sample & "000000",
-		
-		debug_hsync_det_o => i_debug_hsync_det,
-		debug_vsync_det_o => i_debug_vsync_det,
-		debug_hsync_crtc_o => i_debug_hsync_crtc,
-		debug_odd_o => i_debug_odd,
-		debug_spr_mem_clken_o => i_debug_spr_mem_clken
-
+		PCM_L_i				=> i_dac_sample,
+		PCM_R_i				=> i_dac_sample
 	);
+
+   G_NOTSIMDIV:if not SIM_NO_DVI generate
+
+   e_hdmi_serial:hdmi_out_altera_max10
+   port map (
+      clock_pixel_i => i_clk_tmds_pixel,
+      clock_tdms_i => i_clk_tmds,
+      red_i => i_tmds_R,
+      green_i => i_tmds_G,
+      blue_i => i_tmds_B,
+      red_s => HDMI_D2_o,
+      green_s => HDMI_D1_o,
+      blue_s => HDMI_D0_o,
+      clock_s => HDMI_CK_o
+   );
+   end generate;	
+	
+   G_NOTSIM:if not SIM generate
+		e_pll_hdmi:pll_hdmi
+		port map(
+			inclk0 => CLK_48M_i,
+			c1 => i_clk_tmds_pixel,
+			c0 => i_clk_tmds
+		);
+	end generate;
+
+   G_SIM:if SIM generate
+      g_hdmi_pixel:if not SIM_NO_DVI generate
+         p_pll_hdmi_pixel: process
+         begin
+            i_clk_tmds_pixel <= '1';
+            wait for 18.5 ns;
+            i_clk_tmds_pixel <= '0';
+            wait for 18.5 ns;
+         end process;
+      end generate;
+
+      p_pll_hdmi_tmds: process
+      begin
+         i_clk_tmds <= '1';
+         wait for 3.7 ns;
+         i_clk_tmds <= '0';
+         wait for 3.7 ns;
+      end process;
+   end generate;
+
 END GENERATE;
 
+
+i_hsync <= i_vga_debug_hs;
+i_vsync <= i_vga_debug_vs;
 
 end rtl;

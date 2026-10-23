@@ -14,20 +14,21 @@ create_generated_clock -name CLOCK_96M -source [get_nets {i_clk_pll_384M}] -mast
 create_generated_clock -name CLOCK_48M -source [get_nets {i_clk_div_96M}] -master_clock CLOCK_96M -divide_by 2 -multiply_by 1 [get_nets {i_clk_div_48M}]
 
 
-create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 45 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}]
-create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_tmds}] -master_clock CLOCK_TMDS_HDMI -divide_by 5 -multiply_by 1 [get_nets {G_HDMI.e_fb_HDMI/e_vid15tohdmi/i_clk_hdmi_pixel}]
+create_generated_clock -name CLOCK_TMDS_HDMI -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 16 -multiply_by 45 [get_nets {i_clk_tmds}]
+create_generated_clock -name CLOCK_PIXEL_HDMI -source [get_nets {i_clk_tmds}] -master_clock CLOCK_TMDS_HDMI -divide_by 5 -multiply_by 1 [get_nets {i_clk_tmds_pixel}]
 
 create_generated_clock -name CLOCK_72M  -source [get_nets {i_clk_pll_360M}] -master_clock CLOCK_360M -divide_by 5 -multiply_by 1 [get_nets {i_clk_div_72M}]
 
-#create_clock -name CLOCK_CHROMA -period 56.387347 -waveform {0 28.19367} [get_nets {i_clk_chroma_x4_jitter}]
-## actual numbers for CLOCK_CHROMA are bollocks but close
+## actually generated but div/mul too large
 ##TODO: reenable for real chroma
-create_generated_clock -name CLOCK_CHROMA -source [get_nets {i_clk_div_48M}] -master_clock CLOCK_48M -divide_by 1600 -multiply_by 591 [get_nets {i_clk_chroma_x4_jitter}]
-create_generated_clock -name CLOCK_CHROMA_x60 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 1 -multiply_by 60 [get_nets {i_clk_chroma_x60_dac}]
-create_generated_clock -name CLOCK_CHROMA_x20 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 1 -multiply_by 20 [get_nets {i_clk_chroma_x20_dac}]
+create_clock -name CLOCK_CHROMA_x4_jitter -period 56.387347 -waveform {0 28.19367} [get_nets {i_clk_chroma_x4_jitter}]
+create_generated_clock -name CLOCK_SOUND -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA_x4_jitter -divide_by 5 -multiply_by 1 [get_nets {i_clk_snd}]
+# chroma DAC clocks (from pll_pal_sc and its CLKDIVs), as in C20K.sdc
+create_generated_clock -name CLOCK_CHROMA_x60 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA_x4_jitter -divide_by 1 -multiply_by 15 [get_nets {i_clk_chroma_x60_dac}]
+create_generated_clock -name CLOCK_CHROMA_x20 -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA_x4_jitter -divide_by 1 -multiply_by 5 [get_nets {i_clk_chroma_x20_dac}]
 create_generated_clock -name CLOCK_CHROMA_x12 -source [get_nets {i_clk_chroma_x60_dac}] -master_clock CLOCK_CHROMA_x60 -divide_by 5 -multiply_by 1 [get_nets {i_clk_chroma_x12_px}]
 create_generated_clock -name CLOCK_CHROMA_x4 -source [get_nets {i_clk_chroma_x20_dac}] -master_clock CLOCK_CHROMA_x20 -divide_by 5 -multiply_by 1 [get_nets {i_clk_chroma_x4}]
-create_generated_clock -name CLOCK_SOUND -source [get_nets {i_clk_chroma_x4_jitter}] -master_clock CLOCK_CHROMA -divide_by 5 -multiply_by 1 [get_nets {i_clk_snd}]
+
 
 ##TODO: bodge for no chroma
 #create_generated_clock -name CLOCK_SOUND -source [get_nets {i_clk_pll_128M}] -master_clock CLOCK_128M -divide_by 64000 -multiply_by 3547 [get_nets {i_clk_snd}]
@@ -41,28 +42,35 @@ set_clock_groups -asynchronous -group [get_clocks {CLOCK_128M}] -group [get_cloc
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_PIXEL_HDMI}] 
 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_SOUND}] -group [get_clocks {CLOCK_128M}] 
-set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA}] 
+set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA_x4_jitter}] 
 set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_CHROMA_x4}] 
 
-set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -setup 4
-set_multicycle_path -from [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu_t65only/e_t65/e_cpu/*}]  -hold 3
+# 1-bit mono DACs (dac1_oserx2): r_pattern (48M) -> r_pat0..2 (72M). The
+# frequencies are locked (2:3) but the phase between the 384M/4/2 and the
+# 360M/5 CLKDIVs is set by start-up, so a synchronous analysis is fiction.
+# TODO (clock-group review): the crossing itself is not phase-safe.
+set_clock_groups -asynchronous -group [get_clocks {CLOCK_48M}] -group [get_clocks {CLOCK_72M}] 
 
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -setup 2
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -setup 2
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -setup 2
+set_multicycle_path -from [get_regs {e_fb_cpu/gt65.e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu/gt65.e_t65/e_cpu/*}]  -setup 4
+set_multicycle_path -from [get_regs {e_fb_cpu/gt65.e_t65/e_cpu/*}] -to [get_regs {e_fb_cpu/gt65.e_t65/e_cpu/*}]  -hold 3
 
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -hold 1
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -hold 1
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
-set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/*}] -hold 1
+# blit_addr: address-calc inputs -> r_addr_out has 2 clocks (inputs change with
+# r_clken_addr_calc_start; calc a clock later; r_addr_out loads the clock after).
+# The start strobe itself is deliberately not covered.
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_blit_state*}]   -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_blit_state*}]   -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_cha_*}]         -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_cha_*}]         -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_BLTCON_*}]      -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_BLTCON_*}]      -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_d*}]            -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_d*}]            -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_row_countdn*}]  -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_row_countdn*}]  -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/addr_gen/r_addr_out*}] -hold -end 1
 
-set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
-set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
-set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
-set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_op*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
-set_multicycle_path -setup -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -setup 2
-set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_pointers*}] -hold 1
-set_multicycle_path -setup -end -from [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -setup 2
-set_multicycle_path -hold -end -from  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}]  -to  [get_regs {GCHIPSET.e_chipset/GAERIS.e_fb_aeris/r_counters*}] -hold 1
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -setup -end 2
+set_multicycle_path -from [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/*}] -to [get_regs {GCHIPSET.e_chipset/GBLIT.e_fb_blit/r_per_D_rd*}] -hold -end 1
 
+# SID is only at 1MHz! - these could be 128/127 
+set_multicycle_path -from [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -to [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -setup -end 2
+set_multicycle_path -from [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -to [get_regs {e_fb_sys/e_sid/sid_voice_*/*}] -hold -end 1

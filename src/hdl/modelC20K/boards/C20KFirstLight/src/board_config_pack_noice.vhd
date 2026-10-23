@@ -53,16 +53,18 @@ package board_config_pack is
 	constant G_OSROM						: string  := "/src/hdl/modelC20K/asm/C20KFirstLight/build/C20K-boot-rom.vec";
 
    constant G_1BIT_DAC_VIDEO  		: boolean := true;
-   constant G_C20K_I2S			: boolean := true;
-   constant G_INCL_SID			: boolean := true;
+   constant G_C20K_I2S					: boolean := true;
+   constant G_INCL_SID					: boolean := false;
 	constant G_INCL_HDMI					: boolean := true;
 	constant C_CPU_BYTELANES			: positive := 1;		
+	constant G_PIPELINE_DEPTH  		: positive := 1;
+
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
 	constant PERIPHERAL_COUNT 			: natural 		:= 7;
-	constant PERIPHERAL_NO_MEM_RAM 	: natural		:= 0;
-	constant PERIPHERAL_NO_HDMI		: natural 		:= 0;	-- not HDMI / MEM_RAM are mutually exclusive
+	constant PERIPHERAL_NO_MEM_RAM 	: natural		:= 0;	-- not HDMI / MEM_RAM are mutually exclusive
+	constant PERIPHERAL_NO_HDMI		: natural 		:= 0;	
 	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
 	constant PERIPHERAL_NO_MEM_BRD 	: natural		:= 2;
 	constant PERIPHERAL_NO_SYS			: natural      := 3;

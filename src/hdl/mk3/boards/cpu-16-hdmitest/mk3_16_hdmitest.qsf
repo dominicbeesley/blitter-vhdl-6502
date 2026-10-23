@@ -65,7 +65,6 @@ set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "VERILOG HDL" -section_id eda
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
 
 
-set_global_assignment -name OPTIMIZATION_MODE BALANCED
 
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:../../../../scripts/tcl/get-version.tcl"
 
@@ -97,6 +96,8 @@ source ../../simulation/sim_tb/sim_6800.qsf
 
 source ../../simulation/sim_tb/sim_80188.qsf
 
+source ../../simulation/sim_tb/sim_80186.qsf
+
 source ../../simulation/sim_tb/sim_arm2.qsf
 
 source ../../simulation/sim_tb/sim_z180.qsf
@@ -115,26 +116,33 @@ set_global_assignment -name VHDL_FILE ../../../library/3rdparty/hdmi_alexey_spir
 
 set_global_assignment -name VHDL_FILE ../../shared/hdmi/dd_out.vhd
 
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/dvi_synchro.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/dvi_synchro.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sync_sync.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/mc6845.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_crtc.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_crtc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050.vhd
 set_global_assignment -name VHDL_FILE ../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_vidproc.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ram.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/HDMI_pack.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_enabled.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_ctl.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/fb_HDMI_seq_ctl.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/vidmem_sequencer.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/vid15tohdmi.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_vidproc.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_ram.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/HDMI_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/hdmi_int_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_enabled.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_ctl.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/fb_HDMI_seq_ctl.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/vidmem_sequencer.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/vid15tohdmi.vhd
 
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/fb_sprites.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprite_comp_ser.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprite_int.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites.vhd
-set_global_assignment -name VHDL_FILE ../../shared/hdmi/sprites/sprites_pack.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/fb_sprites.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprite_int.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprites.vhd
+set_global_assignment -name VHDL_FILE ../../../shared/hdmi/sprites/sprites_pack.vhd
+
+set_global_assignment -name VHDL_FILE ../../../library/ram_sdp_2clk.vhd
+set_global_assignment -name VHDL_FILE ../../../library/ram_tdp_2clk.vhd
+
+set_global_assignment -name QIP_FILE ../../shared/hdmi/pll_hdmi.qip
+
 
 set_global_assignment -name VHDL_FILE ../../../shared/firmware_info_pack.vhd
 set_global_assignment -name VHDL_FILE board_config_pack.vhd
@@ -148,6 +156,7 @@ set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_one_to
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_prior.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_arbiter_roundrobin.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_shared.vhd
+set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_intcon_buffer.vhd
 set_global_assignment -name VHDL_FILE ../../../library/fishbone/fb_null.vhd
 set_global_assignment -name VHDL_FILE ../../../library/metadelay.vhd
 set_global_assignment -name VHDL_FILE ../../../library/clockreg.vhd
@@ -205,9 +214,6 @@ set_global_assignment -name VHDL_FILE ../../../chipset/dac_1bit.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma.vhd
 set_global_assignment -name VHDL_FILE ../../../chipset/dmac_int_dma_cha.vhd
 set_global_assignment -name QIP_FILE pllmain.qip
-set_global_assignment -name QIP_FILE ../../shared/hdmi/hdmi_blockram.qip
-set_global_assignment -name QIP_FILE pll_hdmi.qip
-set_global_assignment -name QIP_FILE ../../shared/hdmi/linebuffer.qip
 
 
 set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
@@ -222,6 +228,11 @@ set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT EXTRA
+set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
+#set_global_assignment -name OPTIMIZATION_MODE BALANCED
+set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
 
+set_global_assignment -name SEED 1
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

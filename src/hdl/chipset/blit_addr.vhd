@@ -38,6 +38,9 @@
 -- Revision: 
 -- Revision 0.01 - File Created
 -- Revision 0.02 - use a direction indicator in preparation for line drawing mode
+-- Revision 0.03 - Oct 2026: the width/stride terms are precomputed in registers
+--                  by the caller (delta_wrap, delta_wrap_mid, stride_m7), so the
+--                  next address is one add/subtract of a selected operand
 -- Additional Comments: 
 --
 ----------------------------------------------------------------------------------
@@ -50,7 +53,6 @@ use work.blit_types.ALL;
 entity blit_addr is
 	 generic (
 		ram_A_hi 	: integer := 15;
-		width_hi		: integer := 9;
 		stride_hi	: integer := 9
 	 );
     Port (
@@ -63,7 +65,13 @@ entity blit_addr is
 		mode_cell			: in		BOOLEAN; -- '1' - indicated CELL mode 
 				
 		bytes_stride		: in		SIGNED(stride_hi downto 0);	-- stride in addition to bytes_wide in cell mode this should be screen width minus 8
-		width					: in		UNSIGNED(width_hi downto 0);	-- actually width in bytes - 1 for linear, in cell mode bytes = (width+1)*8 i.e. w = char cells - 1
+
+		-- precomputed by the caller from the channel's stride and width, which
+		-- are constant during a blit (width w is bytes - 1 for linear, char
+		-- cells - 1 in cell mode); all modulo 2**(ram_A_hi+1)
+		delta_wrap			: in		STD_LOGIC_VECTOR(ram_A_hi downto 0);	-- SPR_WRAP: cell: stride - w*8 - 7 (end of cell), linear: stride - w
+		delta_wrap_mid		: in		STD_LOGIC_VECTOR(ram_A_hi downto 0);	-- SPR_WRAP, cell, not end of cell: 1 - w*8
+		stride_m7			: in		STD_LOGIC_VECTOR(ram_A_hi downto 0);	-- cell PLOT_UP/PLOT_DOWN crossing a cell: stride - 7
 						
 		addr_in				: in		STD_LOGIC_VECTOR(ram_A_hi downto 0);
 		addr_out				: out		STD_LOGIC_VECTOR(ram_A_hi downto 0);
@@ -127,56 +135,74 @@ begin
 
 
 	
-	p_next_addr: process(addr_in, mode_cell, bytes_stride, width, direction)
+	-- next address: addr_in plus or minus one selected operand, so a single
+	-- carry chain (the subtract is done as add of the inverse plus carry in)
+	p_next_addr: process(all)
+	variable v_stride : unsigned(ram_A_hi downto 0);
+	variable v_op     : unsigned(ram_A_hi downto 0);
+	variable v_sub    : std_logic;
 	begin
+		v_stride := unsigned(resize(bytes_stride, ram_A_hi+1));
+		v_sub := '0';
 
 		if (mode_cell) then
 			case direction is
 				when CHA_E => 
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + 1);
+					v_op := to_unsigned(1, v_op'length);
 				when SPR_WRAP =>
 					if addr_in(2 downto 0) = "111" then
-						i_addr_next <= std_logic_vector(unsigned(addr_in) + unsigned(resize(bytes_stride, ram_A_hi+1)) - (width & "000") - 7);
+						v_op := unsigned(delta_wrap);
 					else
-						i_addr_next <= std_logic_vector(unsigned(addr_in) - (width & "000") + 1);
+						v_op := unsigned(delta_wrap_mid);
 					end if;
 				when PLOT_UP =>
 					if addr_in(2 downto 0) = "000" then
-						i_addr_next <=	std_logic_vector(unsigned(addr_in) - unsigned(resize(bytes_stride, ram_A_hi+1)) + 7);
+						v_op := unsigned(stride_m7);
+						v_sub := '1';
 					else
-						i_addr_next <=	std_logic_vector(unsigned(addr_in) - 1);
+						v_op := to_unsigned(1, v_op'length);
+						v_sub := '1';
 					end if;
 				when PLOT_DOWN =>
 					if addr_in(2 downto 0) = "111" then
-						i_addr_next <=	std_logic_vector(unsigned(addr_in) + unsigned(resize(bytes_stride, ram_A_hi+1)) - 7);
+						v_op := unsigned(stride_m7);
 					else
-						i_addr_next <=	std_logic_vector(unsigned(addr_in) + 1);
+						v_op := to_unsigned(1, v_op'length);
 					end if;
 				when PLOT_LEFT =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) - 8);
+					v_op := to_unsigned(8, v_op'length);
+					v_sub := '1';
 				when PLOT_RIGHT =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + 8);
+					v_op := to_unsigned(8, v_op'length);
 				when others =>
-					i_addr_next <= addr_in;
+					v_op := (others => '0');
 			end case;
 		else
 			case direction is
 				when CHA_E => 
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + 1);
+					v_op := to_unsigned(1, v_op'length);
 				when SPR_WRAP =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + unsigned(resize(bytes_stride, ram_A_hi+1)) - width);
+					v_op := unsigned(delta_wrap);
 				when PLOT_UP =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) - unsigned(resize(bytes_stride, ram_A_hi+1)));
+					v_op := v_stride;
+					v_sub := '1';
 				when PLOT_DOWN =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + unsigned(resize(bytes_stride, ram_A_hi+1)));
+					v_op := v_stride;
 				when PLOT_LEFT =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) - 1);
+					v_op := to_unsigned(1, v_op'length);
+					v_sub := '1';
 				when PLOT_RIGHT =>
-					i_addr_next <= std_logic_vector(unsigned(addr_in) + 1);
+					v_op := to_unsigned(1, v_op'length);
 				when others =>
-					i_addr_next <= addr_in;
+					v_op := (others => '0');
 			end case;
 		end if;
+
+		i_addr_next <= std_logic_vector(
+							unsigned(addr_in)
+							+ (v_op xor (v_op'range => v_sub))
+							+ unsigned'(0 => v_sub)
+							);
 	end process;
 end Behavioral;
 

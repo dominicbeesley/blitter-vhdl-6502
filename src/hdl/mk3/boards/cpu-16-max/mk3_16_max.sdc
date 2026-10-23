@@ -70,6 +70,19 @@ create_generated_clock -name {snd_pll} -duty_cycle 50/1 -multiply_by 80 -divide_
 
 derive_clock_uncertainty
 
+#**************************************************************
+# Fitter-only over-constraint
+#**************************************************************
+# The fitter stops improving a path once it meets its constraint. This makes
+# the fitter (only) see main_pll as slightly faster, so it keeps working on
+# paths just past zero slack. quartus_sta, and so the Makefile timing check,
+# doesn't run this block and signs off against the real period.
+# Must come after main_pll is created. Comment out to switch off.
+
+if { $::TimeQuestInfo(nameofexecutable) eq "quartus_fit" } {
+   set_clock_uncertainty -add -setup 0.3 -from [get_clocks {main_pll}] -to [get_clocks {main_pll}]
+}
+
 
 #**************************************************************
 # Set Input Delay
@@ -134,37 +147,32 @@ set_false_path -from [get_registers {e_fb_cpu|r_cpu_run_ix*} ]
 #cpu multi-cycles
 set t65regs  [ get_registers {e_fb_cpu|\gt65:e_t65|e_cpu|*} ]
 
-set_multicycle_path -setup -end -from  $t65regs  -to  $t65regs 2
-set_multicycle_path -hold -end -from  $t65regs   -to  $t65regs 1
+# cross-check these against the setting in fb_CPU/fb_CPU_t65
+set_multicycle_path -setup -end -from  $t65regs  -to  $t65regs 4
+set_multicycle_path -hold -end -from  $t65regs   -to  $t65regs 3
 
 #blitter addr calcs multi-cycles
 
 set blit {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_blit:\GBLIT:e_fb_blit}
 
-set blitregs [ get_registers "$blit|*" ]
+# Register reads: r_per_addr is loaded on A_stb, act_rd0 waits a clock, and
+# r_per_D_rd only captures in act_rd, so the read mux has 2 clocks.
+set blit_rd [get_registers "$blit|r_per_D_rd*"]
+set_multicycle_path -setup -end -from [get_registers "$blit|*"] -to $blit_rd 2
+set_multicycle_path -hold  -end -from [get_registers "$blit|*"] -to $blit_rd 1
 
-set_multicycle_path -setup -end -from $blitregs  -to  $blitregs 2
-set_multicycle_path -hold -end -from  $blitregs  -to  $blitregs 1
+# Address calc: the inputs (r_blit_state, channel address/stride/width regs)
+# change in the same edge as r_clken_addr_calc_start; blit_addr goes to calc
+# a clock later and loads r_addr_out from i_addr_next the clock after that.
+# Excludes the start strobe itself and blit_addr's own state, which act each clock.
+set blit_addr_src [remove_from_collection [get_registers "$blit|r_*"] \
+                                          [get_registers "$blit|r_clken_addr_calc_start"]]
+set blit_addr_out [get_registers "$blit|blit_addr:addr_gen|r_addr_out*"]
+set_multicycle_path -setup -end -from $blit_addr_src -to $blit_addr_out 2
+set_multicycle_path -hold  -end -from $blit_addr_src -to $blit_addr_out 1
 
 
-#aeris - not thoroughly checked!
-
-set aeris {fb_chipset:\GCHIPSET:e_chipset|fb_dmac_aeris:\GAERIS:e_fb_aeris}
-set aeris_src_regs [get_registers "$aeris|r_op*"] 
-set aeris_ptr_regs [get_registers "$aeris|r_pointers*"]
-set aeris_ctr_regs [get_registers "$aeris|r_counters*"]
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_src_regs  -to  $aeris_ctr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ptr_regs  -to  $aeris_ptr_regs 1
-
-set_multicycle_path -setup -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 2
-set_multicycle_path -hold -end -from  $aeris_ctr_regs  -to  $aeris_ctr_regs 1
+# NOTE: the Aeries no longer needs multi_cycle_paths!
 
 
 #**************************************************************

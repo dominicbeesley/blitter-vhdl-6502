@@ -133,6 +133,7 @@ architecture rtl of fb_cpu_65816 is
 
 	signal r_cpu_hlt			: std_logic;	-- need to register this at the start of the cycle following
 														-- halt being asserted to stop that cycle from starting
+	signal r_cpu_hlt_prev	: std_logic;	-- the previous cpu cycle was held by RDY (r_cpu_hlt through its phi2)
 	signal r_cpu_res			: std_logic;
 
 	signal r_boot_65816_dly	: std_logic_vector(2 downto 0) := (others => '1');
@@ -302,7 +303,10 @@ begin
 
 					if r_substate = SUBSTATE_A_8 then
 
-						if r_cpu_hlt = '0' then
+						-- latch the address and bank only at the start of a new cpu cycle:
+						-- after a cycle held by RDY the cpu completes the same cycle and
+						-- doesn't drive the bank onto the data bus again
+						if r_cpu_hlt_prev = '0' then
 							if i_boot = '1' then
 								if i_CPUSKT_D_c2b(7 downto 0) = x"00" then -- bank 0 map to FF, special treatment for native vector pulls
 									if i_CPUSKT_VPB_c2b = '0' and unsigned(i_CPUSKT_A_c2b(4 downto 0)) <= 16#19# then
@@ -366,6 +370,7 @@ begin
 					if r_substate = 0 then
 
 						if i_ack then
+							r_cpu_hlt_prev <= r_cpu_hlt;
 							r_state <= phi1;
 							r_PHI0 <= '0';
 							r_substate <= SUBSTATEMAX_8;
@@ -394,6 +399,7 @@ begin
 
 			-- bodge for reset - need to better work out the state machine!
 			if r_fbreset_prev = '0' and fb_syscon_i.rst = '1' then
+				r_cpu_hlt_prev <= '0';
 				r_state <= phi1;
 				r_substate <= SUBSTATEMAX_8;
 				r_PHI0 <= '0';				

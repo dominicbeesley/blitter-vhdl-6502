@@ -377,13 +377,24 @@ READ_MEM:
 		iny
 		sta	z:0,X
 		inx
-		dec	z:<(TMP - deice_base)
+		iny
+		bne	@cb
+		jsr	incbank
+@cb:		dec	z:<(TMP - deice_base)
 		bne	@lp
 
 		plb				; restore bank register
 
 ;  Compute checksum on buffer, and send to master, then return
 GLP90:		jmp	SEND
+incbank:	pha
+		phb
+		pla
+		inc	A
+		pha
+		plb
+		pla
+		rts
 
 
 ;===========================================================================
@@ -400,6 +411,7 @@ WRITE_MEM:
 		sta	z:<(TMP - deice_base)
 		lda	z:<(COMBUF+3 - deice_base); dest bank
 		pha
+		pha				; save bank for second pass
 		plb
 		lda	z:<(COMBUF+4 - deice_base); get dest pointer high
 		xba				; swap BE->LE
@@ -412,7 +424,9 @@ WRITE_MEM:
 		inx
 		sta	a:0,Y
 		iny
-		dec	z:<(TMP - deice_base)
+		bne	@cb
+		jsr	incbank
+@cb:		dec	z:<(TMP - deice_base)
 		bne	@lp
 
 		lda	z:<(COMBUF+1 - deice_base)
@@ -420,13 +434,16 @@ WRITE_MEM:
 		sbc	#4
 		sta	z:<(TMP	 - deice_base); get back count
 		ply
+		plb				; reset bank
 		ldx	#<(COMBUF+6 - deice_base)
 @lp2:		lda	z:0,X
 		inx
 		cmp	a:0,Y
 		bne	WLP80
 		iny
-		dec	z:<(TMP - deice_base)
+		bne	@cb2
+		jsr	incbank
+@cb2:		dec	z:<(TMP - deice_base)
 		bne	@lp2
 
 WLP50:		lda	#0			; RETURN STATUS = 0

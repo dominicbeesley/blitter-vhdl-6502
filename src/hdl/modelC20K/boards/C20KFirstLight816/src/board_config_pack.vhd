@@ -56,15 +56,18 @@ package board_config_pack is
 -- \______/  |______| \______/ |__| \__\
 --
 --  F I R S T   L I G H T   8 1 6
+	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; 
    constant G_1BIT_DAC_VIDEO  : boolean := true;
-	constant G_JIM_DEVNO			: std_logic_vector(7 downto 0) := x"D1"; --TODO: change to D2 
+   constant G_C20K_I2S			: boolean := true;
+   constant G_INCL_SID			: boolean := false;
 	constant G_INCL_HDMI		: boolean := true;
 
 	constant C_CPU_BYTELANES	: positive := 1;		
+	constant G_PIPELINE_DEPTH  : positive := 1;
 
 	constant CONTROLLER_COUNT 			: natural 		:= 1;
 	constant MAS_NO_CPU					: natural		:= 0;
-	constant PERIPHERAL_COUNT 			: natural 		:= 7;
+	constant PERIPHERAL_COUNT 			: natural 		:= 8;
 	constant PERIPHERAL_NO_MEM_RAM 	: natural		:= 0;
 	constant PERIPHERAL_NO_MEM_ROM 	: natural		:= 1;
 	constant PERIPHERAL_NO_MEM_BRD 	: natural		:= 2;
@@ -72,6 +75,7 @@ package board_config_pack is
 	constant PERIPHERAL_NO_LED_ARR	: natural      := 4;
 	constant PERIPHERAL_NO_UART 		: natural		:= 5;
 	constant PERIPHERAL_NO_HDMI 		: natural		:= 6;
+	constant PERIPHERAL_NO_XFLASH		: natural		:= 7; -- SPI interface to SOM Configuration Flash
 
 end board_config_pack;
 

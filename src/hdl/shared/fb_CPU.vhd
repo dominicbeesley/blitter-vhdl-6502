@@ -26,7 +26,7 @@
 -- 
 -- Create Date:    	16/04/2019
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU wrapper component
+-- Module Name:    	fb_cpu
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -63,18 +63,8 @@ entity fb_cpu is
 		G_NMI_META_LEVELS					: natural := 5;
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		G_INCL_CPU_T65						: boolean := false;
-		G_INCL_CPU_65C02					: boolean := false;
-		G_INCL_CPU_6800					: boolean := false;
-		G_INCL_CPU_80188					: boolean := false;
-		G_INCL_CPU_65816					: boolean := false;
-		G_INCL_CPU_6x09					: boolean := false;
-		G_INCL_CPU_Z80						: boolean := false;
-		G_INCL_CPU_Z180					: boolean := false;
-		G_INCL_CPU_680x0					: boolean := false;
-		G_INCL_CPU_68008					: boolean := false;
-		G_INCL_CPU_ARM2					: boolean := false;
-		G_MK3									: boolean := false
+		G_MK3									: boolean;
+		G_C20K								: boolean
 	);
 	port(
 
@@ -131,6 +121,7 @@ entity fb_cpu is
 		fb_syscon_i								: in	fb_syscon_t;
 		fb_c2p_o									: out fb_con_o_per_i_t;
 		fb_p2c_i									: in	fb_con_i_per_o_t;
+		fb_c2p_instr_fetch_o					: out std_logic;
 
 		-- chipset control signals
 		cpu_halt_i								: in  std_logic;
@@ -145,8 +136,6 @@ entity fb_cpu is
 		debug_wrap_cyc_o						: out std_logic;
 
 		debug_65816_vma_o						: out std_logic;
-
-		debug_SYS_VIA_block_o				: out std_logic;
 
 		debug_Z180_M1_o						: out std_logic;
 
@@ -466,7 +455,7 @@ architecture rtl of fb_cpu is
 	constant C_IX_CPU_6800						: natural := C_IX_CPU_65C02 + B2OZ(G_INCL_CPU_65C02);
 	constant C_IX_CPU_80188						: natural := C_IX_CPU_6800 + B2OZ(G_INCL_CPU_6800);
 	constant C_IX_CPU_65816						: natural := C_IX_CPU_80188 + B2OZ(G_INCL_CPU_80188);
-	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816);
+	constant C_IX_CPU_6x09						: natural := C_IX_CPU_65816 + B2OZ(G_INCL_CPU_65816 and not G_C20K);
 	constant C_IX_CPU_Z80						: natural := C_IX_CPU_6x09 + B2OZ(G_INCL_CPU_6x09);
 	constant C_IX_CPU_Z180						: natural := C_IX_CPU_Z80 + B2OZ(G_INCL_CPU_Z80);
 	constant C_IX_CPU_680X0						: natural := C_IX_CPU_Z180 + B2OZ(G_INCL_CPU_Z180);
@@ -540,6 +529,7 @@ begin
 
 	hard_cpu_en_o <= r_hard_cpu_en;
 
+
 	-- PORTEFG nOE's selected in top level p_EFG_en process
 	p_config:process(fb_syscon_i)
 	begin
@@ -572,7 +562,7 @@ begin
 					r_do_sys_via_block <= '1';	
 					r_cpu_en_t65 <= '1';
 				else
-					if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+					if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 and not G_C20K then
 						r_cpu_run_ix_act <= C_IX_CPU_65816;
 						r_do_sys_via_block <= '1';	
 						r_cpu_en_65816 <= '1';
@@ -616,7 +606,7 @@ begin
 				end if;
 
 				-- multiplex/enable current hard cpu expansion out
-				if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 then
+				if cfg_cpu_type_i = CPU_65816 and G_INCL_CPU_65816 and not G_C20K then
 					r_cpu_run_ix_hard <= C_IX_CPU_65816;
 					r_hard_cpu_en <= '1';
 				elsif cfg_cpu_type_i = CPU_680x0 and G_INCL_CPU_680x0 then
@@ -723,7 +713,7 @@ begin
 		fb_con_c2pinstr_fetch_o		=> i_fb_c2p_extra_instr_fetch
 	
 	);
-	
+	fb_c2p_instr_fetch_o	<= i_fb_c2p_extra_instr_fetch;
 
 	-- ================================================================================================ --
 	-- log2phys and VIA throttle stage
@@ -734,7 +724,7 @@ begin
 		SIM			=> SIM,
 		CLOCKSPEED	=> CLOCKSPEED,
 		G_MK3			=> G_MK3,
-		G_C20K		=> false
+		G_C20K		=> G_C20K
 	)
 	port map(
 
@@ -785,7 +775,7 @@ begin
 	);
 
 
-	i_preboot <= (r_cpu_en_t65 or r_cpu_en_65816) and preboot_i;
+	i_preboot <= (r_cpu_en_t65 or r_cpu_en_65816 or b2s(G_C20K)) and preboot_i;
 	throttle_act_o <= i_throttle_act;
 
 
@@ -1030,7 +1020,7 @@ END GENERATE;
 
 
 
-g65816:IF G_INCL_CPU_65816 GENERATE
+g65816:IF G_INCL_CPU_65816 and not G_C20K GENERATE
 	e_wrap_65816:fb_cpu_65816
 	generic map (
 		SIM										=> SIM,

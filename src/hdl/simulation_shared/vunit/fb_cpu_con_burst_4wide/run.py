@@ -15,4 +15,6 @@ lib.add_source_files("../../../shared/fb_CPU_con_burst.vhd")
 lib.add_source_files("../../../simulation_shared/sim_fb_per_mem.vhd")
 
 # Run vunit function
+vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])
+vu.set_sim_option("disable_ieee_warnings",1)
 vu.main()

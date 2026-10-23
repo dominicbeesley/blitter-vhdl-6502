@@ -59,6 +59,7 @@ use work.ws2812_pack.all;
 entity C20K816only is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      SIM_NO_DVI                    : boolean := false;                    -- disable TMDS output
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT                  : string  := ""                        -- path to root of project (to find relative files, override in simulations)
@@ -99,7 +100,7 @@ entity C20K816only is
       cpu_E_i              : in            std_logic;
       cpu_MX_i             : in            std_logic;
       cpu_PHI2_o           : out           std_logic;
-      cpu_RDY_io           : out           std_logic;
+      cpu_RDY_io           : inout         std_logic;
       cpu_nABORT_o         : out           std_logic;
       cpu_nIRQ_o           : out           std_logic;
       cpu_nNMI_o           : out           std_logic;
@@ -196,6 +197,21 @@ architecture rtl of C20K816only is
       I:IN std_logic
    );
    END COMPONENT;
+
+
+   component hdmi_out_gowin_2a is
+      port (
+      clock_pixel_i     : in std_logic;   -- x1
+      clock_tdms_i      : in std_logic;   -- x5
+      red_i             : in  std_logic_vector(9 downto 0);
+      green_i           : in  std_logic_vector(9 downto 0);
+      blue_i            : in  std_logic_vector(9 downto 0);      
+      red_s             : out std_logic;
+      green_s           : out std_logic;
+      blue_s            : out std_logic;
+      clock_s           : out std_logic
+   );
+   end component;
 
    -----------------------------------------------------------------------------
 	-- config signals
@@ -332,6 +348,8 @@ architecture rtl of C20K816only is
 	-- hdmi peripheral interface control registers
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
+	signal i_c2p_hdmi_buf				: fb_con_o_per_i_t;		-- after e_hdmi_buf
+	signal i_p2c_hdmi_buf				: fb_con_i_per_o_t;
 
 	signal i_vid_48_r                : std_logic_vector(3 downto 0);
 	signal i_vid_48_g                : std_logic_vector(3 downto 0);
@@ -343,6 +361,16 @@ architecture rtl of C20K816only is
    signal r_vid_128_vs              : std_logic;
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
+
+   signal i_tmds_R                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_G                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_B                  : std_logic_vector(9 downto 0); -- tmds encoded data
+
+   signal i_clk_tmds_pixel    : std_logic;
+   attribute syn_keep of i_clk_tmds_pixel : signal is 1; -- keep for SDC?
+   signal i_clk_tmds          : std_logic;
+   attribute syn_keep of i_clk_tmds : signal is 1; -- keep for SDC?
+
 
    -----------------------------------------------------------------------------
    -- peripherals
@@ -391,8 +419,8 @@ architecture rtl of C20K816only is
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
-   signal i_debug_cpu_instr_a : std_logic_vector(23 downto 0);
 
+   signal i_c2p_cpu_instr_fetch     : std_logic;
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
    -----------------------------------------------------------------------------
@@ -475,12 +503,8 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
    -- address decode to select peripheral
    e_addr2s:entity work.address_decode
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT,
-      G_INCL_CHIPSET		      => G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI,
-		G_HDMI_SHADOW_SYS			=> G_HDMI_SHADOW_SYS,
-      G_C20K                  => true
+		G_HDMI_SHADOW_SYS		=> true,
+	    G_C20K                  => true
 	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
@@ -490,25 +514,22 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	);
 end generate;
 
-g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-      G_REGISTER_PERIPHERAL_C2P => false
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH
 		)
    port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
 		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+		fb_up_c2p_i						=> i_con_c2p_intcon,
+		fb_up_p2c_o						=> i_con_p2c_intcon,
 
 		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+		fb_dn_c2p_o						=> i_per_c2p_intcon,
+		fb_dn_p2c_i						=> i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
       peripheral_sel_we_o                 => i_intcon_peripheral_sel_we,
@@ -517,33 +538,7 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
    );
 
 
-END GENERATE;
-g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-   e_fb_intcon: fb_intcon_one_to_many
-   generic map (
-      SIM                           => SIM,
-      G_PERIPHERAL_COUNT                  => PERIPHERAL_COUNT,
-      G_ADDRESS_WIDTH               => 24
-      )
-   port map (
-      fb_syscon_i                   => i_fb_syscon,
 
-      -- peripheral ports connect to controllers
-      fb_con_c2p_i                  => i_con_c2p_intcon(0),
-      fb_con_p2c_o                  => i_con_p2c_intcon(0),
-
-      -- controller ports connect to peripherals
-      fb_per_c2p_o                  => i_per_c2p_intcon,
-      fb_per_p2c_i                  => i_per_p2c_intcon,
-
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_we_o           => i_intcon_peripheral_sel_we(0),
-      peripheral_sel_i              => i_intcon_peripheral_sel(0),
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
-   );
-
-
-END GENERATE;   
 
 	i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
 	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
@@ -569,7 +564,8 @@ GCHIPSET: IF G_INCL_CHIPSET GENERATE
 	e_chipset:fb_chipset
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
 	port map (
 		fb_syscon_i		=> i_fb_syscon,
@@ -970,7 +966,7 @@ end generate;
 		-- configuration
 
 --		cfg_cpu_type_i						=> r_cfg_cpu_type,
---		cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
+      cfg_cpu_use_t65_i					=> r_cfg_cpu_use_t65,
 --		cfg_cpu_speed_opt_i				=> r_cfg_cpu_speed_opt,
      	cfg_sys_type_i                => r_cfg_sys_type,      
 		cfg_swram_enable_i				=> r_cfg_swram_enable,
@@ -1012,13 +1008,13 @@ end generate;
       -- cpu controller
       fb_cpu_c2p_o                  => i_c2p_cpu,
       fb_cpu_p2c_i                  => i_p2c_cpu,
+      fb_cpu_c2p_instr_fetch_o      => i_c2p_cpu_instr_fetch,
       -- mem peripheral
       fb_mem_c2p_i                  => i_c2p_mem,
       fb_mem_p2c_o                  => i_p2c_mem,
 
 
       -- debug
-      debug_cpu_instr_A             => i_debug_cpu_instr_a,
       debug_throttle_act_o          => i_debug_throttle_act,
 
       -- preboot
@@ -1086,6 +1082,7 @@ end generate;
    p_leds:process(i_fb_syscon)
    variable i : integer;
    variable vr_btn : unsigned(7 downto 0);
+   variable vr_instr : std_logic_vector(23 downto 0);
    begin
       if rising_edge(i_fb_syscon.clk) then
          if i_fb_syscon.rst = '1' then
@@ -1103,17 +1100,17 @@ end generate;
                i_debug_leds(I).blue <= (others => '0');         
             end loop;
             vr_btn := (others => '0');
-         elsif i_c2p_cpu.A_stb = '1' and i_c2p_cpu.cyc = '1' and vr_btn(vr_btn'high) = '1' then
+            vr_instr := x"5AF0A5";
+         elsif vr_btn(vr_btn'high) = '1' then
             for i in 0 to 7 loop
-               i_debug_leds(I).red <= (0 => i_debug_cpu_instr_a(I), others => '0');
-               i_debug_leds(I).green <= (0 => i_debug_cpu_instr_a(I + 8), others => '0');
-               i_debug_leds(I).blue <= (0 => i_debug_cpu_instr_a(I + 16), others => '0');
-               --i_debug_leds(I).red <= (others => '0');
-               --i_debug_leds(I).green <= (others => '0');
-               --i_debug_leds(I).blue <= (others => '0');
+               i_debug_leds(I).red <= (0 => vr_instr(I), others => '0');
+               i_debug_leds(I).green <= (0 => vr_instr(I + 8), others => '0');
+               i_debug_leds(I).blue <= (0 => vr_instr(I + 16), others => '0');
             end loop;
 
-            
+            if i_c2p_cpu_instr_fetch = '1' and i_c2p_cpu.A_stb = '1' then
+               vr_instr := i_c2p_cpu.A;
+            end if;
          end if;         
 
          if icipo_btn2 = '0' then
@@ -1194,25 +1191,52 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
    i_mb_scroll_latch_c <= i_beeb_ic32(5 downto 4);
 
+   -- Return buffer on the HDMI port: the HDMI block has its own interconnect,
+   -- so without this an HDMI peripheral's D_ack/D_rd went through two return
+   -- muxes (HDMI intcon, then the top intcon) into the top intcon's count and
+   -- the CPU block in one clock (failed by ~1.6 ns). D_ack, rdy and D_rd are
+   -- registered here; A_ack and the forward path pass straight through (the
+   -- HDMI intcon's slot already registers the forward path). Costs one clock
+   -- on CPU accesses to the HDMI block, which on the C20K includes main RAM
+   -- (FF 0000-7FFF, G_HDMI_SHADOW_SYS); the old design also registered
+   -- these returns (fb_HDMI_enabled G_REGISTER_CON_READS).
+   e_hdmi_buf:entity work.fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => false,
+      G_REG_P2C            => true
+   )
+   port map (
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_up_c2p_i          => i_c2p_hdmi_per,
+      fb_up_p2c_o          => i_p2c_hdmi_per,
+
+      fb_dn_c2p_o          => i_c2p_hdmi_buf,
+      fb_dn_p2c_i          => i_p2c_hdmi_buf
+   );
+
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+      SIM_NO_DVI => SIM_NO_DVI,
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH            
 	)
 	port map (
 		CLK_48M_i			=> i_clk_div_48M,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_c2p_i				=> i_c2p_hdmi_per,
-		fb_p2c_o				=> i_p2c_hdmi_per,
+		fb_c2p_i				=> i_c2p_hdmi_buf,
+		fb_p2c_o				=> i_p2c_hdmi_buf,
 
 		HDMI_SCL_io			=> edid_scl_io,
 		HDMI_SDA_io			=> edid_sda_io,
 		HDMI_HPD_i			=> HDMI_HPD_io,
-		HDMI_CK_o			=> tmds_clk_o_p,
-		HDMI_B_o				=> tmds_d_o_p(0),
-		HDMI_G_o				=> tmds_d_o_p(1),
-		HDMI_R_o				=> tmds_d_o_p(2),
+
+      clk_tmds_pixel_i  => i_clk_tmds_pixel,
+		tmds_B_o				=> i_tmds_B,
+		tmds_G_o				=> i_tmds_G,
+		tmds_R_o				=> i_tmds_R,
 
 		-- analogue video	straight from CRTC/ULA
 
@@ -1237,6 +1261,64 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 		PCM_L_i				=> r_dac_sample_l,
       PCM_R_i           => r_dac_sample_r
 	);
+
+
+   G_NOTSIMDIV:if not SIM_NO_DVI generate
+
+      e_hdmi_serial:hdmi_out_gowin_2a
+      port map (
+         clock_pixel_i => i_clk_tmds_pixel,
+         clock_tdms_i => i_clk_tmds,
+         red_i => i_tmds_R,
+         green_i => i_tmds_G,
+         blue_i => i_tmds_B,
+         red_s => tmds_d_o_p(2),
+         green_s => tmds_d_o_p(1),
+         blue_s => tmds_d_o_p(0),
+         clock_s => tmds_clk_o_p
+      );
+   end generate;
+
+   G_NOTSIM:if not SIM generate
+      e_pll_hdmi: entity work.pll_hdmi
+      port map(
+         clkin => i_clk_div_48M,
+         clkout => i_clk_tmds
+      );
+
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_tmds,
+         CLKOUT => i_clk_tmds_pixel,         -- 27MHz HDMI Pixel Clock
+         CALIB  => '1'
+      );
+   end generate;
+
+   G_SIM:if SIM generate
+      g_hdmi_pixel:if not SIM_NO_DVI generate
+         p_pll_hdmi_pixel: process
+         begin
+            i_clk_tmds_pixel <= '1';
+            wait for 18.5 ns;
+            i_clk_tmds_pixel <= '0';
+            wait for 18.5 ns;
+         end process;
+      end generate;
+
+      p_pll_hdmi_tmds: process
+      begin
+         i_clk_tmds <= '1';
+         wait for 3.7 ns;
+         i_clk_tmds <= '0';
+         wait for 3.7 ns;
+      end process;
+   end generate;
+
 END GENERATE;
 
 --TODO: clash with OSER10's on video

@@ -52,18 +52,14 @@ use work.board_config_pack.all;
 
 entity address_decode is
 	generic (
-		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		G_PERIPHERAL_COUNT		: natural;
-		G_INCL_CHIPSET				: boolean;
-		G_INCL_HDMI					: boolean;
 		G_C20K						: boolean := false;
 		G_HDMI_SHADOW_SYS			: boolean := false							-- when true chipset hdmi shadows/hides motherboard graphics
 	);
 	port(
 		addr_i						: in		std_logic_vector(23 downto 0);
 		we_i							: in     std_logic;
-		peripheral_sel_o			: out		unsigned(numbits(G_PERIPHERAL_COUNT)-1 downto 0);
-		peripheral_sel_oh_o		: out		std_logic_vector(G_PERIPHERAL_COUNT-1 downto 0)		
+		peripheral_sel_o			: out		unsigned(numbits(PERIPHERAL_COUNT)-1 downto 0);
+		peripheral_sel_oh_o		: out		std_logic_vector(PERIPHERAL_COUNT-1 downto 0)		
 	);
 end address_decode;
 
@@ -83,26 +79,26 @@ begin
 			-- peripherals/sys
 			if addr_i(19 downto 17) = "101" and G_INCL_HDMI then		-- "11xx 101x"		FA-FB
 					-- hdmi
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
 			elsif (addr_i(16) = '1') then																-- "11xx xxx1"		FF
 				if addr_i(15 downto 4) = x"FE3" and addr_i(3 downto 0) /= x"0" and addr_i(3 downto 0) /= x"4" then
 					-- memctl
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEMCTL, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_MEMCTL, numbits(PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_MEMCTL) <= '1';
 				else
 					
 					if addr_i(15 downto 4) = x"FE0" and addr_i(3) = '0' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
 						-- crtc
-						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
 					elsif addr_i(15 downto 4) = x"FE2" and addr_i(3) = '0' and we_i = '1' and G_INCL_HDMI and G_HDMI_SHADOW_SYS then 
 						-- (n)ula
-						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
 					elsif unsigned(addr_i(15 downto 12)) < 8 and (unsigned(addr_i(15 downto 12)) >= 3 or G_C20K) and G_INCL_HDMI and G_HDMI_SHADOW_SYS then
 						-- memory
-						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_HDMI, numbits(PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_HDMI) <= '1';				
 					elsif (addr_i(15 downto 0) and x"FFFC") = x"FC50" and G_INCL_XFLASH then
 						--TODO: move inside chipset, extras or SYS
@@ -114,29 +110,29 @@ begin
 						peripheral_sel_oh_o(PERIPHERAL_NO_UART) <= '1';
 					else
 						-- SYS
-						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(G_PERIPHERAL_COUNT));
+						peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_SYS, numbits(PERIPHERAL_COUNT));
 						peripheral_sel_oh_o(PERIPHERAL_NO_SYS) <= '1';
 					end if;
 				end if;
 			elsif addr_i(17) = '1' and G_INCL_CHIPSET then										-- "11xx xx1x"		FE
-				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET, numbits(G_PERIPHERAL_COUNT));
+				peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPSET, numbits(PERIPHERAL_COUNT));
 				peripheral_sel_oh_o(PERIPHERAL_NO_CHIPSET) <= '1';
 			else
 				if addr_i(15) = '1' and G_INCL_PREBOOT then
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_PREBOOT, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_PREBOOT, numbits(PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_PREBOOT) <= '1';
 				elsif addr_i(14) = '1' then
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CONFIG, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CONFIG, numbits(PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_CONFIG) <= '1';
 				else
 					-- version
-					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(G_PERIPHERAL_COUNT));
+					peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_VERSION, numbits(PERIPHERAL_COUNT));
 					peripheral_sel_oh_o(PERIPHERAL_NO_VERSION) <= '1';
 				end if;
 			end if;
 		else
 			-- memory
-			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPRAM, numbits(G_PERIPHERAL_COUNT));
+			peripheral_sel_o <= to_unsigned(PERIPHERAL_NO_CHIPRAM, numbits(PERIPHERAL_COUNT));
 			peripheral_sel_oh_o(PERIPHERAL_NO_CHIPRAM) <= '1';
 		end if;
 	end process;

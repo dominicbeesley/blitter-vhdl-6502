@@ -11,11 +11,9 @@
 
         <File path="../../shared/version.vhd" type="file.vhdl" enable="1"/>
 
-        <File path="src/gowin_dpb/hdmi_blockram.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_27_360.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_360_384_128.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/pll_hdmi.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_sdpb/linebuffer.vhd" type="file.vhdl" enable="1"/>
 
         <File path="../../../shared/firmware_info_pack.vhd" type="file.vhdl" enable="1" />
         <File path="src/board_config_pack.vhd" type="file.vhdl" enable="1" />
@@ -35,7 +33,7 @@
 
         <File path="../../../shared/log2phys.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_CPU_pack.vhd" type="file.vhdl" enable="1" />
-        <File path="src/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
+        <File path="../../shared/fb_C20K_mem_cpu_65816.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/address_decode.vhd" type="file.vhdl" enable="1" />
         <File path="../../../shared/fb_i2c.vhd" type="file.vhdl" enable="1" />
         <File path="../../../mk3/shared/fb_MEM.vhd" type="file.vhdl" enable="1" />
@@ -65,6 +63,7 @@
         <File path="../../../library/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_intcon_shared.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/fishbone/fb_intcon_buffer.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_null.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/fishbone/fb_inferred_mem.vhd" type="file.vhdl" enable="1" />
 
@@ -105,28 +104,30 @@
         <File path="../../../library/3rdparty/hdmi_alexey_spirkov/hdmidelay.vhd" type="file.vhdl" enable="1" />
 
 
-
+        <File path="../../../library/ram_sdp_2clk.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../library/ram_tdp_2clk.vhd" type="file.vhdl" enable="1" />
         <File path="../../shared/hdmi//hdmi_out_gowin_2a.vhd" type="file.vhdl" enable="1" />
 
-        <File path="../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/sync_sync.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/vid15tohdmi.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/sync_sync.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/dvi_synchro.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/mc6845.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_crtc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_crtc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/vidproc_model_bc.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/saa5050.vhd" type="file.vhdl" enable="1" />
         <File path="../../../library/3rdparty/MikeStirling/saa5050_rom_dual_port_dom.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_vidproc.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_ram.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/HDMI_pack.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_enabled.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_ctl.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/fb_HDMI_seq_ctl.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/sprites/sprites_pack.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/sprites/fb_sprites.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/sprites/sprites.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/sprites/sprite_int.vhd" type="file.vhdl" enable="1" />
-        <File path="../../shared/hdmi/vidmem_sequencer.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_vidproc.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_ram.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/HDMI_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/hdmi_int_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_enabled.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/fb_HDMI_seq_ctl.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/sprites/sprites_pack.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/sprites/fb_sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/sprites/sprites.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/sprites/sprite_int.vhd" type="file.vhdl" enable="1" />
+        <File path="../../../shared/hdmi/vidmem_sequencer.vhd" type="file.vhdl" enable="1" />
 
 
     </FileList>

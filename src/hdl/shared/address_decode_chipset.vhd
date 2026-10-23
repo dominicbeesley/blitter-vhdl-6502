@@ -52,8 +52,6 @@ use work.board_config_pack.all;
 
 entity address_decode_chipset is
 	generic (
-		SIM							: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-
 		G_PERIPHERAL_NO_CHIPSET_DMA		: natural;
 		G_PERIPHERAL_NO_CHIPSET_SOUND		: natural;
 		G_PERIPHERAL_NO_CHIPSET_BLIT		: natural;
@@ -61,10 +59,9 @@ entity address_decode_chipset is
 		G_PERIPHERAL_NO_CHIPSET_EEPROM	: natural;
 		G_PERIPHERAL_NO_CHIPSET_SDCARD	: natural;
 		G_PERIPHERAL_COUNT_CHIPSET			: natural
-
 	);
 	port(
-		addr_i						: in		std_logic_vector(9 downto 0);
+		addr_i						       : in		std_logic_vector(23 downto 0);
 		-- NOTE: extra channel for no match
 		peripheral_sel_o					: out		unsigned(numbits(G_PERIPHERAL_COUNT_CHIPSET+1)-1 downto 0);
 		peripheral_sel_oh_o				: out		std_logic_vector(G_PERIPHERAL_COUNT_CHIPSET downto 0)

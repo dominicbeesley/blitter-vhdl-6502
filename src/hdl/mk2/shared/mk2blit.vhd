@@ -27,7 +27,7 @@
 -- 
 -- Create Date:    	4/4/2019
 -- Design Name: 
--- Module Name:    	dip 40 blitter - mk2 product board
+-- Module Name:    	mk2blit
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
@@ -59,7 +59,6 @@ entity mk2blit is
 	generic (
 		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED							: natural := 128;								-- fast clock speed in mhz				
-		G_JIM_DEVNO							: std_logic_vector(7 downto 0) := x"D1";
 		G_DWRITE_HOLD						: natural := 6;								-- hold write data on system bus for this many cycles
       PROJECT_ROOT                  : string  := "../"                     -- path to root of project (to find relative files, override in simulations)
 	);
@@ -183,6 +182,10 @@ architecture rtl of mk2blit is
 
    signal i_map0n1            : std_logic;                     -- which ROM map - used to be static, can now change at runtime
 
+   -----------------------------------------------------------------------------
+   -- Aeris external signals in from CRTC
+   -----------------------------------------------------------------------------
+
 	signal i_hsync					: std_logic;
 	signal i_vsync					: std_logic;
 
@@ -208,7 +211,7 @@ architecture rtl of mk2blit is
 	signal i_c2p_memctl			: fb_con_o_per_i_t;
 	signal i_p2c_memctl			: fb_con_i_per_o_t;
 
-	-- memory control registers wrapper
+	-- version information wrapper
 	signal i_c2p_version			: fb_con_o_per_i_t;
 	signal i_p2c_version			: fb_con_i_per_o_t;
 
@@ -266,7 +269,7 @@ architecture rtl of mk2blit is
 
 	signal i_memctl_configbits			: std_logic_vector(15 downto 0);
    signal i_preboot                 : std_logic;
-
+   signal i_preboot_s               : std_logic;
 	-- intcon to peripheral sel
 	signal i_intcon_peripheral_sel_addr		: fb_arr_std_logic_vector(CONTROLLER_COUNT-1 downto 0)(23 downto 0);
 	signal i_intcon_peripheral_sel_we		: std_logic_vector(CONTROLLER_COUNT-1 downto 0);
@@ -280,14 +283,6 @@ architecture rtl of mk2blit is
 	signal i_clk_snd						: std_logic;							-- ~3.5MHz PAULA samplerate clock
 	signal i_dac_snd_pwm					: std_logic;							-- pwm signal for sound channels
 	signal i_dac_sample					: signed(15 downto 0);				-- sample playing
-
-	-----------------------------------------------------------------------------
-	-- sys signals
-	-----------------------------------------------------------------------------
-
-	signal i_SYS_RnW						: std_logic;
-	signal i_SYS_A							: std_logic_vector(15 downto 0);
-	signal i_SYS_PHI2						: std_logic;
 
 	-----------------------------------------------------------------------------
 	-- cpu control signals
@@ -378,12 +373,6 @@ begin
 g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	-- address decode to select peripheral
 	e_addr2s:entity work.address_decode
-	generic map (
-		SIM							=> SIM,
-		G_PERIPHERAL_COUNT		=> PERIPHERAL_COUNT,
-		G_INCL_CHIPSET				=> G_INCL_CHIPSET,
-		G_INCL_HDMI					=> G_INCL_HDMI
-	)
 	port map (
 		addr_i						=> i_intcon_peripheral_sel_addr(I),
 		we_i							=> i_intcon_peripheral_sel_we(I),
@@ -392,25 +381,22 @@ g_addr_decode:for I in CONTROLLER_COUNT-1 downto 0 generate
 	);
 end generate;
 
-g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
-	e_fb_intcon: entity work.fb_intcon_shared
+	e_fb_intcon: fb_intcon_shared
 	generic map (
-		SIM => SIM,
 		G_CONTROLLER_COUNT => CONTROLLER_COUNT,
 		G_PERIPHERAL_COUNT => PERIPHERAL_COUNT,
-		G_REGISTER_CONTROLLER_P2C => true,
-		G_REGISTER_CONTROLLER_P2C_BEFORE_MUX => false -- TODO: this fails on mk.2 but seems ok on C20K and mk.3
+      G_ARB_ROUND_ROBIN             => true
 		)
 	port map (
 		fb_syscon_i 		=> i_fb_syscon,
 
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon,
-		fb_con_p2c_o						=> i_con_p2c_intcon,
+      -- upstream ports connect to controllers
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
 
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
+      -- downstream ports connect to peripherals
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
 		peripheral_sel_addr_o					=> i_intcon_peripheral_sel_addr,
 		peripheral_sel_we_o						=> i_intcon_peripheral_sel_we,
@@ -418,34 +404,6 @@ g_intcon_shared:IF CONTROLLER_COUNT > 1 GENERATE
 		peripheral_sel_oh_i						=> i_intcon_peripheral_sel_oh
 	);
 
-
-END GENERATE;
-g_intcon_o2m:IF CONTROLLER_COUNT = 1 GENERATE
-	e_fb_intcon: fb_intcon_one_to_many
-	generic map (
-		SIM 									=> SIM,
-		G_PERIPHERAL_COUNT 						=> PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH 					=> 24
-		)
-	port map (
-		fb_syscon_i 						=> i_fb_syscon,
-
-		-- peripheral ports connect to controllers
-		fb_con_c2p_i						=> i_con_c2p_intcon(0),
-		fb_con_p2c_o						=> i_con_p2c_intcon(0),
-
-		-- controller ports connect to peripherals
-		fb_per_c2p_o						=> i_per_c2p_intcon,
-		fb_per_p2c_i						=> i_per_p2c_intcon,
-
-		peripheral_sel_addr_o			=> i_intcon_peripheral_sel_addr(0),
-		peripheral_sel_we_o				=> i_intcon_peripheral_sel_we(0),
-		peripheral_sel_i					=> i_intcon_peripheral_sel(0),
-		peripheral_sel_oh_i				=> i_intcon_peripheral_sel_oh(0)
-	);
-
-
-END GENERATE;
 
 	i_con_c2p_intcon(MAS_NO_CPU)			<= i_c2p_cpu;
 	i_per_p2c_intcon(PERIPHERAL_NO_MEMCTL)	<=	i_p2c_memctl;
@@ -462,10 +420,12 @@ END GENERATE;
    i_c2p_config         <= i_per_c2p_intcon(PERIPHERAL_NO_CONFIG);
 
 GCHIPSET: IF G_INCL_CHIPSET GENERATE
+   GCHIPSET_MASTER:if CONTROLLER_COUNT_CHIPSET > 0 GENERATE
 	i_con_c2p_intcon(MAS_NO_CHIPSET)		<= i_c2p_chipset_con;
-	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
+      i_p2c_chipset_con    <= i_con_p2c_intcon(MAS_NO_CHIPSET);
+   end generate;
 
-	i_p2c_chipset_con 	<= i_con_p2c_intcon(MAS_NO_CHIPSET);
+	i_per_p2c_intcon(PERIPHERAL_NO_CHIPSET)	<= i_p2c_chipset_per;
 	i_c2p_chipset_per		<= i_per_c2p_intcon(PERIPHERAL_NO_CHIPSET);
 
 	e_chipset:fb_chipset
@@ -641,13 +601,8 @@ END GENERATE;
 		fb_c2p_i								=> i_c2p_mem,
 		fb_p2c_o								=> i_p2c_mem,
 
-		debug_mem_a_stb_o					=> i_debug_mem_a_stb
+		debug_mem_a_stb_o					=> open
 	);
-
-
-	SYS_RnW_o <= i_SYS_RnW;
-	SYS_A_o <= i_SYS_A;
-	SYS_PHI2_o <= i_SYS_PHI2;
 
 	e_fb_sys: entity work.fb_sys
 	generic map (
@@ -659,14 +614,14 @@ END GENERATE;
 	port map (
       cfg_sys_type_i                => r_cfg_sys_type,
 
-		SYS_A_o								=> i_SYS_A,
+      SYS_A_o                       => SYS_A_o,
 		SYS_D_io								=> SYS_D_io,
 		SYS_RDY_i							=> SYS_RDY_i,
 		SYS_SYNC_o							=> SYS_SYNC_o,
 		SYS_PHI0_i							=> SYS_PHI0_i,
 		SYS_PHI1_o							=> SYS_PHI1_o,
-		SYS_PHI2_o							=> i_SYS_PHI2,
-		SYS_RnW_o							=> i_SYS_RnW,
+      SYS_PHI2_o                    => SYS_PHI2_o,
+      SYS_RnW_o                     => SYS_RnW_o,
 
 		-- fishbone signals
 		fb_syscon_i							=> i_fb_syscon,
@@ -748,7 +703,7 @@ END GENERATE;
    -- PRE-BOOT ROM
    -------------------------------------
 
-   g_pre_rom:if G_INCL_PREBOOT generate
+   g_pre_rom:if G_INCL_PREBOOT and NOT SIM generate
       b_spi:block
          signal i_c2p_preboot          : fb_con_o_per_i_t;
          signal i_p2c_preboot          : fb_con_i_per_o_t;         
@@ -778,16 +733,8 @@ END GENERATE;
 	generic map (
 		SIM => SIM,
 		CLOCKSPEED => CLOCKSPEED,
-
-		G_INCL_CPU_T65						=> G_INCL_CPU_T65,
-		G_INCL_CPU_65C02					=> G_INCL_CPU_65C02,
-		G_INCL_CPU_6800					=> G_INCL_CPU_6800,
-		G_INCL_CPU_80188					=> G_INCL_CPU_80188,
-		G_INCL_CPU_65816					=> G_INCL_CPU_65816,
-		G_INCL_CPU_6x09					=> G_INCL_CPU_6x09,
-		G_INCL_CPU_Z80						=> G_INCL_CPU_Z80,
-		G_INCL_CPU_680x0					=> G_INCL_CPU_680x0,
-		G_INCL_CPU_68008					=> G_INCL_CPU_68008
+      G_MK3 => false,
+      G_C20K => false
 	)
 	port map (
 
@@ -852,13 +799,15 @@ END GENERATE;
 		window_65816_wr_en_i				=> i_window_65816_wr_en,
 
 		-- preboot
-		preboot_i							=> i_preboot,
+		preboot_i							=> i_preboot_s,
 
 		debug_wrap_cyc_o					=> i_debug_wrap_cyc,
 
 		debug_65816_vma_o					=> i_debug_65816_vma
 
 	);
+
+   i_preboot_s <= i_preboot when not SIM else '0';
 
 	i_cpu_IRQ_n <= SYS_nIRQ_i and not i_chipset_cpu_int;
 
@@ -899,7 +848,14 @@ END GENERATE;
 
 
 
-	p_debug_btn:process(i_fb_syscon)
+	
+
+
+-- ================================================================================================ --
+-- BOOT TIME CONFIGURATION
+-- ================================================================================================ --
+
+p_debug_btn:process(i_fb_syscon)
 	variable vcnt:unsigned(7 downto 0);
 	begin
 		if i_fb_syscon.rst = '1' then
@@ -922,16 +878,10 @@ END GENERATE;
 	end process;
 
 
--- ================================================================================================ --
--- BOOT TIME CONFIGURATION
--- ================================================================================================ --
-
-
 
 CFG_io <= (others => 'Z');
 
-
-
+--TODO: make the cpu swap only occur on long resets, to match fb_memctl
 p_config:process(i_fb_syscon)
 begin
 	if rising_edge(i_fb_syscon.clk) then

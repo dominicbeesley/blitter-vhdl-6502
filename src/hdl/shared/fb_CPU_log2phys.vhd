@@ -109,13 +109,14 @@ end fb_cpu_log2phys;
 
 architecture rtl of fb_cpu_log2phys is 
 
-	type state_t is (idle, waitstall, wait_d_stb);
+	type state_t is (idle, wait_a_ack);
 
 	signal r_state 		: state_t;
 
+	signal r_A_ack_host				: std_logic;
 	signal r_cyc						: std_logic;
-	signal r_A_stb						: std_logic;							-- output address strobe
-	signal i_A_stb						: std_logic;							-- input qualified address strobe
+	signal r_A_stb_client			: std_logic;							-- output address strobe
+	signal i_A_stb_host				: std_logic;							-- input qualified address strobe
 	signal i_phys_A					: std_logic_vector(23 downto 0);
 	signal r_phys_A					: std_logic_vector(23 downto 0);
 	signal r_we							: std_logic;
@@ -123,23 +124,23 @@ architecture rtl of fb_cpu_log2phys is
 	signal r_D_wr						: std_logic_vector(7 downto 0);
 	signal r_rdy_ctdn					: t_rdy_ctdn;
 
-	signal r_done_r_d_wr_stb		: std_logic;
-
 	signal i_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 	signal r_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
 
 begin
 
 
-	fb_con_p2c_o.stall <= '0' when r_state = idle else '1';
-	fb_con_p2c_o.ack <= fb_per_p2c_i.ack;
-	fb_con_p2c_o.rdy <= fb_per_p2c_i.rdy;
+	fb_con_p2c_o.A_ack <= r_A_ack_host;
 	fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
+ 	-- gate with r_cyc: our cyc to the peripheral drops a clock after the host's,
+   -- so a D_ack from the aborted cycle could otherwise reach the host
+   fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack and r_cyc;
+   fb_con_p2c_o.rdy   <= fb_per_p2c_i.rdy and r_cyc;
 
 	fb_per_c2p_o.cyc			<=	r_cyc;
 	fb_per_c2p_o.we			<=	r_we;
 	fb_per_c2p_o.A				<=	r_phys_A;
-	fb_per_c2p_o.A_stb		<= r_A_stb;
+	fb_per_c2p_o.A_stb		<= r_A_stb_client;
 	fb_per_c2p_o.D_wr			<= r_D_wr;
 	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
 	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
@@ -150,12 +151,11 @@ begin
 	-- State Machine 
 	-- ================================================================================================ --
 
-	i_A_stb 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
+	i_A_stb_host 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
 					'0';
 
 
 	p_state:process(fb_syscon_i)
-	variable v_accept_wr_stb:boolean;
 	begin
 		if fb_syscon_i.rst = '1' then
 			r_state <= idle;
@@ -165,72 +165,57 @@ begin
 			r_D_wr_stb <= '0';
 			r_D_wr <= (others => '0');
 			r_rdy_ctdn <= RDY_CTDN_MAX;
-			r_a_stb <= '0';
-			r_done_r_d_wr_stb <= '0';
+			r_a_stb_client <= '0';
+			r_A_ack_host <= '0';
+			r_throttle_act <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
-			r_a_stb <= '0';
+			r_a_stb_client <= '0';
+			r_A_ack_host <= '0';
 
-			v_accept_wr_stb := false;
+			-- write data: registered copy of the host's, which it holds until
+         -- D_ack. Masked in the clock after the peripheral's D_ack (the host
+         -- hasn't seen it yet); the peripheral's guard covers the clock after.
+         r_D_wr_stb <= fb_con_c2p_i.D_wr_stb and not fb_per_p2c_i.D_ack;
+         r_D_wr     <= fb_con_c2p_i.D_wr;
+         -- rdy_ctdn is constant for the host's whole cyc, and r_cyc drops at
+         -- the same edge the host's cyc is first seen low, so copying it every
+         -- clock keeps it constant for our cyc too, with no enable needed
+         -- (as fb_intcon_buffer)
+         r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
 			case r_state is
 				when idle =>
-					r_done_r_d_wr_stb <= '0';
-					r_D_wr_stb <= '0';
-					if i_A_stb then
-						v_accept_wr_stb := true;
-						r_phys_A <= i_phys_A;
+					-- address and we follow the host every idle clock, so the host
+					-- A_stb doesn't drive their enable; only the value at the
+					-- accepting edge is used, and A_stb to the peripheral is low here.
+					-- r_throttle_act stays on the strobe: throttle_act_o is used by
+					-- the CPU wrapper after this transaction is accepted.
+					r_phys_A <= i_phys_A;
+					r_we <= fb_con_c2p_i.we;
+					if i_A_stb_host then
 						r_throttle_act <= i_throttle_act;
-						r_we <= fb_con_c2p_i.we;
-						r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 						r_cyc <= '1';
-						r_state <= waitstall;
-						r_a_stb <= '1';
+						r_state <= wait_a_ack;
+						r_a_stb_client <= '1';
+						r_a_ack_host <= '1';
 					end if;
-				when waitstall =>
-					v_accept_wr_stb := true;
-					if fb_per_p2c_i.stall = '1' then
-						r_a_stb <= '1';
-						r_State <= waitstall;
+				when wait_a_ack =>
+					if fb_per_p2c_i.A_ack = '0' then
+						r_a_stb_client <= '1';
+						r_State <= wait_a_ack;
 					else
-						if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
-							r_state <= idle;
-							r_done_r_d_wr_stb <= '0';
-							r_D_wr_stb <= '0';
-						else
-							r_state <= wait_d_stb;
-						end if;
-						r_D_wr_stb <= '0';
-					end if;
-				when wait_d_stb =>
-					v_accept_wr_stb := true;
-					r_D_wr_stb <= '0';
-					-- this gets cancelled in if below
-					if fb_con_c2p_i.D_wr_stb = '1' or r_we = '0' or r_done_r_d_wr_stb = '1' then
 						r_state <= idle;
-						r_done_r_d_wr_stb <= '0';
-						r_D_wr_stb <= '0';
 					end if;
 				when others =>
 					r_state <= idle;
 			end case;
 
-			if v_accept_wr_stb then
-				if r_done_r_d_wr_stb = '0' or r_state = idle then
-					if (r_D_wr_stb = '0' or r_state = idle) and fb_con_c2p_i.D_wr_stb = '1' then
-						r_D_wr_stb <= '1';
-						r_D_wr <= fb_con_c2p_i.D_WR;
-						r_done_r_d_wr_stb <= '1';
-					end if;
-				end if;
-			end if;
-
 			if fb_con_c2p_i.cyc = '0' then
-				r_A_stb <= '0';
+				r_A_stb_client <= '0';
 				r_cyc <= '0';
 				r_state <= idle;
 				r_D_wr_stb <= '0';
-				r_done_r_d_wr_stb <= '0';
 			end if;
 
 		end if;
@@ -275,7 +260,7 @@ begin
 
 		A_i									=> fb_con_c2p_i.A,
 		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
-		A_stb_i								=> i_A_stb,
+		A_stb_i								=> i_A_stb_host,
 
 		A_o									=> i_phys_A,
 

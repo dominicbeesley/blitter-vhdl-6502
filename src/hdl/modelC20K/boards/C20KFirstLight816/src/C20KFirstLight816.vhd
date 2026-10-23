@@ -57,6 +57,7 @@ use work.ws2812_pack.all;
 entity C20KFirstLight816 is
    generic (
       SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      SIM_NO_DVI                    : boolean := false;                    -- disable TMDS output
       CLOCKSPEED                    : natural := 128;                      -- fast clock speed in mhz          
       BAUD                          : natural := 19200;
       PROJECT_ROOT_PATH             : string  := "../../../../..";
@@ -194,20 +195,19 @@ architecture rtl of C20KFirstLight816 is
    );
    END COMPONENT;
 
-component pll_48_128
-    port (
-        clkout: out std_logic;
-        clkin: in std_logic
-    );
-end component;
-
-component pll_27_48
-    port (
-        clkout: out std_logic;
-        clkin: in std_logic
-    );
-end component;
-
+   component hdmi_out_gowin_2a is
+      port (
+      clock_pixel_i     : in std_logic;   -- x1
+      clock_tdms_i      : in std_logic;   -- x5
+      red_i             : in  std_logic_vector(9 downto 0);
+      green_i           : in  std_logic_vector(9 downto 0);
+      blue_i            : in  std_logic_vector(9 downto 0);      
+      red_s             : out std_logic;
+      green_s           : out std_logic;
+      blue_s            : out std_logic;
+      clock_s           : out std_logic
+   );
+   end component;
 
    signal i_cfg_eco_station_id: std_logic_vector(7 downto 0) := x"A5";
    -----------------------------------------------------------------------------
@@ -279,6 +279,8 @@ end component;
 	-- hdmi peripheral interface control registers
 	signal i_c2p_hdmi_per				: fb_con_o_per_i_t;
 	signal i_p2c_hdmi_per				: fb_con_i_per_o_t;
+	signal i_c2p_hdmi_buf				: fb_con_o_per_i_t;		-- after e_hdmi_buf
+	signal i_p2c_hdmi_buf				: fb_con_i_per_o_t;
 
 	signal i_vid_48_r                : std_logic_vector(3 downto 0);
 	signal i_vid_48_g                : std_logic_vector(3 downto 0);
@@ -291,6 +293,16 @@ end component;
 
 	signal i_mb_scroll_latch_c			: std_logic_vector(1 downto 0); -- scroll offset registers from port B latch
    
+   signal i_tmds_R                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_G                  : std_logic_vector(9 downto 0); -- tmds encoded data
+   signal i_tmds_B                  : std_logic_vector(9 downto 0); -- tmds encoded data
+
+   signal i_clk_tmds_pixel    : std_logic;
+   attribute syn_keep of i_clk_tmds_pixel : signal is 1; -- keep for SDC?
+   signal i_clk_tmds          : std_logic;
+   attribute syn_keep of i_clk_tmds : signal is 1; -- keep for SDC?
+
+
    -----------------------------------------------------------------------------
    -- peripherals
    -----------------------------------------------------------------------------
@@ -300,17 +312,19 @@ end component;
    signal r_clken_baud16  : std_logic;
    signal r_clk_baud_div: unsigned(numbits(C_BAUD_CKK16_DIV-1) downto 0); -- note 1 bigger to catch carry out
 
-   signal i_ser_tx      : std_logic;
-
-   signal i_clk_pll_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
-   attribute syn_keep of i_clk_pll_48M : signal is 1; -- keep for SDC
-   signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
-   attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
 
    signal i_clk_pll_360M: std_logic;         -- used for video DACs
    attribute syn_keep of i_clk_pll_360M : signal is 1; -- keep for SDC
    signal i_clk_div_72M:  std_logic;         -- used for video DAC samples 
    attribute syn_keep of i_clk_div_72M : signal is 1; -- keep for SDC
+   signal i_clk_pll_384M:  std_logic;         -- used for 3x128
+   attribute syn_keep of i_clk_pll_384M : signal is 1; -- keep for SDC
+   signal i_clk_div_96M:  std_logic;         -- used for 3x128
+   attribute syn_keep of i_clk_div_96M : signal is 1; -- keep for SDC
+   signal i_clk_div_48M: std_logic;          -- used for HDMI / VIDEO pixels (12/24/16 MHz pixel clocks)
+   attribute syn_keep of i_clk_div_48M : signal is 1; -- keep for SDC
+   signal i_clk_pll_128M: std_logic;         -- used for main logic/fishbone bus
+   attribute syn_keep of i_clk_pll_128M : signal is 1; -- keep for SDC
 
 
    -- multiplex in to core, out from peripheral (I0 phase)   
@@ -319,27 +333,18 @@ end component;
    signal i_sys_nNMI        : std_logic;
 
    -- multiplex in to core, out from peripheral (I1 phase)   
-   signal icipo_j_i0       : std_logic;
-   signal icipo_j_i1       : std_logic;
-   signal icipo_j_spi_miso : std_logic;
    signal icipo_btn0       : std_logic;
    signal icipo_btn1       : std_logic;
    signal icipo_btn2       : std_logic;
    signal icipo_btn3       : std_logic;
 
 
-   -- multiplex out from core, in to peripheral (O0 phase)   
-   signal icopi_j_ds_nCS2  : std_logic;
-   signal icopi_j_ds_nCS1  : std_logic;
-   signal icopi_j_spi_clk  : std_logic;
-   signal icopi_j_spi_mosi : std_logic;
-   signal icopi_j_adc_nCS  : std_logic;
-
    -- emulated / synthesized beeb signals
    signal i_beeb_ic32      : std_logic_vector(7 downto 0);
    signal i_c20k_latch     : std_logic_vector(7 downto 0);
    signal i_psg_audio      : signed(13 downto 0);
    signal r_dac_sample     : signed(10 downto 0);
+   signal i_paula_sample   : signed(9 downto 0) := (others => '0');
 
    -- debug
    signal i_debug_leds     : ws2812_colour_arr_t(0 to 7);
@@ -348,14 +353,15 @@ end component;
    -----------------------------------------------------------------------------
    -- 1 bit video clocks and chroma
    -----------------------------------------------------------------------------
---   signal i_clk_chroma_x4_jitter : std_logic; -- Base PALx4 clock
---   attribute syn_keep of i_clk_chroma_x4_jitter : signal is 1; -- keep for SDC
---   signal i_clk_chroma_x4        : std_logic;
---   signal i_clk_chroma_x60_dac   : std_logic;
---   signal i_clk_chroma_x12_px    : std_logic;
---   signal i_clk_chroma_x20_dac   : std_logic;
-   signal i_chroma_s             : signed(4 downto 0);
-   signal r2_vid_chroma          : unsigned(4 downto 0);
+   
+   constant C_CHROMA_BITS : natural := 5;
+   signal i_clk_chroma_x4_jitter : std_logic; -- Base PALx4 clock
+   signal i_clk_chroma_x4        : std_logic;
+   signal i_clk_chroma_x60_dac   : std_logic;
+   signal i_clk_chroma_x12_px    : std_logic;
+   signal i_clk_chroma_x20_dac   : std_logic;
+   signal i_chroma_s             : signed(C_CHROMA_BITS - 1 downto 0);
+   signal r2_vid_chroma          : unsigned(C_CHROMA_BITS - 1 downto 0);
 
    signal i_vid_r_0  : std_logic;
    signal i_vid_g_0  : std_logic;
@@ -364,41 +370,42 @@ end component;
 
 begin
 
-g_pll:if not SIM generate
-   e_pll_27_48:pll_27_48
+   e_pll_27_360: entity work.pll_27_360
    port map (
-      clkout => i_clk_pll_48M,
-      clkin => brd_clk_27M_i
+      clkin => brd_clk_27M_i,
+      clkout => i_clk_pll_360M
    );
 
-   e_pll_48_128:pll_48_128
+   e_pll_360_384_128: entity work.pll_360_384_128
    port map (
-      clkout => i_clk_pll_128M,
-      clkin => i_clk_pll_48M
+      clkin => i_clk_pll_360M,
+      clkout => i_clk_pll_384M,
+      clkoutd3 => i_clk_pll_128M
    );
 
-end generate;
+   e_div2_384_96: CLKDIV
+   generic map (
+      DIV_MODE => "4",            -- Divide by 4
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_pll_384M,
+      CLKOUT => i_clk_div_96M,
+      CALIB  => '1'
+   );
 
-g_pll_dont:if SIM generate
-   p_pll_27_48:process
-   constant c_per : time := 0.5 us / 48;
-   begin
-      i_clk_pll_48M <= '1';
-      wait for c_per;
-      i_clk_pll_48M <= '0';
-      wait for c_per;
-   end process;
-
-   p_pll_48_128:process
-   constant c_per : time := 0.5 us / 128;
-   begin
-      i_clk_pll_128M <= '1';
-      wait for c_per;
-      i_clk_pll_128M <= '0';
-      wait for c_per;
-   end process;
-
-end generate;
+   e_div2_96_48: CLKDIV
+   generic map (
+      DIV_MODE => "2",            -- Divide by 2
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_div_96M,
+      CLKOUT => i_clk_div_48M,
+      CALIB  => '1'
+   );
 
    e_fb_syscon: entity work.fb_syscon
    generic map (
@@ -419,8 +426,7 @@ end generate;
    -- address decode to select peripheral
    e_addr2s:entity work.address_decode_P20K
    generic map (
-      SIM                     => SIM,
-      G_PERIPHERAL_COUNT      => PERIPHERAL_COUNT
+      SIM                     => SIM
    )
    port map (
       addr_i                  => i_intcon_peripheral_sel_addr(0),
@@ -428,26 +434,26 @@ end generate;
       peripheral_sel_oh_o     => i_intcon_peripheral_sel_oh(0)
    );
 
-   e_fb_intcon: fb_intcon_one_to_many
+   e_fb_intcon: fb_intcon_shared
    generic map (
-      SIM                           => SIM,
-      G_PERIPHERAL_COUNT                  => PERIPHERAL_COUNT,
-      G_ADDRESS_WIDTH               => 24
+      G_CONTROLLER_COUNT            => CONTROLLER_COUNT,
+      G_PERIPHERAL_COUNT            => PERIPHERAL_COUNT,
+      G_PIPELINE_DEPTH              => G_PIPELINE_DEPTH
       )
    port map (
       fb_syscon_i                   => i_fb_syscon,
 
       -- peripheral ports connect to controllers
-      fb_con_c2p_i                  => i_con_c2p_intcon(0),
-      fb_con_p2c_o                  => i_con_p2c_intcon(0),
+      fb_up_c2p_i                   => i_con_c2p_intcon,
+      fb_up_p2c_o                   => i_con_p2c_intcon,
 
       -- controller ports connect to peripherals
-      fb_per_c2p_o                  => i_per_c2p_intcon,
-      fb_per_p2c_i                  => i_per_p2c_intcon,
+      fb_dn_c2p_o                   => i_per_c2p_intcon,
+      fb_dn_p2c_i                   => i_per_p2c_intcon,
 
-      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr(0),
-      peripheral_sel_i              => i_intcon_peripheral_sel(0),
-      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh(0)
+      peripheral_sel_addr_o         => i_intcon_peripheral_sel_addr,
+      peripheral_sel_i              => i_intcon_peripheral_sel,
+      peripheral_sel_oh_i           => i_intcon_peripheral_sel_oh
    );
 
    i_con_c2p_intcon(MAS_NO_CPU)           <= i_c2p_cpu;
@@ -523,6 +529,30 @@ end generate;
 
    );
 
+  p_reg_snd:process(i_fb_syscon)
+   begin 
+      if rising_edge(i_fb_syscon.clk) then
+         r_dac_sample <= resize(i_paula_sample, 11) + resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
+      end if;
+   end process;
+
+   e_dac_snd: entity work.dac_1bit 
+   generic map (
+      G_SAMPLE_SIZE     => 11,
+      G_SYNC_DEPTH      => 0
+   )
+   port map (
+      rst_i             => i_fb_syscon.rst,
+      clk_dac           => i_fb_syscon.clk,
+
+      sample            => r_dac_sample,
+  
+      bitstream         => i_dac_snd_pwm
+   );
+
+   aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
+   aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
+   aud_i2s_dat_o        <= '1';
 
    e_fb_cpu_mem: entity work.fb_C20K_mem_cpu_65816
    generic map (
@@ -589,34 +619,6 @@ end generate;
       led_serial_o                  => open --ui_leds_o
    );
 
-   p_reg_snd:process(i_fb_syscon)
-   begin 
-      if rising_edge(i_fb_syscon.clk) then
-         r_dac_sample <= resize(i_psg_audio(i_psg_audio'high downto i_psg_audio'high-9), 11);
-      end if;
-   end process;
-
-
-   --NOTE: we do DAC stuff at top level as blitter/1MPaula do this differently
-
-  e_dac_snd: entity work.dac_1bit 
-  generic map (
-     G_SAMPLE_SIZE     => 11,
-     G_SYNC_DEPTH      => 0
-  )
-  port map (
-     rst_i             => i_fb_syscon.rst,
-     clk_dac           => i_fb_syscon.clk,
-
-     sample            => r_dac_sample,
-  
-     bitstream         => i_dac_snd_pwm
-  );
-
-
-	aud_i2s_ws_pwm_R_o <= i_dac_snd_pwm;
-	aud_i2s_bck_pwm_L_o <= i_dac_snd_pwm;
-
 
 
    e_fb_sys:entity work.fb_SYS_c20k
@@ -639,6 +641,9 @@ end generate;
       mux_mhz1E_clk_o               => p_1MHZ_E_o,
       mux_mhz2E_clk_o               => p_2MHZ_E_o,
 
+      mhz8_fdc_clk_o                => p_8MHZ_FDC_o,
+
+
       -- mux control outputs
       mux_nALE_o                    => mux_nALE_o,
       mux_D_nOE_o                   => mux_D_nOE_o,
@@ -652,9 +657,9 @@ end generate;
 
 
       -- memory registers managed in here
+      sys_ROMPG_o                   => open,
       jim_en_o                      => i_JIM_en,
       jim_page_o                    => i_JIM_page,
-      sys_ROMPG_o                   => open,
 
       -- cpu sync 
       cpu_2MHz_phi2_clken_o         => open,
@@ -667,22 +672,15 @@ end generate;
       p_kb_nRST_o                   => icipo_kb_nRST,
 
       -- random other multiplexed pins out to FPGA (I1 phase)
-      p_j_i0_o                      => icipo_j_i0,
-      p_j_i1_o                      => icipo_j_i1,
-      p_j_spi_miso_o                => icipo_j_spi_miso,
       p_btn0_o                      => icipo_btn0,
       p_btn1_o                      => icipo_btn1,
       p_btn2_o                      => icipo_btn2,
       p_btn3_o                      => icipo_btn3,
 
+
       -- random other multiplexed pins in from FPGA (O1 phase)
-      p_j_ds_nCS2_i                 => icopi_j_ds_nCS2,
-      p_j_ds_nCS1_i                 => icopi_j_ds_nCS1,
-      p_j_spi_clk_i                 => icopi_j_spi_clk,
       p_VID_HS_i                    => r_vid_128_hs,
       p_VID_VS_i                    => r_vid_128_vs,
-      p_j_spi_mosi_i                => icopi_j_spi_mosi,
-      p_j_adc_nCS_i                 => icopi_j_adc_nCS,
 
       -- other inputs to FPGA
       lpstb_i                       => pj_LPSTB_i,
@@ -697,6 +695,44 @@ end generate;
       -- config in
       cfg_eco_station_id_i          => i_cfg_eco_station_id
    );
+
+   -------------------------------------
+   -- FPGA CONFIG FLASH
+   -------------------------------------
+
+
+   b_spi:block
+      signal i_SPI_CS: std_logic_vector(7 downto 0);
+      -- FPGA config flash
+      signal i_c2p_xflash          : fb_con_o_per_i_t;
+      signal i_p2c_xflash          : fb_con_i_per_o_t;
+   begin
+      e_fb_xflash:entity work.fb_spi
+      generic map (
+         SIM                           => SIM,
+         CLOCKSPEED                    => CLOCKSPEED,
+         PRESCALE                      => 1
+      )
+      port map (
+
+         -- eeprom signals
+         SPI_CS_o                      => i_SPI_CS,
+         SPI_CLK_o                     => flash_ck_o,
+         SPI_MOSI_o                    => flash_mosi_o,
+         SPI_MISO_i                    => flash_miso_i,
+         SPI_DET_i                     => '1',
+
+         -- fishbone signals
+
+         fb_syscon_i                   => i_fb_syscon,
+         fb_c2p_i                      => i_c2p_xflash,
+         fb_p2c_o                      => i_p2c_xflash
+      );
+      
+      flash_cs_o <= i_SPI_CS(0); -- had to do this for modelsim
+      i_per_p2c_intcon(PERIPHERAL_NO_XFLASH) <= i_p2c_xflash;
+      i_c2p_xflash         <= i_per_c2p_intcon(PERIPHERAL_NO_XFLASH);
+   end block;
 
 
 p_reg_128:process(i_fb_syscon)
@@ -722,7 +758,7 @@ end process;
       G_N_CHAIN                       => 8
    )
    port map (
-      rst_i                   => '0',
+      rst_i                   => i_fb_syscon.rst,
       clk_i                   => i_fb_syscon.clk,
       rgb_arr_i               => i_debug_leds,
       led_serial_o            => ui_leds_o
@@ -730,6 +766,10 @@ end process;
    );
 
 
+--      ddr_addr_o           <= (others => '0');
+      ddr_bank_o           <= (others => '0');
+      ddr_cas_o            <= '0';
+      ddr_ck_o             <= '0';
 --====================================================
 -- H D M I
 --====================================================
@@ -740,25 +780,52 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
    i_mb_scroll_latch_c <= i_beeb_ic32(5 downto 4);
 
+   -- Return buffer on the HDMI port: the HDMI block has its own interconnect,
+   -- so without this an HDMI peripheral's D_ack/D_rd went through two return
+   -- muxes (HDMI intcon, then the top intcon) into the top intcon's count and
+   -- the CPU block in one clock (failed by ~1.6 ns). D_ack, rdy and D_rd are
+   -- registered here; A_ack and the forward path pass straight through (the
+   -- HDMI intcon's slot already registers the forward path). Costs one clock
+   -- on CPU accesses to the HDMI block, which on the C20K includes main RAM
+   -- (FF 0000-7FFF, G_HDMI_SHADOW_SYS); the old design also registered
+   -- these returns (fb_HDMI_enabled G_REGISTER_CON_READS).
+   e_hdmi_buf:entity work.fb_intcon_buffer
+   generic map (
+      G_REG_C2P            => false,
+      G_REG_P2C            => true
+   )
+   port map (
+      fb_syscon_i          => i_fb_syscon,
+
+      fb_up_c2p_i          => i_c2p_hdmi_per,
+      fb_up_p2c_o          => i_p2c_hdmi_per,
+
+      fb_dn_c2p_o          => i_c2p_hdmi_buf,
+      fb_dn_p2c_i          => i_p2c_hdmi_buf
+   );
+
 	e_fb_HDMI:fb_HDMI
 	generic map (
 		SIM => SIM,
-		CLOCKSPEED => CLOCKSPEED
+      SIM_NO_DVI => SIM_NO_DVI,
+		CLOCKSPEED => CLOCKSPEED,
+      G_PIPELINE_DEPTH => G_PIPELINE_DEPTH      
 	)
 	port map (
-		CLK_48M_i			=> i_clk_pll_48M,
+		CLK_48M_i			=> i_clk_div_48M,
 
 		fb_syscon_i			=> i_fb_syscon,
-		fb_c2p_i				=> i_c2p_hdmi_per,
-		fb_p2c_o				=> i_p2c_hdmi_per,
+		fb_c2p_i				=> i_c2p_hdmi_buf,
+		fb_p2c_o				=> i_p2c_hdmi_buf,
 
 		HDMI_SCL_io			=> edid_scl_io,
 		HDMI_SDA_io			=> edid_sda_io,
 		HDMI_HPD_i			=> HDMI_HPD_io,
-		HDMI_CK_o			=> tmds_clk_o_p,
-		HDMI_B_o				=> tmds_d_o_p(0),
-		HDMI_G_o				=> tmds_d_o_p(1),
-		HDMI_R_o				=> tmds_d_o_p(2),
+
+      clk_tmds_pixel_i  => i_clk_tmds_pixel,
+		tmds_B_o				=> i_tmds_B,
+		tmds_G_o				=> i_tmds_G,
+		tmds_R_o				=> i_tmds_R,
 
 		-- analogue video	straight from CRTC/ULA
 
@@ -780,38 +847,80 @@ G_HDMI:IF G_INCL_HDMI GENERATE
 
 		scroll_latch_c_i		=> i_mb_scroll_latch_c,
 
-		PCM_L_i				=> r_dac_sample & "00000",
-      PCM_R_i           => r_dac_sample & "00000"
+		PCM_L_i				=> r_dac_sample_l,
+      PCM_R_i           => r_dac_sample_r
 	);
+
+
+   G_NOTSIMDIV:if not SIM_NO_DVI generate
+
+      e_hdmi_serial:hdmi_out_gowin_2a
+      port map (
+         clock_pixel_i => i_clk_tmds_pixel,
+         clock_tdms_i => i_clk_tmds,
+         red_i => i_tmds_R,
+         green_i => i_tmds_G,
+         blue_i => i_tmds_B,
+         red_s => tmds_d_o_p(2),
+         green_s => tmds_d_o_p(1),
+         blue_s => tmds_d_o_p(0),
+         clock_s => tmds_clk_o_p
+      );
+   end generate;
+
+   G_NOTSIM:if not SIM generate
+      e_pll_hdmi: entity work.pll_hdmi
+      port map(
+         clkin => i_clk_div_48M,
+         clkout => i_clk_tmds
+      );
+
+      clkdiv5 : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_tmds,
+         CLKOUT => i_clk_tmds_pixel,         -- 27MHz HDMI Pixel Clock
+         CALIB  => '1'
+      );
+   end generate;
+
+   G_SIM:if SIM generate
+      g_hdmi_pixel:if not SIM_NO_DVI generate
+         p_pll_hdmi_pixel: process
+         begin
+            i_clk_tmds_pixel <= '1';
+            wait for 18.5 ns;
+            i_clk_tmds_pixel <= '0';
+            wait for 18.5 ns;
+         end process;
+      end generate;
+
+      p_pll_hdmi_tmds: process
+      begin
+         i_clk_tmds <= '1';
+         wait for 3.7 ns;
+         i_clk_tmds <= '0';
+         wait for 3.7 ns;
+      end process;
+   end generate;
+
 END GENERATE;
 
---TODO: clash with OSER10's on video
---      ddr_addr_o           <= (others => '1');
-      ddr_bank_o           <= (others => '1');
-      ddr_cas_o            <= '1';
-      ddr_ck_o             <= '1';
       ddr_cke_o            <= '0';
-      ddr_cs_o             <= '1';
-      ddr_odt_o            <= '1';
-      ddr_ras_o            <= '1';
+      ddr_cs_o             <= '0';
+      ddr_odt_o            <= '0';
+      ddr_ras_o            <= '0';
       ddr_reset_n_o        <= '0';
       ddr_we_o             <= '0';
-      ddr_dq_io            <= (others => 'Z');
-      ddr_dqs_io           <= (others => 'Z');
-      ddr_dm_io            <= (others => 'Z');
 
-      aud_i2s_dat_o        <= '1';
-
-      flash_ck_o           <= '1';
-      flash_cs_o           <= '1';
-      flash_mosi_o         <= '1';
 
 
       i2c_scl_io           <= '1';
       i2c_sda_io           <= 'Z';
-
-      p_8MHZ_FDC_o         <= i_fb_syscon.clk;
-
 
       sd0_cs_o             <= '0';
       sd0_mosi_o           <= '0';
@@ -841,14 +950,6 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
     
    -- the 1 bit DACs run at 360MHz pwm, there are three sub-pixels for each 72MHz sample
 
-   -- TODO: this is frigged together - we need another pll to (re)generate chroma clocks
-
-   e_pll2: entity work.pll_rgb_dac
-   port map (
-      clkout      => i_clk_pll_360M,
-      clkin       => i_clk_pll_48M
-   );
-
    clkdiv5 : CLKDIV
    generic map (
       DIV_MODE => "5",            -- Divide by 5
@@ -862,64 +963,63 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
    
----   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
----   p_car_gen:process(i_clk_pll_48M)
----      constant div : natural := 709379;
----      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
----      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
----   begin
----      if rising_edge(i_clk_pll_48M) then
----         r_acc := r_acc + div;
----         if r_acc >= num then
----            r_acc := r_acc - num;
----            i_clk_chroma_x4_jitter <= '1';
----         else
----            i_clk_chroma_x4_jitter <= '0';
----         end if;
----      end if;
----   end process;
+   -- generate a slightly jittery 17.7MHz sub-carrier, we'll pass this through a PLL to smooth it out a bit
+   p_car_gen:process(i_clk_div_48M)
+      constant div : natural := 709379;
+      constant num : natural := 1920000;    -- PAL * 4 with 25Hz offset (17.734475)
+      variable r_acc : unsigned(numbits(num) downto 0) := (others => '0');
+   begin
+      if rising_edge(i_clk_div_48M) then
+         r_acc := r_acc + div;
+         if r_acc >= num then
+            r_acc := r_acc - num;
+            i_clk_chroma_x4_jitter <= '1';
+         else
+            i_clk_chroma_x4_jitter <= '0';
+         end if;
+      end if;
+   end process;
 
---- TODO: not enough plls to allow this, maybe change main clock to 96MHz?
----   e_pal_pll: entity work.pll_pal_sc
----   port map (
----      clkout => i_clk_chroma_x60_dac,        -- ~266.0MHz  - DAC frequency
----      clkoutd3 => i_clk_chroma_x20_dac,      -- ~88.7MHz
----      clkin  => i_clk_chroma_x4_jitter
----   );
----
----   -- divide above by 5
----   e_clkdiv_cdac_5 : CLKDIV
----   generic map (
----      DIV_MODE => "5",
----      GSREN => "false"
----   )
----   port map (
----      RESETN => '1',
----      HCLKIN => i_clk_chroma_x60_dac,
----      CLKOUT => i_clk_chroma_x12_px,          -- ~53.2MHz colour pixel clock clock
----      CALIB  => '1'
----   );
----   
----   e_clkdiv_cdac_3 : CLKDIV
----   generic map (
----      DIV_MODE => "5",
----      GSREN => "false"
----   )
----   port map (
----      RESETN => '1',
----      HCLKIN => i_clk_chroma_x20_dac,
----      CLKOUT => i_clk_chroma_x4,             -- ~17.5MHz x4 cleaner clock
----      CALIB  => '1'
----   );
+   e_pal_pll: entity work.pll_pal_sc
+   port map (
+      clkout => i_clk_chroma_x60_dac,        -- ~266.0MHz  - DAC frequency
+      clkoutd3 => i_clk_chroma_x20_dac,      -- ~88.7MHz
+      clkin  => i_clk_chroma_x4_jitter
+   );
+
+   -- divide above by 5
+   e_clkdiv_cdac_5 : CLKDIV
+   generic map (
+      DIV_MODE => "5",
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_chroma_x60_dac,
+      CLKOUT => i_clk_chroma_x12_px,          -- ~53.2MHz colour pixel clock clock
+      CALIB  => '1'
+   );
+   
+   e_clkdiv_cdac_3 : CLKDIV
+   generic map (
+      DIV_MODE => "5",
+      GSREN => "false"
+   )
+   port map (
+      RESETN => '1',
+      HCLKIN => i_clk_chroma_x20_dac,
+      CLKOUT => i_clk_chroma_x4,             -- ~17.5MHz x4 cleaner clock
+      CALIB  => '1'
+   );
 
    e_chroma_gen:entity work.dossy_chroma
    generic map (
----      G_USE_EXT_x4_CLK  => true,
-      G_GAIN => 1.0
+      G_USE_EXT_x4_CLK  => true,
+      G_OUTBITS         => C_CHROMA_BITS
    )
    port map (
-      clk_i             => i_clk_pll_48M,
----      clk_chroma_x4_i   => i_clk_chroma_x4,
+      clk_i             => i_clk_div_48M,
+      clk_chroma_x4_i   => i_clk_chroma_x4,
       r_i               => unsigned(i_Vid_48_r),
       g_i               => unsigned(i_Vid_48_g),
       b_i               => unsigned(i_Vid_48_b),
@@ -933,40 +1033,29 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    );
 
 
-   p_chrom_s2u:process(i_clk_pll_48M)
+   p_chrom_s2u:process(i_clk_chroma_x4)
    begin
-      if rising_edge(i_clk_pll_48M) then
-         r2_vid_chroma <= to_unsigned(16+to_integer(i_chroma_s), 5);
+      if rising_edge(i_clk_chroma_x4) then
+         r2_vid_chroma <= to_unsigned( (2**(C_CHROMA_BITS-1)) + to_integer(i_chroma_s), C_CHROMA_BITS);
       end if;
    end process;
 
----   -- regular 30 bits per sample 
----   e_chroma_dac:entity work.dac1_oser
----   port map (
----      rst_i             => i_fb_syscon.rst,
----      clk_sample_i      => i_clk_chroma_x4,
----      clk_dac_px_i      => i_clk_chroma_x12_px,
----      clk_dac_i         => i_clk_chroma_x60_dac,
----      sample_i          => r2_vid_chroma(4 downto 1),
----      bitstream_o       => vid_chroma_o
----   );
-
-   e_mono_dac_chr:entity work.dac1_oserx2
+   -- regular 30 bits per sample 
+   e_chroma_dac:entity work.dac1_oserx1
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
-      clk_dac_px_i      => i_clk_div_72M,
-      clk_dac_i         => i_clk_pll_360M,
-      sample_i          => r2_vid_chroma(4 downto 1),
+      clk_sample_i      => i_clk_chroma_x4,
+      clk_dac_px_i      => i_clk_chroma_x12_px,
+      clk_dac_i         => i_clk_chroma_x60_dac,
+      sample_i          => r2_vid_chroma,
       bitstream_o       => i_vid_chroma_0
    );
 
-    
    -- split x2 15 bits per sample
    e_mono_dac_r:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_r)),
@@ -976,7 +1065,7 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_g:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_g)),
@@ -986,12 +1075,25 @@ G_DO1BIT_DAC_VIDEO:if G_1BIT_DAC_VIDEO generate
    e_mono_dac_b:entity work.dac1_oserx2
    port map (
       rst_i             => i_fb_syscon.rst,
-      clk_sample_i      => i_clk_pll_48M,
+      clk_sample_i      => i_clk_div_48M,
       clk_dac_px_i      => i_clk_div_72M,
       clk_dac_i         => i_clk_pll_360M,
       sample_i          => unsigned(not(i_Vid_48_b)),
       bitstream_o       => i_vid_b_0
    );
+
+     
+      clkdiv5_snd : CLKDIV
+      generic map (
+         DIV_MODE => "5",            -- Divide by 5
+         GSREN => "false"
+      )
+      port map (
+         RESETN => '1',
+         HCLKIN => i_clk_chroma_x4_jitter,
+         CLKOUT => i_clk_snd,
+         CALIB  => '1'
+      );
 
    e_obuf_vid_chroma:obuf
    port map (
@@ -1040,6 +1142,9 @@ G_DONT_1BIT_DAC_VIDEO:if not G_1BIT_DAC_VIDEO generate
    end process;
 
 end generate;
+
+
+
 
 end architecture rtl;
       

@@ -1,11 +1,11 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.11 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW2A-LV18PG256C8/I7
 --Device: GW2A-18
 --Device Version: C
---Created Time: Tue Jul  1 19:29:20 2025
+--Created Time: Thu Jun 11 14:05:00 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -91,11 +91,11 @@ begin
             FCLKIN => "48",
             DEVICE => "GW2A-18C",
             DYN_IDIV_SEL => "false",
-            IDIV_SEL => 7,
+            IDIV_SEL => 15,
             DYN_FBDIV_SEL => "false",
             FBDIV_SEL => 44,
             DYN_ODIV_SEL => "false",
-            ODIV_SEL => 2,
+            ODIV_SEL => 4,
             PSDA_SEL => "0000",
             DYN_DA_EN => "true",
             DUTYDA_SEL => "1000",
