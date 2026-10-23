@@ -326,8 +326,8 @@ begin
       CLOCK       => CLK_48M_i,
       -- 6 MHz dot clock enable
       CLKEN       => i_ttx_pixel_clken,
-      -- Async reset
-      nRESET      => not fb_syscon_i.rst,
+      -- Async reset (the 48 MHz copy, released in step with CLK_48M_i)
+      nRESET      => not i_reset48,
 
       -- Indicates special VGA Mode 7 (720x576p)
       VGA         => '0',

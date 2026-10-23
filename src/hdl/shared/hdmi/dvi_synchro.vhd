@@ -176,6 +176,9 @@ architecture rtl of dvi_synchro is
    signal   i_line_buffer_Q               : std_logic_vector(11 downto 0);
    signal   r_line_px_in_ctr48            :unsigned(NUMBITS(2*C_PXLINE48)-1 downto 0);
 
+   -- RESET_48M_i resynchronised to the pixel clock (see p_rst_dvi)
+   signal   r_rst_dvi                     : std_logic_vector(1 downto 0) := "11";
+
 begin
 
    debug_vsync_det_o <= r_vsync_lead_ack_dvi;
@@ -333,10 +336,24 @@ begin
 
    );
 
-   p_reg_syncs_dvi:process(RESET_48M_i, clk_pixel_dvi)
+   -- RESET_48M_i is a 48 MHz register. Used directly as the asynchronous
+   -- reset of pixel clock registers, its release could land close to a pixel
+   -- clock edge, and some registers would leave reset a clock before others.
+   -- Reset synchroniser: assert at once (asynchronous), release two pixel
+   -- clocks later, in step with the pixel clock.
+   p_rst_dvi:process(RESET_48M_i, clk_pixel_dvi)
+   begin
+      if RESET_48M_i = '1' then
+         r_rst_dvi <= "11";
+      elsif rising_edge(clk_pixel_dvi) then
+         r_rst_dvi <= r_rst_dvi(0) & '0';
+      end if;
+   end process;
+
+   p_reg_syncs_dvi:process(r_rst_dvi, clk_pixel_dvi)
    begin
 
-      if RESET_48M_i = '1' then
+      if r_rst_dvi(1) = '1' then
          r_hsync_lead_ack_dvi <= '0';
          r_hsync_lead_cken_dvi <= '0';
          r_vsync_lead_ack_dvi <= '0';

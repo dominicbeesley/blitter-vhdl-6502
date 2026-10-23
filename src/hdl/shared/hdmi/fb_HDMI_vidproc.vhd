@@ -145,6 +145,10 @@ architecture rtl of fb_HDMI_vidproc is
 	signal 	i_G							: std_logic_vector(3 downto 0);
 	signal 	i_B							: std_logic_vector(3 downto 0);
 
+	-- reset into the 48 MHz domain (see p_rst_fb / p_rst_48)
+	signal   r_reset_hard_fb			: std_logic := '1';	-- fishbone clock: hard reset wanted
+	signal   r_reset_48_meta			: std_logic_vector(1 downto 0) := "11";
+	signal   r_reset_48_hard_meta		: std_logic_vector(1 downto 0) := "11";
 	signal   r_reset_48					: std_logic := '1';
 	signal   r_reset_48_hard			: std_logic := '1';
 
@@ -202,18 +206,30 @@ begin
 		SPR_PX_DAT		=> SPR_PX_DAT
 	);
 
-	p_rst_48:process(fb_syscon_i.rst, CLK_48M_i)
+	-- Reset into the 48 MHz domain.
+	--
+	-- synchronous process: the value depends on rst / rst_state, so it
+	-- can't be loaded by an asynchronous reset
+	p_rst_fb:process(fb_syscon_i)
 	begin
-		if rising_edge(CLK_48M_i) then
+		if rising_edge(fb_syscon_i.clk) then
 			if fb_syscon_i.rst = '1' then
-				r_reset_48 <= '1';
 				if fb_syscon_i.rst_state = resetfull or fb_syscon_i.rst_state = powerup then
-					r_reset_48_hard <= '1';
+					r_reset_hard_fb <= '1';
 				end if;
 			else
-				r_reset_48 <= '0';
-				r_reset_48_hard <= '0';
+				r_reset_hard_fb <= '0';
 			end if;
+		end if;
+	end process;
+
+	p_rst_48:process(CLK_48M_i)
+	begin
+		if rising_edge(CLK_48M_i) then
+			r_reset_48_meta		<= r_reset_48_meta(0) & fb_syscon_i.rst;
+			r_reset_48_hard_meta	<= r_reset_48_hard_meta(0) & r_reset_hard_fb;
+			r_reset_48				<= r_reset_48_meta(1);
+			r_reset_48_hard		<= r_reset_48_hard_meta(1);
 		end if;
 	end process;
 
