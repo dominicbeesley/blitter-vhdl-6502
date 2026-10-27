@@ -41,6 +41,7 @@
 ----------------------------------------------------------------------------------
 
 
+
 library ieee;
 use ieee.std_logic_1164.all;
 USE IEEE.VITAL_timing.ALL;
@@ -49,6 +50,9 @@ USE IEEE.VITAL_primitives.ALL;
 library fmf;
 
 entity cy74FCT2543 is
+   generic (
+      G_GRADE : string := "T"   -- speed grade: "T", "AT" or "CT" (max delays)
+   );
     port(
         A : inout std_logic_vector(7 downto 0);
         B : inout std_logic_vector(7 downto 0);
@@ -65,32 +69,49 @@ entity cy74FCT2543 is
 end cy74FCT2543;
 
 architecture behav of cy74FCT2543 is
-	signal i_BA_Q : std_logic_vector(7 downto 0);
-	signal i_AB_Q : std_logic_vector(7 downto 0);
+
+   -- Datasheet switching characteristics, max column of each grade
+   type t_timing is record
+      t_pd  : time;     -- A or B to B or A
+      t_le  : time;     -- nLE to output
+      t_en  : time;     -- tPZH/tPZL, nOE or nCE to output
+      t_dis : time;     -- tPHZ/tPLZ, nOE or nCE to output
+   end record;
+
+   function timing(grade : string) return t_timing is
+   begin
+      if grade = "CT" then
+         return (t_pd => 5.5 ns, t_le => 7.0 ns,  t_en => 8.0 ns,  t_dis => 6.5 ns);
+      elsif grade = "AT" then
+         return (t_pd => 6.5 ns, t_le => 8.0 ns,  t_en => 9.0 ns,  t_dis => 7.5 ns);
+      else
+         return (t_pd => 8.5 ns, t_le => 12.5 ns, t_en => 12.0 ns, t_dis => 9.0 ns);
+      end if;
+   end function;
+
+   constant C_T : t_timing := timing(G_GRADE);
+
+   -- VitalDelayType01Z order: (01, 10, 0Z, Z1, 1Z, Z0)
+   constant C_TPD_EN : VitalDelayType01Z := (C_T.t_en, C_T.t_en, C_T.t_dis, C_T.t_en, C_T.t_dis, C_T.t_en);
+
 begin
+
+   assert G_GRADE = "T" or G_GRADE = "AT" or G_GRADE = "CT"
+      report "cy74FCT2543: unknown G_GRADE " & G_GRADE severity failure;
 
 	G_L:FOR I in 7 downto 0 GENERATE
 
 		e_fmf_543:entity fmf.std543
 		GENERIC MAP (
-        -- tipd delays: interconnect path delays
---        tipd_A                   : VitalDelayType01 := VitalZeroDelay01;
---        tipd_B                   : VitalDelayType01 := VitalZeroDelay01;
---        tipd_OEBANeg             : VitalDelayType01 := VitalZeroDelay01;
---        tipd_CEBANeg             : VitalDelayType01 := VitalZeroDelay01;
---        tipd_LEBANeg             : VitalDelayType01 := VitalZeroDelay01;
---        tipd_OEABNeg             : VitalDelayType01 := VitalZeroDelay01;
---        tipd_CEABNeg             : VitalDelayType01 := VitalZeroDelay01;
---        tipd_LEABNeg             : VitalDelayType01 := VitalZeroDelay01;
         -- tpd delays
-        tpd_A_B                  => (8 ns, 8 ns),
-        tpd_B_A                  => (8 ns, 8 ns),
-        tpd_OEBANeg_A            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
-        tpd_LEBANeg_A            => (12 ns, 12 ns),
-        tpd_OEABNeg_B            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
-        tpd_LEABNeg_B            => (12 ns, 12 ns),
-        tpd_CEABNeg_B            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
-        tpd_CEBANeg_A            => (12 ns, 12 ns, 12 ns, 12 ns, 12 ns, 12 ns),
+         tpd_A_B                  => (C_T.t_pd, C_T.t_pd),
+         tpd_B_A                  => (C_T.t_pd, C_T.t_pd),
+         tpd_OEBANeg_A            => C_TPD_EN,
+         tpd_LEBANeg_A            => (C_T.t_le, C_T.t_le),
+         tpd_OEABNeg_B            => C_TPD_EN,
+         tpd_LEABNeg_B            => (C_T.t_le, C_T.t_le),
+         tpd_CEABNeg_B            => C_TPD_EN,
+         tpd_CEBANeg_A            => C_TPD_EN,
         -- tsetup values: setup times
         tsetup_A_LEABNeg         => 2 ns,
         tsetup_B_LEBANeg         => 2 ns,
@@ -113,5 +134,4 @@ begin
 			);
 	END GENERATE;
 	
-
 end behav;
