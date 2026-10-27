@@ -15,13 +15,18 @@
 -- Revision: 
 ----------------------------------------------------------------------------------
 
+library vunit_lib;
+context vunit_lib.vunit_context;
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity sim_arm2_tb is
 generic (
-	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm_arm/build/boot_arm_testbench_mos.bin"
+	runner_cfg : string := "#";
+--	G_MOSROMFILE : string := "../../../../../../sim_asm/test_asm_arm/build/boot_arm_testbench_mos.bin"
+	G_MOSROMFILE : string := "C:/Users/domin/OneDrive/Documents/GitHub/blitter-arm2-code/1stlight-gcc/build/test-1.rom"
 	);
 end sim_arm2_tb;
 
@@ -501,6 +506,28 @@ begin
 			wait for 10 us;
 
 			wait;
+	end process;
+
+
+-- VUNIT --
+
+	p_main:process
+	begin
+		test_runner_setup(runner, runner_cfg);
+
+		while test_suite loop
+
+			if run("run all") then
+
+				wait until sim_ENDSIM = '1';
+
+			end if;
+
+		end loop;
+
+		wait for 3 us;
+
+		test_runner_cleanup(runner); -- Simulation ends here
 	end process;
 
 
