@@ -80,16 +80,18 @@ end fb_cpu_arm2;
 architecture rtl of fb_cpu_arm2 is
 
 	function prior(x : in std_logic_vector) return std_logic_vector is
-	variable ret : std_logic_vector(x'range);
+	variable v_x   : std_logic_vector(x'length-1 downto 0);
+	variable v_ret : std_logic_vector(x'length-1 downto 0);
 	begin
-		ret := (ret'range => '0');
-		for I in 0 to x'length-1 loop
-			if x(I) = '1' then
-				ret(I) := '1';
-				return ret;
-			end if;
-		end loop;
-		return ret;
+	   v_x   := x;
+	   v_ret := (others => '0');
+	   for I in 0 to x'length-1 loop
+	      if v_x(I) = '1' then
+	         v_ret(I) := '1';
+	         return v_ret;
+	      end if;
+	   end loop;
+	   return v_ret;
 	end function;
 
 	function cdiv(dividend:time; divisor:time) return integer is
@@ -127,6 +129,7 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_nOPC				: std_logic;
 	signal r_nBW				: std_logic;
 	signal r_nRW				: std_logic;
+	signal r_nRW_dly			: std_logic_vector(1 downto 0);	-- r_nRW delayed for the PORTA buffer direction
 	signal r_instr_fetch		: std_logic;
 
 	-- port B
@@ -238,7 +241,11 @@ begin
 	);
 
 
-	i_BUF_D_RnW_b2c <= 	not r_nRW;
+	-- The PORTA direction changes 2 clocks after r_nRW: at the end of a read
+	-- the last lane's latch (nBL) closes on the same edge that r_nRW changes,
+	-- so without the delay PORTA stops being driven with no hold time
+	-- (2543 hold is 2 ns). Writes don't need DIR until phi2.
+	i_BUF_D_RnW_b2c <= 	not r_nRW_dly(1);
 
 	i_CPUSKT_ABRT_b2c 	<= '0';
 	i_CPUSKT_phi1_b2c 	<= r_cpu_phi1;
@@ -361,6 +368,7 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 
 			r_mem_acc_reset <= '0';
+			r_nRW_dly <= r_nRW_dly(0) & r_nRW;
 
 			if r_clkctdn /= 0 then
 				r_clkctdn <= r_clkctdn - 1;
