@@ -71,8 +71,10 @@ architecture Behavioral of sim_arm2_tb is
 	signal	i_exp_PORTD_io			: std_logic_vector(11 downto 0);
 
 	signal	i_exp_PORTA_io_cpu	: std_logic_vector(7 downto 0);
-	signal	i_exp_PORTA_nOE_dly	: std_logic;
-	signal	i_exp_PORTA_DIR_dly	: std_logic;
+	signal	i_exp_PORTA_en_a		: std_logic;						-- 4245 drives the CPU (5V, A) side
+	signal	i_exp_PORTA_en_b		: std_logic;						-- 4245 drives the FPGA (3V3, B) side
+	signal	i_exp_PORTA_d_b2a		: std_logic_vector(7 downto 0);
+	signal	i_exp_PORTA_d_a2b		: std_logic_vector(7 downto 0);
 	signal	i_exp_PORTB_o_cpu		: std_logic_vector(7 downto 0);
 
 
@@ -206,17 +208,21 @@ begin
 							(others => 'Z');
 
 
-	-- model the 74LVC4245 on PORTA
-	i_exp_PORTA_nOE_dly <= i_exp_PORTA_nOE_blit after 8 ns;
-	i_exp_PORTA_DIR_dly <= i_exp_PORTA_DIR_blit after 8 ns;
+	-- model the 74LVC4245A on PORTA (VCCA 5V, VCCB 3V3), datasheet max delays
+	-- A = CPU side, B = FPGA side; DIR = '1' is A to B. DIR is treated like nOE
+	-- (the datasheet gives no separate DIR timing).
+	i_exp_PORTA_en_a <= transport '1' after 10 ns when i_exp_PORTA_DIR_blit = '0' and i_exp_PORTA_nOE_blit = '0' else
+	                              '0' after 7 ns;							-- tPZH/tPZL, tPLZ/tPHZ OE to A
+	i_exp_PORTA_en_b <= transport '1' after 10.3 ns when i_exp_PORTA_DIR_blit = '1' and i_exp_PORTA_nOE_blit = '0' else
+	                              '0' after 7.8 ns;							-- tPZL/tPZH, tPLZ/tPHZ OE to B
+	i_exp_PORTA_d_b2a <= transport i_exp_PORTA_io_blit after 6.1 ns;	-- tPHL/tPLH B to A
+	i_exp_PORTA_d_a2b <= transport i_exp_PORTA_io_cpu after 6.7 ns;	-- tPHL/tPLH A to B
 
-	i_exp_PORTA_io_cpu	<= 	(others => 'Z') when i_exp_PORTA_DIR_dly = '1' or i_exp_PORTA_nOE_dly = '1' else
-						   			i_exp_PORTA_io_blit after 6 ns;
-	i_exp_PORTA_io_blit	<= 	(others => 'Z') when i_exp_PORTA_DIR_dly = '0' or i_exp_PORTA_nOE_dly = '1' else
-					      			i_exp_PORTA_io_cpu after 6 ns;
+	i_exp_PORTA_io_cpu	<= 	i_exp_PORTA_d_b2a when i_exp_PORTA_en_a = '1' else (others => 'Z');
+	i_exp_PORTA_io_blit	<= 	i_exp_PORTA_d_a2b when i_exp_PORTA_en_b = '1' else (others => 'Z');
 
-	-- model the 74LVC4245 on PORTB
-	i_exp_PORTB_o_cpu <= i_exp_PORTB_o_blit after 6 ns;
+	-- model the 74LVC4245A on PORTB (B to A only)
+	i_exp_PORTB_o_cpu <= transport i_exp_PORTB_o_blit after 6.1 ns;
 
 
 	-- TODO: work out how to map the bidirectional 74cb3t's for PORTC/D
@@ -328,6 +334,9 @@ begin
 	g_lat:for I in 3 downto 0 generate
 
 		e_lat:entity work.cy74FCT2543
+		generic map (
+			G_GRADE => "CT"		-- CPU board uses the fastest grade
+		)
 		port map(
 
         A => i_exp_PORTA_io_cpu,
