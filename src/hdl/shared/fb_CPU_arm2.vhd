@@ -41,6 +41,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 library work;
 use work.fishbone.all;
@@ -78,6 +79,30 @@ end fb_cpu_arm2;
 
 architecture rtl of fb_cpu_arm2 is
 
+	function prior(x : in std_logic_vector) return std_logic_vector is
+	variable ret : std_logic_vector(x'range);
+	begin
+		ret := (ret'range => '0');
+		for I in 0 to x'length-1 loop
+			if x(I) = '1' then
+				ret(I) := '1';
+				return ret;
+			end if;
+		end loop;
+		return ret;
+	end function;
+
+	function cdiv(dividend:time; divisor:time) return integer is
+   begin
+      return integer(ceil(real(1000 * dividend / divisor) / 1000.0));
+
+   end cdiv;
+
+   constant C_CLOCK_PER    : time      := 1 us / CLOCKSPEED;
+   constant T_ARM_DOUT     : time      := 60000 ps;
+
+   constant C_CPU_DIV_DOUT : integer   := cdiv(T_ARM_DOUT , C_CLOCK_PER);
+
 -- timings below in number of fast clocks
 	constant C_CLKD2_8		: natural 		:= 8;		-- clock half period - 8MHz
 
@@ -88,7 +113,8 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal r_cyc_o				: std_logic;
 	signal i_cyc_ack_i		: std_logic;
-	signal r_D_wr_stb			: std_logic;
+	signal r_D_wr_stb			: std_logic_vector(3 downto 0);
+	signal r_D_wr				: std_logic_vector(31 downto 0);
 
 	signal r_arm_boot			: std_logic;							-- place ROM at 0-100 from 8D3Fxx at boot
 
@@ -133,10 +159,11 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_readed_lane_prev	: std_logic_vector(3 downto 0);
 	signal r_readed_lane_prev2	: std_logic_vector(3 downto 0);
 
-	signal i_write_lane			: std_logic_vector(3 downto 0);
-	signal r_writed_lane_prev	: std_logic_vector(3 downto 0);
-	signal r_writed_lane_prev2	: std_logic_vector(3 downto 0);
-	signal r_writed_lane_prev3	: std_logic_vector(3 downto 0);
+	signal r_write_lane			: std_logic_vector(3 downto 0);
+	signal r_write_lane_prev	: std_logic_vector(3 downto 0);
+	signal r_write_lane_prev2	: std_logic_vector(3 downto 0);
+	signal r_write_lane_done	: std_logic_vector(3 downto 0);
+	signal r_write_lane_done2	: std_logic_vector(3 downto 0);
 
 	type t_clk_state is (
 		phi1,
@@ -220,7 +247,7 @@ begin
 	i_CPUSKT_nFIRQ_b2c	<= wrap_i.nmi_n;
 	i_CPUSKT_nIRQ_b2c 	<= wrap_i.irq_n;
 	i_CPUBRD_nBL_b2c 		<= not i_readed_lane or r_readed_lane_prev2 when r_WE = '0' else
-									not i_write_lane;
+									not r_write_lane;
 	i_CPUSKT_D_mux_b2c <= 	wrap_i.D_rd(7 downto 0)   when i_readed_lane(0) = '1' else
 									wrap_i.D_rd(15 downto 8)  when i_readed_lane(1) = '1' else
 									wrap_i.D_rd(23 downto 16) when i_readed_lane(2) = '1' else
@@ -232,26 +259,14 @@ begin
 	wrap_o.lane_req		<= r_lane_req;
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
-	wrap_o.D_wr				<=	i_CPUSKT_D_mux_c2b & i_CPUSKT_D_mux_c2b & i_CPUSKT_D_mux_c2b & i_CPUSKT_D_mux_c2b;	
-	G_B:FOR I in 0 to 3 GENERATE
-	wrap_o.D_wr_stb(I)	<= r_writed_lane_prev3(I) and r_D_wr_stb;
-	END GENERATE;
+	wrap_o.D_wr				<=	r_D_wr;
+	wrap_o.D_wr_stb		<= r_D_wr_stb;
 	wrap_o.rdy_ctdn		<= RDY_CTDN_MIN;
 	wrap_o.instr_fetch 	<= r_instr_fetch;
 
 	i_cyc_ack_i 			<= wrap_i.ack;
 
 
-	p_reg_writed:process(fb_syscon_i)
-	begin
-		if rising_edge(fb_syscon_i.clk) then
-			r_writed_lane_prev <= wrap_i.act_lane;
-			r_writed_lane_prev2 <= r_writed_lane_prev;
-			r_writed_lane_prev3 <= r_writed_lane_prev2;
-		end if;
-	end process;
-
-	i_write_lane <= wrap_i.act_lane;
 
 	p_reg_readed:process(fb_syscon_i)
 	begin
@@ -266,15 +281,33 @@ begin
 		if fb_syscon_i.rst ='1' then
 			r_cyc_o <= '0';
 			r_lane_req <= (others => '1');
+			r_write_lane <= (others => '0');
+			r_write_lane_prev <= (others => '0');
+			r_write_lane_prev2 <= (others => '0');
+			r_write_lane_done <= (others => '0');
+			r_write_lane_done2 <= (others => '0');
 			r_mem_acc_state <= done;
-			r_D_wr_stb <= '0';
+			r_D_wr_stb <= (others => '0');
+			r_D_wr <= (others => '0');
 			r_WE <= '0';
 			r_A_log <= (others => '0');		
 		elsif rising_edge(fb_syscon_i.clk) then
+
+			r_write_lane <= prior(r_lane_req and (not r_write_lane_done) and (r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2));
+			r_write_lane_prev <= r_write_lane;
+			r_write_lane_prev2 <= r_write_lane_prev;
+			r_write_lane_done <= r_write_lane_done or r_write_lane_prev;
+			r_write_lane_done2 <= r_write_lane_done;
+
 			case r_mem_acc_state is 
 				when idle =>
 					r_cyc_o <= '0';
-					r_D_wr_stb <= '0';
+					r_D_wr_stb <= (others => '0');
+					r_write_lane <= (others => '0');
+					r_write_lane_prev <= (others => '0');
+					r_write_lane_prev2 <= (others => '0');
+					r_write_lane_done <= (others => '0');
+					r_write_lane_done2 <= (others => '0');
 					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
 						if r_nBW = '1' then
 							r_lane_req <= "1111";
@@ -295,10 +328,15 @@ begin
 					end if;
 				when wr =>
 					if r_cpu_phi2 = '1' then
-						r_D_wr_stb <= '1';
+						for I in 0 to 3 loop
+							if r_write_lane_prev2(I) = '1' then
+								r_D_wr(7+8*I downto 8*I) <= i_CPUSKT_D_mux_c2b;
+							end if;
+						end loop;
+						r_D_wr_stb <= r_D_wr_stb or r_write_lane_done2;
 					end if;
 					if i_cyc_ack_i then
-						r_D_wr_stb <= '0';
+						r_D_wr_stb <= (others => '0');
 						r_mem_acc_state <= done;
 					end if;
 				when rd =>
@@ -312,7 +350,7 @@ begin
 					end if;
 				when others =>
 					r_cyc_o <= '0';
-					r_D_wr_stb <= '0';
+					r_D_wr_stb <= (others => '0');
 					r_mem_acc_state <= idle;
 			end case;
 		end if;
