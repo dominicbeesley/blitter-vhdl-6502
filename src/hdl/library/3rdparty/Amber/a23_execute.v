@@ -70,7 +70,7 @@ output reg                  o_write_enable,
 output                      o_write_enable_next,
 output reg                  o_translate,
 output reg  [3:0]           o_byte_enable,
-output reg  [3:0]           o_byte_enable_next,
+output      [3:0]           o_byte_enable_next,
 output reg                  o_data_access,    // To Fetch stage. high = data fetch,
                                                     // low = instruction fetch
 output      [31:0]          o_status_bits,          // Full PC will all status bits, but PC part zero'ed out
