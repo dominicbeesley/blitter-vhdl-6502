@@ -376,6 +376,7 @@ architecture rtl of mk3blit is
 	-----------------------------------------------------------------------------
 	signal i_wrap_exp_o					: t_cpu_wrap_exp_o;
 	signal i_wrap_exp_i					: t_cpu_wrap_exp_i;
+	signal r_PORTA_off_hist				: std_logic_vector(1 downto 0);	-- PORTA not driven, last 2 clocks
 	signal i_hard_cpu_en					: std_logic;
 
 	-----------------------------------------------------------------------------
@@ -908,7 +909,19 @@ END GENERATE;
 	-- PORTA is a 74lvc4245 need to control direction and enable
 	exp_PORTA_nOE_o <= i_wrap_exp_o.PORTA_nOE;
 	exp_PORTA_DIR_o <= i_wrap_exp_o.PORTA_DIR;
-	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.PORTA_DIR = '1' or i_wrap_exp_o.PORTA_nOE = '1' else
+	-- After a CPU write (DIR = '1') the 4245's B outputs take up to 7.8 ns to
+	-- release, so only drive PORTA once DIR has been '0' for 2 clocks (one
+	-- clock would leave no margin). Stop driving at once when DIR goes to '1'.
+	p_PORTA_off_hist:process(i_fb_syscon)
+	begin
+		if i_fb_syscon.rst = '1' then
+			r_PORTA_off_hist <= (others => '1');
+		elsif rising_edge(i_fb_syscon.clk) then
+			r_PORTA_off_hist <= r_PORTA_off_hist(0) & (i_wrap_exp_o.PORTA_DIR or i_wrap_exp_o.PORTA_nOE);
+		end if;
+	end process;
+
+	exp_PORTA_io	 <= (others => 'Z') when i_wrap_exp_o.PORTA_DIR = '1' or i_wrap_exp_o.PORTA_nOE = '1' or r_PORTA_off_hist /= "00" else
 						 	 i_wrap_exp_o.PORTA;
 
 	i_wrap_exp_i.PORTA <= exp_PORTA_io;
