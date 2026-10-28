@@ -41,7 +41,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;
 
 library work;
 use work.fishbone.all;
@@ -93,17 +92,6 @@ architecture rtl of fb_cpu_arm2 is
 	   end loop;
 	   return v_ret;
 	end function;
-
-	function cdiv(dividend:time; divisor:time) return integer is
-   begin
-      return integer(ceil(real(1000 * dividend / divisor) / 1000.0));
-
-   end cdiv;
-
-   constant C_CLOCK_PER    : time      := 1 us / CLOCKSPEED;
-   constant T_ARM_DOUT     : time      := 60000 ps;
-
-   constant C_CPU_DIV_DOUT : integer   := cdiv(T_ARM_DOUT , C_CLOCK_PER);
 
 -- timings below in number of fast clocks
 	constant C_CLKD2_8		: natural 		:= 8;		-- clock half period - 8MHz
@@ -158,9 +146,9 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_D_mux_b2c	: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_c2b		: std_logic_vector(25 downto 0);
 
-	signal r_rd_nBL				: std_logic_vector(3 downto 0);	-- read latch enables, low for 1 clock per byte
-	signal r_rd_nBL2				: std_logic_vector(3 downto 0);	-- read latch enables, low for 1 clock 1/2 clock later
-	signal r_rd_D					: std_logic_vector(7 downto 0);	-- read byte to the latches
+	signal r_rd_nBL				: std_logic_vector(3 downto 0);	-- read latch pre-enables, low for 1 clock per byte lane
+	signal r_rd_nBL2				: std_logic_vector(3 downto 0);	-- actual read latch enables, low for 1 clock 1/2 clock later
+	signal r_rd_D					: std_logic_vector(7 downto 0);	-- read byte to the latches - must be valid for at least 2 cycles.
 
 	signal r_write_lane			: std_logic_vector(3 downto 0);
 	signal r_write_lane_prev	: std_logic_vector(3 downto 0);
@@ -260,9 +248,10 @@ begin
 	-- Read bytes to the CPU board latches. Data and latch enable come straight
 	-- from registers (only the CPU mux follows), so they reach the pins
 	-- together. They are loaded from con_burst's rx_lane_unreg/rx_D_rd_unreg,
-	-- so they change on the same edge as ack_lane did. Each latch is open for
-	-- one clock while its byte is on PORTA; the next byte comes at least one
-	-- clock after it closes (back-to-back reads are 2 clocks apart).
+	-- so they change on the same edge as ack_lane did. Each latch is re-registered
+	-- on the falling_edge in the p_rd_lat2 process and is open for
+	-- one clock while its byte lane data is on PORTA; the next byte comes at least
+	-- one half clock after the BL2 latch closes (back-to-back reads are 2 clocks apart).
 	p_rd_lat:process(fb_syscon_i)
 	begin
 		if fb_syscon_i.rst = '1' then
@@ -276,9 +265,13 @@ begin
 		end if;
 	end process;
 
+	-- shifted byte lane latch signal to allow data throw exp4 4245 to transit before
+	-- latching.
 	p_rd_lat2:process(fb_syscon_i)
 	begin
-		if falling_edge(fb_syscon_i.clk) then
+		if fb_syscon_i.rst = '1' then
+			r_rd_nBL2 <= (others => '1');
+		elsif falling_edge(fb_syscon_i.clk) then
 			r_rd_nBL2 <= r_rd_nBL;
 		end if;
 	end process;
@@ -348,10 +341,8 @@ begin
 					end if;
 				when rd =>
 					if i_cyc_ack_i then
-						r_mem_acc_state <= rd2;
+						r_mem_acc_state <= done;
 					end if;				
-				when rd2 =>
-					r_mem_acc_state <= done;
 				when done =>
 					if r_mem_acc_reset = '1' then
 						r_mem_acc_state <= idle;
