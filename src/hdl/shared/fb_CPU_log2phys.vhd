@@ -202,13 +202,13 @@ begin
 			end if;
 
 			if i_A_stb_host = '1' then
-					-- r_throttle_act stays on the strobe: throttle_act_o is used by
-					-- the CPU wrapper after this transaction is accepted.
-						r_throttle_act <= i_throttle_act;
-						r_cyc <= '1';
-						r_state <= wait_a_ack;
-						r_a_stb_client <= '1';
-						r_a_ack_host <= '1';
+				-- r_throttle_act stays on the strobe: throttle_act_o is used by
+				-- the CPU wrapper after this transaction is accepted.
+				r_throttle_act <= i_throttle_act;
+				r_cyc <= '1';
+				r_state <= wait_a_ack;
+				r_a_stb_client <= '1';
+				r_a_ack_host <= '1';
 			elsif i_free = '1' then
 				r_state <= idle;
 			else
