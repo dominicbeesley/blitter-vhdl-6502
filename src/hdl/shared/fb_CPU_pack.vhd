@@ -93,6 +93,8 @@ package fb_CPU_pack is
 		ack_lane						: std_logic_vector(C_CPU_BYTELANES-1 downto 0);
 		ack							: std_logic;
 		D_rd							: std_logic_vector((8 * C_CPU_BYTELANES)-1 downto 0);
+		rx_lane_unreg				: std_logic_vector(C_CPU_BYTELANES-1 downto 0);	-- unregistered: lane D_acked this clock
+		rx_D_rd_unreg				: std_logic_vector(7 downto 0);						-- unregistered: its data
 
 		noice_debug_nmi_n			: std_logic;		-- debugger is forcing a cpu NMI
 		noice_debug_shadow		: std_logic;		-- debugger memory MOS map is active (overrides shadow_mos)

@@ -158,9 +158,9 @@ architecture rtl of fb_cpu_arm2 is
 	signal i_CPUSKT_D_mux_b2c	: std_logic_vector(7 downto 0);
 	signal i_CPUSKT_A_c2b		: std_logic_vector(25 downto 0);
 
-	signal i_readed_lane			: std_logic_vector(3 downto 0);
-	signal r_readed_lane_prev	: std_logic_vector(3 downto 0);
-	signal r_readed_lane_prev2	: std_logic_vector(3 downto 0);
+	signal r_rd_nBL				: std_logic_vector(3 downto 0);	-- read latch enables, low for 1 clock per byte
+	signal r_rd_nBL2				: std_logic_vector(3 downto 0);	-- read latch enables, low for 1 clock 1/2 clock later
+	signal r_rd_D					: std_logic_vector(7 downto 0);	-- read byte to the latches
 
 	signal r_write_lane			: std_logic_vector(3 downto 0);
 	signal r_write_lane_prev	: std_logic_vector(3 downto 0);
@@ -178,6 +178,7 @@ architecture rtl of fb_cpu_arm2 is
 	type t_mem_acc_state is (
 		idle,
 		rd,
+		rd2,
 		wr,
 		done
 		);
@@ -187,22 +188,6 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_lane_req		: std_logic_vector(3 downto 0);
 
 begin
-
-	p_prio_readed:process(wrap_i.ack_lane)
-	begin
-		if wrap_i.ack_lane(3) = '1' then
-			i_readed_lane <= "1000";
-		elsif wrap_i.ack_lane(2) = '1' then
-			i_readed_lane <= "0100";
-		elsif wrap_i.ack_lane(1) = '1' then
-			i_readed_lane <= "0010";
-		elsif wrap_i.ack_lane(0) = '1' then
-			i_readed_lane <= "0001";
-		else
-			i_readed_lane <= "0000";
-		end if;	
-	end process;
-
 
 	assert CLOCKSPEED = 128 report "CLOCKSPEED must be 128" severity failure;
 	
@@ -253,12 +238,9 @@ begin
 	i_CPUSKT_RES_b2c		<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- TODO:does this need synchronising?
 	i_CPUSKT_nFIRQ_b2c	<= wrap_i.nmi_n;
 	i_CPUSKT_nIRQ_b2c 	<= wrap_i.irq_n;
-	i_CPUBRD_nBL_b2c 		<= not i_readed_lane or r_readed_lane_prev2 when r_WE = '0' else
+	i_CPUBRD_nBL_b2c 		<= r_rd_nBL2 when r_WE = '0' else
 									not r_write_lane;
-	i_CPUSKT_D_mux_b2c <= 	wrap_i.D_rd(7 downto 0)   when i_readed_lane(0) = '1' else
-									wrap_i.D_rd(15 downto 8)  when i_readed_lane(1) = '1' else
-									wrap_i.D_rd(23 downto 16) when i_readed_lane(2) = '1' else
-									wrap_i.D_rd(31 downto 24);
+	i_CPUSKT_D_mux_b2c <= 	r_rd_D;
 
 
 	wrap_o.BE 				<= '0';
@@ -275,11 +257,29 @@ begin
 
 
 
-	p_reg_readed:process(fb_syscon_i)
+	-- Read bytes to the CPU board latches. Data and latch enable come straight
+	-- from registers (only the CPU mux follows), so they reach the pins
+	-- together. They are loaded from con_burst's rx_lane_unreg/rx_D_rd_unreg,
+	-- so they change on the same edge as ack_lane did. Each latch is open for
+	-- one clock while its byte is on PORTA; the next byte comes at least one
+	-- clock after it closes (back-to-back reads are 2 clocks apart).
+	p_rd_lat:process(fb_syscon_i)
 	begin
-		if rising_edge(fb_syscon_i.clk) then
-			r_readed_lane_prev <= i_readed_lane;
-			r_readed_lane_prev2 <= r_readed_lane_prev;
+		if fb_syscon_i.rst = '1' then
+			r_rd_nBL <= (others => '1');
+			r_rd_D <= (others => '0');
+		elsif rising_edge(fb_syscon_i.clk) then
+			r_rd_nBL <= not wrap_i.rx_lane_unreg;
+			if my_or_reduce(wrap_i.rx_lane_unreg) = '1' then
+				r_rd_D <= wrap_i.rx_D_rd_unreg;
+			end if;
+		end if;
+	end process;
+
+	p_rd_lat2:process(fb_syscon_i)
+	begin
+		if falling_edge(fb_syscon_i.clk) then
+			r_rd_nBL2 <= r_rd_nBL;
 		end if;
 	end process;
 
@@ -348,8 +348,10 @@ begin
 					end if;
 				when rd =>
 					if i_cyc_ack_i then
-						r_mem_acc_state <= done;
+						r_mem_acc_state <= rd2;
 					end if;				
+				when rd2 =>
+					r_mem_acc_state <= done;
 				when done =>
 					if r_mem_acc_reset = '1' then
 						r_mem_acc_state <= idle;

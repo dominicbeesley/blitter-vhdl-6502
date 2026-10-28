@@ -702,6 +702,8 @@ begin
 		ack_lane_o			=> i_wrap_i.ack_lane,
 		ack_o					=> i_wrap_i.ack,
 		D_rd_o				=> i_wrap_i.D_rd,
+		rx_lane_unreg_o	=> i_wrap_i.rx_lane_unreg,
+		rx_D_rd_unreg_o	=> i_wrap_i.rx_D_rd_unreg,
 	
 		-- fishbone byte wide controller interface
 	

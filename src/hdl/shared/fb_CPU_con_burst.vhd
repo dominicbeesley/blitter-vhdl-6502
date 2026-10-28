@@ -72,6 +72,11 @@ port (
    ack_lane_o        : out std_logic_vector(G_BYTELANES-1 downto 0);
    ack_o             : out std_logic;
    D_rd_o            : out std_logic_vector((8 * G_BYTELANES)-1 downto 0);
+   -- unregistered, for wrappers that register their own pins: the lane being
+   -- D_acked this clock (reads and writes) and its data. They change at the
+   -- edge before ack_lane_o/D_rd_o do.
+   rx_lane_unreg_o   : out std_logic_vector(G_BYTELANES-1 downto 0);
+   rx_D_rd_unreg_o   : out std_logic_vector(7 downto 0);
 
    -- fishbone byte wide controller interface
 
@@ -272,5 +277,10 @@ begin
    D_rd_o      <= r_d_Rd;
 
    act_lane_o  <= i_tx_cur;
+
+   -- same qualification as the D_rd capture in p_rx
+   rx_lane_unreg_o <= i_rx_cur when r_cyc = '1' and cyc_i = '1' and fb_con_p2c_i.D_ack = '1' else
+                      (others => '0');
+   rx_D_rd_unreg_o <= fb_con_p2c_i.D_rd;
 
 end rtl;

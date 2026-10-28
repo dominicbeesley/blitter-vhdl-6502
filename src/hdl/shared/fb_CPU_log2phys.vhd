@@ -117,6 +117,7 @@ architecture rtl of fb_cpu_log2phys is
 	signal r_cyc						: std_logic;
 	signal r_A_stb_client			: std_logic;							-- output address strobe
 	signal i_A_stb_host				: std_logic;							-- input qualified address strobe
+	signal i_free						: std_logic;							-- nothing held, or what's held is A_ack'd this clock
 	signal i_phys_A					: std_logic_vector(23 downto 0);
 	signal r_phys_A					: std_logic_vector(23 downto 0);
 	signal r_we							: std_logic;
@@ -151,7 +152,15 @@ begin
 	-- State Machine 
 	-- ================================================================================================ --
 
-	i_A_stb_host 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and r_state = idle else
+	-- One transaction is held for the peripheral. It frees on the peripheral's
+	-- A_ack and the next one is taken on that same edge (as the fb_intcon_shared
+	-- slot), so a burst runs at one transaction per 2 clocks. r_A_ack_host
+	-- guards the clock after our own A_ack, when the host still shows the
+	-- transaction just taken.
+	i_free <= '1' when r_state = idle or fb_per_p2c_i.A_ack = '1' else
+				'0';
+
+	i_A_stb_host 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and i_free = '1' and r_A_ack_host = '0' else
 					'0';
 
 
@@ -184,32 +193,27 @@ begin
          -- (as fb_intcon_buffer)
          r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
-			case r_state is
-				when idle =>
-					-- address and we follow the host every idle clock, so the host
-					-- A_stb doesn't drive their enable; only the value at the
-					-- accepting edge is used, and A_stb to the peripheral is low here.
+			-- address and we follow the host whenever free, so the host A_stb
+			-- doesn't drive their enable; only the value at the accepting edge is
+			-- used, and A_stb to the peripheral is low otherwise.
+			if i_free = '1' then
+				r_phys_A <= i_phys_A;
+				r_we <= fb_con_c2p_i.we;
+			end if;
+
+			if i_A_stb_host = '1' then
 					-- r_throttle_act stays on the strobe: throttle_act_o is used by
 					-- the CPU wrapper after this transaction is accepted.
-					r_phys_A <= i_phys_A;
-					r_we <= fb_con_c2p_i.we;
-					if i_A_stb_host then
 						r_throttle_act <= i_throttle_act;
 						r_cyc <= '1';
 						r_state <= wait_a_ack;
 						r_a_stb_client <= '1';
 						r_a_ack_host <= '1';
-					end if;
-				when wait_a_ack =>
-					if fb_per_p2c_i.A_ack = '0' then
+			elsif i_free = '1' then
+				r_state <= idle;
+			else
 						r_a_stb_client <= '1';
-						r_State <= wait_a_ack;
-					else
-						r_state <= idle;
 					end if;
-				when others =>
-					r_state <= idle;
-			end case;
 
 			if fb_con_c2p_i.cyc = '0' then
 				r_A_stb_client <= '0';
