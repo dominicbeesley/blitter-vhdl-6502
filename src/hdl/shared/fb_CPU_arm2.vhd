@@ -110,15 +110,24 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal i_rdy				: std_logic;
 
-	signal r_a_cpu				: std_logic_vector(23 downto 0);
-	signal r_A_log				: unsigned(1 downto 0);
+	-- address signals registered from the cpu during phi2 of previous cycle (pipelined)
+	-- note ABE, ALE are pulled high
+	signal r_a_cpu_p			: std_logic_vector(23 downto 0);
+	signal r_nMREQ_p				: std_logic;
+	signal r_nOPC_p				: std_logic;
+	signal r_nBW_p				: std_logic;
+	signal r_nRW_p				: std_logic;
+
+	-- address signals for the current cycle
+
+	signal r_A_log_cur		: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
-	signal r_nMREQ				: std_logic;
-	signal r_nOPC				: std_logic;
-	signal r_nBW				: std_logic;
-	signal r_nRW				: std_logic;
-	signal r_nRW_dly			: std_logic_vector(1 downto 0);	-- r_nRW delayed for the PORTA buffer direction
 	signal r_instr_fetch		: std_logic;
+	signal r_nMREQ_cur		: std_logic;
+
+	-- port A buffer signals
+	signal r_nRW_buf			: std_logic;
+	signal r_nRW_buf_dly		: std_logic_vector(1 downto 0);	-- r_nRW_p delayed for the PORTA buffer direction
 
 	-- port B
 
@@ -214,11 +223,11 @@ begin
 	);
 
 
-	-- The PORTA direction changes 2 clocks after r_nRW: at the end of a read
-	-- the last lane's latch (nBL) closes on the same edge that r_nRW changes,
+	-- The PORTA direction changes 2 clocks after r_nRW_buf: at the end of a read
+	-- the last lane's latch (nBL) closes on the same edge that r_nRW_buf changes,
 	-- so without the delay PORTA stops being driven with no hold time
 	-- (2543 hold is 2 ns). Writes don't need DIR until phi2.
-	i_BUF_D_RnW_b2c <= 	not r_nRW_dly(1);
+	i_BUF_D_RnW_b2c <= 	not r_nRW_buf_dly(1);
 
 	i_CPUSKT_ABRT_b2c 	<= '0';
 	i_CPUSKT_phi1_b2c 	<= r_cpu_phi1;
@@ -232,7 +241,7 @@ begin
 
 
 	wrap_o.BE 				<= '0';
-	wrap_o.A	 				<= r_A_cpu(23 downto 2) & std_logic_vector(r_A_log);
+	wrap_o.A	 				<= r_A_log_cur;
 	wrap_o.lane_req		<= r_lane_req;
 	wrap_o.cyc 				<= r_cyc_o;
 	wrap_o.we	  			<= r_WE;
@@ -290,7 +299,8 @@ begin
 			r_D_wr_stb <= (others => '0');
 			r_D_wr <= (others => '0');
 			r_WE <= '0';
-			r_A_log <= (others => '0');		
+			r_A_log_cur <= (others => '0');	
+			r_nMREQ_cur <= '1';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_write_lane <= prior(r_lane_req and (not r_write_lane_done) and (r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2));
@@ -301,31 +311,7 @@ begin
 
 			case r_mem_acc_state is 
 				when idle =>
-					r_cyc_o <= '0';
-					r_D_wr_stb <= (others => '0');
-					r_write_lane <= (others => '0');
-					r_write_lane_prev <= (others => '0');
-					r_write_lane_prev2 <= (others => '0');
-					r_write_lane_done <= (others => '0');
-					r_write_lane_done2 <= (others => '0');
-					if r_cpu_phi1 = '1' and r_nMREQ = '0' then
-						if r_nBW = '1' then
-							r_lane_req <= "1111";
-							r_A_log <= "00";
-						else
-							r_lane_req <= (others => '0');
-							r_lane_req(to_integer(unsigned(r_a_cpu(1 downto 0)))) <= '1';
-							r_A_log <= unsigned(r_a_cpu(1 downto 0));
-						end if;
-						if r_nRW = '0' then
-							r_mem_acc_state <= rd;
-							r_WE <= '0';
-						else
-							r_mem_acc_state <= wr;
-							r_WE <= '1';
-						end if;
-						r_cyc_o <= '1';
-					end if;
+					null; -- wait here to be release by the if below...
 				when wr =>
 					if r_cpu_phi2 = '1' then
 						for I in 0 to 3 loop
@@ -338,21 +324,52 @@ begin
 					if i_cyc_ack_i then
 						r_D_wr_stb <= (others => '0');
 						r_mem_acc_state <= done;
+						r_cyc_o <= '0';
 					end if;
 				when rd =>
 					if i_cyc_ack_i then
 						r_mem_acc_state <= done;
+						r_cyc_o <= '0';
 					end if;				
 				when done =>
 					if r_mem_acc_reset = '1' then
 						r_mem_acc_state <= idle;
-						r_cyc_o <= '0';
 					end if;
 				when others =>
 					r_cyc_o <= '0';
 					r_D_wr_stb <= (others => '0');
 					r_mem_acc_state <= idle;
 			end case;
+
+			if  (r_mem_acc_state = idle or r_mem_acc_state = done) and r_mem_acc_reset = '1' then
+				if r_nMREQ_p = '0' then
+					r_D_wr_stb <= (others => '0');
+					r_write_lane <= (others => '0');
+					r_write_lane_prev <= (others => '0');
+					r_write_lane_prev2 <= (others => '0');
+					r_write_lane_done <= (others => '0');
+					r_write_lane_done2 <= (others => '0');
+					if r_nBW_p = '1' then
+						r_lane_req <= "1111";
+						r_A_log_cur <= r_a_cpu_p(23 downto 2) & "00";
+					else
+						r_lane_req <= (others => '0');
+						r_lane_req(to_integer(unsigned(r_a_cpu_p(1 downto 0)))) <= '1';
+						r_A_log_cur <= r_a_cpu_p(23 downto 0);
+					end if;
+					if r_nRW_p = '0' then
+						r_mem_acc_state <= rd;
+						r_WE <= '0';
+					else
+						r_mem_acc_state <= wr;
+						r_WE <= '1';
+					end if;
+					r_cyc_o <= '1';
+					r_nMREQ_cur <= '0';
+				else
+					r_nMREQ_cur <= '1';
+				end if;		
+			end if;
 		end if;
 	end process;
 
@@ -361,7 +378,7 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 
 			r_mem_acc_reset <= '0';
-			r_nRW_dly <= r_nRW_dly(0) & r_nRW;
+			r_nRW_buf_dly <= r_nRW_buf_dly(0) & r_nRW_buf;
 
 			if r_clkctdn /= 0 then
 				r_clkctdn <= r_clkctdn - 1;
@@ -376,28 +393,34 @@ begin
 					else
 						r_cpu_phi1 <= '1';
 
-						r_instr_fetch <= not r_nOPC;
-						if r_arm_boot = '1' and r_nRW = '0' then
-							if cfg_mosram_i = '1' then
-								r_a_cpu <= x"7D3F" & i_CPUSKT_A_c2b(7 downto 0); 	-- boot from SWRAM at 7D xxxx
-							else
-								r_a_cpu <= x"8D3F" & i_CPUSKT_A_c2b(7 downto 0); 	-- boot from Flash at 8D xxxx
-							end if;
-						else
-							r_a_cpu <= i_CPUSKT_A_c2b(23 downto 0);
-						end if;
+						r_instr_fetch <= not r_nOPC_p;
 					end if;
 
 				when phi2 =>
-					if r_clkctdn = 0 and (r_mem_acc_state = done or r_nMREQ /= '0') then
+
+					-- get pipelined stuff for next cycle
+					if r_arm_boot = '1' and i_CPUSKT_nRW_c2b = '0' then
+						if cfg_mosram_i = '1' then
+							r_a_cpu_p <= x"7D3F" & i_CPUSKT_A_c2b(7 downto 0); 	-- boot from SWRAM at 7D xxxx
+						else
+							r_a_cpu_p <= x"8D3F" & i_CPUSKT_A_c2b(7 downto 0); 	-- boot from Flash at 8D xxxx
+						end if;
+					else
+						r_a_cpu_p <= i_CPUSKT_A_c2b(23 downto 0);
+					end if;
+					r_nMREQ_p <= i_CPUSKT_nMREQ_c2b or fb_syscon_i.rst;
+					r_nOPC_p <= i_CPUSKT_nOPC_c2b;
+					r_nBW_p <= i_CPUSKT_nBW_c2b;
+					r_nRW_p <= i_CPUSKT_nRW_c2b;
+
+					
+
+					if r_clkctdn = 0 and (r_mem_acc_state = done or r_nMREQ_cur /= '0') then
 						r_cpu_phi2 <= '0';
 						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
 						r_clk_state <= phi1;
 						r_mem_acc_reset <= '1';
-						r_nMREQ <= i_CPUSKT_nMREQ_c2b or fb_syscon_i.rst;
-						r_nOPC <= i_CPUSKT_nOPC_c2b;
-						r_nBW <= i_CPUSKT_nBW_c2b;
-						r_nRW <= i_CPUSKT_nRW_c2b;
+						r_nRW_buf <= r_nRW_p;
 					else
 						r_cpu_phi2 <= '1';
 					end if;
