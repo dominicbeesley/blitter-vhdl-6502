@@ -315,8 +315,8 @@ begin
 				when wr =>
 					if r_cpu_phi2 = '1' then
 						for I in 0 to 3 loop
-							if r_write_lane_prev2(I) = '1' then
-								r_D_wr(7+8*I downto 8*I) <= i_CPUSKT_D_mux_c2b;
+							if r_write_lane_done2(I) = '1' and r_D_wr_stb(I) = '0' then
+   							r_D_wr(7+8*I downto 8*I) <= i_CPUSKT_D_mux_c2b;
 							end if;
 						end loop;
 						r_D_wr_stb <= r_D_wr_stb or r_write_lane_done2;

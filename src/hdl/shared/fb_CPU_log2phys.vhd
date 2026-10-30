@@ -21,18 +21,18 @@
 -- THE SOFTWARE.
 -- ----------------------------------------------------------------------
 
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company:          Dossytronics
+-- Engineer:         Dominic Beesley
 -- 
--- Create Date:    	24/10/2022
+-- Create Date:      24/10/2022
 -- Design Name: 
--- Module Name:    	fishbone bus - CPU address translation and wait
+-- Module Name:      fishbone bus - CPU address translation and wait
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		A pass-through fishbone component that translates logical to 
---							physical addresses and additionally throttles consecutive 
---							accesses to the system VIA
+-- Description:      A pass-through fishbone component that translates logical to 
+--                   physical addresses and additionally throttles consecutive 
+--                   accesses to the system VIA
 -- Dependencies: 
 --
 -- Revision: 
@@ -48,141 +48,142 @@ use work.common.all;
 use work.fb_sys_pack.all;
 
 entity fb_cpu_log2phys is
-	generic (
-		SIM									: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED							: natural;										-- fast clock speed in mhz						
-		G_MK3									: boolean := false;							-- TODO: get from board_config?
-		G_C20K								: boolean := false
-	);
-	port(
+   generic (
+      SIM                           : boolean := false;                    -- skip some stuff, i.e. slow sdram start up
+      CLOCKSPEED                    : natural;                             -- fast clock speed in mhz                
+      G_MK3                         : boolean := false;                    -- TODO: get from board_config?
+      G_C20K                        : boolean := false
+   );
+   port(
 
-		fb_syscon_i								: in	fb_syscon_t;
+      fb_syscon_i                      : in  fb_syscon_t;
 
-		-- controller interface from the cpu
-		fb_con_c2p_i							: in fb_con_o_per_i_t;
-		fb_con_p2c_o							: out	fb_con_i_per_o_t;
-		fb_con_extra_instr_fetch_i				: in std_logic;
+      -- controller interface from the cpu
+      fb_con_c2p_i                     : in fb_con_o_per_i_t;
+      fb_con_p2c_o                     : out fb_con_i_per_o_t;
+      fb_con_extra_instr_fetch_i          : in std_logic;
 
-		fb_per_c2p_o							: out fb_con_o_per_i_t;
-		fb_per_p2c_i							: in	fb_con_i_per_o_t;
+      fb_per_c2p_o                     : out fb_con_o_per_i_t;
+      fb_per_p2c_i                     : in  fb_con_i_per_o_t;
 
-		-- per cpu config
-		cfg_sys_via_block_i					: in std_logic;
+      -- per cpu config
+      cfg_sys_via_block_i              : in std_logic;
 
-		-- system type
-		cfg_sys_type_i							: in sys_type;
-		cfg_swram_enable_i					: in std_logic;
-		cfg_mosram_i							: in std_logic;
-		cfg_map0n1_i							: in std_logic;
+      -- system type
+      cfg_sys_type_i                   : in sys_type;
+      cfg_swram_enable_i               : in std_logic;
+      cfg_mosram_i                     : in std_logic;
+      cfg_map0n1_i                     : in std_logic;
 
-		-- extra memory map control signals
-		sys_ROMPG_i								: in std_logic_vector(7 downto 0);
-		JIM_page_i								: in std_logic_vector(15 downto 0);
-		jim_en_i									: in std_logic;		-- jim enable, this is handled here 
-
-
-		-- memctl signals
-		swmos_shadow_i							: in std_logic;		-- shadow mos from SWRAM slot #8
-		turbo_lo_mask_i						: in std_logic_vector(7 downto 0);
-		rom_autohazel_map_i					: in std_logic_vector(15 downto 0);
-
-		throttle_mos_i							: in std_logic;
-		throttle_all_i							: in std_logic;
-		rom_throttle_map_i					: in std_logic_vector(15 downto 0);
-		throttle_act_o							: out std_logic;
-
-		-- noice signals
-		noice_debug_shadow_i					: in std_logic;
+      -- extra memory map control signals
+      sys_ROMPG_i                      : in std_logic_vector(7 downto 0);
+      JIM_page_i                       : in std_logic_vector(15 downto 0);
+      jim_en_i                         : in std_logic;      -- jim enable, this is handled here 
 
 
-		-- 65816/model-C extras
-		window_65816_i							: in	std_logic_vector(12 downto 0) := x"FF" & "11100";
-		window_65816_wr_en_i					: in	std_logic := '0';
+      -- memctl signals
+      swmos_shadow_i                   : in std_logic;      -- shadow mos from SWRAM slot #8
+      turbo_lo_mask_i                  : in std_logic_vector(7 downto 0);
+      rom_autohazel_map_i              : in std_logic_vector(15 downto 0);
 
-		-- preboot
-		preboot_i								: in  std_logic := '0'
+      throttle_mos_i                   : in std_logic;
+      throttle_all_i                   : in std_logic;
+      rom_throttle_map_i               : in std_logic_vector(15 downto 0);
+      throttle_act_o                   : out std_logic;
+      cpu_2MHz_phi2_clken_i            : in std_logic;
+
+      -- noice signals
+      noice_debug_shadow_i             : in std_logic;
 
 
-	);
+      -- 65816/model-C extras
+      window_65816_i                   : in  std_logic_vector(12 downto 0) := x"FF" & "11100";
+      window_65816_wr_en_i             : in  std_logic := '0';
+
+      -- preboot
+      preboot_i                        : in  std_logic := '0'
+
+
+   );
 end fb_cpu_log2phys;
 
 
 architecture rtl of fb_cpu_log2phys is 
 
-	type state_t is (idle, wait_a_ack);
+   type state_t is (idle, wait_a_ack);
 
-	signal r_state 		: state_t;
+   signal r_state       : state_t;
 
-	signal r_A_ack_host				: std_logic;
-	signal r_cyc						: std_logic;
-	signal r_A_stb_client			: std_logic;							-- output address strobe
-	signal i_A_stb_host				: std_logic;							-- input qualified address strobe
-	signal i_free						: std_logic;							-- nothing held, or what's held is A_ack'd this clock
-	signal i_phys_A					: std_logic_vector(23 downto 0);
-	signal r_phys_A					: std_logic_vector(23 downto 0);
-	signal r_we							: std_logic;
-	signal r_D_wr_stb					: std_logic;
-	signal r_D_wr						: std_logic_vector(7 downto 0);
-	signal r_rdy_ctdn					: t_rdy_ctdn;
+   signal r_A_ack_host           : std_logic;
+   signal r_cyc                  : std_logic;
+   signal r_A_stb_client         : std_logic;                     -- output address strobe
+   signal i_A_stb_host           : std_logic;                     -- input qualified address strobe
+   signal i_free                 : std_logic;                     -- nothing held, or what's held is A_ack'd this clock
+   signal i_phys_A               : std_logic_vector(23 downto 0);
+   signal r_phys_A               : std_logic_vector(23 downto 0);
+   signal r_we                   : std_logic;
+   signal r_D_wr_stb             : std_logic;
+   signal r_D_wr                 : std_logic_vector(7 downto 0);
+   signal r_rdy_ctdn             : t_rdy_ctdn;
 
-	signal i_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
-	signal r_throttle_act			: std_logic; -- set to '1' when current cycle should be throttled
+   signal i_throttle_act         : std_logic; -- set to '1' when current cycle should be throttled
+   signal r_throttle_act         : std_logic; -- set to '1' when current cycle should be throttled
 
 begin
 
 
-	fb_con_p2c_o.A_ack <= r_A_ack_host;
-	fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
- 	-- gate with r_cyc: our cyc to the peripheral drops a clock after the host's,
+   fb_con_p2c_o.A_ack <= r_A_ack_host;
+   fb_con_p2c_o.D_rd <= fb_per_p2c_i.D_rd;
+   -- gate with r_cyc: our cyc to the peripheral drops a clock after the host's,
    -- so a D_ack from the aborted cycle could otherwise reach the host
    fb_con_p2c_o.D_ack <= fb_per_p2c_i.D_ack and r_cyc;
    fb_con_p2c_o.rdy   <= fb_per_p2c_i.rdy and r_cyc;
 
-	fb_per_c2p_o.cyc			<=	r_cyc;
-	fb_per_c2p_o.we			<=	r_we;
-	fb_per_c2p_o.A				<=	r_phys_A;
-	fb_per_c2p_o.A_stb		<= r_A_stb_client;
-	fb_per_c2p_o.D_wr			<= r_D_wr;
-	fb_per_c2p_o.D_wr_stb	<= r_D_wr_stb;
-	fb_per_c2p_o.rdy_ctdn	<= r_rdy_ctdn;
+   fb_per_c2p_o.cyc        <= r_cyc;
+   fb_per_c2p_o.we         <= r_we;
+   fb_per_c2p_o.A          <= r_phys_A;
+   fb_per_c2p_o.A_stb      <= r_A_stb_client;
+   fb_per_c2p_o.D_wr       <= r_D_wr;
+   fb_per_c2p_o.D_wr_stb   <= r_D_wr_stb;
+   fb_per_c2p_o.rdy_ctdn   <= r_rdy_ctdn;
 
-	throttle_act_o <= r_throttle_act;
+   throttle_act_o <= r_throttle_act;
 
-	-- ================================================================================================ --
-	-- State Machine 
-	-- ================================================================================================ --
+   -- ================================================================================================ --
+   -- State Machine 
+   -- ================================================================================================ --
 
-	-- One transaction is held for the peripheral. It frees on the peripheral's
-	-- A_ack and the next one is taken on that same edge (as the fb_intcon_shared
-	-- slot), so a burst runs at one transaction per 2 clocks. r_A_ack_host
-	-- guards the clock after our own A_ack, when the host still shows the
-	-- transaction just taken.
-	i_free <= '1' when r_state = idle or fb_per_p2c_i.A_ack = '1' else
-				'0';
+   -- One transaction is held for the peripheral. It frees on the peripheral's
+   -- A_ack and the next one is taken on that same edge (as the fb_intcon_shared
+   -- slot), so a burst runs at one transaction per 2 clocks. r_A_ack_host
+   -- guards the clock after our own A_ack, when the host still shows the
+   -- transaction just taken.
+   i_free <= '1' when r_state = idle or fb_per_p2c_i.A_ack = '1' else
+            '0';
 
-	i_A_stb_host 	<= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and i_free = '1' and r_A_ack_host = '0' else
-					'0';
+   i_A_stb_host   <= '1' when fb_con_c2p_i.cyc = '1' and fb_con_c2p_i.a_stb = '1' and i_free = '1' and r_A_ack_host = '0' else
+               '0';
 
 
-	p_state:process(fb_syscon_i)
-	begin
-		if fb_syscon_i.rst = '1' then
-			r_state <= idle;
-			r_phys_A <= (others => '0');
-			r_cyc <= '0';
-			r_we <= '0';
-			r_D_wr_stb <= '0';
-			r_D_wr <= (others => '0');
-			r_rdy_ctdn <= RDY_CTDN_MAX;
-			r_a_stb_client <= '0';
-			r_A_ack_host <= '0';
-			r_throttle_act <= '0';
-		elsif rising_edge(fb_syscon_i.clk) then
+   p_state:process(fb_syscon_i)
+   begin
+      if fb_syscon_i.rst = '1' then
+         r_state <= idle;
+         r_phys_A <= (others => '0');
+         r_cyc <= '0';
+         r_we <= '0';
+         r_D_wr_stb <= '0';
+         r_D_wr <= (others => '0');
+         r_rdy_ctdn <= RDY_CTDN_MAX;
+         r_a_stb_client <= '0';
+         r_A_ack_host <= '0';
+         r_throttle_act <= '0';
+      elsif rising_edge(fb_syscon_i.clk) then
 
-			r_a_stb_client <= '0';
-			r_A_ack_host <= '0';
+         r_a_stb_client <= '0';
+         r_A_ack_host <= '0';
 
-			-- write data: registered copy of the host's, which it holds until
+         -- write data: registered copy of the host's, which it holds until
          -- D_ack. Masked in the clock after the peripheral's D_ack (the host
          -- hasn't seen it yet); the peripheral's guard covers the clock after.
          r_D_wr_stb <= fb_con_c2p_i.D_wr_stb and not fb_per_p2c_i.D_ack;
@@ -193,87 +194,89 @@ begin
          -- (as fb_intcon_buffer)
          r_rdy_ctdn <= fb_con_c2p_i.rdy_ctdn;
 
-			-- address and we follow the host whenever free, so the host A_stb
-			-- doesn't drive their enable; only the value at the accepting edge is
-			-- used, and A_stb to the peripheral is low otherwise.
-			if i_free = '1' then
-				r_phys_A <= i_phys_A;
-				r_we <= fb_con_c2p_i.we;
-			end if;
+         -- address and we follow the host whenever free, so the host A_stb
+         -- doesn't drive their enable; only the value at the accepting edge is
+         -- used, and A_stb to the peripheral is low otherwise.
+         if i_free = '1' then
+            r_phys_A <= i_phys_A;
+            r_we <= fb_con_c2p_i.we;
+         end if;
 
-			if i_A_stb_host = '1' then
-				-- r_throttle_act stays on the strobe: throttle_act_o is used by
-				-- the CPU wrapper after this transaction is accepted.
-				r_throttle_act <= i_throttle_act;
-				r_cyc <= '1';
-				r_state <= wait_a_ack;
-				r_a_stb_client <= '1';
-				r_a_ack_host <= '1';
-			elsif i_free = '1' then
-				r_state <= idle;
-			else
-						r_a_stb_client <= '1';
-					end if;
+         if i_A_stb_host = '1' then
+            -- r_throttle_act stays on the strobe: throttle_act_o is used by
+            -- the CPU wrapper after this transaction is accepted.
+            r_throttle_act <= i_throttle_act;
+            r_cyc <= '1';
+            r_state <= wait_a_ack;
+            r_a_stb_client <= '1';
+            r_a_ack_host <= '1';
+         elsif i_free = '1' then
+            r_state <= idle;
+         else
+                  r_a_stb_client <= '1';
+               end if;
 
-			if fb_con_c2p_i.cyc = '0' then
-				r_A_stb_client <= '0';
-				r_cyc <= '0';
-				r_state <= idle;
-				r_D_wr_stb <= '0';
-			end if;
+         if fb_con_c2p_i.cyc = '0' then
+            r_A_stb_client <= '0';
+            r_cyc <= '0';
+            r_state <= idle;
+            r_D_wr_stb <= '0';
+         end if;
 
-		end if;
-	end process;
-
-
+      end if;
+   end process;
 
 
-	-- ================================================================================================ --
-	-- Logical to physical address mapping 
-	-- ================================================================================================ --
 
 
-	e_log2phys: entity work.log2phys
-	generic map (
-		SIM									=> SIM,
-		G_MK3									=> G_MK3,
-		G_C20K								=> G_C20K
-	)
-	port map (
-		fb_syscon_i 						=> fb_syscon_i,	
-		-- CPU address control signals from other components
-		JIM_page_i							=> JIM_page_i,
-		sys_ROMPG_i							=> sys_ROMPG_i,
-		cfg_swram_enable_i				=> cfg_swram_enable_i,
-		cfg_map0n1_i						=> cfg_map0n1_i,
-		cfg_mosram_i						=> cfg_mosram_i,
-		cfg_sys_via_block_i				=> cfg_sys_via_block_i,
+   -- ================================================================================================ --
+   -- Logical to physical address mapping 
+   -- ================================================================================================ --
+
+
+   e_log2phys: entity work.log2phys
+   generic map (
+      SIM                           => SIM,
+      G_MK3                         => G_MK3,
+      G_C20K                        => G_C20K
+   )
+   port map (
+      fb_syscon_i                   => fb_syscon_i,   
+      -- CPU address control signals from other components
+      JIM_page_i                    => JIM_page_i,
+      sys_ROMPG_i                   => sys_ROMPG_i,
+      cfg_swram_enable_i            => cfg_swram_enable_i,
+      cfg_map0n1_i                  => cfg_map0n1_i,
+      cfg_mosram_i                  => cfg_mosram_i,
+      cfg_sys_via_block_i           => cfg_sys_via_block_i,
       cfg_sys_type_i                => cfg_sys_type_i,
+      cpu_2MHz_phi2_clken_i         => cpu_2MHz_phi2_clken_i,
 
-		jim_en_i								=> jim_en_i,
-		swmos_shadow_i						=> swmos_shadow_i,
-		turbo_lo_mask_i					=> turbo_lo_mask_i,
-		noice_debug_shadow_i				=> noice_debug_shadow_i,
 
-		rom_autohazel_map_i				=> rom_autohazel_map_i,
+      jim_en_i                      => jim_en_i,
+      swmos_shadow_i                => swmos_shadow_i,
+      turbo_lo_mask_i               => turbo_lo_mask_i,
+      noice_debug_shadow_i          => noice_debug_shadow_i,
 
-		throttle_mos_i						=> throttle_mos_i,
-		throttle_all_i						=> throttle_all_i,
-		rom_throttle_map_i				=> rom_throttle_map_i,
-		throttle_act_o						=> i_throttle_act,
+      rom_autohazel_map_i           => rom_autohazel_map_i,
 
-		A_i									=> fb_con_c2p_i.A,
-		instruction_fetch_i				=> fb_con_extra_instr_fetch_i,
-		A_stb_i								=> i_A_stb_host,
+      throttle_mos_i                => throttle_mos_i,
+      throttle_all_i                => throttle_all_i,
+      rom_throttle_map_i            => rom_throttle_map_i,
+      throttle_act_o                => i_throttle_act,
 
-		A_o									=> i_phys_A,
+      A_i                           => fb_con_c2p_i.A,
+      instruction_fetch_i           => fb_con_extra_instr_fetch_i,
+      A_stb_i                       => i_A_stb_host,
 
-		-- 65816/model C extras
-		window_65816_i						=> window_65816_i,
-		window_65816_wr_en_i				=> window_65816_wr_en_i,
+      A_o                           => i_phys_A,
 
-		preboot_i							=> preboot_i
-		
-	);
+      -- 65816/model C extras
+      window_65816_i                => window_65816_i,
+      window_65816_wr_en_i          => window_65816_wr_en_i,
+
+      preboot_i                     => preboot_i
+      
+   );
 
 end rtl;

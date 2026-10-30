@@ -763,6 +763,7 @@ begin
 		throttle_all_i							=> throttle_all_i,
 		rom_throttle_map_i					=> rom_throttle_map_i,
 		throttle_act_o							=> i_throttle_act,
+		cpu_2MHz_phi2_clken_i				=> cpu_2MHz_phi2_clken_i,
 
 		-- noice signals
 		noice_debug_shadow_i					=> noice_debug_shadow_i,

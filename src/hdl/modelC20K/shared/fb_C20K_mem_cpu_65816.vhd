@@ -449,6 +449,7 @@ begin
       throttle_all_i                => i_throttle_all_E,
       rom_throttle_map_i            => rom_throttle_map_i,
       throttle_act_o                => i_throttle_act,
+      cpu_2MHz_phi2_clken_i         => cpu_2MHz_phi2_clken_i,
       rom_autohazel_map_i           => rom_autohazel_map_i,
       window_65816_i                => window_65816_i,
       window_65816_wr_en_i          => window_65816_wr_en_i,

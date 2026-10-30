@@ -90,6 +90,7 @@ entity log2phys is
 		rom_throttle_map_i				: in  std_logic_vector(15 downto 0);
 		throttle_all_i						: in  std_logic;
 		throttle_act_o						: out std_logic;
+		cpu_2MHz_phi2_clken_i			: in  std_logic;
 
 		rom_autohazel_map_i				: in  std_logic_vector(15 downto 0);
 
@@ -121,7 +122,7 @@ end log2phys;
 architecture rtl of log2phys is
 
 	constant SYS_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
-	constant USR_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE4";
+	constant USR_VIA_ADDR : std_logic_vector(23 downto 4) := x"FFFE6";
 
 	signal r_pagrom_A 	: std_logic_vector(9 downto 0);
 	signal r_mosrom_A		: std_logic_vector(9 downto 0);
@@ -319,16 +320,16 @@ begin
 			r_sysvia_blocking <= '0';
 			r_sysvia_block_counter <= (others => '0');
 		elsif rising_edge(fb_syscon_i.clk) then
-			if A_stb_i = '1' then
-				if cfg_sys_via_block_i = '1' and (A_i(23 downto 4) = SYS_VIA_ADDR or A_i(23 downto 4) = USR_VIA_ADDR) then
-					r_sysvia_blocking <= '1';
-					r_sysvia_block_counter <= to_unsigned(G_SYSVIA_BLOCK_LEN, r_sysvia_block_counter'length);
-				elsif r_sysvia_blocking = '1' then
-					if r_sysvia_block_counter = 0 then
-						r_sysvia_blocking <= '0';
-					else
-						r_sysvia_block_counter <= r_sysvia_block_counter - 1;
-					end if;
+			if A_stb_i = '1'
+				and cfg_sys_via_block_i = '1'
+				and (A_i(23 downto 4) = SYS_VIA_ADDR or A_i(23 downto 4) = USR_VIA_ADDR) then
+				r_sysvia_blocking <= '1';
+				r_sysvia_block_counter <= to_unsigned(G_SYSVIA_BLOCK_LEN, r_sysvia_block_counter'length);
+			elsif r_sysvia_blocking = '1' and cpu_2MHz_phi2_clken_i = '1' then
+				if r_sysvia_block_counter = 0 then
+					r_sysvia_blocking <= '0';
+				else
+					r_sysvia_block_counter <= r_sysvia_block_counter - 1;
 				end if;
 			end if;
 		end if;
