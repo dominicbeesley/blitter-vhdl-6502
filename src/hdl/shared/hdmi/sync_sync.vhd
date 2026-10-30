@@ -37,14 +37,17 @@ library work;
 
 entity sync_sync is
    generic (
-      G_PERIOD : natural      := 9;   --PERIOD is the number cycles of dest clock to sample, 
+      G_PERIOD : natural      := 27;   --PERIOD is the number cycles of dest clock to sample, 
                                  --there must be a whole number of these cycles between
                                  --HS's and must be >= HYSTERESIS*2 + (TRAIL - META)
-      G_HYSTERESIS : natural     := 2;    --syncs will be samples this number of dest_clk cycles
+                                 -- default is 27 as that gives us a sample point for vsync
+                                 -- that is safe even if vsync trails hsync by an odd multiple
+                                 -- of 500ns
+      G_HYSTERESIS : natural  := 2;    --syncs will be samples this number of dest_clk cycles
                                  --after a sync is detected
       G_TRAIL : natural       := 4; --number of cycles after a detected edge to sample
-      G_META : natural        := 2  --the incoming HS is passed through this number of flip
-                                 --flops to remove metastability
+      G_META : natural        := 2  --the incoming HS and VS are passed through this number
+                                 --of flip flops to remove metastability
    );
    port(
       HSYNC_SRC_e_i     : in  std_logic;
@@ -63,6 +66,7 @@ end sync_sync;
 architecture rtl of sync_sync is
    
    signal   i_hsync_meta   : std_logic;
+   signal   i_vsync_meta   : std_logic;
 
    signal   r_hsync_prev   : std_logic;
 
@@ -78,6 +82,16 @@ begin
       clk   => CLK_DEST_i,
       i     => HSYNC_SRC_e_i,
       o     => i_hsync_meta
+   );
+
+   e_rm_vs:entity work.metadelay
+   generic map (
+      N     => G_META
+   )
+   port map(
+      clk   => CLK_DEST_i,
+      i     => VSYNC_SRC_e_i,
+      o     => i_vsync_meta
    );
 
    p:process(CLK_DEST_i)
@@ -97,8 +111,8 @@ begin
 	      end if;
 
 	      if r_ctr = (G_TRAIL - G_META - 1) mod G_PERIOD then
-	         HSYNC_DST_e_o <= HSYNC_SRC_e_i;
-	         VSYNC_DST_e_o <= VSYNC_SRC_e_i;
+            HSYNC_DST_e_o <= i_hsync_meta;
+            VSYNC_DST_e_o <= i_vsync_meta;
 	      end if;
 	   end if;
    end process;

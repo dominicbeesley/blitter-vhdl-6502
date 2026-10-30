@@ -320,7 +320,7 @@ begin
 
    e_synsyn:entity work.sync_sync 
    generic map (
-      G_PERIOD => 9,
+      G_PERIOD => 27,
       G_HYSTERESIS => 2,
       G_TRAIL => 4,
       G_META => 2
