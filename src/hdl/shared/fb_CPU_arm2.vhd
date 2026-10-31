@@ -108,8 +108,6 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal r_arm_boot			: std_logic;							-- place ROM at 0-100 from 8D3Fxx at boot
 
-	signal i_rdy				: std_logic;
-
 	-- address signals registered from the cpu during phi2 of previous cycle (pipelined)
 	-- note ABE, ALE are pulled high
 	signal r_a_cpu_p			: std_logic_vector(23 downto 0);
@@ -118,16 +116,21 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_nBW_p				: std_logic;
 	signal r_nRW_p				: std_logic;
 
-	-- address signals for the current cycle
+	-- the current ARM cycle's request: copied from the _p signals when phi2
+	-- ends (the cycle starts) and held for the whole cycle, so an access that
+	-- starts late (behind a posted write) still uses this cycle's values
+	signal r_a_cpu_cur		: std_logic_vector(23 downto 0);
+	signal r_nMREQ_cur		: std_logic := '1';
+	signal r_nBW_cur			: std_logic;
+	signal r_nRW_cur			: std_logic;						-- also sets the PORTA buffer direction
+	signal r_instr_fetch		: std_logic;						-- not nOPC
 
+	-- Fishbone access signals
 	signal r_A_log_cur		: std_logic_vector(23 downto 0);
 	signal r_WE					: std_logic;
-	signal r_instr_fetch		: std_logic;
-	signal r_nMREQ_cur		: std_logic;
 
 	-- port A buffer signals
-	signal r_nRW_buf			: std_logic;
-	signal r_nRW_buf_dly		: std_logic_vector(1 downto 0);	-- r_nRW_p delayed for the PORTA buffer direction
+	signal r_nRW_buf_dly		: std_logic_vector(1 downto 0);	-- r_nRW_cur delayed for the PORTA buffer direction
 
 	-- port B
 
@@ -161,7 +164,6 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal r_write_lane			: std_logic_vector(3 downto 0);
 	signal r_write_lane_prev	: std_logic_vector(3 downto 0);
-	signal r_write_lane_prev2	: std_logic_vector(3 downto 0);
 	signal r_write_lane_done	: std_logic_vector(3 downto 0);
 	signal r_write_lane_done2	: std_logic_vector(3 downto 0);
 
@@ -173,20 +175,22 @@ architecture rtl of fb_cpu_arm2 is
 	signal r_clk_state		: t_clk_state;
 
 	-- Fishbone access for the current ARM cycle:
-	--   idle  no access in progress (a pending one starts from here)
-	--   rd    read in progress, waiting for con_burst's ack
-	--   wr    write in progress: gathering the bytes from the ARM in phi2,
-	--         then waiting for con_burst's ack
+	--   idle  		no access in progress (a pending one starts from here)
+	--   rd    		read in progress, waiting for con_burst's ack
+	--   wr    		write in progress: gathering the bytes from the ARM in phi2
+	--   wr_post	write has been posted wait for ack but allow phi2 to end
+	--         		then waiting for con_burst's ack before resuming idle
 	type t_mem_acc_state is (
 		idle,
 		rd,
-		wr
+		wr,
+		wr_post
 		);
 
 	signal r_mem_acc_state  : t_mem_acc_state;
 
 	-- handshake between p_clk_state (ARM phi1/phi2) and p_mem_acc_state (Fishbone)
-	signal r_new_cycle		: std_logic;		-- (p_clk_state) one clock pulse: phi2 ended, a new ARM cycle starts; _p signals are now this cycle's
+	signal r_new_cycle		: std_logic;		-- (p_clk_state) one clock pulse: phi2 ended, a new ARM cycle starts; the _cur request is now this cycle's
 	signal r_acc_pending		: std_logic;		-- (p_mem_acc_state) this ARM cycle still needs its Fishbone access started
 	signal r_release			: std_logic;		-- (p_mem_acc_state) this ARM cycle's access no longer needs the ARM: phi2 may end
 	signal r_lane_req		: std_logic_vector(3 downto 0);
@@ -230,8 +234,8 @@ begin
 	);
 
 
-	-- The PORTA direction changes 2 clocks after r_nRW_buf: at the end of a read
-	-- the last lane's latch (nBL) closes on the same edge that r_nRW_buf changes,
+	-- The PORTA direction changes 2 clocks after r_nRW_cur: at the end of a read
+	-- the last lane's latch (nBL) closes on the same edge that r_nRW_cur changes,
 	-- so without the delay PORTA stops being driven with no hold time
 	-- (2543 hold is 2 ns). Writes don't need DIR until phi2.
 	i_BUF_D_RnW_b2c <= 	not r_nRW_buf_dly(1);
@@ -239,7 +243,7 @@ begin
 	i_CPUSKT_ABRT_b2c 	<= '0';
 	i_CPUSKT_phi1_b2c 	<= r_cpu_phi1;
 	i_CPUSKT_phi2_b2c 	<= r_cpu_phi2;
-	i_CPUSKT_RES_b2c		<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- TODO:does this need synchronising?
+	i_CPUSKT_RES_b2c		<= fb_syscon_i.rst when cpu_en_i = '1' else '1';		-- can be async
 	i_CPUSKT_nFIRQ_b2c	<= wrap_i.nmi_n;
 	i_CPUSKT_nIRQ_b2c 	<= wrap_i.irq_n;
 	i_CPUBRD_nBL_b2c 		<= r_rd_nBL2 when r_WE = '0' else
@@ -300,7 +304,6 @@ begin
 			r_lane_req <= (others => '1');
 			r_write_lane <= (others => '0');
 			r_write_lane_prev <= (others => '0');
-			r_write_lane_prev2 <= (others => '0');
 			r_write_lane_done <= (others => '0');
 			r_write_lane_done2 <= (others => '0');
 			r_mem_acc_state <= idle;
@@ -308,21 +311,18 @@ begin
 			r_D_wr <= (others => '0');
 			r_WE <= '0';
 			r_A_log_cur <= (others => '0');	
-			r_nMREQ_cur <= '1';
 			r_acc_pending <= '0';
 			r_release <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_write_lane <= prior(r_lane_req and (not r_write_lane_done) and (r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2));
 			r_write_lane_prev <= r_write_lane;
-			r_write_lane_prev2 <= r_write_lane_prev;
 			r_write_lane_done <= r_write_lane_done or r_write_lane_prev;
 			r_write_lane_done2 <= r_write_lane_done;
 
 			-- a new ARM cycle: take its access requirement, it hasn't been released yet
 			if r_new_cycle = '1' then
-				r_nMREQ_cur <= r_nMREQ_p;
-				r_acc_pending <= not r_nMREQ_p;
+				r_acc_pending <= not r_nMREQ_cur;
 				r_release <= '0';
 			end if;
 
@@ -336,7 +336,10 @@ begin
 						r_mem_acc_state <= idle;
 					end if;				
 				when wr =>
-					if r_cpu_phi2 = '1' then
+					if r_lane_req = r_D_wr_stb then
+						r_mem_acc_state <= wr_post;
+						r_release <= '1';							-- release phi2, allow cpu to continue
+					elsif r_cpu_phi2 = '1' then
 						for I in 0 to 3 loop
 							if r_write_lane_done2(I) = '1' and r_D_wr_stb(I) = '0' then
    							r_D_wr(7+8*I downto 8*I) <= i_CPUSKT_D_mux_c2b;
@@ -344,10 +347,10 @@ begin
 						end loop;
 						r_D_wr_stb <= r_D_wr_stb or r_write_lane_done2;
 					end if;
-					if i_cyc_ack_i then
+				when wr_post =>
+					if i_cyc_ack_i = '1' then
 						r_D_wr_stb <= (others => '0');
 						r_cyc_o <= '0';
-						r_release <= '1';							-- stage 1: release on the ack (no posting yet)
 						r_mem_acc_state <= idle;
 					end if;
 				when others =>
@@ -360,25 +363,24 @@ begin
 			-- new-cycle pulse (so a memory cycle still starts at T+1). cyc has been low
 			-- for at least a clock: it drops on the ack edge, which takes us to idle.
 			v_start := r_mem_acc_state = idle and
-						  (r_acc_pending = '1' or (r_new_cycle = '1' and r_nMREQ_p = '0'));
+						  (r_acc_pending = '1' or (r_new_cycle = '1' and r_nMREQ_cur = '0'));
 
 			if v_start then
 				r_acc_pending <= '0';
 					r_D_wr_stb <= (others => '0');
 					r_write_lane <= (others => '0');
 					r_write_lane_prev <= (others => '0');
-					r_write_lane_prev2 <= (others => '0');
 					r_write_lane_done <= (others => '0');
 					r_write_lane_done2 <= (others => '0');
-					if r_nBW_p = '1' then
+					if r_nBW_cur = '1' then
 						r_lane_req <= "1111";
-						r_A_log_cur <= r_a_cpu_p(23 downto 2) & "00";
+						r_A_log_cur <= r_a_cpu_cur(23 downto 2) & "00";
 					else
 						r_lane_req <= (others => '0');
-						r_lane_req(to_integer(unsigned(r_a_cpu_p(1 downto 0)))) <= '1';
-						r_A_log_cur <= r_a_cpu_p(23 downto 0);
+						r_lane_req(to_integer(unsigned(r_a_cpu_cur(1 downto 0)))) <= '1';
+						r_A_log_cur <= r_a_cpu_cur(23 downto 0);
 					end if;
-					if r_nRW_p = '0' then
+					if r_nRW_cur = '0' then
 						r_mem_acc_state <= rd;
 						r_WE <= '0';
 					else
@@ -395,7 +397,7 @@ begin
 		if rising_edge(fb_syscon_i.clk) then
 
 			r_new_cycle <= '0';
-			r_nRW_buf_dly <= r_nRW_buf_dly(0) & r_nRW_buf;
+			r_nRW_buf_dly <= r_nRW_buf_dly(0) & r_nRW_cur;
 
 			if r_clkctdn /= 0 then
 				r_clkctdn <= r_clkctdn - 1;
@@ -409,8 +411,6 @@ begin
 						r_clk_state <= phi2;
 					else
 						r_cpu_phi1 <= '1';
-
-						r_instr_fetch <= not r_nOPC_p;
 					end if;
 
 				when phi2 =>
@@ -439,7 +439,12 @@ begin
 						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
 						r_clk_state <= phi1;
 						r_new_cycle <= '1';
-						r_nRW_buf <= r_nRW_p;
+						-- freeze the new cycle's request
+						r_a_cpu_cur <= r_a_cpu_p;
+						r_nMREQ_cur <= r_nMREQ_p;
+						r_nBW_cur <= r_nBW_p;
+						r_nRW_cur <= r_nRW_p;
+						r_instr_fetch <= not r_nOPC_p;
 					else
 						r_cpu_phi2 <= '1';
 					end if;
