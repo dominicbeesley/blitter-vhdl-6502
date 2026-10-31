@@ -298,6 +298,12 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal i_throttle_act   : std_logic;   
 
    signal r_mem_RnW        : std_logic;
+
+   -- memory data bus drive: data and output enable registers; MEM_D_io is
+   -- driven from these outside the clocked process, so the pin is only read,
+   -- never held through its own input (see revision notes, bidirectional pins)
+   signal r_MEM_D_o        : std_logic_vector(7 downto 0);
+   signal r_MEM_D_nOE      : std_logic;
    signal r_mem_D_WR       : std_logic_vector(7 downto 0);
 
    -- fishbone memory peripheral port (chipset controllers -> shared memory)
@@ -480,12 +486,14 @@ begin
    -- CPU cycle state machine
    -- ================================================================================================ --
 
+   MEM_D_io <= r_MEM_D_o when r_MEM_D_nOE = '0' else (others => 'Z');
+
    p_state:process(fb_syscon_i)
 
       procedure mem_unsel is
       begin
          MEM_A_io <= (others => 'Z');
-         MEM_D_io <= (others => 'Z');
+         r_MEM_D_nOE <= '1';
 
          MEM_RAM_nCE_o <= (others => '1');
          MEM_ROM_nCE_o <= '1';
@@ -550,7 +558,8 @@ begin
          r_A_stb <= '0';
          CPU_BE_o <= '1';
          r_mem_D_WR <= (others => '1');
-         MEM_D_io <= (others => '1');
+         r_MEM_D_o <= (others => '1');
+         r_MEM_D_nOE <= '0';
 
          r_mem_A_ack <= '0';
          r_mem_D_ack <= '0';
@@ -575,7 +584,8 @@ begin
                   if i_ring_next(C_CPU_DIV_PHI2) = '1' then
                      r_state <= wait_asetup;
                   end if;
-                  MEM_D_io <= (others => '1');
+                  r_MEM_D_o <= (others => '1');
+                  r_MEM_D_nOE <= '0';
                when wait_asetup =>
 
                   r_CPU_RDY <= '0';
@@ -694,7 +704,8 @@ begin
                   end if;
                      
                   if r_cpu_phi_DHR = '1' then
-                     MEM_D_io <= r_fb_D_rd;
+                     r_MEM_D_o <= r_fb_D_rd;
+                     r_MEM_D_nOE <= '0';
                   end if;
 
                   -- read data goes to MEM_D_io from r_fb_D_rd (above) a clock
@@ -826,7 +837,8 @@ begin
                when mem4 =>
 
                   if r_cpu_phi_DHR = '1' and r_mem_RnW = '0' then
-                     MEM_D_io <= r_mem_D_WR;
+                     r_MEM_D_o <= r_mem_D_WR;
+                     r_MEM_D_nOE <= '0';
                   end if;
 
                   -- r_mem_had_d_stb: for a write, the data has arrived (r_mem_D_WR
@@ -915,6 +927,7 @@ begin
          r_mem_win <= '0';
          for i in 0 to C_MEM_ACC_LAST + 1 loop
             if i_ring_next(cw(i - 1)) = '1' and (i <= C_MEM_ACC_LAST or cfg_cpu_use_t65_i = '1') then
+--            if i_ring_next(cw(i - 1)) = '1' and (i <= C_MEM_ACC_LAST) then
                r_mem_win <= '1';
             end if;
          end loop;
