@@ -172,16 +172,23 @@ architecture rtl of fb_cpu_arm2 is
 
 	signal r_clk_state		: t_clk_state;
 
+	-- Fishbone access for the current ARM cycle:
+	--   idle  no access in progress (a pending one starts from here)
+	--   rd    read in progress, waiting for con_burst's ack
+	--   wr    write in progress: gathering the bytes from the ARM in phi2,
+	--         then waiting for con_burst's ack
 	type t_mem_acc_state is (
 		idle,
 		rd,
-		rd2,
-		wr,
-		done
+		wr
 		);
 
 	signal r_mem_acc_state  : t_mem_acc_state;
-	signal r_mem_acc_reset  : std_logic;	
+
+	-- handshake between p_clk_state (ARM phi1/phi2) and p_mem_acc_state (Fishbone)
+	signal r_new_cycle		: std_logic;		-- (p_clk_state) one clock pulse: phi2 ended, a new ARM cycle starts; _p signals are now this cycle's
+	signal r_acc_pending		: std_logic;		-- (p_mem_acc_state) this ARM cycle still needs its Fishbone access started
+	signal r_release			: std_logic;		-- (p_mem_acc_state) this ARM cycle's access no longer needs the ARM: phi2 may end
 	signal r_lane_req		: std_logic_vector(3 downto 0);
 
 begin
@@ -286,6 +293,7 @@ begin
 	end process;
 
 	p_mem_acc_state:process(fb_syscon_i)
+	variable v_start : boolean;
 	begin
 		if fb_syscon_i.rst ='1' then
 			r_cyc_o <= '0';
@@ -295,12 +303,14 @@ begin
 			r_write_lane_prev2 <= (others => '0');
 			r_write_lane_done <= (others => '0');
 			r_write_lane_done2 <= (others => '0');
-			r_mem_acc_state <= done;
+			r_mem_acc_state <= idle;
 			r_D_wr_stb <= (others => '0');
 			r_D_wr <= (others => '0');
 			r_WE <= '0';
 			r_A_log_cur <= (others => '0');	
 			r_nMREQ_cur <= '1';
+			r_acc_pending <= '0';
+			r_release <= '0';
 		elsif rising_edge(fb_syscon_i.clk) then
 
 			r_write_lane <= prior(r_lane_req and (not r_write_lane_done) and (r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2 & r_cpu_phi2));
@@ -309,9 +319,22 @@ begin
 			r_write_lane_done <= r_write_lane_done or r_write_lane_prev;
 			r_write_lane_done2 <= r_write_lane_done;
 
+			-- a new ARM cycle: take its access requirement, it hasn't been released yet
+			if r_new_cycle = '1' then
+				r_nMREQ_cur <= r_nMREQ_p;
+				r_acc_pending <= not r_nMREQ_p;
+				r_release <= '0';
+			end if;
+
 			case r_mem_acc_state is 
 				when idle =>
-					null; -- wait here to be release by the if below...
+					null; -- a pending access starts below
+				when rd =>
+					if i_cyc_ack_i then
+						r_cyc_o <= '0';
+						r_release <= '1';							-- read data is in the latches
+						r_mem_acc_state <= idle;
+					end if;				
 				when wr =>
 					if r_cpu_phi2 = '1' then
 						for I in 0 to 3 loop
@@ -323,16 +346,8 @@ begin
 					end if;
 					if i_cyc_ack_i then
 						r_D_wr_stb <= (others => '0');
-						r_mem_acc_state <= done;
 						r_cyc_o <= '0';
-					end if;
-				when rd =>
-					if i_cyc_ack_i then
-						r_mem_acc_state <= done;
-						r_cyc_o <= '0';
-					end if;				
-				when done =>
-					if r_mem_acc_reset = '1' then
+						r_release <= '1';							-- stage 1: release on the ack (no posting yet)
 						r_mem_acc_state <= idle;
 					end if;
 				when others =>
@@ -341,8 +356,14 @@ begin
 					r_mem_acc_state <= idle;
 			end case;
 
-			if  (r_mem_acc_state = idle or r_mem_acc_state = done) and r_mem_acc_reset = '1' then
-				if r_nMREQ_p = '0' then
+			-- start this cycle's access: from a pending request, or straight from the
+			-- new-cycle pulse (so a memory cycle still starts at T+1). cyc has been low
+			-- for at least a clock: it drops on the ack edge, which takes us to idle.
+			v_start := r_mem_acc_state = idle and
+						  (r_acc_pending = '1' or (r_new_cycle = '1' and r_nMREQ_p = '0'));
+
+			if v_start then
+				r_acc_pending <= '0';
 					r_D_wr_stb <= (others => '0');
 					r_write_lane <= (others => '0');
 					r_write_lane_prev <= (others => '0');
@@ -365,10 +386,6 @@ begin
 						r_WE <= '1';
 					end if;
 					r_cyc_o <= '1';
-					r_nMREQ_cur <= '0';
-				else
-					r_nMREQ_cur <= '1';
-				end if;		
 			end if;
 		end if;
 	end process;
@@ -377,7 +394,7 @@ begin
 	begin
 		if rising_edge(fb_syscon_i.clk) then
 
-			r_mem_acc_reset <= '0';
+			r_new_cycle <= '0';
 			r_nRW_buf_dly <= r_nRW_buf_dly(0) & r_nRW_buf;
 
 			if r_clkctdn /= 0 then
@@ -415,11 +432,13 @@ begin
 
 					
 
-					if r_clkctdn = 0 and (r_mem_acc_state = done or r_nMREQ_cur /= '0') then
+					-- end phi2 once the minimum time is up and either this cycle has no
+					-- memory access, or its access has released the ARM
+					if r_clkctdn = 0 and (r_nMREQ_cur = '1' or r_release = '1') then
 						r_cpu_phi2 <= '0';
 						r_clkctdn <= to_unsigned(C_CLKD2_8-1, r_clkctdn'length);
 						r_clk_state <= phi1;
-						r_mem_acc_reset <= '1';
+						r_new_cycle <= '1';
 						r_nRW_buf <= r_nRW_p;
 					else
 						r_cpu_phi2 <= '1';
