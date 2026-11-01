@@ -87,6 +87,13 @@ architecture rtl of fb_mem is
    signal   r_A_ack     :  std_logic;
    signal   r_D_ack     :  std_logic;
 
+   signal   r_cur_A     :  std_logic_vector(23 downto 21);
+   signal   r_cur_we    :  std_logic;
+
+
+   signal   r_D_wr      :  std_logic_vector(7 downto 0);
+   signal   r_D_wr_nOE  :  std_logic;
+
 begin
 
    debug_mem_a_stb_o <= fb_c2p_i.a_stb;
@@ -96,14 +103,18 @@ begin
    fb_p2c_o.rdy      <= r_rdy;
    fb_p2c_o.D_ack    <= r_D_ack;
 
+   MEM_D_io <= r_D_wr when r_D_wr_nOE = '0' else (others => 'Z');
+
    p_state:process(fb_syscon_i)
    variable vr_rdy_ctdn : t_rdy_ctdn;
+   variable v_allow_next : boolean;
    begin
 
       if fb_syscon_i.rst = '1' then
          state <= idle;
          MEM_A_o <= (others => '0');
-         MEM_D_io <= (others => 'Z');
+         r_D_wr <= (others => '0');
+         r_D_wr_nOE <= '1';
          MEM_nOE_o <= '1';
          MEM_RAM0_nCE_o <= '1';
          MEM_ROM_nCE_o <= '1';
@@ -114,15 +125,18 @@ begin
          r_D_ack <= '0';
          r_A_ack <= '0';
          r_rdy <= '0';
+         r_cur_A <= (others => '0');
+         r_cur_we <= '0';
       elsif rising_edge(fb_syscon_i.clk) then
 
+         v_allow_next := false;
          r_A_ack <= '0';
          r_D_ack <= '0';
 
          case state is
             when idle =>
                MEM_A_o <= (others => '0');
-               MEM_D_io <= (others => 'Z');
+               r_D_wr_nOE <= '1';
                MEM_nOE_o <= '1';
                MEM_RAM_nWE_o <= '1';
                MEM_ROM_nWE_o <= '1';
@@ -130,50 +144,11 @@ begin
                MEM_ROM_nCE_o <= '1';
                r_rdy <= '0';
                vr_rdy_ctdn := RDY_CTDN_MAX;
-
-               if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and r_A_ack = '0' then
-                  r_A_ack <= '1';
-                  r_rdy_ctdn <= fb_c2p_i.rdy_ctdn;
-
-                  MEM_RAM_nWE_o <= not fb_c2p_i.we;
-                  MEM_ROM_nWE_o <= not fb_c2p_i.we;
-                  MEM_nOE_o <= fb_c2p_i.we;                    
-                  MEM_A_o <= fb_c2p_i.A(20 downto 0);
-
-                  -- work out which memory chip and what speed
-                  -- TODO: figure out lower write countdowns from datasheets
-                  if fb_c2p_i.A(23) = '1' then
-                     MEM_ROM_nCE_o <= '0';
-                     IF G_FLASH_IS_45 then
-                        vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
-                     else
-                        vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
-                     end if;
-                  else -- BBRAM
-                     MEM_RAM0_nCE_o <= '0';
-                     if G_SLOW_IS_45 then
-                        vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
-                     else
-                        vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
-                     end if;
-                  end if;
-
-                  if fb_c2p_i.we = '0' then                    
-                     state <= wait_rd;
-                  else
-                     if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-                        MEM_D_io <= fb_c2p_i.D_wr;
-                        r_D_ack <= '1';
-                        r_rdy <= '1';
-                        state <= wait_wr;
-                     else
-                        state <= wait_wr_stb;
-                     end if;
-                  end if;     
-               end if;
+               v_allow_next := true;
             when wait_wr_stb =>
                if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
-                  MEM_D_io <= fb_c2p_i.D_wr;
+                  r_D_wr_nOE <= '0';
+                  r_D_wr <= fb_c2p_i.D_wr;
                   r_D_ack <= '1';
                   r_rdy <= '1';
                   state <= wait_wr;
@@ -187,6 +162,7 @@ begin
                   state <= idle;
                   r_D_ack <= '1';
                   r_D_rd <= MEM_D_io;
+                  v_allow_next := true;
                else
                   vr_rdy_ctdn := vr_rdy_ctdn - 1;
                end if;
@@ -202,6 +178,58 @@ begin
                state <= idle;
          end case;
 
+         if v_allow_next then
+            if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' and r_A_ack = '0' 
+               and (
+                  (fb_c2p_i.A(23 downto 21) = r_cur_A and fb_c2p_i.we = r_cur_we)
+                  or state = idle) then
+               r_A_ack <= '1';
+               r_rdy_ctdn <= fb_c2p_i.rdy_ctdn;
+
+               r_cur_A <= fb_c2p_i.A(23 downto 21);
+               r_cur_we <= fb_c2p_i.we;
+               MEM_RAM_nWE_o <= not fb_c2p_i.we;
+               MEM_ROM_nWE_o <= not fb_c2p_i.we;
+               MEM_nOE_o <= fb_c2p_i.we;                    
+               MEM_A_o <= fb_c2p_i.A(20 downto 0);
+               if fb_c2p_i.we = '1' then
+                  r_D_wr_nOE <= '0';
+                  r_D_wr <= fb_c2p_i.D_wr;
+               end if;
+
+               -- work out which memory chip and what speed
+               if fb_c2p_i.A(23) = '1' then
+                  MEM_ROM_nCE_o <= '0';
+                  IF G_FLASH_IS_45 then
+                     vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+                  else
+                     vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+                  end if;
+               else -- BBRAM
+                  MEM_RAM0_nCE_o <= '0';
+                  if G_SLOW_IS_45 then
+                     vr_rdy_ctdn := to_unsigned(5, RDY_CTDN_LEN);
+                  else
+                     vr_rdy_ctdn := to_unsigned(7, RDY_CTDN_LEN);
+                  end if;
+               end if;
+
+               if fb_c2p_i.we = '0' then                    
+                  state <= wait_rd;
+               else
+                  if fb_c2p_i.D_wr_stb = '1' and r_D_ack = '0' then
+                     r_D_wr_nOE <= '0';
+                     r_D_wr <= fb_c2p_i.D_wr;
+                     r_D_ack <= '1';
+                     r_rdy <= '1';
+                     state <= wait_wr;
+                  else
+                     state <= wait_wr_stb;
+                  end if;
+               end if;     
+            end if;
+         end if;
+
          if r_D_ack = '1' then
             r_rdy <= '0';
          end if;
@@ -213,11 +241,6 @@ begin
                state <= idle;
             end if;
          end if;
-
       end if;
-
-
    end process;
-
-
 end rtl;

@@ -306,6 +306,12 @@ architecture rtl of fb_C20K_mem_cpu_65816 is
    signal r_MEM_D_nOE      : std_logic;
    signal r_mem_D_WR       : std_logic_vector(7 downto 0);
 
+   -- memory address lines drive
+   signal r_MEM_A_o        : std_logic_vector(20 downto 0);
+   signal r_MEM_A_20_8_nOE : std_logic;
+   signal r_MEM_A_7_0_nOE  : std_logic;
+
+
    -- fishbone memory peripheral port (chipset controllers -> shared memory)
    signal r_mem_A_ack      : std_logic;                     -- A_ack for an accepted fb_mem request
    signal r_mem_D_ack      : std_logic;                     -- D_ack (and rdy) for it
@@ -487,12 +493,16 @@ begin
    -- ================================================================================================ --
 
    MEM_D_io <= r_MEM_D_o when r_MEM_D_nOE = '0' else (others => 'Z');
+   MEM_A_io(20 downto 8) <= r_MEM_A_o(20 downto 8) when r_MEM_A_20_8_nOE = '0' else (others => 'Z');
+   MEM_A_io(7 downto 0) <= r_MEM_A_o(7 downto 0) when r_MEM_A_7_0_nOE = '0' else (others => 'Z');
 
    p_state:process(fb_syscon_i)
 
       procedure mem_unsel is
       begin
-         MEM_A_io <= (others => 'Z');
+         r_MEM_A_7_0_nOE <= '1';
+         r_MEM_A_20_8_nOE <= '1';
+
          r_MEM_D_nOE <= '1';
 
          MEM_RAM_nCE_o <= (others => '1');
@@ -505,7 +515,9 @@ begin
       procedure mem_sel(A : std_logic_vector(23 downto 0)) is
       begin
          mem_unsel;
-         MEM_A_io(20 downto 8) <= A(20 downto 8);
+
+         r_MEM_A_20_8_nOE <= '0';
+         r_MEM_A_o(20 downto 8) <= A(20 downto 8);
 
          if A(23) = '1' then
             MEM_ROM_nCE_o <= '0';
@@ -827,7 +839,10 @@ begin
                when mem2 =>
                   mem_sel(r_mem_A);
                   mem_rdy;
-                  MEM_A_io(7 downto 0) <= r_mem_A(7 downto 0);
+
+                  r_mem_A_o(7 downto 0) <= r_mem_A(7 downto 0);
+                  r_MEM_A_7_0_nOE <= '0';
+
                   r_state <= mem3;
                when mem3 =>
                   MEM_nWE_o <= r_mem_RnW;
@@ -867,7 +882,9 @@ begin
                      -- note we need to release nOE a cycle late for 10ns memory or we get
                      -- spurious reads.
                      MEM_nOE_o <= '1';  
-                     MEM_A_io(7 downto 0) <= (others => 'Z');
+
+                     r_MEM_A_7_0_nOE <= '1';
+
                      r_state <= mem5;
                   end if;
                when mem5 =>
