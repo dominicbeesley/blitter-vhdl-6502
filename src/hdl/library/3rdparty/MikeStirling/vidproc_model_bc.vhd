@@ -260,6 +260,9 @@ architecture rtl of vidproc is
     type t_logical_colours is (bpp_1, bpp_2, bpp_4, bpp_8);
     signal nula_logical_colours         : t_logical_colours;
 
+-- Additional ANSI attribute registers
+    signal ansi_flash                  : std_logic; -- '1' = flash (default), '0' = high intensity background
+
 begin
 
     PIXCLKEN <= clken_pixel;
@@ -358,6 +361,8 @@ begin
                     nula_palette(14)           <= x"0FF";
                     nula_palette(15)           <= x"FFF";
                     nula_nreset                <= '1';
+
+                    ansi_flash                 <= '1';
                 end if;
 
                 if ENABLE = '1' and A(1) = '1' and nula_disable_a1 = '0' then
@@ -384,6 +389,10 @@ begin
                             when x"9" =>
                                 -- bits 3..0 control colours 12..15 respectively
                                 nula_flashing_flags(3 downto 0) <= DI_CPU(3 downto 0);
+                            when x"F" =>
+                                -- Do some of the VGA "attribute controller" stuff here
+                                -- TODO: move to sequencer or another module?
+                                ansi_flash                      <= DI_CPU(3);
                             when others =>
                         end case;
                     else
@@ -709,11 +718,11 @@ begin
                     else
                         palette_a := attr_bits(2 downto 0)               & shiftreg(7);
                     end if;
-                elsif MODE_ATTR = '1' then
-                    if shiftreg(7) = '1' and (speccy_bg(3) = '0' or r0_flash = '0') then
+                elsif MODE_ATTR = '1' then                    
+                    if shiftreg(7) = '1' and (speccy_bg(3) = '0' or r0_flash = '0' or ansi_flash = '0') then
                         palette_a := speccy_fg;
                     else
-                        palette_a := '0' & speccy_bg(2 downto 0);
+                        palette_a := (speccy_bg(3) and not ansi_flash) & speccy_bg(2 downto 0);
                     end if;                    
                 elsif nula_speccy_attr_mode = '1' then
                     if shiftreg(7) = '1' then
