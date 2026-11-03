@@ -1,22 +1,3 @@
-New rules 2022:
-
-- d_wr_stb may be asserted after a_stb or coincident with it
-- d_wr_stb must be asserted for every we cycle unless cyc is dropped
-- to allow ack signals to be generated using registered logic the associated 
-  stb should be ignored during the ack and not start a new cycle
-
-Extra rules Oct 2026:
-
-- stall removed
-- stall replaced with A_ack
-- d_ack added to acknowledge receipt of a D_wr_stb or D_rd is ready
-- d_ack must be coincident with or after A_ack
-- A_stb is at least two cycles A, we, must remain stabled from the
-  first cycle's A_stb to the A_ack back from the peripheral
-- rdy_ctdn - should stay constant for the entirety if cyc and need not be
-  registered
-
-
 # Introduction
 
 This documentation describes the bus architecture that is used to connect the 
@@ -189,9 +170,8 @@ These signals are asserted by a controller to control a bus cycle
         |             |                            | acknowledged (see "Stale D_wr_stb hazard" below)     |
         +-------------+----------------------------+------------------------------------------------------+
         | rdy_ctdn (p)| unsigned(<>)               | The number of cycles before "d_ack" that rdy         |
-        |             |                            | should be asserted. Note: this is currently not      |
-        |             |                            | expected to change during a cycle and therefore is   |
-        |             |                            | not registerd by A_stb                               |
+        |             |                            | should be asserted. rdy_ctdn must not change once    |
+        |             |                            | cyc has been asserted.                               |
         +-------------+----------------------------+------------------------------------------------------+
 
 
@@ -202,9 +182,9 @@ with cyc throughout a cycle and A had to remain stable for the entire cycle
 after A_stb was asserted. Similarly D_wr had to remain stable after D_wr_stb 
 had been asserted. 
 
-In pipelined mode the A_stb and D_wr_stb are only asserted until the are acked
-by the peripheral or interconnect device should register the A, we or D_wr 
-signals. 
+In pipelined mode the A_stb and D_wr_stb are only asserted until they have been
+acked by the peripheral or interconnect device should register the A, we or 
+D_wr signals. 
 
 ### Pipeline Transactions
 
@@ -262,6 +242,11 @@ for A_ack from a different peripheral. The controller holds D_wr_stb until it
 is D_ack'd, so the correct peripheral receives it once the write has been 
 A_ack'd.
 
+Note: some interconnects broadcast D_wr_stb to all their peripherals, so a 
+peripheral may see strobes meant for others. This is why the rule above 
+is important: a peripheral not waiting for the data of a write it has accepted 
+must ignore D_wr_stb.
+
 ### Cyc before A_stb
 
 The cyc signal may be asserted before the first A_stb is ready for a set of 
@@ -275,12 +260,52 @@ it should be noted that this is not *normal* behaviour and is likely to cause
 inappropriate behaviour. For instance when accessing the fb_SYS module to 
 access memory or devices on a BBC Micro's bus a bus write will still occur but
 possibly with corrupted data if the D_wr_stb signal hasn't arrived at the 
-fb_SYS or fb_MEM, etc modules before cyc is dropped. 
+fb_SYS or fb_MEM, etc modules before cyc is dropped. However, a write that has
+been D_ack'd by the peripheral must be completed.
 
 In general controllers and interconnects should not drop cyc to abort a 
 transaction that has started (i.e. a_stb has been asserted). However, all 
 peripherals and interconnects should be constructed in such a way that they 
 don't hang the bus should a cyc be dropped at _any_ point.
+
+Note: some interconnects broadcast cyc to all their peripherals. A peripheral 
+must not treat cyc on its own as selecting it: a transaction starts only when 
+A_stb is received. When cyc drops, the peripheral must not give any further 
+D_ack or rdy for that cyc. A write that has already been D_ack'd must still 
+be completed. Dropping cyc before a controller has received all its D_ack's is 
+not normal behaviour - peripherals may abort writes or block until a write is
+finished - that is peripheral specific behaviour. However, any writes that have 
+been D_ack'd must complete.
+
+### Arbitration and switching
+
+An arbiter may only change which controller it has granted while no A_stb of 
+the current cyc has yet been passed on to a peripheral. Before that, switching
+is just a delay the controller can't see. A peripheral may act on the edge 
+where it samples A_stb (fb_SYS starts a motherboard cycle there), so once an 
+A_stb has gone through, the grant stays until the controller drops cyc. When 
+the grant does change, the cyc going to the peripherals must be low for at 
+least one clock between the two controllers, because peripherals treat a 
+dropped cyc as the end of a group (and rdy_ctdn is set per cyc).
+
+An interconnect may split one controller cyc into several cycs downstream, 
+one per peripheral as the transactions move between them. It may only drop a 
+peripheral's cyc once all that peripheral's transactions have had their D_ack; 
+dropping it earlier is an abort. It must not re-arbitrate controllers at these 
+splits. A controller may hold cyc across several transactions to make them 
+atomic, such as a read-modify-write (68K TAS) used as a lock. That only works 
+if no other controller can get in until the controller drops cyc. A peripheral 
+therefore can't assume that the cyc it sees holds all of a controller's 
+transactions; the lock is held at the arbiter, not at the peripheral.
+
+### Mixed reads and writes
+
+Reads and writes may be mixed in a cyc. For example a read-modify-write may
+be locked in a cyc to make it atomic.
+
+### Strobes dropped with cyc
+
+A controller must drop its A_stb and D_wr_stb when cyc is de-asserted.
 
 ## Peripheral to Controller signals
 
@@ -292,8 +317,8 @@ These signals are returned from a peripheral to a controller
         | A_ack       | std_logic                  | Acknowledge the receipt of A, we from the controller.|
         +-------------+----------------------------+------------------------------------------------------+
         | D_rd        | std_logic_vector           | Data returned to a controller from a peripheral in a |
-        |             | (7 downto 0)               | read cycle. This data should not be read until the   |
-        |             |                            | ack and/or rdy_ctdn=0 is/are asserted                |
+        |             | (7 downto 0)               | read cycle. This data should not be read until       |
+        |             |                            | D_ack is asserted.                                   |
         +-------------+----------------------------+------------------------------------------------------+
         | D_ack       | std_logic                  | Acknowledge the receipt of D_wr_stb, for writes or   |
         |             |                            | signal that D_rd is now valid for reads.             |        
@@ -301,8 +326,7 @@ These signals are returned from a peripheral to a controller
         | rdy (p)     | std_logic                  | Signals that data "will be" ready in rdy_ctdn cycles |
         |             |                            | this is used for CPUs such as the Z80 / 68000 that   |
         |             |                            | need to be signaled a head of time that data will be |
-        |             |                            | available, for writes this is just generally asserted| 
-        |             |                            | as D_wr_stb is. Ready should not be asserted before  |
+        |             |                            | available. Ready must not be asserted before         |
         |             |                            | A_stb by a peripheral                                |
         +-------------+----------------------------+------------------------------------------------------+
 
@@ -320,6 +344,8 @@ before they are actually carried out on slow devices
 
 The rdy signal should be qualified by cyc and D_Ack must not be generated after
 cyc has been de-asserted for a bus transaction
+
+rdy_ctdn must not change during a cyc cycle.
 
 rdy may be active for zero or more cycles before D_ack 
 
@@ -362,6 +388,13 @@ sampled in its guard cycle, i.e. the clock after its previous D_ack (see
 "D_wr_stb notes" and "Stale D_wr_stb hazard"). This catches out blocking 
 peripherals in particular, as the next write's A_stb is usually already 
 waiting when they give a D_ack.
+
+Responses come back in transaction order: the n-th D_ack in a cyc (with its 
+D_rd for a read) belongs to the n-th transaction A_ack'd in that cyc. A 
+pipelined peripheral must keep this order. Interconnects rely on it to route 
+responses without tags, so an interconnect must not pass an A_stb to a 
+different peripheral while transactions to the previous one are still waiting
+for their D_ack.
 
 ### Stale D_wr_stb hazard
 
@@ -412,6 +445,19 @@ the previous write, as the controller cannot present the next strobe until
 it has seen that D_ack. It only costs a clock when a write's D_wr_stb is 
 already waiting behind the D_ack of a read.
 
+Registered stages: the guard cycle covers the one clock that a peripheral's own D_ack takes to reach the controller. A stage between the controller and the peripheral (a buffer or interconnect) that registers D_wr_stb or D_ack adds a clock to that window, so it must mask the D_wr_stb it passes on:
+```
+  - D_wr_stb registered: mask with the incoming D_ack.
+  - D_ack registered: mask with its own registered D_ack.
+  -- both directions registered
+  r_dn_D_wr_stb <= up_c2p.D_wr_stb
+                   and not dn_p2c.D_ack
+                   and not r_up_D_ack;
+  r_up_D_ack    <= dn_p2c.D_ack;
+```
+A stage that registers only one direction keeps only that direction's mask. A 
+pass-through stage needs neither.
+
 # Bus Cycle
 
 A bus cycle may take many clocks to service or may be over in a minimum of 2 
@@ -458,8 +504,8 @@ At:
 * A the controller starts the read cycle, asserting cyc, a_stb, we, rdy_ctdn
 * B the peripheral registers the cycle, asserts A_ack and instantly returns 
   data asserting D_ack and rdy
-* C the controller has registered the D_ack and instanly drops cyc and the 
-  peripheral deasserts the ack/ctdn signals
+* C the controller has registered the D_ack and instantly drops cyc and the 
+  peripheral deasserts the D_ack/rdy signal
 
 ## Simple fast multibyte read
                              A   B   C   D
@@ -553,7 +599,7 @@ D_wr/d_wr_stb coincident with a_stb, A_ack, D_ack, rdy ASAP
 
         clk             _|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|_|¯|
 
-        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__________________
+        cyc             ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯______
         a_stb           ______¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯__________________
         A               ------<A0    ><A1            >------------------
         we              ------________________________------------------
@@ -568,7 +614,7 @@ D_wr/d_wr_stb coincident with a_stb, A_ack, D_ack, rdy ASAP
 
 
 Note: this shows overlapped writes
-not rdy_ctdn is ignored for writes and rdy is coincident with D_ack
+Note: rdy_ctdn is ignored for writes and rdy is coincident with D_ack
 
 # Code style
 
