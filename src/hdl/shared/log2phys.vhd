@@ -169,9 +169,7 @@ begin
 			r_pagrom_A <= x"FF" & "10";
 			if (cfg_swram_enable_i = '1' or G_C20K) and fb_syscon_i.rst = '0' then
 				if cfg_map0n1_i = '1' then
-					if sys_ROMPG_i(3 downto 0) = x"E" and (G_MK3 or G_C20K) then -- special turbo ROM
-						r_pagrom_A <= x"1F" & "00";
-					elsif G_C20K or (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
+					if G_C20K or (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1') then
 						if sys_ROMPG_i(0) = '0' then
 							r_pagrom_A <= x"7" & "111" & sys_ROMPG_i(3 downto 1);
 						else
@@ -179,9 +177,7 @@ begin
 						end if;
 					end if;
 				else
-					if sys_ROMPG_i(3 downto 0) = x"E" and (G_MK3 or G_C20K) then -- special turbo ROM
-						r_pagrom_A <= x"1F" & "01";
-					elsif (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1' or cfg_sys_type_i /= SYS_ELK) then
+					if (sys_ROMPG_i(2) = '0' or sys_ROMPG_i(3) = '1' or cfg_sys_type_i /= SYS_ELK) then
 						if sys_ROMPG_i(0) = '0' then
 							r_pagrom_A <= x"7" & "110" & sys_ROMPG_i(3 downto 1);
 						else
